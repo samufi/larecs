@@ -32,8 +32,7 @@ struct EntityPool:
             return self._get_new()
         
         curr = self._next
-        self._entities[int(self._next)].id = self._next
-        self._next = self._entities[int(self._next)].id
+        self._entities[int(self._next)].id, self._next = self._next, self._entities[int(self._next)].id
         self._available -= 1
         return self._entities[int(curr)]
 
@@ -111,8 +110,7 @@ struct BitPool:
             return self._get_new()
         
         curr = self._next
-        self._bits[int(self._next)] = self._next
-        self._next = self._bits[int(self._next)]
+        self._next, self._bits[int(self._next)] = self._bits[int(self._next)], self._next
         self._available -= 1
         return self._bits[int(curr)]
 
@@ -144,7 +142,7 @@ struct BitPool:
         self._available = 0
 
 
-struct IntPool[ElementType: IntableCollectionElement]:
+struct IntPool[ElementType: IntableCollectionElement = Int]:
     """
     IntPool is a _pool implementation using implicit linked lists.
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/

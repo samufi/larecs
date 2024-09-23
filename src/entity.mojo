@@ -1,4 +1,5 @@
 from types import EntityId
+from bit import bit_reverse
 
 # # Reflection type of an [Entity].
 # var entityType = reflect.TypeOf(Entity{})
@@ -10,7 +11,7 @@ from types import EntityId
 # var entityIndexSize uint32 = uint32(reflect.TypeOf(entityIndex{}).Size())
 
 @register_passable("trivial")
-struct Entity(EqualityComparable, Stringable):
+struct Entity(EqualityComparable, Stringable, Hashable):
     """
     Entity identifier.
     Holds an entity ID and it's generation for recycling.
@@ -38,14 +39,19 @@ struct Entity(EqualityComparable, Stringable):
     fn __str__(self) -> String:
         return "Entity(" + str(self.id) + ", " + str(self.gen) + ")"
 
+    fn __hash__(self) -> UInt:
+        var output: UInt = int(self.id)
+        output |= bit_reverse(int(self.gen))
+        return output
+
     fn is_zero(self) -> Bool:
         """
         Returns whether this entity is the reserved zero entity.
         """
         return self.id == 0
 
-    # TODO
-    # # entityIndex indicates where an entity is currently stored.
-    # type entityIndex struct:
-    #     arch  *archetype # Entity's current archetype
-    #     index uint32     # Entity's current index in the archetype
+# TODO
+# # entityIndex indicates where an entity is currently stored.
+# type entityIndex struct:
+#     arch  *archetype # Entity's current archetype
+#     index uint32     # Entity's current index in the archetype
