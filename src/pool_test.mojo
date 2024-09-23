@@ -1,8 +1,11 @@
 from testing import *
+from random import random_float64
 
-from pool import EntityPool
+
+from collections import Dict
+from pool import EntityPool, BitPool, IntPool
 from entity import Entity
-from constants import MAX_UINT16
+from constants import MAX_UINT16, MASK_TOTAL_BITS
 from test_utils import assert_equal_lists
 
 def test_entity_pool_constructor():
@@ -49,104 +52,111 @@ def test_entity_pool():
     assert_false(p.is_alive(Entity()), "Zero entity should not be alive")
 
 
+def test_entity_pool_stochastic():
+    p = EntityPool()
 
-# fn TestEntityPoolStochastic(t *testing.T):
-#     p = newEntityPool(128)
+    for _ in range(10):
+        p.reset()
+        assert_equal(0, len(p))
+        assert_equal(0, p.available())
 
-#     for i = 0; i < 10; i++:
-#         p.reset()
-#         assert_equal(0, p.Len())
-#         assert_equal(0, p.Available())
-
-#         alive = map[Entity]bool{}
-#         for i = 0; i < 10; i++:
-#             e = p.get()
-#             alive[e] = True
+        alive = Dict[Entity, Bool]()
+        for _ in range(10):
+            e = p.get()
+            alive[e] = True
         
-
-#         for e, isAlive = range alive:
-#             assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity %v after initialization", e)
-#             if rand.Float32() > 0.75:
-#                 continue
+        for item in alive.items():
+            e, isAlive = item[].key, item[].value
+            assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity " + str(e) + " after initialization")
+            if random_float64() > 0.75:
+                continue
             
-#             p.Recycle(e)
-#             alive[e] = False
+            p.recycle(e)
+            alive[e] = False
         
-#         for e, isAlive = range alive:
-#             assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity %v after 1st removal. Entity is %v", e, p._entities[e.id])
+        for item in alive.items():
+            e, isAlive = item[].key, item[].value
+            assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity " + str(e) + " after 1st removal. Entity is " + str(p._entities[int(e.id)]))
         
-#         for i = 0; i < 10; i++:
-#             e = p.get()
-#             alive[e] = True
+        for _ in range(10):
+            e = p.get()
+            alive[e] = True
         
-#         for e, isAlive = range alive:
-#             assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity %v after 1st recycling. Entity is %v", e, p._entities[e.id])
+        for item in alive.items():
+            e, isAlive = item[].key, item[].value
+            assert_equal(isAlive, p.is_alive(e), "Wrong alive state of entity " + str(e) + " after 1st recycling. Entity is " + str(p._entities[int(e.id)]))
         
-#         assert_equal(uint32(0), p.available, "No more _entities should be available")
+        assert_equal(0, p._available, "No more _entities should be available")
 
-#         for e, isAlive = range alive:
-#             if !isAlive or rand.Float32() > 0.75:
-#                 continue
+        for item in alive.items():
+            e, isAlive = item[].key, item[].value
+            if not isAlive or random_float64() > 0.75:
+                continue
             
-#             p.Recycle(e)
-#             alive[e] = False
+            p.recycle(e)
+            alive[e] = False
         
-#         for e, a = range alive:
-#             assert_equal(a, p.is_alive(e), "Wrong alive state of entity %v after 2nd removal. Entity is %v", e, p._entities[e.id])
-        
+        for item in alive.items():
+            e, a = item[].key, item[].value
+            assert_equal(a, p.is_alive(e), "Wrong alive state of entity " + str(e) + " after 2nd removal. Entity is " + str(p._entities[int(e.id)]))
+
+
+def test_bit_pool():
+    p = BitPool()
+
+    for i in range(MASK_TOTAL_BITS):
+        assert_equal(i, int(p.get()))
     
 
-# fn TestBitPool(t *testing.T):
-#     p = bitPool{}
+    with assert_raises():
+        _ = p.get()
 
-#     for i = 0; i < MASK_TOTAL_BITS; i++:
-#         assert_equal(i, int(p.get()))
+    for i in range(10):
+        p.recycle(i)
+    
+    for i in range(9, -1, -1):
+        assert_equal(i, int(p.get()))
+    
+    with assert_raises():
+        _ = p.get()
+
+    p.reset()
+
+    for i in range(MASK_TOTAL_BITS):
+        assert_equal(i, int(p.get()))
+    
+    with assert_raises():
+        _ = p.get()
+
+    for i in range(10):
+        p.recycle(i)
+    
+    for i in range(9, -1, -1):
+        assert_equal(i, int(p.get()))
+
+
+def test_int_pool():
+    p = IntPool()
+
+    for i in range(32):
+        assert_equal(i, p.get())
     
 
-#     assert.Panics(t, fn(): p.get() })
+    assert_equal(32, len(p._pool))
 
-#     for i = 0; i < 10; i++:
-#         p.Recycle(uint8(i))
-    
-#     for i = 9; i >= 0; i--:
-#         assert_equal(i, int(p.get()))
-    
+    p.recycle(3)
+    p.recycle(4)
+    assert_equal(4, p.get())
+    assert_equal(3, p.get())
 
-#     assert.Panics(t, fn(): p.get() })
+    p.reset()
 
-#     p.reset()
-
-#     for i = 0; i < MASK_TOTAL_BITS; i++:
-#         assert_equal(i, int(p.get()))
-    
-
-#     assert.Panics(t, fn(): p.get() })
-
-#     for i = 0; i < 10; i++:
-#         p.Recycle(uint8(i))
-    
-#     for i = 9; i >= 0; i--:
-#         assert_equal(i, int(p.get()))
-    
-
-# fn TestIntPool(t *testing.T):
-#     p = newIntPool[int](16)
-
-#     for n = 0; n < 3; n++:
-#         for i = 0; i < 32; i++:
-#             assert_equal(i, p.get())
-        
-
-#         assert_equal(32, len(p.pool))
-
-#         p.Recycle(3)
-#         p.Recycle(4)
-#         assert_equal(4, p.get())
-#         assert_equal(3, p.get())
-
-#         p.reset()
     
 def main():
     test_entity_pool_constructor()
     test_entity_pool()
+    test_entity_pool_stochastic()
+    test_bit_pool()
+    test_int_pool()
+
     print("All tests passed")
