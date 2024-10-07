@@ -1,72 +1,76 @@
-package ecs_test
+package ecs
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/mlange-42/arche/ecs"
-    "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestCachedMaskFilter(t *testing.T):
-    f = ecs.all(1, 2, 3).without(4)
+func TestCachedMaskFilter(t *testing.T) {
+	f := All(id(1), id(2), id(3)).Without(id(4))
 
-    assert_true(f.matches(ecs.all(1, 2, 3)))
-    assert_true(f.matches(ecs.all(1, 2, 3, 5)))
+	assert.True(t, f.Matches(all(id(1), id(2), id(3))))
+	assert.True(t, f.Matches(all(id(1), id(2), id(3), id(5))))
 
-    assert_false(f.matches(ecs.all(1, 2)))
-    assert_false(f.matches(ecs.all(1, 2, 3, 4)))
+	assert.False(t, f.Matches(all(id(1), id(2))))
+	assert.False(t, f.Matches(all(id(1), id(2), id(3), id(4))))
+}
 
-fn TestCachedFilter(t *testing.T):
-    w = ecs.NewWorld()
+func TestCachedFilter(t *testing.T) {
+	w := NewWorld()
 
-    f = ecs.all(1, 2, 3)
-    fc = w.Cache().Register(f)
+	f := All(id(1), id(2), id(3))
+	fc := w.Cache().Register(f)
 
-    assert_equal(f.matches(ecs.all(1, 2, 3)), fc.matches(ecs.all(1, 2, 3)))
-    assert_equal(f.matches(ecs.all(1, 2)), fc.matches(ecs.all(1, 2)))
+	assert.Equal(t, f.Matches(all(id(1), id(2), id(3))), fc.Matches(all(id(1), id(2), id(3))))
+	assert.Equal(t, f.Matches(all(id(1), id(2))), fc.Matches(all(id(1), id(2))))
 
-    w.Cache().Unregister(&fc)
+	w.Cache().Unregister(&fc)
+}
 
-fn ExampleMaskFilter():
-    world = ecs.NewWorld()
-    posID = ecs.ComponentID[Position](&world)
-    velID = ecs.ComponentID[Velocity](&world)
+func ExampleMaskFilter() {
+	world := NewWorld()
+	posID := ComponentID[Position](&world)
+	velID := ComponentID[Velocity](&world)
 
-    filter = ecs.all(posID).without(velID)
-    query = world.Query(&filter)
+	filter := All(posID).Without(velID)
+	query := world.Query(&filter)
 
-    for query.Next():
-        # ...
-    
-    # Output:
+	for query.Next() {
+		// ...
+	}
+	// Output:
+}
 
-fn ExampleCachedFilter():
-    world = ecs.NewWorld()
-    posID = ecs.ComponentID[Position](&world)
+func ExampleCachedFilter() {
+	world := NewWorld()
+	posID := ComponentID[Position](&world)
 
-    filter = ecs.all(posID)
-    cached = world.Cache().Register(filter)
+	filter := All(posID)
+	cached := world.Cache().Register(filter)
 
-    query = world.Query(&cached)
+	query := world.Query(&cached)
 
-    for query.Next():
-        # ...
-    
-    # Output:
+	for query.Next() {
+		// ...
+	}
+	// Output:
+}
 
-fn ExampleRelationFilter():
-    world = ecs.NewWorld()
-    childID = ecs.ComponentID[ChildOf](&world)
+func ExampleRelationFilter() {
+	world := NewWorld()
+	childID := ComponentID[ChildOf](&world)
 
-    target = world.NewEntity()
+	target := world.NewEntity()
 
-    builder = ecs.NewBuilder(&world, childID).WithRelation(childID)
-    builder.NewBatch(100, target)
+	builder := NewBuilder(&world, childID).WithRelation(childID)
+	builder.NewBatch(100, target)
 
-    filter = ecs.NewRelationFilter(ecs.all(childID), target)
+	filter := NewRelationFilter(All(childID), target)
 
-    query = world.Query(&filter)
-    for query.Next():
-        # ...
-    
-    # Output:
+	query := world.Query(&filter)
+	for query.Next() {
+		// ...
+	}
+	// Output:
+}

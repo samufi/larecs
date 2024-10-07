@@ -1,89 +1,164 @@
 package ecs
 
 import (
-    "testing"
-    "unsafe"
+	"testing"
+	"unsafe"
 
-    "github.com/stretchr/testify/assert"
+	"github.com/mlange-42/arche/ecs/event"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestCapacity(t *testing.T):
-    assert_equal(0, capacity(0, 8))
-    assert_equal(8, capacity(1, 8))
-    assert_equal(8, capacity(8, 8))
-    assert_equal(16, capacity(9, 8))
+func TestCapacity(t *testing.T) {
+	assert.Equal(t, 0, capacity(0, 8))
+	assert.Equal(t, 8, capacity(1, 8))
+	assert.Equal(t, 8, capacity(8, 8))
+	assert.Equal(t, 16, capacity(9, 8))
+}
 
-fn TestCapacityU32(t *testing.T):
-    assert_equal(0, int(capacityU32(0, 8)))
-    assert_equal(8, int(capacityU32(1, 8)))
-    assert_equal(8, int(capacityU32(8, 8)))
-    assert_equal(16, int(capacityU32(9, 8)))
+func TestCapacityNonZero(t *testing.T) {
+	assert.Equal(t, 8, capacityNonZero(0, 8))
+	assert.Equal(t, 8, capacityNonZero(1, 8))
+	assert.Equal(t, 8, capacityNonZero(8, 8))
+	assert.Equal(t, 16, capacityNonZero(9, 8))
+}
 
-fn TestLockMask(t *testing.T):
-    locks = lockMask{}
+func TestCapacityU32(t *testing.T) {
+	assert.Equal(t, 0, int(capacityU32(0, 8)))
+	assert.Equal(t, 8, int(capacityU32(1, 8)))
+	assert.Equal(t, 8, int(capacityU32(8, 8)))
+	assert.Equal(t, 16, int(capacityU32(9, 8)))
+}
 
-    assert_false(locks.IsLocked())
+func TestLockMask(t *testing.T) {
+	locks := lockMask{}
 
-    l1 = locks.Lock()
-    assert_true(locks.IsLocked())
-    assert_equal(0, int(l1))
+	assert.False(t, locks.IsLocked())
 
-    l2 = locks.Lock()
-    assert_true(locks.IsLocked())
-    assert_equal(1, int(l2))
+	l1 := locks.Lock()
+	assert.True(t, locks.IsLocked())
+	assert.Equal(t, 0, int(l1))
 
-    locks.Unlock(l1)
-    assert_true(locks.IsLocked())
+	l2 := locks.Lock()
+	assert.True(t, locks.IsLocked())
+	assert.Equal(t, 1, int(l2))
 
-    assert.Panics(t, fn(): locks.Unlock(l1) })
+	locks.Unlock(l1)
+	assert.True(t, locks.IsLocked())
 
-    locks.Unlock(l2)
-    assert_false(locks.IsLocked())
+	assert.PanicsWithValue(t, "unbalanced unlock. Did you close a query that was already iterated?",
+		func() { locks.Unlock(l1) })
 
-fn TestPagedSlice(t *testing.T):
-    a = pagedSlice[int32]{}
+	locks.Unlock(l2)
+	assert.False(t, locks.IsLocked())
+}
 
-    var i int32
-    for i = 0; i < 66; i++:
-        a.Add(i)
-        assert_equal(i, *a.get(i))
-        assert_equal(i+1, a.Len())
-    
+func TestPagedSlice(t *testing.T) {
+	a := pagedSlice[int32]{}
 
-    a.set(3, 100)
-    assert_equal(int32(100), *a.get(3))
+	var i int32
+	for i = 0; i < 66; i++ {
+		a.Add(i)
+		assert.Equal(t, i, *a.Get(i))
+		assert.Equal(t, i+1, a.Len())
+	}
 
-fn TestPagedSlicePointerPersistence(t *testing.T):
-    a = pagedSlice[int32]{}
+	a.Set(3, 100)
+	assert.Equal(t, int32(100), *a.Get(3))
+}
 
-    a.Add(0)
-    p1 = a.get(0)
+func TestSubscribes(t *testing.T) {
+	id1 := id(1)
+	id2 := id(2)
+	id3 := id(3)
 
-    var i int32
-    for i = 1; i < 66; i++:
-        a.Add(i)
-        assert_equal(i, *a.get(i))
-        assert_equal(i+1, a.Len())
-    
+	assert.False(t,
+		subscribes(0, all(id1), all(id2), all(id1, id2), nil, nil),
+	)
 
-    p2 = a.get(0)
-    assert_equal(unsafe.Pointer(p1), unsafe.Pointer(p2))
-    *p1 = 100
-    assert_equal(int32(100), *p2)
+	assert.True(t,
+		subscribes(event.ComponentAdded, all(id1), nil, all(id1, id2), nil, nil),
+	)
+	assert.False(t,
+		subscribes(event.ComponentAdded, nil, all(id1), all(id1, id2), nil, nil),
+	)
+	assert.True(t,
+		subscribes(event.ComponentAdded, all(id1, id2), nil, all(id2), nil, nil),
+	)
+	assert.False(t,
+		subscribes(event.ComponentAdded, all(id1, id2), nil, all(id3), nil, nil),
+	)
 
-fn BenchmarkPagedSlice_Get(b *testing.B):
-    b.StopTimer()
+	assert.True(t,
+		subscribes(event.ComponentRemoved, nil, all(id1), all(id1, id2), nil, nil),
+	)
+	assert.False(t,
+		subscribes(event.ComponentRemoved, all(id1), nil, all(id1, id2), nil, nil),
+	)
+	assert.True(t,
+		subscribes(event.ComponentRemoved, nil, all(id1, id2), all(id2), nil, nil),
+	)
+	assert.False(t,
+		subscribes(event.ComponentRemoved, nil, all(id1, id2), all(id3), nil, nil),
+	)
 
-    count = 128
-    s = pagedSlice[int]{}
+	assert.True(t,
+		subscribes(event.RelationChanged, &Mask{}, &Mask{}, all(id1, id2), nil, &id1),
+	)
+	assert.True(t,
+		subscribes(event.RelationChanged, &Mask{}, &Mask{}, all(id1, id2), &id1, &id3),
+	)
+	assert.False(t,
+		subscribes(event.RelationChanged, &Mask{}, &Mask{}, all(id1), &id2, &id3),
+	)
 
-    for i = 0; i < count; i++:
-        s.Add(1)
-    
+	assert.True(t,
+		subscribes(event.TargetChanged, &Mask{}, &Mask{}, all(id1, id2), &id1, &id1),
+	)
+	assert.False(t,
+		subscribes(event.TargetChanged, &Mask{}, &Mask{}, all(id1, id2), &id3, &id3),
+	)
 
-    b.StartTimer()
+	assert.True(t,
+		subscribes(event.ComponentAdded|event.ComponentRemoved|event.TargetChanged, all(id1, id2), all(id1, id2), all(id3), &id3, &id3),
+	)
+	assert.False(t,
+		subscribes(event.ComponentAdded|event.ComponentRemoved|event.TargetChanged, all(id1), all(id1), all(id3), &id2, &id2),
+	)
+}
 
-    sum = 0
-    for i = 0; i < b.N; i++:
-        sum += *s.get(int32(i % count))
-    
+func TestPagedSlicePointerPersistence(t *testing.T) {
+	a := pagedSlice[int32]{}
+
+	a.Add(0)
+	p1 := a.Get(0)
+
+	var i int32
+	for i = 1; i < 66; i++ {
+		a.Add(i)
+		assert.Equal(t, i, *a.Get(i))
+		assert.Equal(t, i+1, a.Len())
+	}
+
+	p2 := a.Get(0)
+	assert.Equal(t, unsafe.Pointer(p1), unsafe.Pointer(p2))
+	*p1 = 100
+	assert.Equal(t, int32(100), *p2)
+}
+
+func BenchmarkPagedSlice_Get(b *testing.B) {
+	b.StopTimer()
+
+	count := 128
+	s := pagedSlice[int]{}
+
+	for i := 0; i < count; i++ {
+		s.Add(1)
+	}
+
+	b.StartTimer()
+
+	sum := 0
+	for i := 0; i < b.N; i++ {
+		sum += *s.Get(int32(i % count))
+	}
+}

@@ -1,49 +1,87 @@
 package ecs
 
 import (
-    "fmt"
-    "testing"
+	"encoding/json"
+	"fmt"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestEntityAsIndex(t *testing.T):
-    entity = Entity{1, 0}
-    arr = []int{0, 1, 2}
+func TestEntityAsIndex(t *testing.T) {
+	entity := Entity{id: 1}
+	arr := []int{0, 1, 2}
 
-    val = arr[entity.id]
-    _ = val
+	val := arr[entity.id]
+	_ = val
+}
 
-fn TestZeroEntity(t *testing.T):
-    assert_true(Entity{}.is_zero())
-    assert_false(Entity{1, 0}.is_zero())
+func TestEntityID(t *testing.T) {
+	e := newEntityGen(1, 2)
 
-fn BenchmarkEntityIsZero(b *testing.B):
-    e = Entity{}
+	assert.Equal(t, e.ID(), uint32(1))
+}
 
-    isZero = False
-    for i = 0; i < b.N; i++:
-        isZero = e.is_zero()
-    
-    _ = isZero
+func TestEntityGeneration(t *testing.T) {
+	e := newEntityGen(1, 2)
 
-fn ExampleEntity():
-    world = NewWorld()
+	assert.Equal(t, e.Generation(), uint32(2))
+}
 
-    posID = ComponentID[Position](&world)
-    velID = ComponentID[Velocity](&world)
+func TestZeroEntity(t *testing.T) {
+	assert.True(t, Entity{}.IsZero())
+	assert.False(t, Entity{1, 0}.IsZero())
+}
 
-    e1 = world.NewEntity()
-    e2 = world.NewEntity(posID, velID)
+func TestEntityMarshal(t *testing.T) {
+	e := newEntityGen(2, 3)
 
-    fmt.Println(e1.is_zero(), e2.is_zero())
-    # Output: False False
+	jsonData, err := json.Marshal(&e)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-fn ExampleEntity_IsZero():
-    world = NewWorld()
+	e2 := Entity{}
+	err = json.Unmarshal(jsonData, &e2)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-    var e1 Entity
-    var e2 Entity = world.NewEntity()
+	assert.Equal(t, e2, e)
 
-    fmt.Println(e1.is_zero(), e2.is_zero())
-    # Output: True False
+	err = e2.UnmarshalJSON([]byte("pft"))
+	assert.NotNil(t, err)
+}
+
+func BenchmarkEntityIsZero(b *testing.B) {
+	e := Entity{}
+
+	isZero := false
+	for i := 0; i < b.N; i++ {
+		isZero = e.IsZero()
+	}
+	_ = isZero
+}
+
+func ExampleEntity() {
+	world := NewWorld()
+
+	posID := ComponentID[Position](&world)
+	velID := ComponentID[Velocity](&world)
+
+	e1 := world.NewEntity()
+	e2 := world.NewEntity(posID, velID)
+
+	fmt.Println(e1.IsZero(), e2.IsZero())
+	// Output: false false
+}
+
+func ExampleEntity_IsZero() {
+	world := NewWorld()
+
+	var e1 Entity
+	var e2 Entity = world.NewEntity()
+
+	fmt.Println(e1.IsZero(), e2.IsZero())
+	// Output: true false
+}

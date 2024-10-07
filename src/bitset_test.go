@@ -1,27 +1,28 @@
 package ecs
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestBitSet(t *testing.T):
-    b = bitSet{}
+func TestBitSet(t *testing.T) {
+	b := bitSet{}
 
-    b.ExtendTo(64)
-    assert_equal(1, len(b.data))
-    b.ExtendTo(65)
-    assert_equal(2, len(b.data))
-    b.ExtendTo(120)
-    assert_equal(2, len(b.data))
+	b.ExtendTo(64)
+	assert.Equal(t, 1, len(b.data))
+	b.ExtendTo(65)
+	assert.Equal(t, 2, len(b.data))
+	b.ExtendTo(120)
+	assert.Equal(t, 2, len(b.data))
 
-    assert_false(b.get(127))
-    b.set(127, True)
-    assert_true(b.get(127))
-    b.set(127, False)
-    assert_false(b.get(127))
+	assert.False(t, b.Get(127))
+	b.Set(127, true)
+	assert.True(t, b.Get(127))
+	b.Set(127, false)
+	assert.False(t, b.Get(127))
 
-    b.set(63, True)
-    b.reset()
-    assert_false(b.get(63))
+	b.Set(63, true)
+	b.Reset()
+	assert.False(t, b.Get(63))
+}

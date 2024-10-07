@@ -1,75 +1,130 @@
 package ecs_test
 
 import (
-    "fmt"
-    "testing"
+	"fmt"
+	"testing"
 
-    "github.com/mlange-42/arche/ecs"
-    "github.com/stretchr/testify/assert"
+	"github.com/mlange-42/arche/ecs"
+	"github.com/mlange-42/arche/ecs/event"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestEntityEvent(t *testing.T):
-    e = ecs.EntityEvent{AddedRemoved: 0}
+func TestEntityEvent(t *testing.T) {
+	e := ecs.EntityEvent{EventTypes: event.ComponentAdded}
 
-    assert_false(e.EntityAdded())
-    assert_false(e.EntityRemoved())
+	assert.False(t, e.Contains(event.EntityCreated))
+	assert.False(t, e.Contains(event.EntityRemoved))
 
-    e = ecs.EntityEvent{AddedRemoved: 1}
+	e = ecs.EntityEvent{EventTypes: event.EntityCreated | event.ComponentAdded}
 
-    assert_true(e.EntityAdded())
-    assert_false(e.EntityRemoved())
+	assert.True(t, e.Contains(event.EntityCreated))
+	assert.False(t, e.Contains(event.EntityRemoved))
 
-    e = ecs.EntityEvent{AddedRemoved: -1}
+	e = ecs.EntityEvent{EventTypes: event.EntityRemoved | event.ComponentRemoved}
 
-    assert_false(e.EntityAdded())
-    assert_true(e.EntityRemoved())
+	assert.False(t, e.Contains(event.EntityCreated))
+	assert.True(t, e.Contains(event.EntityRemoved))
+}
 
-type eventHandler struct:
-    LastEntity ecs.Entity
+type eventHandler struct {
+	LastEntity ecs.Entity
+}
 
-fn (h *eventHandler) ListenCopy(e ecs.EntityEvent):
-    h.LastEntity = e.Entity
+func (h *eventHandler) ListenCopy(e ecs.EntityEvent) {
+	h.LastEntity = e.Entity
+}
 
-fn (h *eventHandler) ListenPointer(e *ecs.EntityEvent):
-    h.LastEntity = e.Entity
+func (h *eventHandler) ListenPointer(e *ecs.EntityEvent) {
+	h.LastEntity = e.Entity
+}
 
-fn BenchmarkEntityEventCopy(b *testing.B):
-    handler = eventHandler{}
+func BenchmarkEntityEventCreate(b *testing.B) {
+	b.StopTimer()
+	world := ecs.NewWorld()
+	posID := ecs.ComponentID[Position](&world)
+	e := world.NewEntity()
+	mask := ecs.All(posID)
+	added := []ecs.ID{posID}
 
-    for i = 0; i < b.N; i++:
-        handler.ListenCopy(ecs.EntityEvent{Entity: ecs.Entity{}, OldMask: ecs.Mask{}, NewMask: ecs.Mask{}, Added: nil, Removed: nil, Current: nil, AddedRemoved: 0})
-    
+	var event ecs.EntityEvent
 
-fn BenchmarkEntityEventCopyReuse(b *testing.B):
-    handler = eventHandler{}
-    event = ecs.EntityEvent{Entity: ecs.Entity{}, OldMask: ecs.Mask{}, NewMask: ecs.Mask{}, Added: nil, Removed: nil, Current: nil, AddedRemoved: 0}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		event = ecs.EntityEvent{Entity: e, Added: mask, Removed: mask, AddedIDs: added, RemovedIDs: nil}
+	}
+	b.StopTimer()
+	_ = event
+}
 
-    for i = 0; i < b.N; i++:
-        handler.ListenCopy(event)
-    
+func BenchmarkEntityEventHeapPointer(b *testing.B) {
+	b.StopTimer()
+	world := ecs.NewWorld()
+	posID := ecs.ComponentID[Position](&world)
+	e := world.NewEntity()
+	mask := ecs.All(posID)
+	added := []ecs.ID{posID}
 
-fn BenchmarkEntityEventPointer(b *testing.B):
-    handler = eventHandler{}
+	var event *ecs.EntityEvent
 
-    for i = 0; i < b.N; i++:
-        handler.ListenPointer(&ecs.EntityEvent{Entity: ecs.Entity{}, OldMask: ecs.Mask{}, NewMask: ecs.Mask{}, Added: nil, Removed: nil, Current: nil, AddedRemoved: 0})
-    
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		event = &ecs.EntityEvent{Entity: e, Added: mask, Removed: mask, AddedIDs: added, RemovedIDs: nil}
+	}
+	b.StopTimer()
+	_ = event
+}
 
-fn BenchmarkEntityEventPointerReuse(b *testing.B):
-    handler = eventHandler{}
-    event = ecs.EntityEvent{Entity: ecs.Entity{}, OldMask: ecs.Mask{}, NewMask: ecs.Mask{}, Added: nil, Removed: nil, Current: nil, AddedRemoved: 0}
+func BenchmarkEntityEventCopy(b *testing.B) {
+	handler := eventHandler{}
 
-    for i = 0; i < b.N; i++:
-        handler.ListenPointer(&event)
-    
+	for i := 0; i < b.N; i++ {
+		handler.ListenCopy(ecs.EntityEvent{Entity: ecs.Entity{}, Added: ecs.Mask{}, Removed: ecs.Mask{}, AddedIDs: nil, RemovedIDs: nil})
+	}
+}
 
-fn ExampleEntityEvent():
-    world = ecs.NewWorld()
+func BenchmarkEntityEventCopyReuse(b *testing.B) {
+	handler := eventHandler{}
+	event := ecs.EntityEvent{Entity: ecs.Entity{}, Added: ecs.Mask{}, Removed: ecs.Mask{}, AddedIDs: nil, RemovedIDs: nil}
 
-    listener = fn(evt *ecs.EntityEvent):
-        fmt.Println(evt)
-    
-    world.SetListener(listener)
+	for i := 0; i < b.N; i++ {
+		handler.ListenCopy(event)
+	}
+}
 
-    world.NewEntity()
-    # Output: &{{1 0}:0 0}:0 0} [] [] [] 1:0 0}:0 0} False}
+func BenchmarkEntityEventPointer(b *testing.B) {
+	handler := eventHandler{}
+
+	for i := 0; i < b.N; i++ {
+		handler.ListenPointer(&ecs.EntityEvent{Entity: ecs.Entity{}, Added: ecs.Mask{}, Removed: ecs.Mask{}, AddedIDs: nil, RemovedIDs: nil})
+	}
+}
+
+func BenchmarkEntityEventPointerReuse(b *testing.B) {
+	handler := eventHandler{}
+	event := ecs.EntityEvent{Entity: ecs.Entity{}, Added: ecs.Mask{}, Removed: ecs.Mask{}, AddedIDs: nil, RemovedIDs: nil}
+
+	for i := 0; i < b.N; i++ {
+		handler.ListenPointer(&event)
+	}
+}
+
+func ExampleEntityEvent() {
+	world := ecs.NewWorld()
+
+	listener := TestListener{
+		Callback: func(world *ecs.World, evt ecs.EntityEvent) { fmt.Println(evt.Entity) },
+	}
+	world.SetListener(&listener)
+
+	world.NewEntity()
+	// Output: {1 0}
+}
+
+func ExampleEntityEvent_Contains() {
+	evt := ecs.EntityEvent{EventTypes: event.EntityCreated | event.EntityRemoved}
+
+	fmt.Println(evt.Contains(event.EntityRemoved))
+	fmt.Println(evt.Contains(event.RelationChanged))
+	// Output: true
+	// false
+}

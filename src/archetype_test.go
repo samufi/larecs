@@ -1,312 +1,353 @@
 package ecs
 
 import (
-    "reflect"
-    "testing"
+	"reflect"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestArchetype(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
+func TestArchetype(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 32, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, False, Entity{})
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 32, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, false, 16, Entity{})
 
-    arch.Add(
-        newEntity(0),
-        Component{ID: 0, Comp: &Position{1, 2}},
-        Component{ID: 1, Comp: &rotation{3}},
-    )
+	arch.Add(
+		newEntity(0),
+		Component{ID: id(0), Comp: &Position{1, 2}},
+		Component{ID: id(1), Comp: &rotation{3}},
+	)
 
-    arch.Add(
-        newEntity(1),
-        Component{ID: 0, Comp: &Position{4, 5}},
-        Component{ID: 1, Comp: &rotation{6}},
-    )
+	arch.Add(
+		newEntity(1),
+		Component{ID: id(0), Comp: &Position{4, 5}},
+		Component{ID: id(1), Comp: &rotation{6}},
+	)
 
-    assert_equal(2, int(arch.Len()))
+	assert.Equal(t, 2, int(arch.Len()))
 
-    e0 = arch.GetEntity(0)
-    e1 = arch.GetEntity(1)
-    assert_equal(Entity{0, 0}, e0)
-    assert_equal(Entity{1, 0}, e1)
+	e0 := arch.GetEntity(0)
+	e1 := arch.GetEntity(1)
+	assert.Equal(t, Entity{0, 0}, e0)
+	assert.Equal(t, Entity{1, 0}, e1)
 
-    pos0 = (*Position)(arch.get(0, ID(0)))
-    rot0 = (*rotation)(arch.get(0, ID(1)))
-    pos1 = (*Position)(arch.get(1, ID(0)))
-    rot1 = (*rotation)(arch.get(1, ID(1)))
+	pos0 := (*Position)(arch.Get(0, id(0)))
+	rot0 := (*rotation)(arch.Get(0, id(1)))
+	pos1 := (*Position)(arch.Get(1, id(0)))
+	rot1 := (*rotation)(arch.Get(1, id(1)))
 
-    assert_equal(1, pos0.X)
-    assert_equal(2, pos0.Y)
-    assert_equal(3, rot0.Angle)
-    assert_equal(4, pos1.X)
-    assert_equal(5, pos1.Y)
-    assert_equal(6, rot1.Angle)
+	assert.Equal(t, 1, pos0.X)
+	assert.Equal(t, 2, pos0.Y)
+	assert.Equal(t, 3, rot0.Angle)
+	assert.Equal(t, 4, pos1.X)
+	assert.Equal(t, 5, pos1.Y)
+	assert.Equal(t, 6, rot1.Angle)
 
-    arch.Remove(0)
-    assert_equal(1, int(arch.Len()))
+	arch.Remove(0)
+	assert.Equal(t, 1, int(arch.Len()))
 
-    pos0 = (*Position)(arch.get(0, ID(0)))
-    rot0 = (*rotation)(arch.get(0, ID(1)))
-    assert_equal(4, pos0.X)
-    assert_equal(5, pos0.Y)
-    assert_equal(6, rot0.Angle)
+	pos0 = (*Position)(arch.Get(0, id(0)))
+	rot0 = (*rotation)(arch.Get(0, id(1)))
+	assert.Equal(t, 4, pos0.X)
+	assert.Equal(t, 5, pos0.Y)
+	assert.Equal(t, 6, rot0.Angle)
 
-    assert.Panics(t, fn():
-        arch.Add(
-            newEntity(1),
-            Component{ID: 0, Comp: &Position{4, 5}},
-        )
-    )
+	assert.PanicsWithValue(t, "Invalid number of components", func() {
+		arch.Add(
+			newEntity(1),
+			Component{ID: id(0), Comp: &Position{4, 5}},
+		)
+	})
+}
 
-fn TestNewArchetype(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
+func TestNewArchetype(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 32, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, True, Entity{})
-    assert_equal(32, int(arch.Cap()))
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 32, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, true, 16, Entity{})
+	assert.Equal(t, 32, int(arch.Cap()))
 
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, False, Entity{})
-    assert_equal(1, int(arch.Cap()))
+	arch = archetype{}
+	data = archetypeData{}
+	arch.Init(&node, &data, 0, false, 16, Entity{})
+	assert.Equal(t, 1, int(arch.Cap()))
 
-    comps = []componentType{
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-    
-    assert.Panics(t, fn():
-        node = newArchNode(all(0, 1), &NodeData{}, -1, 32, comps)
-        arch = archetype{}
-        data = archetypeData{}
-        arch.Init(&node, &data, 0, True, Entity{})
-    )
+	comps = []componentType{
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+	}
+	assert.PanicsWithValue(t, "component arguments must be sorted by ID", func() {
+		node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 32, comps)
+		arch := archetype{}
+		data := archetypeData{}
+		arch.Init(&node, &data, 0, true, 16, Entity{})
+	})
+}
 
-fn TestArchetypeExtend(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
+func TestArchetypeExtend(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 8, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, True, Entity{})
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 8, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, true, 16, Entity{})
 
-    assert_equal(8, int(arch.Cap()))
-    assert_equal(0, int(arch.Len()))
+	assert.Equal(t, 8, int(arch.Cap()))
+	assert.Equal(t, 0, int(arch.Len()))
 
-    arch.extend(5)
-    assert_equal(8, int(arch.Cap()))
+	arch.extend(5)
+	assert.Equal(t, 8, int(arch.Cap()))
 
-    arch.extend(8)
-    assert_equal(8, int(arch.Cap()))
+	arch.extend(8)
+	assert.Equal(t, 8, int(arch.Cap()))
 
-    arch.extend(17)
-    assert_equal(24, int(arch.Cap()))
+	arch.extend(17)
+	assert.Equal(t, 24, int(arch.Cap()))
+}
 
-fn TestArchetypeAlloc(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 8, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, True, Entity{})
+func TestArchetypeExtendLayouts(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+		{ID: id(2), Type: reflect.TypeOf(relationComp{})},
+	}
+	entity := newEntity(1)
 
-    assert_equal(8, int(arch.Cap()))
-    assert_equal(0, int(arch.Len()))
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 8, comps[:2])
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, true, 16, Entity{})
+	node.SetArchetype(&arch)
 
-    arch.AllocN(1)
-    assert_equal(1, int(arch.Len()))
+	assert.Equal(t, len(arch.layouts), 16)
+	node.ExtendArchetypeLayouts(16)
+	assert.Equal(t, len(arch.layouts), 16)
+	node.ExtendArchetypeLayouts(32)
+	assert.Equal(t, len(arch.layouts), 32)
 
-    arch.AllocN(7)
-    assert_equal(8, int(arch.Len()))
-    assert_equal(8, int(arch.Cap()))
+	node = newArchNode(All(id(0), id(1)), &nodeData{}, id(2), true, 8, comps)
+	node.CreateArchetype(16, entity)
+	arch2 := node.GetArchetype(entity)
 
-    arch.AllocN(1)
-    assert_equal(9, int(arch.Len()))
-    assert_equal(16, int(arch.Cap()))
+	assert.Equal(t, len(arch2.layouts), 16)
+	node.ExtendArchetypeLayouts(16)
+	assert.Equal(t, len(arch2.layouts), 16)
+	node.ExtendArchetypeLayouts(32)
+	assert.Equal(t, len(arch2.layouts), 32)
+}
 
-fn TestArchetypeAddGetSet(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(testStruct0{})},
-        {ID: 1, Type: reflect.TypeOf(label{})},
-    
+func TestArchetypeAlloc(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 8, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, true, 16, Entity{})
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 1, comps)
-    a = archetype{}
-    data = archetypeData{}
-    a.Init(&node, &data, 0, True, Entity{})
+	assert.Equal(t, 8, int(arch.Cap()))
+	assert.Equal(t, 0, int(arch.Len()))
 
-    assert_equal(1, int(a.Cap()))
-    assert_equal(0, int(a.Len()))
+	arch.AllocN(1)
+	assert.Equal(t, 1, int(arch.Len()))
 
-    a.Add(Entity{1, 0}, Component{ID: 0, Comp: &testStruct0{100}}, Component{ID: 1, Comp: &label{}})
-    a.Add(Entity{2, 0}, Component{ID: 0, Comp: &testStruct0{200}}, Component{ID: 1, Comp: &label{}})
+	arch.AllocN(7)
+	assert.Equal(t, 8, int(arch.Len()))
+	assert.Equal(t, 8, int(arch.Cap()))
 
-    ts = (*testStruct0)(a.get(0, 0))
-    assert_equal(100, int(ts.Val))
+	arch.AllocN(1)
+	assert.Equal(t, 9, int(arch.Len()))
+	assert.Equal(t, 16, int(arch.Cap()))
+}
 
-    a.set(1, 0, &testStruct0{200})
-    a.set(1, 1, &label{})
+func TestArchetypeAddGetSet(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(testStruct0{})},
+		{ID: id(1), Type: reflect.TypeOf(label{})},
+	}
 
-    _ = (*testStruct0)(a.get(1, 0))
-    _ = (*label)(a.get(1, 1))
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 1, comps)
+	a := archetype{}
+	data := archetypeData{}
+	a.Init(&node, &data, 0, true, 16, Entity{})
 
-    a.SetEntity(1, Entity{100, 200})
-    e = a.GetEntity(1)
-    assert_equal(Entity{100, 200}, e)
+	assert.Equal(t, 1, int(a.Cap()))
+	assert.Equal(t, 0, int(a.Len()))
 
-    a.Remove(0)
-    assert_equal(1, int(a.Len()))
-    a.Remove(0)
-    assert_equal(0, int(a.Len()))
+	a.Add(Entity{1, 0}, Component{ID: id(0), Comp: &testStruct0{100}}, Component{ID: id(1), Comp: &label{}})
+	a.Add(Entity{2, 0}, Component{ID: id(0), Comp: &testStruct0{200}}, Component{ID: id(1), Comp: &label{}})
 
-fn TestArchetypeReset(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
+	ts := (*testStruct0)(a.Get(0, id(0)))
+	assert.Equal(t, 100, int(ts.Val))
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 32, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, False, Entity{})
+	a.Set(1, id(0), &testStruct0{200})
+	a.Set(1, id(1), &label{})
 
-    arch.Add(
-        newEntity(0),
-        Component{ID: 0, Comp: &Position{1, 2}},
-        Component{ID: 1, Comp: &rotation{3}},
-    )
+	_ = (*testStruct0)(a.Get(1, id(0)))
+	_ = (*label)(a.Get(1, id(1)))
 
-    arch.Add(
-        newEntity(1),
-        Component{ID: 0, Comp: &Position{4, 5}},
-        Component{ID: 1, Comp: &rotation{6}},
-    )
+	a.SetEntity(1, Entity{100, 200})
+	e := a.GetEntity(1)
+	assert.Equal(t, Entity{100, 200}, e)
 
-    assert_equal(Position{1, 2}, *(*Position)(arch.get(0, 0)))
-    assert_equal(Position{4, 5}, *(*Position)(arch.get(1, 0)))
-    assert_equal(2, int(arch.Len()))
+	a.Remove(0)
+	assert.Equal(t, 1, int(a.Len()))
+	a.Remove(0)
+	assert.Equal(t, 0, int(a.Len()))
+}
 
-    arch.reset()
-    assert_equal(0, int(arch.Len()))
+func TestArchetypeReset(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
 
-    arch.Add(
-        newEntity(0),
-        Component{ID: 0, Comp: &Position{10, 20}},
-        Component{ID: 1, Comp: &rotation{3}},
-    )
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 32, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, false, 16, Entity{})
 
-    arch.Add(
-        newEntity(1),
-        Component{ID: 0, Comp: &Position{40, 50}},
-        Component{ID: 1, Comp: &rotation{6}},
-    )
+	arch.Add(
+		newEntity(0),
+		Component{ID: id(0), Comp: &Position{1, 2}},
+		Component{ID: id(1), Comp: &rotation{3}},
+	)
 
-    assert_equal(Position{10, 20}, *(*Position)(arch.get(0, 0)))
-    assert_equal(Position{40, 50}, *(*Position)(arch.get(1, 0)))
-    assert_equal(2, int(arch.Len()))
+	arch.Add(
+		newEntity(1),
+		Component{ID: id(0), Comp: &Position{4, 5}},
+		Component{ID: id(1), Comp: &rotation{6}},
+	)
 
-fn TestArchetypeZero(t *testing.T):
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(Position{})},
-        {ID: 1, Type: reflect.TypeOf(rotation{})},
-    
+	assert.Equal(t, Position{1, 2}, *(*Position)(arch.Get(0, id(0))))
+	assert.Equal(t, Position{4, 5}, *(*Position)(arch.Get(1, id(0))))
+	assert.Equal(t, 2, int(arch.Len()))
 
-    node = newArchNode(all(0, 1), &NodeData{}, -1, 32, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, False, Entity{})
+	arch.Reset()
+	assert.Equal(t, 0, int(arch.Len()))
 
-    arch.Alloc(newEntity(0))
-    arch.Alloc(newEntity(1))
+	arch.Add(
+		newEntity(0),
+		Component{ID: id(0), Comp: &Position{10, 20}},
+		Component{ID: id(1), Comp: &rotation{3}},
+	)
 
-    assert_equal(Position{0, 0}, *(*Position)(arch.get(0, 0)))
-    assert_equal(Position{0, 0}, *(*Position)(arch.get(1, 0)))
+	arch.Add(
+		newEntity(1),
+		Component{ID: id(0), Comp: &Position{40, 50}},
+		Component{ID: id(1), Comp: &rotation{6}},
+	)
 
-    pos = (*Position)(arch.get(0, 0))
-    pos.X = 100
-    pos = (*Position)(arch.get(1, 0))
-    pos.X = 100
+	assert.Equal(t, Position{10, 20}, *(*Position)(arch.Get(0, id(0))))
+	assert.Equal(t, Position{40, 50}, *(*Position)(arch.Get(1, id(0))))
+	assert.Equal(t, 2, int(arch.Len()))
+}
 
-    assert_equal(Position{100, 0}, *(*Position)(arch.get(0, 0)))
-    assert_equal(Position{100, 0}, *(*Position)(arch.get(1, 0)))
+func TestArchetypeZero(t *testing.T) {
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(Position{})},
+		{ID: id(1), Type: reflect.TypeOf(rotation{})},
+	}
 
-    arch.Remove(0)
-    arch.Remove(0)
-    arch.Alloc(newEntity(0))
-    arch.Alloc(newEntity(1))
-    assert_equal(Position{0, 0}, *(*Position)(arch.get(0, 0)))
-    assert_equal(Position{0, 0}, *(*Position)(arch.get(1, 0)))
+	node := newArchNode(All(id(0), id(1)), &nodeData{}, ID{}, false, 32, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, false, 16, Entity{})
 
-fn BenchmarkIterArchetype_1000(b *testing.B):
-    b.StopTimer()
-    comps = []componentType{
-        {ID: 0, Type: reflect.TypeOf(testStruct0{})},
-    
+	arch.Alloc(newEntity(0))
+	arch.Alloc(newEntity(1))
 
-    node = newArchNode(all(0), &NodeData{}, -1, 32, comps)
-    arch = archetype{}
-    data = archetypeData{}
-    arch.Init(&node, &data, 0, True, Entity{})
+	assert.Equal(t, Position{0, 0}, *(*Position)(arch.Get(0, id(0))))
+	assert.Equal(t, Position{0, 0}, *(*Position)(arch.Get(1, id(0))))
 
-    for i = 0; i < 1000; i++:
-        arch.Alloc(newEntity(eid(i)))
-    
-    b.StartTimer()
+	pos := (*Position)(arch.Get(0, id(0)))
+	pos.X = 100
+	pos = (*Position)(arch.Get(1, id(0)))
+	pos.X = 100
 
-    for i = 0; i < b.N; i++:
-        len = arch.Len()
-        id = ID(0)
-        var j uint32
-        for j = 0; j < len; j++:
-            pos = (*testStruct0)(arch.get(j, id))
-            pos.Val++
-        
-    
+	assert.Equal(t, Position{100, 0}, *(*Position)(arch.Get(0, id(0))))
+	assert.Equal(t, Position{100, 0}, *(*Position)(arch.Get(1, id(0))))
 
-fn BenchmarkIterSlice_1000(b *testing.B):
-    b.StopTimer()
-    s = []testStruct0{}
-    for i = 0; i < 1000; i++:
-        s = append(s, testStruct0{})
-    
-    assert_equal(b, 1000, len(s))
-    b.StartTimer()
+	arch.Remove(0)
+	arch.Remove(0)
+	arch.Alloc(newEntity(0))
+	arch.Alloc(newEntity(1))
+	assert.Equal(t, Position{0, 0}, *(*Position)(arch.Get(0, id(0))))
+	assert.Equal(t, Position{0, 0}, *(*Position)(arch.Get(1, id(0))))
+}
 
-    for i = 0; i < b.N; i++:
-        for j = 0; j < len(s); j++:
-            a = s[j]
-            a.Val++
-        
-    
+func BenchmarkIterArchetype_1000(b *testing.B) {
+	b.StopTimer()
+	comps := []componentType{
+		{ID: id(0), Type: reflect.TypeOf(testStruct0{})},
+	}
 
-fn BenchmarkIterSliceInterface_1000(b *testing.B):
-    b.StopTimer()
-    s = []interface{}{}
-    for i = 0; i < 1000; i++:
-        s = append(s, testStruct0{})
-    
-    assert_equal(b, 1000, len(s))
-    b.StartTimer()
+	node := newArchNode(All(id(0)), &nodeData{}, ID{}, false, 32, comps)
+	arch := archetype{}
+	data := archetypeData{}
+	arch.Init(&node, &data, 0, true, 16, Entity{})
 
-    for i = 0; i < b.N; i++:
-        for j = 0; j < len(s); j++:
-            a = s[j].(testStruct0)
-            a.Val++
-        
-    
+	for i := 0; i < 1000; i++ {
+		arch.Alloc(newEntity(eid(i)))
+	}
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		len := arch.Len()
+		id := id(0)
+		var j uint32
+		for j = 0; j < len; j++ {
+			pos := (*testStruct0)(arch.Get(j, id))
+			pos.Val++
+		}
+	}
+}
+
+func BenchmarkIterSlice_1000(b *testing.B) {
+	b.StopTimer()
+	s := []testStruct0{}
+	for i := 0; i < 1000; i++ {
+		s = append(s, testStruct0{})
+	}
+	assert.Equal(b, 1000, len(s))
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(s); j++ {
+			a := s[j]
+			a.Val++
+		}
+	}
+}
+
+func BenchmarkIterSliceInterface_1000(b *testing.B) {
+	b.StopTimer()
+	s := []interface{}{}
+	for i := 0; i < 1000; i++ {
+		s = append(s, testStruct0{})
+	}
+	assert.Equal(b, 1000, len(s))
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(s); j++ {
+			a := s[j].(testStruct0)
+			a.Val++
+		}
+	}
+}

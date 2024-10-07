@@ -1,30 +1,32 @@
 package ecs_test
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/mlange-42/arche/ecs"
-    "github.com/stretchr/testify/assert"
+	"github.com/mlange-42/arche/ecs"
+	"github.com/stretchr/testify/assert"
 )
 
-fn TestConfig(t *testing.T):
-    c = ecs.NewConfig()
-    c = c.WithCapacityIncrement(16)
-    assert_equal(16, c.CapacityIncrement)
-    assert_equal(0, c.RelationCapacityIncrement)
+func TestConfig(t *testing.T) {
+	c := ecs.NewConfig()
+	c = c.WithCapacityIncrement(16)
+	assert.Equal(t, 16, c.CapacityIncrement)
+	assert.Equal(t, 0, c.RelationCapacityIncrement)
 
-    c = c.WithRelationCapacityIncrement(8)
-    assert_equal(8, c.RelationCapacityIncrement)
+	c = c.WithRelationCapacityIncrement(8)
+	assert.Equal(t, 8, c.RelationCapacityIncrement)
 
-    _ = ecs.NewWorld(c)
+	_ = ecs.NewWorld(c)
+}
 
-fn ExampleConfig():
-    config =
-        ecs.NewConfig().
-            WithCapacityIncrement(1024).       # Optionally set capacity increment
-            WithRelationCapacityIncrement(128) # Optionally set capacity increment for relations
+func ExampleConfig() {
+	config :=
+		ecs.NewConfig().
+			WithCapacityIncrement(1024).       // Optionally set capacity increment
+			WithRelationCapacityIncrement(128) // Optionally set capacity increment for relations
 
-    world = ecs.NewWorld(config)
+	world := ecs.NewWorld(config)
 
-    world.NewEntity()
-    # Output:
+	world.NewEntity()
+	// Output:
+}
