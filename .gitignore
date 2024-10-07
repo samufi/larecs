@@ -164,4 +164,4 @@ cython_debug/
 *.egg-info
 # magic environments
 .magic
-**.go
+# **.go
