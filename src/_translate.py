@@ -46,7 +46,7 @@ def translate_function_definitions(go_code):
         if params:
             if receiver_var:
                 arg_string += ", "
-            arg_string += ", ".join(("{1}: {0}".format(*pair.split()) for pair in params.split(",")))
+            arg_string += ", ".join(("{0}: {1}".format(*pair.split()) for pair in params.split(",")))
         
         if return_type:
             return_string = f" -> {return_type}"
