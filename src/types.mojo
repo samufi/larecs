@@ -1,8 +1,8 @@
 # Eid is the entity identifier/index type.
 alias EntityId = UInt32
 
-# # ID is the component identifier type.
-# type ID = uint8
+# ID is the component identifier type.
+alias Id = UInt8
 
 # # ResID is the resource identifier type.
 # type ResID = uint8
