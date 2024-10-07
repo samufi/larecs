@@ -10,14 +10,6 @@ def translate_variable_declarations(go_code):
     return go_code
 
 def translate_function_definitions(go_code):
-    # 1: receiver_var
-    # 2: receiver_type
-    # 3: func_name
-    # 4: params
-    # go_code = re.sub(r'func\s+\((\w+)\s+\*(\w+)\)\s+(\w+)\((.*?)\)', r'fn \3(\4) -> \2:', go_code)
-    # go_code = re.sub(r'func (\w+)\((.*?)\) (\w+)', r'fn \1(\2) -> \3:', go_code)
-    # go_code = re.sub(r'func (\w+)\((.*?)\) (\((.*?)\))', r'fn \1(\2) -> \4:', go_code)
-    # go_code = re.sub(r'func (\w+)\((.*?)\)', r'fn \1(\2):', go_code)
     result = []
     pattern_1 = re.compile(r'func\s+\((\w+)\s+\*(\w+)\)\s+(\w+)\((.*?)\)\s*(\w+)?')
     pattern_2 = re.compile(r'func\s+(\w+)\((.*?)\)\s*(\w+)?')
@@ -118,37 +110,6 @@ def translate_go_to_mojo(go_code):
     go_code = remove_go_braces(go_code)
     return go_code
 
-
-def capture_function_components(mojo_code):
-    pattern = re.compile(r'func\s+\((\w+)\s+\*(\w+)\)\s+(\w+)\((.*?)\)')
-    matches = pattern.findall(mojo_code)
-    
-    functions = []
-    for match in matches:
-        receiver_var, receiver_type, func_name, params = match
-        functions.append({
-            'receiver_var': receiver_var,
-            'receiver_type': receiver_type,
-            'func_name': func_name,
-            'params': params
-        })
-    
-    return functions
-
-# Example usage
-mojo_code = """
-func (w *World) RemoveEntity(entity Entity)
-func (p *Player) Move(x int, y int)
-func (e *Enemy) Attack(target Player)
-"""
-
-functions = capture_function_components(mojo_code)
-for func in functions:
-    print(f"Receiver Variable: {func['receiver_var']}")
-    print(f"Receiver Type: {func['receiver_type']}")
-    print(f"Function Name: {func['func_name']}")
-    print(f"Parameters: {func['params']}")
-    print()
 
 
 if __name__ == "__main__":
