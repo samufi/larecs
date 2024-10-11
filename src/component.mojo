@@ -3,8 +3,7 @@ from collections import Dict
 from types import get_max_int_size
 
 trait IdentifiableType:
-    """
-    IdentifiableType is a trait for types that have a unique identifier.
+    """IdentifiableType is a trait for types that have a unique identifier.
     """
 
     @parameter
@@ -33,8 +32,7 @@ struct ComponentInfo[Id: TrivialIntable]:
         return ComponentInfo[Id](id, sizeof[T]())
 
 struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: AnyLifetime[is_mutable].type]:
-    """
-    ComponentReference is an agnostic reference to ECS components.
+    """ComponentReference is an agnostic reference to ECS components.
 
     The ID is used to identify the component type. However, the 
     ID is never checked for validity. Use the ComponentManager to
@@ -61,8 +59,7 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: An
     
     @always_inline
     fn get_value[T: ComponentType](self) raises -> ref [__lifetime_of(self)] T: 
-        """
-        Get the value of the component.
+        """Get the value of the component.
         """
         if sizeof[T]() != int(self._item_size):
             raise Error("The size of the component type does not match the size of the component.")
@@ -70,14 +67,12 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: An
 
     @always_inline
     fn get_unsafe_ptr(self) -> UnsafePointer[UInt8]:
-        """
-        Get the unsafe pointer to the data of the component.
+        """Get the unsafe pointer to the data of the component.
         """
         return self._data
 
 struct ComponentManager[Id: TrivialIntable]:
-    """
-    ComponentManager is a manager for ECS components.
+    """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
     references for passing them around.
@@ -91,8 +86,7 @@ struct ComponentManager[Id: TrivialIntable]:
         self._components = Dict[Int, ComponentInfo[Id]]()
 
     fn register[T: ComponentType](inout self) raises:
-        """
-        Register a new component type.
+        """Register a new component type.
 
         Parameters:
             T: The component type to register.
@@ -110,8 +104,7 @@ struct ComponentManager[Id: TrivialIntable]:
         self._components[T.get_type_identifier()] = ComponentInfo[Id].new[T](Id(len(self._components)))
 
     fn get_id[T: ComponentType](self) raises -> Id:
-        """
-        Get the ID of a component type.
+        """Get the ID of a component type.
 
         Parameters:
             T: The component type.
@@ -122,8 +115,7 @@ struct ComponentManager[Id: TrivialIntable]:
         return self._components[T.get_type_identifier()].id
 
     fn get_info[T: ComponentType](self) raises -> ComponentInfo[Id]:
-        """
-        Get the info of a component type.
+        """Get the info of a component type.
 
         Raises:
             Error: If the component type has not been registered.
@@ -131,8 +123,7 @@ struct ComponentManager[Id: TrivialIntable]:
         return self._components[T.get_type_identifier()]
 
     fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
-        """
-        Get a type-agnostic reference to a component.
+        """Get a type-agnostic reference to a component.
 
         Parameters:
             T: The component type.

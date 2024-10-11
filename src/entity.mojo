@@ -12,8 +12,7 @@ from bit import bit_reverse
 
 @register_passable("trivial")
 struct Entity(EqualityComparable, Stringable, Hashable):
-    """
-    Entity identifier.
+    """Entity identifier.
     Holds an entity ID and it's generation for recycling.
     
     Entities are only created via the [World], using [World.NewEntity] or [World.NewEntityWith].
@@ -45,15 +44,13 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         return output
 
     fn is_zero(self) -> Bool:
-        """
-        Returns whether this entity is the reserved zero entity.
+        """Returns whether this entity is the reserved zero entity.
         """
         return self.id == 0
 
 @register_passable("trivial")
 struct EntityIndex:
-    """
-    Indicates where an entity is currently stored.
+    """Indicates where an entity is currently stored.
     """
     index UInt32       # Entity's current index in the archetype
     # TODO
