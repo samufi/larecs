@@ -9,7 +9,7 @@ struct DummyComponentType(EqualityComparable, Stringable):
     @parameter
     @staticmethod
     @always_inline
-    fn get_type_hash() -> Int:
+    fn get_type_identifier() -> Int:
         return 12345
 
     fn __init__(inout self, x: Int32):
@@ -40,7 +40,7 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](EqualityComparable, St
     @parameter
     @staticmethod
     @always_inline
-    fn get_type_hash() -> Int:
+    fn get_type_identifier() -> Int:
         return type_hash
     
     fn __eq__(self, other: Self) -> Bool:
@@ -122,6 +122,9 @@ def test_component_manager_get_info():
     assert_equal(info.id, 0)
     assert_equal(info.size, sizeof[DummyComponentType]())
 
+    with assert_raises():
+        manager.get_info[FlexibleDummyComponentType[1]]()
+
 def test_component_manager_get_ref():
     manager = ComponentManager[UInt8]()
     manager.register[DummyComponentType]()
@@ -130,6 +133,9 @@ def test_component_manager_get_ref():
     assert_equal(component_ref._id, 0)
     assert_equal(component_ref._item_size, sizeof[DummyComponentType]())
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
+    
+    with assert_raises():
+        manager.get_ref(FlexibleDummyComponentType[1]())
 
 def main():
     test_component_info_initialization()
