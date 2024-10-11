@@ -1,8 +1,14 @@
+from sys.info import sizeof
+
 # Eid is the entity identifier/index type.
 alias EntityId = UInt32
 
 # ID is the component identifier type.
 alias Id = UInt8
+
+fn get_max_int_size[T: AnyType]() -> UInt:
+    return 2 ** (sizeof[T]() * 8 - 1)
+
 
 # # ResID is the resource identifier type.
 # type ResID = uint8

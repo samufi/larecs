@@ -1,29 +1,37 @@
 from sys.info import sizeof
+from collections import Dict
+from types import get_max_int_size
 
 trait HashableType:
 
     @parameter
     @staticmethod
     @always_inline
-    fn get_type_hash() -> UInt:
+    fn get_type_hash() -> Int:
         ...
 
 trait ComponentType(HashableType, Movable):
     pass
 
+trait TrivialIntable(Intable, Copyable, Movable, Hashable):
+    fn __init__(inout self, value: Int):
+        ...
+    fn __init__(inout self, value: UInt):
+        ...
+
+# @register_passable("trivial")
 @value
-@register_passable("trivial")
-struct ComponentInfo[Id: IntLike]:
+struct ComponentInfo[Id: TrivialIntable]:
     var id: Id
     var size: UInt32
 
     @staticmethod
-    fn new[T: AnyType](id: Id) -> ComponentInfo:
-        return ComponentInfo(id, sizeof[T]())
+    fn new[T: AnyType](id: Id) -> ComponentInfo[Id]:
+        return ComponentInfo[Id](id, sizeof[T]())
 
-struct Component[Id: IntLike]:
+struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: AnyLifetime[is_mutable].type]:
     """
-    Component is an agnostic type representing an ECS component value.
+    ComponentReference is an agnostic reference to ECS components.
 
     The ID is used to identify the component type. However, the 
     ID is never checked for validity. 
@@ -39,10 +47,10 @@ struct Component[Id: IntLike]:
     var _item_size: UInt32
     var _data: UnsafePointer[UInt8]
 
-    fn __init__(inout self, id: Id, item_size: UInt32):
+    fn __init__[T: ComponentType](inout self, id: Id, ref[lifetime] value: T):
         self._id = id
-        self._item_size = item_size
-        self._data = UnsafePointer[UInt8].alloc(item_size)
+        self._item_size = sizeof[T]()
+        self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
     fn __moveinit__(inout self, owned existing: Self):
         self._id = existing._id
@@ -52,36 +60,16 @@ struct Component[Id: IntLike]:
     fn __copyinit__(inout self, existing: Self):
         self._id = existing._id
         self._item_size = existing._item_size
-        self._data = UnsafePointer[UInt8].alloc(self._item_size)
-        memcpy(self._data, existing._data, self._item_size)
-
-    @staticmethod
-    fn new[T: ComponentType](id: Id, owned value: T) -> Component[Id] as component:
-        """
-        Create a new component with a given id and value.
-        """
-        component = Component[Id](id, sizeof[T]())
-        component._data.bitcast[T].init_pointee_move(UnsafePointer.address_of(value)())
-
-    fn set_value[T: ComponentType](self) raises:
-        """
-        Set the value of the component.
-
-        Raises:
-            Error: If the size of the component type does not match the size of the component.
-        """
-        if sizeof[T]() != self._item_size:
-            raise Error("The size of the component type does not match the size of the component.")
-        self._data.bitcast[T].init_pointee_move(UnsafePointer.address_of(value)())
-
+        self._data = existing._data
+    
     @always_inline
-    fn get_value[T: ComponentType](self) -> ref[__lifetime_of(self)] T raises:
+    fn get_value[T: ComponentType](self) raises -> ref [__lifetime_of(self)] T: 
         """
         Get the value of the component.
         """
-        if sizeof[T]() != self._item_size:
+        if sizeof[T]() != int(self._item_size):
             raise Error("The size of the component type does not match the size of the component.")
-        return self._data.bitcast[T]()
+        return self._data.bitcast[T]()[0]
 
     @always_inline
     fn get_unsafe_ptr(self) -> UnsafePointer[UInt8]:
@@ -90,28 +78,29 @@ struct Component[Id: IntLike]:
         """
         return self._data
 
-    fn __del__(self):
-        self._data.free()
+struct ComponentManager[Id: TrivialIntable]:
 
-alias NewComponent[Id: IntLike, T: ComponentType] = Component[Id].new[T]
-
-struct ComponentManager[Id: IntLike]:
-
-    var _components: Dict[UInt, ComponentInfo[Id]]
-    alias max_size = 2 ** (sizeof(Id) - 1)
+    var _components: Dict[Int, ComponentInfo[Id]]
+    alias max_size = get_max_int_size[Id]()
     alias new_component[T: ComponentType] = Component[Id].new[T]
 
     fn __init__(inout self):
-        self._components = Dict[UInt, ComponentInfo[Id]]()
+        self._components = Dict[Int, ComponentInfo[Id]]()
 
-    fn register[component_type: HashableType](inout self) raises:
-        if component_type.get_type_hash() in self._components:
-            raise Error("A component with hash " + str(component_type.get_type_hash()) + " has already been registered.")
+    fn register[T: ComponentType](inout self) raises:
+        if T.get_type_hash() in self._components:
+            raise Error("A component with hash " + str(T.get_type_hash()) + " has already been registered.")
         
-        if len(_components) >= max_size:
-            raise Error("We cannot register more than " + str(max_size) + " elements in a component manager of this type.")
+        if len(self._components) >= self.max_size:
+            raise Error("We cannot register more than " + str(self.max_size) + " elements in a component manager of this type.")
 
-        self._components[component_type.get_type_hash()] = len(_components)
+        self._components[T.get_type_hash()] = ComponentInfo[Id].new[T](Id(len(self._components)))
 
-    fn get_id[component_type: HashableType](self) -> UInt raises:
-        return self._components[component_type.get_type_hash()]
+    fn get_id[T: ComponentType](self) raises -> Id:
+        return self._components[T.get_type_hash()].id
+
+    fn get_info[T: ComponentType](self) raises -> ComponentInfo[Id]:
+        return self._components[T.get_type_hash()]
+
+    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
+        return ComponentReference[Id](self.get_id[T](), value)
