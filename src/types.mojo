@@ -7,7 +7,7 @@ alias EntityId = UInt32
 alias Id = UInt8
 
 fn get_max_uint_size[T: AnyType]() -> UInt:
-    return 2 ** sizeof[T]() * 8
+    return 2 ** (sizeof[T]() * 8)
 
 
 # # ResID is the resource identifier type.
