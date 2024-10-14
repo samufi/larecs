@@ -52,6 +52,6 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 struct EntityIndex:
     """Indicates where an entity is currently stored.
     """
-    index UInt32       # Entity's current index in the archetype
+    var index UInt32       # Entity's current index in the archetype
     # TODO
     # arch  *archetype # Entity's current archetype
