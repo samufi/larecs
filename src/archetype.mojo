@@ -33,15 +33,19 @@ struct Archetype[Id: Intable]:
             self._ids.append(component.id)
             self._data[component.id] = UnsafePointer[UInt8].alloc(self._capacity * component.size)
 
+    fn __len__(self) -> UInt32:
+        """Returns the number of entities in the archetype.
+        """
+        return self._size
 
     @always_inline
-    fn _extend(inout self):
+    fn reserve(inout self):
         """Extend the capacity of the archetype by factor 2
         """
-        self._extend(self._capacity * 2)    
+        self.reserve(self._capacity * 2)    
 
 
-    fn _extend(inout self, new_capacity: UInt32):
+    fn reserve(inout self, new_capacity: UInt32):
         """Extend the capacity of the archetype to a given number.
 
         Does nothing if the new capacity is not larger than the current capacity.
@@ -89,7 +93,7 @@ struct Archetype[Id: Intable]:
         return False
 
 
-    fn add(inout self, entity: Entity, components: ...ComponentReference) -> UInt32:
+    fn add(inout self, entity: Entity, components: ...ComponentReference) raises -> UInt32:
         """Adds an entity with components to the archetype.
         """
         if len(components) != len(self.ids):
@@ -102,18 +106,21 @@ struct Archetype[Id: Intable]:
 
         self.entities.append(entity)
 
-        for component in components:
+        for i, component in components:
+            id = component.get_id()
+            if not self.ids[i] == id:
+                raise Error("Component not in archetype")
             var size = self._sizes[component.get_id()]
             if not size:
                 continue
             
-            memcpy(self._get_component_ptr(idx, c.id), component.get_unsafe_ptr(), size)
+            memcpy(self._get_component_ptr(idx, component.id), component.get_unsafe_ptr(), size)
         
         self._size += 1
         return idx
 
 
-    fn remove(inout self, index: UInt32) -> bool:
+    fn remove(inout self, index: UInt32) raises -> bool:
         """Removes an entity and its components from the archetype.
         
         Performs a swap-remove and reports whether a swap was necessary
@@ -121,7 +128,8 @@ struct Archetype[Id: Intable]:
         """
         
         self.size -= 1
-        var swapped = index == self.size
+
+        var swapped = index != self.size
         
         if swapped:
             self._entities[index] = self._entities.pop()
