@@ -1,6 +1,6 @@
 from sys.info import sizeof
 from collections import Dict
-from types import get_max_uint_size
+from types import get_max_uint_size, TrivialIntable
 
 trait IdentifiableType:
     """IdentifiableType is a trait for types that have a unique identifier.
@@ -15,11 +15,6 @@ trait IdentifiableType:
 trait ComponentType(IdentifiableType, Movable):
     pass
 
-trait TrivialIntable(Intable, Copyable, Movable, Hashable):
-    fn __init__(inout self, value: Int):
-        ...
-    fn __init__(inout self, value: UInt):
-        ...
 
 # @register_passable("trivial")
 @value
