@@ -6,8 +6,8 @@ alias EntityId = UInt32
 # ID is the component identifier type.
 alias Id = UInt8
 
-fn get_max_int_size[T: AnyType]() -> UInt:
-    return 2 ** (sizeof[T]() * 8 - 1)
+fn get_max_uint_size[T: AnyType]() -> UInt:
+    return 2 ** sizeof[T]() * 8
 
 
 # # ResID is the resource identifier type.

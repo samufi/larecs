@@ -1,6 +1,6 @@
 from sys.info import sizeof
 from collections import Dict
-from types import get_max_int_size
+from types import get_max_uint_size
 
 trait IdentifiableType:
     """IdentifiableType is a trait for types that have a unique identifier.
@@ -80,7 +80,7 @@ struct ComponentManager[Id: TrivialIntable]:
     """
 
     var _components: Dict[Int, ComponentInfo[Id]]
-    alias max_size = get_max_int_size[Id]()
+    alias max_size = get_max_uint_size[Id]()
     alias new_component[T: ComponentType] = Component[Id].new[T]
 
     fn __init__(inout self):
