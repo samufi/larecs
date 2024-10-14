@@ -61,13 +61,12 @@ def test_component_initialization():
     test_value = DummyComponentType(123)
     component = ComponentReference[UInt32](1, test_value)
     assert_equal(component._id, 1)
-    assert_equal(component._item_size, sizeof[DummyComponentType]())
     assert_not_equal(component._data, UnsafePointer[UInt8]())
 
 def test_component_value_getting():
     dummy_value = DummyComponentType(456)
     component = ComponentReference[UInt32](1, dummy_value)
-    assert_equal(component.get_value[DummyComponentType](), dummy_value)
+    assert_equal(component.unsafe_get_value[DummyComponentType](), dummy_value)
 
 def test_referencing():
     dummy_value = DummyComponentType(123)
@@ -86,7 +85,6 @@ def test_component_reference_copy():
     component = ComponentReference[UInt32](1, original)
     copied_component = component
     assert_equal(copied_component._id, component._id)
-    assert_equal(copied_component._item_size, component._item_size)
     assert_equal(copied_component._data, component._data)
 
 def test_component_reference_move():
@@ -94,7 +92,6 @@ def test_component_reference_move():
     component = ComponentReference[UInt32](1, original)
     moved_component = component^
     assert_equal(moved_component._id, 1)
-    assert_equal(moved_component._item_size, sizeof[DummyComponentType]())
     assert_not_equal(moved_component._data, UnsafePointer[UInt8]())
 
 def test_component_manager_registration():
@@ -131,7 +128,6 @@ def test_component_manager_get_ref():
     dummy_value = DummyComponentType(123)
     component_ref = manager.get_ref(dummy_value)
     assert_equal(component_ref._id, 0)
-    assert_equal(component_ref._item_size, sizeof[DummyComponentType]())
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
     
     with assert_raises():

@@ -39,30 +39,24 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: An
     create component references safely.
     """
     var _id: Id
-    var _item_size: UInt32
     var _data: UnsafePointer[UInt8]
 
     fn __init__[T: ComponentType](inout self, id: Id, ref[lifetime] value: T):
         self._id = id
-        self._item_size = sizeof[T]()
         self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
     fn __moveinit__(inout self, owned existing: Self):
         self._id = existing._id
-        self._item_size = existing._item_size
         self._data = existing._data
 
     fn __copyinit__(inout self, existing: Self):
         self._id = existing._id
-        self._item_size = existing._item_size
         self._data = existing._data
     
     @always_inline
-    fn get_value[T: ComponentType](self) raises -> ref [__lifetime_of(self)] T: 
+    fn unsafe_get_value[T: ComponentType](self) raises -> ref [__lifetime_of(self)] T: 
         """Get the value of the component.
         """
-        if sizeof[T]() != int(self._item_size):
-            raise Error("The size of the component type does not match the size of the component.")
         return self._data.bitcast[T]()[0]
 
     @always_inline
@@ -70,6 +64,13 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: An
         """Get the unsafe pointer to the data of the component.
         """
         return self._data
+
+    @always_inline
+    fn get_id(self) -> Id:
+        """Get the ID of the component.
+        """
+        return self._id
+
 
 struct ComponentManager[Id: TrivialIntable]:
     """ComponentManager is a manager for ECS components.

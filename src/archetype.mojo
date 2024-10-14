@@ -11,7 +11,7 @@ struct Archetype[Id: Intable]:
     """
     alias max_size = 2 ** (sizeof(Id) - 1)
     alias NullPtr = UnsafePointer[UInt8]()
-    
+
     var _data:       InlineArray[UnsafePointer[UInt8], max_size, ​run_destructors=True] # Pointers to the component data.
     var _size:       UInt32                        # Current number of entities.
     var _capacity:   UInt32                        # Current capacity.
@@ -103,8 +103,8 @@ struct Archetype[Id: Intable]:
         self.entities.append(entity)
 
         for component in components:
-            var size = component.get_size()
-            if not component.get_size():
+            var size = self._sizes[component.get_id()]
+            if not size:
                 continue
             
             memcpy(self._get_component_ptr(idx, c.id), component.get_unsafe_ptr(), size)
