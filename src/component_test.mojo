@@ -120,7 +120,7 @@ def test_component_manager_get_info():
     assert_equal(info.size, sizeof[DummyComponentType]())
 
     with assert_raises():
-        manager.get_info[FlexibleDummyComponentType[1]]()
+        _ = manager.get_info[FlexibleDummyComponentType[1]]()
 
 def test_component_manager_get_ref():
     manager = ComponentManager[UInt8]()
@@ -131,7 +131,7 @@ def test_component_manager_get_ref():
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
     
     with assert_raises():
-        manager.get_ref(FlexibleDummyComponentType[1]())
+        _ = manager.get_ref(FlexibleDummyComponentType[1](1))
 
 def main():
     test_component_info_initialization()
