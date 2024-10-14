@@ -2,7 +2,7 @@
 authors = ["samufi <samufi@web.de>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Add a short description here"
-name = "mojoecs"
+name = "larecs"
 platforms = ["linux-64"]
 version = "0.1.0"
 
