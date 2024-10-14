@@ -86,45 +86,62 @@ struct ComponentManager[Id: TrivialIntable]:
     fn __init__(inout self):
         self._components = Dict[Int, ComponentInfo[Id]]()
 
-    fn register[T: ComponentType](inout self) raises:
+    fn register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[Id] as component_info:
         """Register a new component type.
 
         Parameters:
             T: The component type to register.
+            check_existent: Whether to check if the component type has already been registered.
 
         Raises:
-            Error: If the component type has already been registered.
+            Error: If check_existent and the component type has already been registered.
             Error: If the maximum number of components has been reached.
         """
-        if T.get_type_identifier() in self._components:
-            raise Error("A component with hash " + str(T.get_type_identifier()) + " has already been registered.")
+        @parameter
+        if check_existent:
+            if T.get_type_identifier() in self._components:
+                raise Error("A component with hash " + str(T.get_type_identifier()) + " has already been registered.")
         
         if len(self._components) >= self.max_size:
             raise Error("We cannot register more than " + str(self.max_size) + " elements in a component manager of this type.")
 
-        self._components[T.get_type_identifier()] = ComponentInfo[Id].new[T](Id(len(self._components)))
+        component_info = ComponentInfo[Id].new[T](Id(len(self._components)))
+        self._components[T.get_type_identifier()] = component_info
 
-    fn get_id[T: ComponentType](self) raises -> Id:
+    fn get_id[T: ComponentType](inout self) raises -> Id:
         """Get the ID of a component type.
+
+        If the component does not yet have an ID, register the component.
 
         Parameters:
             T: The component type.
 
         Raises:
-            Error: If the component type has not been registered.
+            Error: If the component was not registered and the maximum number of components has been reached.
         """
-        return self._components[T.get_type_identifier()].id
+        if T.get_type_identifier() in self._components:
+            return self._components[T.get_type_identifier()].id
+        else:
+            return self.register[T, False]().id
 
-    fn get_info[T: ComponentType](self) raises -> ComponentInfo[Id]:
+    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo[Id]:
         """Get the info of a component type.
 
-        Raises:
-            Error: If the component type has not been registered.
-        """
-        return self._components[T.get_type_identifier()]
+        If the component does not yet have an ID, register the component.
 
-    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
+        Raises:
+            Error: If the component was not registered and the maximum number of components has been reached.
+        """
+        if T.get_type_identifier() in self._components:
+            return self._components[T.get_type_identifier()]
+        else:
+            return self.register[T, False]()
+
+    @always_inline
+    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
         """Get a type-agnostic reference to a component.
+
+        If the component does not yet have an ID, register the component.
 
         Parameters:
             T: The component type.
@@ -132,5 +149,8 @@ struct ComponentManager[Id: TrivialIntable]:
 
         Args:
             value: The value of the component to be passed around.
+
+        Raises:
+            Error: If the component was not registered and the maximum number of components has been reached.
         """
         return ComponentReference[Id](self.get_id[T](), value)
