@@ -81,7 +81,7 @@ struct ComponentManager[Id: TrivialIntable]:
     fn __init__(inout self):
         self._components = Dict[Int, ComponentInfo[Id]]()
 
-    fn register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[Id] as component_info:
+    fn _register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[Id] as component_info:
         """Register a new component type.
 
         Parameters:
@@ -117,7 +117,7 @@ struct ComponentManager[Id: TrivialIntable]:
         if T.get_type_identifier() in self._components:
             return self._components[T.get_type_identifier()].id
         else:
-            return self.register[T, False]().id
+            return self._register[T, False]().id
 
     fn get_info[T: ComponentType](inout self) raises -> ComponentInfo[Id]:
         """Get the info of a component type.
@@ -130,7 +130,7 @@ struct ComponentManager[Id: TrivialIntable]:
         if T.get_type_identifier() in self._components:
             return self._components[T.get_type_identifier()]
         else:
-            return self.register[T, False]()
+            return self._register[T, False]()
 
     @always_inline
     fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
@@ -139,6 +139,7 @@ struct ComponentManager[Id: TrivialIntable]:
         If the component does not yet have an ID, register the component.
 
         Parameters:
+            is_mutable: Infer-only. Whether the reference is mutable.
             T: The component type.
             lifetime: The lifetime of the reference.
 

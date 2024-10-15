@@ -96,21 +96,21 @@ def test_component_reference_move():
 
 def test_component_manager_registration():
     manager = ComponentManager[UInt8]()
-    _ = manager.register[DummyComponentType]()
+    _ = manager._register[DummyComponentType]()
     assert_equal(manager.get_id[DummyComponentType](), 0)
     with assert_raises():
-        _ = manager.register[DummyComponentType]()
+        _ = manager._register[DummyComponentType]()
     
     @parameter
     for i in range(1, 256):
-        _ = manager.register[FlexibleDummyComponentType[i]]()
+        _ = manager._register[FlexibleDummyComponentType[i]]()
     
     @parameter
     for i in range(1, 256):
         assert_equal(manager.get_id[FlexibleDummyComponentType[i]](), i)
     
     with assert_raises(contains="256"):
-        _ = manager.register[FlexibleDummyComponentType[1000]]()
+        _ = manager._register[FlexibleDummyComponentType[1000]]()
 
 def test_component_manager_get_info():
     manager = ComponentManager[UInt8]()
