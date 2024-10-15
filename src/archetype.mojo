@@ -2,14 +2,15 @@
 
 from collections import InlineArray, InlineList
 from component import ComponentInfo, ComponentReference
-from sys.info import sizeof
 from sys.mem import memcpy
 from entitiy import Entity
+
+from types import get_max_uint_size
 
 struct Archetype[Id: Intable]: 
     """Archetype represents an ECS archetype
     """
-    alias max_size = 2 ** (sizeof(Id) - 1)
+    alias max_size = get_max_uint_size[Id]()
     alias NullPtr = UnsafePointer[UInt8]()
 
     var _data:       InlineArray[UnsafePointer[UInt8], max_size, ​run_destructors=True] # Pointers to the component data.

@@ -6,8 +6,26 @@ alias EntityId = UInt32
 # ID is the component identifier type.
 alias Id = UInt8
 
-fn get_max_int_size[T: AnyType]() -> UInt:
-    return 2 ** (sizeof[T]() * 8 - 1)
+trait TrivialIntable(Intable, Copyable, Movable, Hashable):
+    """A trait for trivial (register-passable) integer types.
+
+    As of yet, there is no trait for register-passable types in
+    Mojo. This trait will be added once introudced.
+
+    In the end, this trait should be one of UInt8, UInt16, UInt32, UInt64, etc.
+    """
+    fn __init__(inout self, value: Int):
+        ...
+    fn __init__(inout self, value: UInt):
+        ...
+
+fn get_max_uint_size[T: TrivialIntable]() -> UInt:
+    """Returns how many different numbers could be expressed with a UInt with the same size as T.
+
+    Parameters:
+        T: The type to get the size of.
+    """
+    return 2 ** (sizeof[T]() * 8)
 
 
 # # ResID is the resource identifier type.

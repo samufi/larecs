@@ -68,7 +68,7 @@ struct EntityPool:
         """
         return len(self._entities) - 1 - int(self._available)
 
-    fn capactiy(self) -> Int:
+    fn capacity(self) -> Int:
         """Returns the current capacity (used and recycled _entities).
         """
         return len(self._entities) - 1
