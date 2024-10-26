@@ -1,27 +1,27 @@
-from bitmask import Mask
+from bitmask import BitMask
 
 
 # Filter is the interface for logic filters.
 # Filters are required to query entities using [World.Query].
 #
-# See [Mask], [MaskFilter] anf [RelationFilter] for basic filters.
+# See [BitMask], [MaskFilter] anf [RelationFilter] for basic filters.
 # For type-safe generics queries, see package [github.com/mlange-42/arche/generic].
 # For advanced filtering, see package [github.com/mlange-42/arche/filter].
 
 # type Filter interface:
 #     # matches the filter against a mask, i.e. a component composition.
-#     matches(bits Mask): Bool
+#     matches(bits BitMask): Bool
 
 @value
 struct MaskFilter:
     """MaskFilter is a [Filter] for including and excluding certain components.
 
-    See [all], [Mask.without] and [Mask.exclusive].
+    See [all], [BitMask.without] and [BitMask.exclusive].
     """
-    var include: Mask # Components to include.
-    var exclude: Mask # Components to exclude.
+    var include: BitMask # Components to include.
+    var exclude: BitMask # Components to exclude.
 
-    fn matches(self, bits: Mask) -> Bool:
+    fn matches(self, bits: BitMask) -> Bool:
         """Matches the filter against a mask."""
         return bits.contains(self.include) and (self.exclude.is_zero() or not bits.contains_any(self.exclude))
 
@@ -41,7 +41,7 @@ struct MaskFilter:
     
 
 # # matches the filter against a mask.
-# fn (f *RelationFilter) matches(bits Mask): Bool:
+# fn (f *RelationFilter) matches(bits BitMask): Bool:
 #     return f.Filter.matches(bits)
 
 # # CachedFilter is a filter that is cached by the world.
@@ -53,5 +53,5 @@ struct MaskFilter:
 #     id     uint32
 
 # # matches the filter against a mask.
-# fn (f *CachedFilter) matches(bits Mask): Bool:
+# fn (f *CachedFilter) matches(bits BitMask): Bool:
 #     return f.filter.matches(bits)
