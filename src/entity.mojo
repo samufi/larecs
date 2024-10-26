@@ -48,10 +48,11 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         """
         return self.id == 0
 
+@value
 @register_passable("trivial")
 struct EntityIndex:
     """Indicates where an entity is currently stored.
     """
-    var index UInt32       # Entity's current index in the archetype
+    var index: UInt32       # Entity's current index in the archetype
     # TODO
     # arch  *archetype # Entity's current archetype
