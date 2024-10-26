@@ -18,8 +18,8 @@ struct Archetype[Id: TrivialIntable]:
 
     """
 
+    # The maximal number of components in the archetype.
     alias max_size = get_max_uint_size[Id]()
-    alias NullPtr = UnsafePointer[UInt8]()
 
     # Pointers to the component data.
     var _data: InlineArray[
@@ -68,11 +68,11 @@ struct Archetype[Id: TrivialIntable]:
 
     @always_inline
     fn reserve(inout self):
-        """Extend the capacity of the archetype by factor 2."""
+        """Extends the capacity of the archetype by factor 2."""
         self.reserve(self._capacity * 2)
 
     fn reserve(inout self, new_capacity: UInt):
-        """Extend the capacity of the archetype to a given number.
+        """Extends the capacity of the archetype to a given number.
 
         Does nothing if the new capacity is not larger than the current capacity.
 
