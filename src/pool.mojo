@@ -9,6 +9,7 @@ trait IntableCollectionElement(Intable, CollectionElement):
 
 struct EntityPool:
     """EntityPool is an implementation using implicit linked lists.
+    
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
     var _entities: List[Entity]
@@ -130,6 +131,7 @@ struct BitPool:
 
 struct IntPool[ElementType: IntableCollectionElement = Int]:
     """IntPool is a _pool implementation using implicit linked lists.
+
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
     var _pool: List[ElementType, True]
