@@ -83,8 +83,8 @@ struct BitMask(Stringable):
 
     fn reset(inout self):
         """Resets the mask setting all bits to False."""
-        self.lo = False
-        self.hi = False
+        self.lo = 0
+        self.hi = 0
 
     fn contains(self, other: Self) -> Bool:
         """Reports if the other mask is a subset of this mask."""
@@ -103,9 +103,9 @@ struct BitMask(Stringable):
         var result: String = "["
         for i in range(Self.total_bits):
             if self.get(i): 
-                result += "1, "
+                result += "1"
             else:
-                result += "0, "
+                result += "0"
         result += "]"
         return result
     
