@@ -26,7 +26,7 @@ fn benchmark_entity_is_zero():
 
     var n: Int = 1000000
 
-    for i in range(n):
+    for _ in range(n):
         is_zero = e.is_zero()
 
     if now() == 0:
@@ -37,11 +37,15 @@ def test_entity_index():
     alias AType = Archetype[UInt8]
     arr = InlineArray[AType, 3](AType(5), AType(10), AType(20))
     index1 = EntityIndex(1, arr[1])
+    index1b = EntityIndex(1, arr[1])
     index2 = EntityIndex(10, arr[2])
     assert_equal(index1.index, 1)
     assert_equal(index2.index, 10)
     assert_equal(index1.archetype[]._capacity, 10)
     assert_equal(index2.archetype[]._capacity, 20)
+    index1b.archetype[] = AType(1)
+    assert_equal(index1.archetype[]._capacity, 1)
+    assert_equal(index1b.archetype[]._capacity, 1)
 
 
 # TODO
