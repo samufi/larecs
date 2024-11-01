@@ -1,6 +1,6 @@
-from types import EntityId
+from types import EntityId, get_max_uint_size_of_half_type, TrivialIntable
 from entity import Entity
-from constants import MAX_UINT16, MASK_TOTAL_BITS
+from constants import MAX_UINT16
 
 trait IntableCollectionElement(Intable, CollectionElement):
     fn __init__(inout self, value: Int):
@@ -79,16 +79,29 @@ struct EntityPool:
         """
         return int(self._available)
 
-struct BitPool:
-    """BitPool is an entityPool implementation using implicit linked lists.
+struct BitPool[LengthType: TrivialIntable = UInt16]:
+    """BitPool is an EntityPool implementation using implicit linked lists.
+
+    Parameters:
+        LengthType: The data type of the length attribute of the pool.
+                    This controls how many bits can be stored in the pool,
+                    namely 2 ** (number_of_bits(LengthType) / 2).
     """
-    var _bits: SIMD[DType.uint8, MASK_TOTAL_BITS]
+
+    # The length must be able to express that the pool is full.
+    # Hence, the capacity must be smaller than the maximum value of the length type.
+    # Since the capacity must be a power of 2, the largest possible capacity is 
+    # half of the maximum value.
+    alias capacity = get_max_uint_size_of_half_type[Self.LengthType]()
+    
+    var _bits: SIMD[DType.uint8, Self.capacity]
     var _next: UInt8
-    var _length: UInt8
+    var _length: LengthType
     var _available: UInt8
 
+
     fn __init__(inout self):
-        self._bits = SIMD[DType.uint8, MASK_TOTAL_BITS]()
+        self._bits = SIMD[DType.uint8, Self.capacity]()
         self._next = 0
         self._length = 0
         self._available = 0
@@ -107,10 +120,10 @@ struct BitPool:
     fn _get_new(inout self) raises -> UInt8 as bit:
         """Allocates and returns a new bit. For internal use.
         """
-        if self._length >= MASK_TOTAL_BITS:
-            raise Error("Ran out of the maximum of 128 bits")
+        if int(self._length) >= Self.capacity:
+            raise Error(String("Ran out of the capacity of {} bits").format(Self.capacity))
         
-        bit = self._length
+        bit = UInt8(int(self._length))
         self._bits[int(self._length)] = bit
         self._length += 1
         return bit
