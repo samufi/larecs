@@ -116,6 +116,7 @@ struct ChainedArrayList[
         """
         return len(self) > 0
 
+    @always_inline
     fn __getitem__(
         ref [_]self: Self, owned idx: Int
     ) -> ref [__lifetime_of(self)] Self.ElementType:
