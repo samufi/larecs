@@ -6,7 +6,7 @@ alias EntityId = UInt32
 # ID is the component identifier type.
 alias Id = UInt8
 
-trait TrivialIntable(Intable, Copyable, Movable, Hashable):
+trait TrivialIntable(Intable, Copyable, CollectionElementNew, Hashable):
     """A trait for trivial (register-passable) integer types.
 
     As of yet, there is no trait for register-passable types in
