@@ -11,4 +11,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: fabasoad/setup-mojo-action@v1
       - name: Run test
-      - run: mojo test src/
+        run: mojo test src/
