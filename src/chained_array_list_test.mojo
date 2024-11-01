@@ -1,12 +1,13 @@
 from testing import *
 from chained_array_list import ChainedArrayList
+from memory import Arc
 
 
-struct TestElement[lifetime: AnyLifetime[True].type](CollectionElementNew):
+struct TestElement(CollectionElementNew):
     var value: Int
-    var dealloc_counter: Reference[Int, lifetime]
+    var dealloc_counter: Arc[Int]
 
-    fn __init__(inout self, value: Int, dealloc_counter: Reference[Int, lifetime]):
+    fn __init__(inout self, value: Int, dealloc_counter: Arc[Int]):
         self.value = value
         self.dealloc_counter = dealloc_counter
 
@@ -64,14 +65,14 @@ def test_chained_array_list_moveinit():
 
 
 def test_chained_list_deallocation():
-    dealloc_counter = 0
-    list = ChainedArrayList[TestElement[__lifetime_of(dealloc_counter)]]()
+    dealloc_counter = Arc[Int](0)
+    list = ChainedArrayList[TestElement]()
     n = 100
     for i in range(n):
-        list.append(TestElement(i, Reference(dealloc_counter)))
-    assert_equal(dealloc_counter, 0)
+        list.append(TestElement(i, dealloc_counter))
+    assert_equal(dealloc_counter[], 0)
     _ = list^
-    assert_equal(dealloc_counter, n)
+    assert_equal(dealloc_counter[], n)
 
 
 def main():
