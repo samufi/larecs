@@ -72,8 +72,8 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
 
         # Hopefully this can become a simple copy in the future
         self._ids = InlineList[Id, Self.max_size]()
-        self._ids._size = other._ids._size
-        self._ids._array = other._ids._array
+        for id in other._ids:
+            self._ids.append(id[])
 
         # Copy the data
         self._data = InlineArray[
@@ -97,10 +97,6 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         self._entities = existing._entities
 
         # Hopefully this can become a simple copy in the future
-        # Note that the pattern from the copyinit above does not
-        # work here, because existing is owned and 
-        # copying internal variables causes destruction issues.
-        # I am not sure why.
         self._ids = InlineList[Id, Self.max_size]()
         for id in existing._ids:
             self._ids.append(id[])
