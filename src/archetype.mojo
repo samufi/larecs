@@ -100,6 +100,10 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         self._ids = InlineList[Id, Self.max_size]()
         for id in existing._ids:
             self._ids.append(id[])
+    
+    fn __del__(owned self):
+        for i in self._ids:
+            self._data[int(i[])].free()
 
     fn __len__(self) -> Int:
         """Returns the number of entities in the archetype."""
