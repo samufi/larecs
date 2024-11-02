@@ -69,9 +69,7 @@ struct ChainedArrayList[
         page_size: The number of elements stored in one contiguous block of memory.
     """
 
-    alias PageType = InlineArray[
-        UnsafeMaybeUninitialized[ElementType], Self.page_size
-    ]
+    alias PageType = UnsafePointer[ElementType]
 
     var _pages: List[Self.PageType]
     var _size: UInt
@@ -80,6 +78,12 @@ struct ChainedArrayList[
         """Create a new empty list."""
         self._size = 0
         self._pages = List[Self.PageType]()
+
+    fn __init__(inout self, owned *elements: ElementType):
+        """Create a new empty list."""
+        self = Self()
+        for element in elements:
+            self.append(ElementType(other=element[]))
 
     fn __moveinit__(inout self, owned other: Self):
         """Move the contents of another list into a new list."""
@@ -92,11 +96,15 @@ struct ChainedArrayList[
         full_pages = self._size // Self.page_size
 
         for i in range(full_pages):
-            for j in range(Self.page_size):
-                self._pages[i][j].assume_initialized_destroy()
+            if self._pages[i]:
+                for j in range(Self.page_size):
+                    (self._pages[i] + j).destroy_pointee()
+                self._pages[i].free()
 
-        for j in range(self._size % Self.page_size):
-            self._pages[full_pages][j].assume_initialized_destroy()
+        if self._pages and self._pages[full_pages]:
+            for j in range(self._size % Self.page_size):
+                (self._pages[full_pages] + j).destroy_pointee()
+            self._pages[full_pages].free()
 
     @always_inline
     fn __len__(self) -> Int:
@@ -130,9 +138,7 @@ struct ChainedArrayList[
         """
         debug_assert(0 <= idx < self._size, "Index must be within bounds.")
 
-        return self._pages[idx // Self.page_size][
-            idx % Self.page_size
-        ].assume_initialized()
+        return (self._pages[idx // Self.page_size] + idx % Self.page_size)[]
 
     fn __iter__(
         ref [_]self: Self,
@@ -152,6 +158,8 @@ struct ChainedArrayList[
         """
         page_index = self._size // Self.page_size
         if page_index == len(self._pages):
-            self._pages.append(Self.PageType(unsafe_uninitialized=True))
-        self._pages[page_index][self._size % Self.page_size].write(value^)
+            self._pages.append(Self.PageType.alloc(Self.page_size))
+        (
+            self._pages[page_index] + self._size % Self.page_size
+        ).init_pointee_move(value^)
         self._size += 1
