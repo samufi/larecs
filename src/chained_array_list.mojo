@@ -56,7 +56,7 @@ struct ChainedArrayList[
 ]:
     """A list whose data are stored in persistent subarrays.
 
-    It is backed by a list of `InlineArray`s and an `Int` to represent the size.
+    It is backed by a list of raw pointers and an `Int` to represent the size.
     This struct partially implements the API of a regular `List`,
     but some special functionality is not available.
 
