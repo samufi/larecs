@@ -6,7 +6,7 @@ from entity import Entity
 from types import get_max_uint_size, TrivialIntable
 
 
-struct Archetype[Id: TrivialIntable](CollectionElementNew):
+struct Archetype[dType: DType](CollectionElementNew):
     """Archetype represents an ECS archetype.
 
     Parameters:
@@ -18,8 +18,10 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
 
     """
 
+    alias Id = SIMD[dType, 1]
+
     # The maximal number of components in the archetype.
-    alias max_size = get_max_uint_size[Id]()
+    alias max_size = get_max_uint_size[Self.Id]()
 
     # Pointers to the component data.
     var _data: InlineArray[
@@ -32,34 +34,53 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
     # Current capacity.
     var _capacity: UInt
 
+    # number of components.
+    var _component_count: UInt
+
     # Sizes of the component types by column
     var _item_sizes: InlineArray[UInt32, Self.max_size, run_destructors=True]
 
     # The indices of the present components
-    var _ids: InlineList[Id, Self.max_size]
+    var _ids: SIMD[dType, Self.max_size]
 
     # The entities in the archetype
     var _entities: List[Entity]
 
     fn __init__(
-        inout self, capacity: UInt, *components: ComponentInfo[Self.Id]
-    ):
+        inout self, capacity: UInt, *components: ComponentInfo[dType]
+    ) raises:
+        
+        @parameter
+        if not dType.is_integral():
+            raise Error(
+                "The component identifier type needs to be an integral type."
+            )
+
+        if len(components) > self.max_size:
+            raise Error(
+                "An archetype cannot have more than "
+                + str(self.max_size)
+                + " components."
+            )
+        
         self._size = 0
+        self._component_count = len(components)
         self._capacity = capacity
+        self._ids = SIMD[dType, Self.max_size]()
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
         ](UnsafePointer[UInt8]())
         self._item_sizes = InlineArray[
             UInt32, Self.max_size, run_destructors=True
         ](0)
-        self._ids = InlineList[Id, Self.max_size]()
         self._entities = List[Entity]()
 
-        for component in components:
-            self._item_sizes[int(component[].id)] = component[].size
-            self._ids.append(component[].id)
-            self._data[int(component[].id)] = UnsafePointer[UInt8].alloc(
-                self._capacity * int(component[].size)
+        for i in range(self._component_count):
+            component = components[i]
+            self._item_sizes[int(component.id)] = component.size
+            self._ids[i] = component.id
+            self._data[int(component.id)] = UnsafePointer[UInt8].alloc(
+                self._capacity * int(component.size)
             )
 
     fn __init__(inout self, /, *, other: Self):
@@ -67,25 +88,23 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         # copied via a simple assignment
         self._size = other._size
         self._capacity = other._capacity
+        self._component_count = other._component_count
         self._item_sizes = other._item_sizes
         self._entities = other._entities
-
-        # Hopefully this can become a simple copy in the future
-        self._ids = InlineList[Id, Self.max_size]()
-        for id in other._ids:
-            self._ids.append(id[])
+        self._ids = other._ids
 
         # Copy the data
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
         ](UnsafePointer[UInt8]())
 
-        for id in other._ids:
-            size = self._capacity * int(other._item_sizes[int(id[])])
-            self._data[int(id[])] = UnsafePointer[UInt8].alloc(size)
+        for i in range(other._component_count):
+            id = int(other._ids[i])
+            size = other._capacity * int(other._item_sizes[id])
+            self._data[id] = UnsafePointer[UInt8].alloc(size)
             memcpy(
-                self._data[int(id[])],
-                other._data[int(id[])],
+                self._data[id],
+                other._data[id],
                 size,
             )
 
@@ -93,17 +112,14 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         self._data = existing._data
         self._size = existing._size
         self._capacity = existing._capacity
+        self._component_count = existing._component_count
         self._item_sizes = existing._item_sizes
         self._entities = existing._entities
+        self._ids = existing._ids
 
-        # Hopefully this can become a simple copy in the future
-        self._ids = InlineList[Id, Self.max_size]()
-        for id in existing._ids:
-            self._ids.append(id[])
-    
     fn __del__(owned self):
-        for i in self._ids:
-            self._data[int(i[])].free()
+        for i in range(self._component_count):
+            self._data[int(self._ids[i])].free()
 
     fn __len__(self) -> Int:
         """Returns the number of entities in the archetype."""
@@ -126,15 +142,17 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
             return
 
         self._capacity = new_capacity
-        for i in self._ids:
-            new_memory = UnsafePointer[UInt8].alloc(int(self._capacity))
+        for i in range(self._component_count):
+            id = int(self._ids[i])
+            new_size = int(self._item_sizes[id]) * new_capacity
+            new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
-                self._data[int(i[])],
-                int(self._size * self._item_sizes[int(i[])]),
+                self._data[id],
+                new_size,
             )
-            self._data[int(i[])].free()
-            self._data[int(i[])] = new_memory
+            self._data[id].free()
+            self._data[id] = new_memory
 
     @always_inline
     fn get_entity(self, index: UInt) -> ref [self._entities] Entity:
@@ -142,12 +160,14 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         return self._entities[index]
 
     @always_inline
-    fn _get_component_ptr(self, index: UInt, id: Id) -> UnsafePointer[UInt8]:
+    fn _get_component_ptr(
+        self, index: UInt, id: Self.Id
+    ) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
         return self._data[int(id)] + index * int(self._item_sizes[int(id)])
 
     @always_inline
-    fn has_component(self, id: Id) -> Bool:
+    fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id."""
         return bool(self._data[int(id)])
 
@@ -172,14 +192,15 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
         if swapped:
             self._entities[index] = self._entities.pop()
 
-            for id in self._ids:
-                size = int(self._item_sizes[int(id[])])
+            for i in range(self._component_count):
+                id = int(self._ids[i])
+                size = int(self._item_sizes[id])
                 if size == 0:
                     continue
 
                 memcpy(
-                    self._get_component_ptr(index, int(id[])),
-                    self._get_component_ptr(self._size, int(id[])),
+                    self._get_component_ptr(index, id),
+                    self._get_component_ptr(self._size, id),
                     size,
                 )
         else:
