@@ -33,19 +33,6 @@ fn benchmark_entity_is_zero():
         print(is_zero)
 
 
-def test_entity_index():
-    alias AType = Archetype[UInt8]
-    arr = InlineArray[AType, 3](AType(5), AType(10), AType(20))
-    index1 = EntityIndex(1, arr[1])
-    index1b = EntityIndex(1, arr[1])
-    index2 = EntityIndex(10, arr[2])
-    assert_equal(index1.index, 1)
-    assert_equal(index2.index, 10)
-    assert_equal(index1.archetype[]._capacity, 10)
-    assert_equal(index2.archetype[]._capacity, 20)
-    index1b.archetype[] = AType(1)
-    assert_equal(index1.archetype[]._capacity, 1)
-    assert_equal(index1b.archetype[]._capacity, 1)
 
 
 # TODO
@@ -75,7 +62,6 @@ def main():
     print("Running tests...")
     test_entity_as_index()
     test_zero_entity()
-    test_entity_index()
     print("All tests passed.")
     # report = benchmark.run[benchmark_entity_is_zero]()
     # report.print()

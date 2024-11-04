@@ -54,11 +54,11 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
 @value
 @register_passable("trivial")
-struct EntityIndex[Id: TrivialIntable, //, lifetime: AnyLifetime[True].type]:
+struct EntityIndex:
     """Indicates where an entity is currently stored."""
 
     # Entity's current index in the archetype
     var index: UInt32
 
     # Entity's current archetype
-    var archetype: Reference[Archetype[Id], lifetime]
+    var archetypeIndex: UInt32
