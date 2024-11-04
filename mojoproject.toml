@@ -1,6 +1,6 @@
 [project]
 authors = ["samufi <samufi@web.de>"]
-channels = ["conda-forge", "https://conda.modular.com/max"]
+channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 description = "Add a short description here"
 name = "larecs"
 platforms = ["linux-64"]
@@ -9,4 +9,4 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-max = ">=24.5.0,<25"
+max = ">24.5.1,<24.7"

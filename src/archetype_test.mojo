@@ -1,6 +1,7 @@
 from archetype import Archetype
 from component import ComponentInfo, ComponentReference, ComponentManager
 from entity import Entity
+from memory import UnsafePointer
 from testing import *
 
 @value

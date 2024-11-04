@@ -137,7 +137,7 @@ struct Archetype[Id: TrivialIntable](CollectionElementNew):
             self._data[int(i[])] = new_memory
 
     @always_inline
-    fn get_entity(self, index: UInt) -> ref [__lifetime_of(self)] Entity:
+    fn get_entity(self, index: UInt) -> ref [self._entities] Entity:
         """Returns the entity at the given index."""
         return self._entities[index]
 
