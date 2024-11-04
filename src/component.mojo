@@ -17,15 +17,16 @@ trait ComponentType(IdentifiableType, Movable):
     pass
 
 
-# @register_passable("trivial")
 @value
-struct ComponentInfo[Id: TrivialIntable]:
-    var id: Id
+@register_passable("trivial")
+struct ComponentInfo[dType: DType]:
+    alias Id = SIMD[dType, 1]
+    var id: Self.Id
     var size: UInt32
 
     @staticmethod
-    fn new[T: AnyType](id: Id) -> ComponentInfo[Id]:
-        return ComponentInfo[Id](id, sizeof[T]())
+    fn new[T: AnyType](id: Self.Id) -> ComponentInfo[dType]:
+        return ComponentInfo[dType](id, sizeof[T]())
 
 struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable].type]:
     """ComponentReference is an agnostic reference to ECS components.
@@ -68,20 +69,28 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: Or
         return self._id
 
 
-struct ComponentManager[Id: TrivialIntable]:
+struct ComponentManager[dType: DType]:
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
     references for passing them around.
     """
+    alias Id = SIMD[dType, 1]
 
-    var _components: Dict[Int, ComponentInfo[Id]]
-    alias max_size = get_max_uint_size[Id]()
+    var _components: Dict[Int, ComponentInfo[dType]]
+    alias max_size = get_max_uint_size[Self.Id]()
 
-    fn __init__(inout self):
-        self._components = Dict[Int, ComponentInfo[Id]]()
+    fn __init__(inout self) raises:
+        
+        @parameter
+        if not dType.is_integral():
+            raise Error(
+                "dType needs to be an integral type."
+            )
 
-    fn _register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[Id] as component_info:
+        self._components = Dict[Int, ComponentInfo[dType]]()
+
+    fn _register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[dType] as component_info:
         """Register a new component type.
 
         Parameters:
@@ -100,10 +109,10 @@ struct ComponentManager[Id: TrivialIntable]:
         if len(self._components) >= self.max_size:
             raise Error("We cannot register more than " + str(self.max_size) + " elements in a component manager of this type.")
 
-        component_info = ComponentInfo[Id].new[T](Id(len(self._components)))
+        component_info = ComponentInfo[dType].new[T](Self.Id(len(self._components)))
         self._components[T.get_type_identifier()] = component_info
 
-    fn get_id[T: ComponentType](inout self) raises -> Id:
+    fn get_id[T: ComponentType](inout self) raises -> Self.Id:
         """Get the ID of a component type.
 
         If the component does not yet have an ID, register the component.
@@ -119,7 +128,7 @@ struct ComponentManager[Id: TrivialIntable]:
         else:
             return self._register[T, False]().id
 
-    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo[Id]:
+    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo[dType]:
         """Get the info of a component type.
 
         If the component does not yet have an ID, register the component.
@@ -133,7 +142,7 @@ struct ComponentManager[Id: TrivialIntable]:
             return self._register[T, False]()
 
     @always_inline
-    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: Origin[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
+    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: Origin[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Self.Id, lifetime]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -149,4 +158,4 @@ struct ComponentManager[Id: TrivialIntable]:
         Raises:
             Error: If the component was not registered and the maximum number of components has been reached.
         """
-        return ComponentReference[Id](self.get_id[T](), value)
+        return ComponentReference[Self.Id](self.get_id[T](), value)
