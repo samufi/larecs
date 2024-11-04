@@ -1,6 +1,7 @@
 from sys.info import sizeof
 from collections import Dict
 from types import get_max_uint_size, TrivialIntable
+from memory import UnsafePointer
 
 trait IdentifiableType:
     """IdentifiableType is a trait for types that have a unique identifier.
@@ -26,7 +27,7 @@ struct ComponentInfo[Id: TrivialIntable]:
     fn new[T: AnyType](id: Id) -> ComponentInfo[Id]:
         return ComponentInfo[Id](id, sizeof[T]())
 
-struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: AnyLifetime[is_mutable].type]:
+struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable].type]:
     """ComponentReference is an agnostic reference to ECS components.
 
     The ID is used to identify the component type. However, the 
@@ -49,7 +50,7 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: An
         self._data = existing._data
     
     @always_inline
-    fn unsafe_get_value[T: ComponentType](self) raises -> ref [__lifetime_of(self)] T: 
+    fn unsafe_get_value[T: ComponentType](self) raises -> ref [__origin_of(self)] T: 
         """Get the value of the component.
         """
         return self._data.bitcast[T]()[0]
@@ -76,7 +77,6 @@ struct ComponentManager[Id: TrivialIntable]:
 
     var _components: Dict[Int, ComponentInfo[Id]]
     alias max_size = get_max_uint_size[Id]()
-    alias new_component[T: ComponentType] = Component[Id].new[T]
 
     fn __init__(inout self):
         self._components = Dict[Int, ComponentInfo[Id]]()
@@ -133,7 +133,7 @@ struct ComponentManager[Id: TrivialIntable]:
             return self._register[T, False]()
 
     @always_inline
-    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: AnyLifetime[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
+    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: Origin[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Id, lifetime]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.

@@ -1,5 +1,5 @@
 from collections import InlineArray
-from memory.maybe_uninitialized import UnsafeMaybeUninitialized
+from memory import UnsafePointer
 
 # Note: The implentation of the list and the iterator directly
 # copy code from the standard library's InlineList type.
@@ -11,7 +11,7 @@ struct _ChainedArrayListIter[
     list_mutability: Bool, //,
     T: CollectionElementNew,
     page_size: UInt,
-    list_lifetime: AnyLifetime[list_mutability].type,
+    list_lifetime: Origin[list_mutability].type,
     forward: Bool = True,
 ]:
     """Iterator for ChainedArrayList.
@@ -27,21 +27,25 @@ struct _ChainedArrayListIter[
     alias list_type = ChainedArrayList[T, page_size]
 
     var index: Int
-    var src: Reference[Self.list_type, list_lifetime]
+    var src: Pointer[Self.list_type, list_lifetime]
 
     fn __iter__(self) -> Self:
         return self
 
     fn __next__(
         inout self,
-    ) -> Reference[T, list_lifetime]:
+    ) -> Pointer[T, list_lifetime]:
         @parameter
         if forward:
             self.index += 1
-            return self.src[][self.index - 1]
+            return Pointer.address_of(self.src[][self.index - 1])
         else:
             self.index -= 1
-            return self.src[][self.index]
+            return Pointer.address_of(self.src[][self.index])
+
+    @always_inline
+    fn __hasmore__(self) -> Bool:
+        return self.__len__() > 0
 
     fn __len__(self) -> Int:
         @parameter
@@ -127,8 +131,8 @@ struct ChainedArrayList[
     @always_inline
     fn __getitem__(
         ref [_]self: Self, owned idx: Int
-    ) -> ref [__lifetime_of(self)] Self.ElementType:
-        """Get a `Reference` to the element at the given index.
+    ) -> ref [self] Self.ElementType:
+        """Get a `Pointer` to the element at the given index.
 
         Args:
             idx: The index of the item.
@@ -140,15 +144,29 @@ struct ChainedArrayList[
 
         return (self._pages[idx // Self.page_size] + idx % Self.page_size)[]
 
+    @always_inline
+    fn get_ptr(
+        ref [_]self: Self, owned idx: Int
+    ) -> Pointer[Self.ElementType, __origin_of(self)]:
+        """Get a `Pointer` to the element at the given index.
+
+        Args:
+            idx: The index of the item.
+
+        Returns:
+            A reference to the item at the given index.
+        """
+        return Pointer.address_of(self[idx])
+
     fn __iter__(
         ref [_]self: Self,
-    ) -> _ChainedArrayListIter[ElementType, page_size, __lifetime_of(self)]:
+    ) -> _ChainedArrayListIter[ElementType, page_size, __origin_of(self)]:
         """Iterate over elements of the list, returning immutable references.
 
         Returns:
             An iterator of immutable references to the list elements.
         """
-        return _ChainedArrayListIter(0, self)
+        return _ChainedArrayListIter(0, Pointer.address_of(self))
 
     fn append(inout self, owned value: ElementType):
         """Append an element to the list.
