@@ -21,17 +21,13 @@ jobs:
       run: |
         curl -ssL https://magic.modular.com | bash
         source /home/runner/.bash_profile 
-        BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" )
-        echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
-        source "$BASHRC"
-        cat /home/runner/.bash_profile 
  
     - name: Install mojo and dependencies
       run: |
-        export PATH="/home/runner/.modular/bin:$PATH"
+        source /home/runner/.bash_profile 
         magic install --locked
 
     - name: Run tests
       run: |
-        export PATH="/home/runner/.modular/bin:$PATH"
+        source /home/runner/.bash_profile 
         magic run mojo test src/
