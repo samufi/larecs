@@ -24,11 +24,11 @@ jobs:
         BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" )
         echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
         source "$BASHRC"
+        cat /home/runner/.bash_profile 
  
     - name: Install mojo and dependencies
       run: |
-        export MODULAR_HOME="/home/runner/.modular"
-        export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
+        export PATH="/home/runner/.modular/bin:$PATH"
         magic shell
 
     - name: Run tests
