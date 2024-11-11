@@ -20,9 +20,7 @@ jobs:
     - name: Install magic CLI
       run: |
         curl -ssL https://magic.modular.com | bash
-        BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" )
-        echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
-        source "$BASHRC"
+        source /home/runner/.bash_profile 
 
     - name: Install mojo and dependencies
       run: |
