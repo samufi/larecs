@@ -1,14 +1,30 @@
-name: Test
+name: Run Unit Tests
 on: 
   pull_request:
     branches:
     - main
 jobs:
-  test:
-    name: Test job
+  build:
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: fabasoad/setup-mojo-action@v1
-      - name: Run test
-        run: mojo test src/
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install magic CLI
+      run: |
+        curl -ssL https://magic.modular.com/web-54216713-2680-45aa-81c7-3fc8209653fa | bash
+
+    - name: Install mojo and dependencies
+      run: |
+        magic shell
+
+    - name: Run tests
+      run: |
+        mojo test src/
