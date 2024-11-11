@@ -24,6 +24,7 @@ jobs:
         BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" )
         echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
         source "$BASHRC"
+        echo Success!
 
     - name: Install mojo and dependencies
       run: |
