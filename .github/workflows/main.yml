@@ -19,7 +19,7 @@ jobs:
 
     - name: Install magic CLI
       run: |
-        curl -ssL https://magic.modular.com/web-54216713-2680-45aa-81c7-3fc8209653fa | bash
+        curl -ssL https://magic.modular.com | bash
 
     - name: Install mojo and dependencies
       run: |
