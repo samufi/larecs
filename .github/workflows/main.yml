@@ -29,9 +29,8 @@ jobs:
     - name: Install mojo and dependencies
       run: |
         export PATH="/home/runner/.modular/bin:$PATH"
-        magic shell
+        magic install --locked
 
     - name: Run tests
       run: |
-        magic shell
-        mojo test src/
+        magic run mojo test src/
