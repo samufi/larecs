@@ -24,18 +24,14 @@ jobs:
         BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" )
         echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
         source "$BASHRC"
-        echo Success!
-    
-    - name: Breakpoint
-      uses: namespacelabs/breakpoint-action@v0
-      with:
-        duration: 10m
-        authorized-users: samufi
-
+ 
     - name: Install mojo and dependencies
       run: |
+        export MODULAR_HOME="/home/runner/.modular"
+        export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
         magic shell
 
     - name: Run tests
       run: |
+        magic shell
         mojo test src/
