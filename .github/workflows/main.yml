@@ -25,6 +25,12 @@ jobs:
         echo 'eval "$(magic completion --shell bash)"' >> "$BASHRC"
         source "$BASHRC"
         echo Success!
+    
+    - name: Breakpoint
+      uses: namespacelabs/breakpoint-action@v0
+      with:
+        duration: 10m
+        authorized-users: samufi
 
     - name: Install mojo and dependencies
       run: |
