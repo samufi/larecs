@@ -1,0 +1,33 @@
+name: Run Unit Tests
+on: 
+  pull_request:
+    branches:
+    - main
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.12
+
+    - name: Install magic CLI
+      run: |
+        curl -ssL https://magic.modular.com | bash
+        source /home/runner/.bash_profile 
+ 
+    - name: Install mojo and dependencies
+      run: |
+        source /home/runner/.bash_profile 
+        magic install --locked
+
+    - name: Run tests
+      run: |
+        source /home/runner/.bash_profile 
+        magic run mojo test src/
