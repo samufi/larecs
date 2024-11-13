@@ -6,7 +6,7 @@ This software is very much under construction and not fully working at the momen
 
 ## Installation
 
-This project is written in [Mojo}(https://docs.modular.com/mojo/manual/get-started), which needs to be installed in order to compile, test, or use the software.
+This project is written in [Mojo](https://docs.modular.com/mojo/manual/get-started), which needs to be installed in order to compile, test, or use the software.
 If Mojo and the command line interface [magic](https://docs.modular.com/magic/) are available, dependencies can be installed by navigating to the project directory and executing the following command: 
 
 ```
