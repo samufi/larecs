@@ -1,4 +1,4 @@
-name: Run Unit Tests
+name: Build and test
 on: 
   push:
     branches:
@@ -7,7 +7,7 @@ on:
     branches:
     - main
 jobs:
-  build:
+  build_and_test:
 
     runs-on: ubuntu-latest
 
@@ -29,8 +29,13 @@ jobs:
       run: |
         source /home/runner/.bash_profile 
         magic install --locked
-
+  
     - name: Run tests
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo test src/
+        magic run mojo test --validate-doc-strings --sanitize address src/
+
+    - name: Check formatting
+      run: |
+        source /home/runner/.bash_profile 
+        if mojo format *.mojo 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
