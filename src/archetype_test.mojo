@@ -27,7 +27,7 @@ def test_archetype_init():
 
     assert_equal(archetype._capacity, 10)
     assert_equal(len(archetype), 0)
-    assert_equal(len(archetype._ids), 2)
+    assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
@@ -39,28 +39,28 @@ def test_archetype_reserve():
 
     assert_equal(archetype._capacity, 10)
     assert_equal(len(archetype), 0)
-    assert_equal(len(archetype._ids), 2)
+    assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
     archetype.reserve(20)
     assert_equal(archetype._capacity, 20)
     assert_equal(len(archetype), 0)
-    assert_equal(len(archetype._ids), 2)
+    assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
     archetype.reserve(5)
     assert_equal(archetype._capacity, 20)
     assert_equal(len(archetype), 0)
-    assert_equal(len(archetype._ids), 2)
+    assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
     archetype.reserve(30)
     assert_equal(archetype._capacity, 30)
     assert_equal(len(archetype), 0)
-    assert_equal(len(archetype._ids), 2)
+    assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[2], 8)
 
 

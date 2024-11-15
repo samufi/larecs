@@ -10,12 +10,11 @@ struct Archetype[dType: DType](CollectionElementNew):
     """Archetype represents an ECS archetype.
 
     Parameters:
-        Id: The type of the component identifier.
-            Note: The size of the type needs to be
-            suffiently small. If it is bigger than
-            UInt16, a compile-time error will be raised
-            ("failed to run the pass manager").
-
+        dType: The type of the component identifier.
+               Note: The size of the type needs to be
+               suffiently small. If it is bigger than
+               UInt16, a compile-time error will be raised
+               ("failed to run the pass manager").
     """
 
     alias Id = SIMD[dType, 1]
