@@ -1,7 +1,7 @@
 from archetype import Archetype
 from component import ComponentInfo, ComponentReference, ComponentManager
 from entity import Entity
-from testing import assert_equal, assert_raises
+from testing import *
 
 @value
 struct DummyComponentType:
@@ -112,10 +112,45 @@ def test_archetype_get_component_ptr():
     var ptr = archetype._get_component_ptr(0, 1)
     assert_equal(ptr != UnsafePointer[UInt8](), True)
 
+def test_archetype_move():
+    # TODO: not all fields are tested
+    var component1 = ComponentInfo[UInt8](id=1, size=4)
+    var component2 = ComponentInfo[UInt8](id=5, size=8)
+    var archetype = Archetype[UInt8](10, component1, component2)
+
+    ptr1 = archetype._get_component_ptr(0, 1)
+    ptr2 = archetype._get_component_ptr(0, 5)
+    id1 = archetype._ids[0]
+    id2 = archetype._ids[1]
+
+    var archetype2 = archetype^
+
+    assert_equal(ptr1, archetype2._get_component_ptr(0, 1))
+    assert_equal(ptr2, archetype2._get_component_ptr(0, 5))
+    assert_equal(id1, archetype2._ids[0])
+    assert_equal(id2, archetype2._ids[1])
+
+def test_archetype_copy():
+    # TODO: not all fields are tested
+    var component1 = ComponentInfo[UInt8](id=1, size=4)
+    var component2 = ComponentInfo[UInt8](id=5, size=8)
+    var archetype = Archetype[UInt8](10, component1, component2)
+
+    var archetype2 = Archetype(other=archetype)
+
+    assert_not_equal(archetype._get_component_ptr(0, 1), archetype2._get_component_ptr(0, 1))
+    assert_not_equal(archetype._get_component_ptr(0, 5), archetype2._get_component_ptr(0, 5))
+    assert_equal(archetype._ids[0], archetype2._ids[0])
+    assert_equal(archetype._ids[1], archetype2._ids[1])
+
 def main():
+    print("Running tests...")
     test_archetype_init()
     test_archetype_reserve()
     test_get_entity()
     test_archetype_remove()
     test_archetype_has_component()
     test_archetype_get_component_ptr()
+    test_archetype_move()
+    test_archetype_copy()
+    print("All tests passed!")

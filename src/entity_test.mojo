@@ -1,7 +1,10 @@
 from testing import *
 import benchmark
-from entity import Entity
+from entity import Entity, EntityIndex
 from time import now
+from archetype import Archetype
+from collections import InlineArray
+
 
 def test_entity_as_index():
     entity = Entity(1, 0)
@@ -10,9 +13,11 @@ def test_entity_as_index():
     val = arr[int(entity.id)]
     _ = val
 
+
 def test_zero_entity():
     assert_true(Entity().is_zero())
     assert_false(Entity(1, 0).is_zero())
+
 
 fn benchmark_entity_is_zero():
     e = Entity()
@@ -21,12 +26,13 @@ fn benchmark_entity_is_zero():
 
     var n: Int = 1000000
 
-    for i in range(n):
+    for _ in range(n):
         is_zero = e.is_zero()
 
     if now() == 0:
         print(is_zero)
-    
+
+
 
 
 # TODO
@@ -51,8 +57,11 @@ fn benchmark_entity_is_zero():
 #     fmt.Println(e1.is_zero(), e2.is_zero())
 #     # Output: True False
 
+
 def main():
+    print("Running tests...")
     test_entity_as_index()
     test_zero_entity()
-    report = benchmark.run[benchmark_entity_is_zero]()
-    report.print()
+    print("All tests passed.")
+    # report = benchmark.run[benchmark_entity_is_zero]()
+    # report.print()
