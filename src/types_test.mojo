@@ -1,6 +1,7 @@
 from testing import *
 from types import *
 
+
 def test_get_max_uint_size():
     assert_equal(get_max_uint_size[UInt8](), 256)
     assert_equal(get_max_uint_size[UInt16](), 65536)

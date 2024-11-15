@@ -48,7 +48,6 @@ struct Archetype[dType: DType](CollectionElementNew):
     fn __init__(
         inout self, capacity: UInt, *components: ComponentInfo[dType]
     ) raises:
-        
         @parameter
         if not dType.is_integral():
             raise Error(
@@ -61,7 +60,7 @@ struct Archetype[dType: DType](CollectionElementNew):
                 + str(self.max_size)
                 + " components."
             )
-        
+
         self._size = 0
         self._component_count = len(components)
         self._capacity = capacity

@@ -33,8 +33,6 @@ fn benchmark_entity_is_zero():
         print(is_zero)
 
 
-
-
 # TODO
 # fn example_entity():
 #     world = new_world()
