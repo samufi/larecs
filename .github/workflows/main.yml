@@ -38,4 +38,4 @@ jobs:
     - name: Check formatting
       run: |
         source /home/runner/.bash_profile 
-        if magic format src/*.mojo 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if magic run mojo format src/*.mojo 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
