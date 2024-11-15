@@ -18,6 +18,9 @@ trait TrivialIntable(Intable, Copyable, CollectionElementNew, Hashable):
         ...
     fn __init__(inout self, value: UInt):
         ...
+    fn __iadd__(inout self: Self, rhs: Self):
+        ...
+    
 
 fn get_max_uint_size[T: TrivialIntable]() -> UInt:
     """Returns how many different numbers could be expressed with a UInt with the same size as T.
@@ -26,6 +29,14 @@ fn get_max_uint_size[T: TrivialIntable]() -> UInt:
         T: The type to get the size of.
     """
     return 2 ** (sizeof[T]() * 8)
+
+fn get_max_uint_size_of_half_type[T: TrivialIntable]() -> UInt:
+    """Returns how many different numbers could be expressed with a UInt with half the size of T.
+
+    Parameters:
+        T: The type to consider.
+    """
+    return 2 ** (sizeof[T]() * 4)
 
 
 # # ResID is the resource identifier type.
