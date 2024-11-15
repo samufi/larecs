@@ -1,4 +1,3 @@
-
 # Maximal UInt16 number
 alias MAX_UINT16 = 2**16 - 1
 

@@ -12,18 +12,23 @@ from bitmask import BitMask
 #     # matches the filter against a mask, i.e. a component composition.
 #     matches(bits BitMask): Bool
 
+
 @value
 struct MaskFilter:
     """MaskFilter is a [Filter] for including and excluding certain components.
 
     See [all], [BitMask.without] and [BitMask.exclusive].
     """
-    var include: BitMask # Components to include.
-    var exclude: BitMask # Components to exclude.
+
+    var include: BitMask  # Components to include.
+    var exclude: BitMask  # Components to exclude.
 
     fn matches(self, bits: BitMask) -> Bool:
         """Matches the filter against a mask."""
-        return bits.contains(self.include) and (self.exclude.is_zero() or not bits.contains_any(self.exclude))
+        return bits.contains(self.include) and (
+            self.exclude.is_zero() or not bits.contains_any(self.exclude)
+        )
+
 
 # # RelationFilter is a [Filter] for a [Relation] target, in addition to components.
 # #
@@ -38,7 +43,7 @@ struct MaskFilter:
 #     return RelationFilter{
 #         Filter: filter,
 #         Target: target,
-    
+
 
 # # matches the filter against a mask.
 # fn (f *RelationFilter) matches(bits BitMask): Bool:

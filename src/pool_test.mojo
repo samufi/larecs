@@ -145,7 +145,6 @@ def test_entity_pool_stochastic():
 
 
 def test_bit_pool():
-
     p = BitPool()
 
     assert_equal(p.capacity, 256)
