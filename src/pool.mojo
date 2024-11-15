@@ -3,7 +3,7 @@ from entity import Entity
 from constants import MAX_UINT16
 
 
-trait IntableCollectionElement(Intable, CollectionElement):
+trait IntableCollectionElement(Intable):
     fn __init__(inout self, value: Int):
         ...
 
@@ -76,16 +76,18 @@ struct EntityPool:
         return int(self._available)
 
 
-struct BitPool[LengthType: TrivialIntable = UInt16]:
+struct BitPool[LengthDType: DType = DType.uint16]:
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 
     This implementation uses an implicit list.
 
     Parameters:
-        LengthType: The data type of the length attribute of the pool.
-                    This controls how many bits can be stored in the pool,
-                    namely 2 ** (number_of_bits(LengthType) / 2).
+        LengthDType: The data type of the length attribute of the pool.
+                     This controls how many bits can be stored in the pool,
+                     namely 2 ** (number_of_bits(LengthType) / 2).
     """
+
+    alias LengthType = SIMD[LengthDType, 1]
 
     # The length must be able to express that the pool is full.
     # Hence, the capacity must be smaller than the maximum value of the length type.
@@ -95,7 +97,7 @@ struct BitPool[LengthType: TrivialIntable = UInt16]:
 
     var _bits: SIMD[DType.uint8, Self.capacity]
     var _next: UInt8
-    var _length: LengthType
+    var _length: Self.LengthType
     var _available: UInt8
 
     fn __init__(inout self):
@@ -129,7 +131,7 @@ struct BitPool[LengthType: TrivialIntable = UInt16]:
         bit = UInt8(int(self._length))
         self._bits[int(self._length)] = bit
         self._length += 1
-        return bit
+        return 
 
     fn recycle(inout self, bit: UInt8):
         """Hands a bit back for recycling."""

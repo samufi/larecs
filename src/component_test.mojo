@@ -53,7 +53,7 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](EqualityComparable, St
         return "FlexibleDummyComponentType(x: " + str(self.x) + ")"
 
 def test_component_info_initialization():
-    info = ComponentInfo[UInt8].new[DummyComponentType](1)
+    info = ComponentInfo[DType.uint8].new[DummyComponentType](1)
     assert_equal(info.id, 1)
     assert_equal(info.size, 4)
 
@@ -95,7 +95,7 @@ def test_component_reference_move():
     assert_not_equal(moved_component._data, UnsafePointer[UInt8]())
 
 def test_component_manager_registration():
-    manager = ComponentManager[UInt8]()
+    manager = ComponentManager[DType.uint8]()
     _ = manager._register[DummyComponentType]()
     assert_equal(manager.get_id[DummyComponentType](), 0)
     with assert_raises():
@@ -113,13 +113,13 @@ def test_component_manager_registration():
         _ = manager._register[FlexibleDummyComponentType[1000]]()
 
 def test_component_manager_get_info():
-    manager = ComponentManager[UInt8]()
+    manager = ComponentManager[DType.uint8]()
     info = manager.get_info[DummyComponentType]()
     assert_equal(info.id, 0)
     assert_equal(info.size, sizeof[DummyComponentType]())
 
 def test_component_manager_get_ref():
-    manager = ComponentManager[UInt8]()
+    manager = ComponentManager[DType.uint8]()
     component_ref = manager.get_ref(DummyComponentType(123))
     assert_equal(component_ref._id, 0)
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
