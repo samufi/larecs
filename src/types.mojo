@@ -6,7 +6,10 @@ alias EntityId = UInt32
 # ID is the component identifier type.
 alias Id = UInt8
 
-trait TrivialIntable(CollectionElement, Hashable): #Intable, CollectionElementNew, Hashable
+
+trait TrivialIntable(
+    CollectionElement, Hashable
+):  # Intable, CollectionElementNew, Hashable
     """A trait for trivial (register-passable) integer types.
 
     As of yet, there is no trait for register-passable types in
@@ -14,13 +17,16 @@ trait TrivialIntable(CollectionElement, Hashable): #Intable, CollectionElementNe
 
     In the end, this trait should be one of UInt8, UInt16, UInt32, UInt64, etc.
     """
+
     fn __init__(inout self, value: Int):
         ...
+
     fn __init__(inout self, value: UInt):
         ...
+
     fn __iadd__(inout self: Self, rhs: Self):
         ...
-    
+
 
 fn get_max_uint_size[T: TrivialIntable]() -> UInt:
     """Returns how many different numbers could be expressed with a UInt with the same size as T.
@@ -29,6 +35,7 @@ fn get_max_uint_size[T: TrivialIntable]() -> UInt:
         T: The type to get the size of.
     """
     return 2 ** (sizeof[T]() * 8)
+
 
 fn get_max_uint_size_of_half_type[T: TrivialIntable]() -> UInt:
     """Returns how many different numbers could be expressed with a UInt with half the size of T.

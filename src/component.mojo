@@ -3,15 +3,16 @@ from collections import Dict
 from types import get_max_uint_size, TrivialIntable
 from memory import UnsafePointer
 
+
 trait IdentifiableType:
-    """IdentifiableType is a trait for types that have a unique identifier.
-    """
+    """IdentifiableType is a trait for types that have a unique identifier."""
 
     @parameter
     @staticmethod
     @always_inline
     fn get_type_identifier() -> Int:
         ...
+
 
 trait ComponentType(IdentifiableType, Movable):
     pass
@@ -28,17 +29,21 @@ struct ComponentInfo[dType: DType]:
     fn new[T: AnyType](id: Self.Id) -> ComponentInfo[dType]:
         return ComponentInfo[dType](id, sizeof[T]())
 
-struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable].type]:
+
+struct ComponentReference[
+    is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable].type
+]:
     """ComponentReference is an agnostic reference to ECS components.
 
-    The ID is used to identify the component type. However, the 
+    The ID is used to identify the component type. However, the
     ID is never checked for validity. Use the ComponentManager to
     create component references safely.
     """
+
     var _id: Id
     var _data: UnsafePointer[UInt8]
 
-    fn __init__[T: ComponentType](inout self, id: Id, ref[lifetime] value: T):
+    fn __init__[T: ComponentType](inout self, id: Id, ref [lifetime]value: T):
         self._id = id
         self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
@@ -49,23 +54,22 @@ struct ComponentReference[is_mutable: Bool, //, Id: TrivialIntable, lifetime: Or
     fn __copyinit__(inout self, existing: Self):
         self._id = existing._id
         self._data = existing._data
-    
+
     @always_inline
-    fn unsafe_get_value[T: ComponentType](self) raises -> ref [__origin_of(self)] T: 
-        """Get the value of the component.
-        """
+    fn unsafe_get_value[
+        T: ComponentType
+    ](self) raises -> ref [__origin_of(self)] T:
+        """Get the value of the component."""
         return self._data.bitcast[T]()[0]
 
     @always_inline
     fn get_unsafe_ptr(self) -> UnsafePointer[UInt8]:
-        """Get the unsafe pointer to the data of the component.
-        """
+        """Get the unsafe pointer to the data of the component."""
         return self._data
 
     @always_inline
     fn get_id(self) -> Id:
-        """Get the ID of the component.
-        """
+        """Get the ID of the component."""
         return self._id
 
 
@@ -75,22 +79,22 @@ struct ComponentManager[dType: DType]:
     It is used to assign IDs to types and to create
     references for passing them around.
     """
+
     alias Id = SIMD[dType, 1]
 
     var _components: Dict[Int, ComponentInfo[dType]]
     alias max_size = get_max_uint_size[Self.Id]()
 
     fn __init__(inout self) raises:
-        
         @parameter
         if not dType.is_integral():
-            raise Error(
-                "dType needs to be an integral type."
-            )
+            raise Error("dType needs to be an integral type.")
 
         self._components = Dict[Int, ComponentInfo[dType]]()
 
-    fn _register[T: ComponentType, check_existent: Bool = True](inout self) raises -> ComponentInfo[dType] as component_info:
+    fn _register[
+        T: ComponentType, check_existent: Bool = True
+    ](inout self) raises -> ComponentInfo[dType] as component_info:
         """Register a new component type.
 
         Parameters:
@@ -101,15 +105,26 @@ struct ComponentManager[dType: DType]:
             Error: If check_existent and the component type has already been registered.
             Error: If the maximum number of components has been reached.
         """
+
         @parameter
         if check_existent:
             if T.get_type_identifier() in self._components:
-                raise Error("A component with hash " + str(T.get_type_identifier()) + " has already been registered.")
-        
-        if len(self._components) >= self.max_size:
-            raise Error("We cannot register more than " + str(self.max_size) + " elements in a component manager of this type.")
+                raise Error(
+                    "A component with hash "
+                    + str(T.get_type_identifier())
+                    + " has already been registered."
+                )
 
-        component_info = ComponentInfo[dType].new[T](Self.Id(len(self._components)))
+        if len(self._components) >= self.max_size:
+            raise Error(
+                "We cannot register more than "
+                + str(self.max_size)
+                + " elements in a component manager of this type."
+            )
+
+        component_info = ComponentInfo[dType].new[T](
+            Self.Id(len(self._components))
+        )
         self._components[T.get_type_identifier()] = component_info
 
     fn get_id[T: ComponentType](inout self) raises -> Self.Id:
@@ -142,7 +157,13 @@ struct ComponentManager[dType: DType]:
             return self._register[T, False]()
 
     @always_inline
-    fn get_ref[is_mutable: Bool, //, T: ComponentType, lifetime: Origin[is_mutable].type](inout self,  ref[lifetime] value: T) raises -> ComponentReference[Self.Id, lifetime]:
+    fn get_ref[
+        is_mutable: Bool, //,
+        T: ComponentType,
+        lifetime: Origin[is_mutable].type,
+    ](inout self, ref [lifetime]value: T) raises -> ComponentReference[
+        Self.Id, lifetime
+    ]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.

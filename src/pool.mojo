@@ -131,7 +131,7 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         bit = UInt8(int(self._length))
         self._bits[int(self._length)] = bit
         self._length += 1
-        return 
+        return
 
     fn recycle(inout self, bit: UInt8):
         """Hands a bit back for recycling."""
