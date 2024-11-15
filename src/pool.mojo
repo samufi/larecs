@@ -64,15 +64,15 @@ struct EntityPool:
         return entity.gen == self._entities[int(entity.id)].gen
 
     fn __len__(self) -> Int:
-        """Returns the current number of used _entities."""
+        """Returns the current number of used entities."""
         return len(self._entities) - 1 - int(self._available)
 
     fn capacity(self) -> Int:
-        """Returns the current capacity (used and recycled _entities)."""
+        """Returns the current capacity (used and recycled entities)."""
         return len(self._entities) - 1
 
     fn available(self) -> Int:
-        """Returns the current number of _available/recycled _entities."""
+        """Returns the current number of available/recycled entities."""
         return int(self._available)
 
 
@@ -146,7 +146,7 @@ struct BitPool[LengthDType: DType = DType.uint16]:
 
 
 struct IntPool[ElementType: IntableCollectionElement = Int]:
-    """IntPool is a _pool implementation using implicit linked lists.
+    """IntPool is a pool implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
