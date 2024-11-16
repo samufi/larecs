@@ -1,4 +1,4 @@
-import bitmask as ecs
+from bitmask import BitMask
 import random
 import benchmark
 from time import now
@@ -14,7 +14,7 @@ fn run_all_bitmask_tests() raises:
     print("Running all bitmask tests...")
     test_bit_mask()
     test_bit_mask_without_exclusive()
-    test_bit_mask_128()
+    test_bit_mask_256()
     print("Done")
 
 
@@ -25,7 +25,7 @@ fn run_all_bitmask_tests() raises:
 
 
 fn test_bit_mask() raises:
-    var mask = ecs.all(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
+    var mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
 
     assert_equal(4, mask.total_bits_set())
 
@@ -36,7 +36,7 @@ fn test_bit_mask() raises:
 
     assert_equal(
         str(mask),
-        "[01100000000001000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]",
+        "[0110000000000100000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]",
     )
 
     assert_false(mask.get(0))
@@ -48,8 +48,8 @@ fn test_bit_mask() raises:
     assert_true(mask.get(0))
     assert_false(mask.get(1))
 
-    var other1 = ecs.all(UInt8(1), UInt8(2), UInt8(32))
-    var other2 = ecs.all(UInt8(0), UInt8(2))
+    var other1 = BitMask(UInt8(1), UInt8(2), UInt8(32))
+    var other2 = BitMask(UInt8(0), UInt8(2))
 
     assert_false(mask.contains(other1))
     assert_true(mask.contains(other2))
@@ -57,57 +57,57 @@ fn test_bit_mask() raises:
     mask.reset()
     assert_equal(0, mask.total_bits_set())
 
-    mask = ecs.all(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
-    other1 = ecs.all(UInt8(1), UInt8(32))
-    other2 = ecs.all(UInt8(0), UInt8(32))
+    mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
+    other1 = BitMask(UInt8(1), UInt8(32))
+    other2 = BitMask(UInt8(0), UInt8(32))
 
     assert_true(mask.contains_any(other1))
     assert_false(mask.contains_any(other2))
 
 
 fn test_bit_mask_without_exclusive() raises:
-    mask = ecs.all(UInt8(1), UInt8(2), UInt8(13))
-    assert_true(mask.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13))))
-    assert_true(mask.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
+    mask = BitMask(UInt8(1), UInt8(2), UInt8(13))
+    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
+    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
 
-    assert_false(mask.matches(ecs.all(UInt8(1), UInt8(2))))
+    assert_false(mask.matches(BitMask(UInt8(1), UInt8(2))))
 
     without = mask.without(UInt8(3))
 
-    assert_true(without.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13))))
+    assert_true(without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
     assert_true(
-        without.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
+        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
     )
 
     assert_false(
-        without.matches(ecs.all(UInt8(1), UInt8(2), UInt8(3), UInt8(13)))
+        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13)))
     )
-    assert_false(without.matches(ecs.all(UInt8(1), UInt8(2))))
+    assert_false(without.matches(BitMask(UInt8(1), UInt8(2))))
 
     excl = mask.exclusive()
 
-    assert_true(excl.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13))))
+    assert_true(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
     assert_false(
-        excl.matches(ecs.all(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
+        excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
     )
-    assert_false(excl.matches(ecs.all(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
+    assert_false(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
 
 
-fn test_bit_mask_128() raises:
-    for i in range(ecs.BitMask.total_bits):
-        mask = ecs.all(UInt8(i))
+fn test_bit_mask_256() raises:
+    for i in range(BitMask.total_bits):
+        mask = BitMask(UInt8(i))
         assert_equal(1, mask.total_bits_set())
         assert_true(mask.get(UInt8(i)))
 
-    mask = ecs.BitMask(0, 0)
+    mask = BitMask()
     assert_equal(0, mask.total_bits_set())
 
-    for i in range(ecs.BitMask.total_bits):
+    for i in range(BitMask.total_bits):
         mask.set(UInt8(i), True)
         assert_equal(i + 1, mask.total_bits_set())
         assert_true(mask.get(UInt8(i)))
 
-    mask = ecs.all(
+    mask = BitMask(
         UInt8(1),
         UInt8(2),
         UInt8(13),
@@ -118,26 +118,27 @@ fn test_bit_mask_128() raises:
     )
 
     assert_true(
-        mask.contains(ecs.all(UInt8(1), UInt8(2), UInt8(63), UInt8(64)))
+        mask.contains(BitMask(UInt8(1), UInt8(2), UInt8(63), UInt8(64)))
     )
     assert_false(
-        mask.contains(ecs.all(UInt8(1), UInt8(2), UInt8(63), UInt8(90)))
+        mask.contains(BitMask(UInt8(1), UInt8(2), UInt8(63), UInt8(90)))
     )
 
-    assert_true(mask.contains_any(ecs.all(UInt8(6), UInt8(65), UInt8(111))))
-    assert_false(mask.contains_any(ecs.all(UInt8(6), UInt8(66), UInt8(90))))
+    assert_true(mask.contains_any(BitMask(UInt8(6), UInt8(65), UInt8(111))))
+    assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
 
+# # -----------------------------------------------------------------------------
 
 # fn benchmark_bitmask_get[n: Int = 100000000]():
-#     var mask = ecs.all()
+#     var mask = BitMask()
 
-#     for i in range(ecs.BitMask.total_bits):
+#     for i in range(BitMask.total_bits):
 #         if random.random_float64() < 0.5:
 #             mask.set(UInt8(i), True)
 
 
 #     vals_ = random.rand[DType.float16](n)
-#     vals_ = ecs.BitMask.total_bits * vals_
+#     vals_ = BitMask.total_bits * vals_
 #     vals = vals_.astype[DType.uint8]()
 #     print(n)
 #     print(vals.shape()[0])
@@ -153,13 +154,13 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkBitmaskContains(b *testing.B):
 #     b.StopTimer()
-#     mask = ecs.all()
+#     mask = BitMask()
 #     for i = 0; i < ecs.MASK_TOTAL_BITS; i++:
 #         if rand.Float64() < 0.5:
 #             mask.set(UInt8(i), True)
 
 
-#     filter = ecs.all(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
+#     filter = BitMask(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
 #     b.StartTimer()
 
 #     var v: Bool
@@ -174,13 +175,13 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkBitmaskContainsAny(b *testing.B):
 #     b.StopTimer()
-#     mask = ecs.all()
+#     mask = BitMask()
 #     for i = 0; i < ecs.MASK_TOTAL_BITS; i++:
 #         if rand.Float64() < 0.5:
 #             mask.set(UInt8(i), True)
 
 
-#     filter = ecs.all(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
+#     filter = BitMask(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
 #     b.StartTimer()
 
 #     var v: Bool
@@ -195,8 +196,8 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkMaskFilter(b *testing.B):
 #     b.StopTimer()
-#     mask = ecs.all(0, 1, 2).without()
-#     bits = ecs.all(0, 1, 2)
+#     mask = BitMask(0, 1, 2).without()
+#     bits = BitMask(0, 1, 2)
 #     b.StartTimer()
 #     var v: Bool
 #     for i = 0; i < b.N; i++:
@@ -209,8 +210,8 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkMaskFilterNoPointer(b *testing.B):
 #     b.StopTimer()
-#     mask = maskFilterPointer{ecs.all(0, 1, 2), ecs.all()
-#     bits = ecs.all(0, 1, 2)
+#     mask = maskFilterPointer{BitMask(0, 1, 2), BitMask()
+#     bits = BitMask(0, 1, 2)
 #     b.StartTimer()
 #     var v: Bool
 #     for i = 0; i < b.N; i++:
@@ -223,8 +224,8 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkMaskPointer(b *testing.B):
 #     b.StopTimer()
-#     mask = maskPointer(ecs.all(0, 1, 2))
-#     bits = ecs.all(0, 1, 2)
+#     mask = maskPointer(BitMask(0, 1, 2))
+#     bits = BitMask(0, 1, 2)
 #     b.StartTimer()
 #     var v: Bool
 #     for i = 0; i < b.N; i++:
@@ -237,8 +238,8 @@ fn test_bit_mask_128() raises:
 
 # fn BenchmarkMask(b *testing.B):
 #     b.StopTimer()
-#     mask = ecs.all(0, 1, 2)
-#     bits = ecs.all(0, 1, 2)
+#     mask = BitMask(0, 1, 2)
+#     bits = BitMask(0, 1, 2)
 #     b.StartTimer()
 #     var v: Bool
 #     for i = 0; i < b.N; i++:
@@ -294,7 +295,7 @@ fn test_bit_mask_128() raises:
 #     posID = ecs.ComponentID[Position](&world)
 #     velID = ecs.ComponentID[Velocity](&world)
 
-#     filter = ecs.all(posID, velID)
+#     filter = BitMask(posID, velID)
 #     query = world.Query(filter)
 
 #     for query.Next():
@@ -308,7 +309,7 @@ fn test_bit_mask_128() raises:
 #     posID = ecs.ComponentID[Position](&world)
 #     velID = ecs.ComponentID[Velocity](&world)
 
-#     filter = ecs.all(posID).without(velID)
+#     filter = BitMask(posID).without(velID)
 #     query = world.Query(&filter)
 
 #     for query.Next():
@@ -322,7 +323,7 @@ fn test_bit_mask_128() raises:
 #     posID = ecs.ComponentID[Position](&world)
 #     velID = ecs.ComponentID[Velocity](&world)
 
-#     filter = ecs.all(posID, velID).exclusive()
+#     filter = BitMask(posID, velID).exclusive()
 #     query = world.Query(&filter)
 
 #     for query.Next():
