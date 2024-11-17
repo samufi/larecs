@@ -2,12 +2,13 @@ from bitmask import BitMask
 import random
 import benchmark
 from time import now
+from memory import UnsafePointer
 from testing import *
 
 
 fn main() raises:
     run_all_bitmask_tests()
-    # run_all_bitmask_benchmarks()
+    run_all_bitmask_benchmarks()
 
 
 fn run_all_bitmask_tests() raises:
@@ -18,10 +19,10 @@ fn run_all_bitmask_tests() raises:
     print("Done")
 
 
-# fn run_all_bitmask_benchmarks():
-#     print("Running all bitmask benchmarks...")
-#     benchmark_bitmask_get()
-#     print("Done")
+fn run_all_bitmask_benchmarks():
+    print("Running all bitmask benchmarks...")
+    benchmark_bitmask_get()
+    print("Done")
 
 
 fn test_bit_mask() raises:
@@ -129,27 +130,25 @@ fn test_bit_mask_256() raises:
 
 # # -----------------------------------------------------------------------------
 
-# fn benchmark_bitmask_get[n: Int = 100000000]():
-#     var mask = BitMask()
+fn benchmark_bitmask_get[log_2_n: Int = 22]():
+    alias n = 2 ** log_2_n
 
-#     for i in range(BitMask.total_bits):
-#         if random.random_float64() < 0.5:
-#             mask.set(UInt8(i), True)
+    var mask = BitMask()
+    for i in range(BitMask.total_bits):
+        if random.random_float64() < 0.5:
+            mask.set(UInt8(i), True)
 
+    vals = SIMD[DType.uint8, n]()
+    random.randint(UnsafePointer.address_of(vals[0]), len(vals), 0, 256)
 
-#     vals_ = random.rand[DType.float16](n)
-#     vals_ = BitMask.total_bits * vals_
-#     vals = vals_.astype[DType.uint8]()
-#     print(n)
-#     print(vals.shape()[0])
-#     print(vals)
+    previous = now()
+    result = 0
+    for i in range(len(vals)):
+        result += mask.get(i)
 
-#     let previous = now()
-#     for i in range(vals.shape()[0]):
-#         let v = mask.get(i)
-
-#     let elapsed_time = (previous - now()) * 1e-9 / n
-#     print(elapsed_time)
+    elapsed_time = (previous - now()) * 1e-9 / n
+    print(result)
+    print(elapsed_time)
 
 
 # fn BenchmarkBitmaskContains(b *testing.B):
