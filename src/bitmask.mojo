@@ -2,9 +2,8 @@ from bit import pop_count, bit_not
 from filter import MaskFilter
 
 
-@value
 @register_passable
-struct BitMask(Stringable):
+struct BitMask(Stringable, KeyElement):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexType = UInt8
@@ -14,7 +13,7 @@ struct BitMask(Stringable):
     var _bytes: SIMD[DType.uint8, Self.total_bytes]
 
     @always_inline
-    fn __init__(inout self, bytes: SIMD[DType.uint8, Self.total_bytes]):
+    fn __init__(inout self, *, bytes: SIMD[DType.uint8, Self.total_bytes]):
         """Initializes the mask with the given bytes."""
         self._bytes = bytes
 
@@ -31,6 +30,25 @@ struct BitMask(Stringable):
         """Initializes the mask with the bits at the given indices set to True.
         """
         self.__init__(bits)
+
+    fn __copyinit__(inout self, other: Self):
+        """Initializes the mask with the other mask."""
+        self._bytes = other._bytes
+
+    @always_inline
+    fn __hash__(self) -> UInt:
+        """Hashes the mask."""
+        return hash(self._bytes)
+
+    @always_inline
+    fn __eq__(self, other: Self) -> Bool:
+        """Compares two masks for equality."""
+        return (self._bytes == other._bytes).reduce_and()
+
+    @always_inline
+    fn __ne__(self, other: Self) -> Bool:
+        """Compares two masks for inequality."""
+        return not self.__eq__(other)
 
     @always_inline
     fn matches(self, bits: Self) -> Bool:
@@ -89,9 +107,16 @@ struct BitMask(Stringable):
             self._bytes[int(index)] &= ~(1 << offset)
 
     @always_inline
+    fn flip(inout self, bit: Self.IndexType):
+        """Flips the state of bit at the given index."""
+        var index: Self.IndexType = bit // 8
+        var offset: Self.IndexType = bit - (8 * index)
+        self._bytes[int(index)] ^= 1 << offset
+
+    @always_inline
     fn invert(self) -> BitMask:
         """Returns the inversion of this mask."""
-        return BitMask(bit_not(self._bytes))
+        return BitMask(bytes=bit_not(self._bytes))
 
     @always_inline
     fn is_zero(self) -> Bool:
@@ -116,7 +141,7 @@ struct BitMask(Stringable):
     @always_inline
     fn total_bits_set(self) -> Int:
         """Returns how many bits are set in this mask."""
-        # The cast to uint16 is necessary to avoid overflow 
+        # The cast to uint16 is necessary to avoid overflow
         # in the reduce operation.
         return int(pop_count(self._bytes).cast[DType.uint16]().reduce_add())
 
