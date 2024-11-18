@@ -4,6 +4,7 @@ import benchmark
 from time import now
 from memory import UnsafePointer
 from testing import *
+from benchmark import Bencher, keep
 
 
 fn main() raises:
@@ -21,7 +22,11 @@ fn run_all_bitmask_tests() raises:
 
 fn run_all_bitmask_benchmarks():
     print("Running all bitmask benchmarks...")
-    benchmark_bitmask_get()
+    n = 100000000
+    bencher = Bencher(n)
+    benchmark_bitmask_get(bencher)
+    print(bencher.elapsed / n * 1e-9)
+    benchmark_bitmask_get_()
     print("Done")
 
 
@@ -48,6 +53,15 @@ fn test_bit_mask() raises:
 
     assert_true(mask.get(0))
     assert_false(mask.get(1))
+
+    mask.flip(UInt8(0))
+    mask.flip(UInt8(1))
+    
+    assert_false(mask.get(0))
+    assert_true(mask.get(1))
+    
+    mask.flip(UInt8(0))
+    mask.flip(UInt8(1))
 
     var other1 = BitMask(UInt8(1), UInt8(2), UInt8(32))
     var other2 = BitMask(UInt8(0), UInt8(2))
@@ -128,10 +142,12 @@ fn test_bit_mask_256() raises:
     assert_true(mask.contains_any(BitMask(UInt8(6), UInt8(65), UInt8(111))))
     assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
 
+
 # # -----------------------------------------------------------------------------
 
-fn benchmark_bitmask_get[log_2_n: Int = 22]():
-    alias n = 2 ** log_2_n
+
+fn benchmark_bitmask_get_[log_2_n: Int = 16]():
+    alias n = 2**log_2_n
 
     var mask = BitMask()
     for i in range(BitMask.total_bits):
@@ -139,16 +155,53 @@ fn benchmark_bitmask_get[log_2_n: Int = 22]():
             mask.set(UInt8(i), True)
 
     vals = SIMD[DType.uint8, n]()
-    random.randint(UnsafePointer.address_of(vals[0]), len(vals), 0, 256)
+    for i in range(n):
+        vals[i] = random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+    result = 0
 
     previous = now()
-    result = 0
-    for i in range(len(vals)):
-        result += mask.get(i)
+    for i in range(n):
+        result += mask.get(vals[i])
 
-    elapsed_time = (previous - now()) * 1e-9 / n
+    elapsed_time = (now() - previous) * 1e-9 / n
     print(result)
     print(elapsed_time)
+
+    previous = now()
+    for _ in range(n):
+        result += int(
+            random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+        )
+
+    elapsed_time = (now() - previous) * 1e-9 / n
+    print(result)
+    print(elapsed_time)
+
+
+fn benchmark_bitmask_get(inout bencher: Bencher):
+    var mask = BitMask()
+    for i in range(BitMask.total_bits):
+        if random.random_float64() < 0.5:
+            mask.set(UInt8(i), True)
+
+    var index: UInt8 = 0
+    var index2: UInt8 = 0
+
+    @always_inline
+    @parameter
+    fn preproc_fn() capturing:
+        index2 = (
+            1  # random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+        )
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing:
+        keep(mask.get(index))
+
+    print(index2)
+    bencher.iter_preproc[bench_fn, preproc_fn]()
+    # bencher.iter[bench_fn]()
 
 
 # fn BenchmarkBitmaskContains(b *testing.B):
