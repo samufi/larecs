@@ -157,7 +157,7 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
 
     fn __init__(inout self):
         """Creates a new, initialized entity pool."""
-        self._pool = List[ElementType]()
+        self._pool = List[ElementType, True]()
         self._next = ElementType(0)
         self._available = 0
 
