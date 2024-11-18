@@ -56,10 +56,10 @@ fn test_bit_mask() raises:
 
     mask.flip(UInt8(0))
     mask.flip(UInt8(1))
-    
+
     assert_false(mask.get(0))
     assert_true(mask.get(1))
-    
+
     mask.flip(UInt8(0))
     mask.flip(UInt8(1))
 
