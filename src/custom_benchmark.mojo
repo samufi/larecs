@@ -196,11 +196,11 @@ struct Bench:
 
         for tuple in self._results:
             bench_id, bencher = tuple[]
-            mean_time = bencher._time_ns * 1e-9 / bencher._iters
+            mean_time = bencher._time_ns / bencher._iters
             print(
                 bench_id.func_name + ":",
                 mean_time,
-                "seconds per iteration (" + str(bencher._iters),
+                "ns per iteration (" + str(bencher._iters),
                 "iterations in",
                 bencher._time_ns * 1e-9,
                 "seconds)",
