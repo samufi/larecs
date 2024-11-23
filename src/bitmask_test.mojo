@@ -261,6 +261,7 @@ fn benchmark_bitmask_contains(inout bencher: Bencher) capturing:
         for _ in range(calls):
             keep(mask.contains(val))
         return calls
+
     bencher.iter_custom[bench_fn]()
 
 
@@ -272,7 +273,7 @@ fn benchmark_bitmask_contains_any(inout bencher: Bencher) capturing:
     @parameter
     fn bench_fn(calls: Int) capturing -> Int:
         for _ in range(calls):
-                keep(mask.contains_any(val))
+            keep(mask.contains_any(val))
         return calls
 
     bencher.iter_custom[bench_fn]()
