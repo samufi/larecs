@@ -4,12 +4,41 @@ import benchmark
 from time import now
 from memory import UnsafePointer
 from testing import *
-from benchmark import Bencher, keep
+from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
 
 
-fn main() raises:
-    run_all_bitmask_tests()
-    run_all_bitmask_benchmarks()
+# ------ Helper functions ------
+
+
+@always_inline
+fn get_random_bitmask() -> BitMask as mask:
+    mask = BitMask()
+    for i in range(BitMask.total_bits):
+        if random.random_float64() < 0.5:
+            mask.set(UInt8(i), True)
+
+
+@always_inline
+fn get_random_uint8_list(size: Int) -> List[UInt8] as vals:
+    vals = List[UInt8](capacity=size)
+    for _ in range(size):
+        vals.append(
+            random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+        )
+
+
+@always_inline
+fn get_random_1_true_bitmasks(size: Int) -> List[BitMask] as vals:
+    vals = List[BitMask](capacity=size)
+    for _ in range(size):
+        vals.append(
+            BitMask(
+                random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+            )
+        )
+
+
+# ------ Tests ------
 
 
 fn run_all_bitmask_tests() raises:
@@ -17,16 +46,6 @@ fn run_all_bitmask_tests() raises:
     test_bit_mask()
     test_bit_mask_without_exclusive()
     test_bit_mask_256()
-    print("Done")
-
-
-fn run_all_bitmask_benchmarks():
-    print("Running all bitmask benchmarks...")
-    n = 100000000
-    bencher = Bencher(n)
-    benchmark_bitmask_get(bencher)
-    print(bencher.elapsed / n * 1e-9)
-    benchmark_bitmask_get_()
     print("Done")
 
 
@@ -108,6 +127,17 @@ fn test_bit_mask_without_exclusive() raises:
     assert_false(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
 
 
+fn test_bi_mask_eq() raises:
+    mask1 = get_random_bitmask()
+    mask2 = mask1
+
+    assert_true(mask1 == mask2)
+
+    mask2.flip(3)
+
+    assert_false(mask1 == mask2)
+
+
 fn test_bit_mask_256() raises:
     for i in range(BitMask.total_bits):
         mask = BitMask(UInt8(i))
@@ -143,121 +173,102 @@ fn test_bit_mask_256() raises:
     assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
 
 
-# # -----------------------------------------------------------------------------
+# ------ Benchmarking ------
 
 
-fn benchmark_bitmask_get_[log_2_n: Int = 16]():
-    alias n = 2**log_2_n
-
-    var mask = BitMask()
-    for i in range(BitMask.total_bits):
-        if random.random_float64() < 0.5:
-            mask.set(UInt8(i), True)
-
-    vals = SIMD[DType.uint8, n]()
-    for i in range(n):
-        vals[i] = random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
-    result = 0
-
-    previous = now()
-    for i in range(n):
-        result += mask.get(vals[i])
-
-    elapsed_time = (now() - previous) * 1e-9 / n
-    print(result)
-    print(elapsed_time)
-
-    previous = now()
-    for _ in range(n):
-        result += int(
-            random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
-        )
-
-    elapsed_time = (now() - previous) * 1e-9 / n
-    print(result)
-    print(elapsed_time)
+fn run_all_bitmask_benchmarks() raises:
+    print("Running all bitmask benchmarks...")
+    config = BenchConfig(initial_batch_size=10000, min_runtime_secs=2, show_progress=True)
+    bench = Bench(config)
+    bench.bench_function[benchmark_bitmask_get](
+        BenchId("benchmark_bitmask_get")
+    )
+    bench.bench_function[benchmark_bitmask_contains](
+        BenchId("benchmark_bitmask_contains")
+    )
+    bench.bench_function[benchmark_bitmask_contains_any](
+        BenchId("benchmark_bitmask_contains_any")
+    )
+    bench.bench_function[benchmark_bitmask_eq](BenchId("benchmark_bitmask_eq"))
+    bench.bench_function[benchmmark_mask_filter](
+        BenchId("benchmmark_mask_filter")
+    )
+    bench.dump_report()
 
 
-fn benchmark_bitmask_get(inout bencher: Bencher):
-    var mask = BitMask()
-    for i in range(BitMask.total_bits):
-        if random.random_float64() < 0.5:
-            mask.set(UInt8(i), True)
-
-    var index: UInt8 = 0
-    var index2: UInt8 = 0
+fn benchmark_bitmask_get(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+    vals = get_random_uint8_list(min(bencher.num_iters, 10000))
 
     @always_inline
     @parameter
-    fn preproc_fn() capturing:
-        index2 = (
-            1  # random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
-        )
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls / len(vals)):
+            for val in vals:
+                keep(mask.get(val[]))
+        return int(calls / len(vals)) * len(vals)
+
+    bencher.iter_custom[bench_fn]()
+
+
+fn benchmark_bitmask_contains(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+    vals = get_random_1_true_bitmasks(min(bencher.num_iters, 10000))
 
     @always_inline
     @parameter
-    fn bench_fn() capturing:
-        keep(mask.get(index))
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls / len(vals)):
+            for val in vals:
+                keep(mask.contains(val[]))
+        return int(calls / len(vals)) * len(vals)
 
-    print(index2)
-    bencher.iter_preproc[bench_fn, preproc_fn]()
-    # bencher.iter[bench_fn]()
-
-
-# fn BenchmarkBitmaskContains(b *testing.B):
-#     b.StopTimer()
-#     mask = BitMask()
-#     for i = 0; i < ecs.MASK_TOTAL_BITS; i++:
-#         if rand.Float64() < 0.5:
-#             mask.set(UInt8(i), True)
+    bencher.iter_custom[bench_fn]()
 
 
-#     filter = BitMask(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
-#     b.StartTimer()
+fn benchmark_bitmask_contains_any(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+    vals = get_random_1_true_bitmasks(min(bencher.num_iters, 10000))
 
-#     var v: Bool
-#     for i = 0; i < b.N; i++:
-#         v = mask.contains(filter)
+    @always_inline
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls / len(vals)):
+            for filter in vals:
+                keep(mask.contains_any(filter[]))
+        return int(calls / len(vals)) * len(vals)
 
-
-#     b.StopTimer()
-#     v = !v
-#     _ = v
-
-
-# fn BenchmarkBitmaskContainsAny(b *testing.B):
-#     b.StopTimer()
-#     mask = BitMask()
-#     for i = 0; i < ecs.MASK_TOTAL_BITS; i++:
-#         if rand.Float64() < 0.5:
-#             mask.set(UInt8(i), True)
+    bencher.iter_custom[bench_fn]()
 
 
-#     filter = BitMask(UInt8(rand.Intn(ecs.MASK_TOTAL_BITS)))
-#     b.StartTimer()
+fn benchmmark_mask_filter(inout bencher: Bencher) capturing:
+    mask = BitMask(0, 1, 2).without()
+    bits = BitMask(0, 1, 2)
 
-#     var v: Bool
-#     for i = 0; i < b.N; i++:
-#         v = mask.contains_any(filter)
+    @always_inline
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls):
+            keep(mask.matches(bits))
+        return calls
+
+    bencher.iter_custom[bench_fn]()
 
 
-#     b.StopTimer()
-#     v = !v
-#     _ = v
+fn benchmark_bitmask_eq(inout bencher: Bencher) capturing:
+    mask1 = get_random_bitmask()
+    mask2 = mask1
+    mask3 = get_random_bitmask()
 
+    @always_inline
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls / 2):
+            keep(mask1 == mask2)
+            keep(mask1 == mask3)
+        return int(calls / 2)
 
-# fn BenchmarkMaskFilter(b *testing.B):
-#     b.StopTimer()
-#     mask = BitMask(0, 1, 2).without()
-#     bits = BitMask(0, 1, 2)
-#     b.StartTimer()
-#     var v: Bool
-#     for i = 0; i < b.N; i++:
-#         v = mask.matches(bits)
-
-#     b.StopTimer()
-#     v = !v
-#     _ = v
+    bencher.iter_custom[bench_fn]()
 
 
 # fn BenchmarkMaskFilterNoPointer(b *testing.B):
@@ -302,83 +313,6 @@ fn benchmark_bitmask_get(inout bencher: Bencher):
 #     _ = v
 
 
-# # bitMask64 is there just for performance comparison with the new 128 bit Mask.
-# type bitMask64 uint64
-
-# fn newBitMask64(ids ...UInt8) bitMask64:
-#     var mask bitMask64
-#     for _, id = range ids:
-#         mask.set(id, True)
-
-#     return mask
-
-# fn (e bitMask64) get(bit UInt8): Bool:
-#     mask = bitMask64(1 << bit)
-#     return e&mask == mask
-
-
-# fn (e *bitMask64) set(bit UInt8, value: Bool):
-#     if value:
-#         *e |= bitMask64(1 << bit)
-#      else:
-#         *e &= bitMask64(^(1 << bit))
-
-
-# type maskFilterPointer struct:
-#     Mask    ecs.Mask
-#     exclude ecs.Mask
-
-
-# # matches matches a filter against a mask.
-# fn (f maskFilterPointer) matches(bits ecs.Mask): Bool:
-#     return bits.contains(f.Mask) and
-#         (f.exclude.is_zero() or !bits.contains_any(f.exclude))
-
-
-# type maskPointer ecs.Mask
-
-# # matches matches a filter against a mask.
-# fn (f *maskPointer) matches(bits ecs.Mask): Bool:
-#     return bits.contains(ecs.Mask(*f))
-
-
-# fn ExampleMask():
-#     world = ecs.NewWorld()
-#     posID = ecs.ComponentID[Position](&world)
-#     velID = ecs.ComponentID[Velocity](&world)
-
-#     filter = BitMask(posID, velID)
-#     query = world.Query(filter)
-
-#     for query.Next():
-#         # ...
-
-#     # Output:
-
-
-# fn ExampleMask_Without():
-#     world = ecs.NewWorld()
-#     posID = ecs.ComponentID[Position](&world)
-#     velID = ecs.ComponentID[Velocity](&world)
-
-#     filter = BitMask(posID).without(velID)
-#     query = world.Query(&filter)
-
-#     for query.Next():
-#         # ...
-
-#     # Output:
-
-
-# fn ExampleMask_Exclusive():
-#     world = ecs.NewWorld()
-#     posID = ecs.ComponentID[Position](&world)
-#     velID = ecs.ComponentID[Velocity](&world)
-
-#     filter = BitMask(posID, velID).exclusive()
-#     query = world.Query(&filter)
-
-#     for query.Next():
-#         # ...
-
-#     # Output:
+fn main() raises:
+    run_all_bitmask_benchmarks()
+    run_all_bitmask_tests()
