@@ -178,10 +178,18 @@ fn test_bit_mask_256() raises:
 
 fn run_all_bitmask_benchmarks() raises:
     print("Running all bitmask benchmarks...")
-    config = BenchConfig(initial_batch_size=10000, min_runtime_secs=2, show_progress=True)
+    config = BenchConfig(
+        initial_batch_size=10000, min_runtime_secs=2, show_progress=True
+    )
     bench = Bench(config)
     bench.bench_function[benchmark_bitmask_get](
         BenchId("benchmark_bitmask_get")
+    )
+    bench.bench_function[benchmark_bitmask_set](
+        BenchId("benchmark_bitmask_set")
+    )
+    bench.bench_function[benchmark_bitmask_flip](
+        BenchId("benchmark_bitmask_flip")
     )
     bench.bench_function[benchmark_bitmask_contains](
         BenchId("benchmark_bitmask_contains")
@@ -206,6 +214,38 @@ fn benchmark_bitmask_get(inout bencher: Bencher) capturing:
         for _ in range(calls / len(vals)):
             for val in vals:
                 keep(mask.get(val[]))
+        return int(calls / len(vals)) * len(vals)
+
+    bencher.iter_custom[bench_fn]()
+
+
+fn benchmark_bitmask_set(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+    vals = get_random_uint8_list(min(bencher.num_iters, 10000))
+
+    @always_inline
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        bit_val = True
+        for _ in range(calls / len(vals)):
+            for val in vals:
+                mask.set(val[], bit_val)
+                bit_val = not bit_val
+        return int(calls / len(vals)) * len(vals)
+
+    bencher.iter_custom[bench_fn]()
+
+
+fn benchmark_bitmask_flip(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+    vals = get_random_uint8_list(min(bencher.num_iters, 10000))
+
+    @always_inline
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls / len(vals)):
+            for val in vals:
+                mask.flip(val[])
         return int(calls / len(vals)) * len(vals)
 
     bencher.iter_custom[bench_fn]()
