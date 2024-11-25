@@ -4,7 +4,7 @@ from bitmask import BitMask
 # We use a stupid dict to circumvent a current
 # bug in the compiler causing a segfault when
 # using the Dict type.
-from supid_dict import StupidDict as Dict
+from stupid_dict import StupidDict as Dict
 
 
 @value
