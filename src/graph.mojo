@@ -102,6 +102,8 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
     ) -> Int:
         """Creates a link between two nodes.
 
+        Note: this does not check whether the link is already established.
+
         Args:
             from_node_index: The index of the node from which the link is created.
             changed_bit:     The index of the bit that differs between the nodes.
@@ -133,6 +135,8 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
     ) -> Int:
         """Returns the index of the node differing from the start node
         by the given indices.
+
+        If necessary, creates a new node and links it to the start node.
 
         Args:
             start_node_index: The index of the start node.
