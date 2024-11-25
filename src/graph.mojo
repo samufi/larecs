@@ -1,4 +1,4 @@
-from collections import InlineArray #, Dict
+from collections import InlineArray  # , Dict
 from bitmask import BitMask
 
 # We use a stupid dict to circumvent a current

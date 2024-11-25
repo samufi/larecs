@@ -1,8 +1,9 @@
 from collections import Optional
 
+
 struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
     """A trivial dict implementation.
-    
+
     This will be deleted once the Dict type is fixed.
     """
 
@@ -29,6 +30,6 @@ struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
                 k_v[][1] = value
                 return
         self._data.append(Tuple(key, value))
-    
+
     fn __len__(self) -> Int:
         return len(self._data)
