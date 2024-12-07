@@ -6,7 +6,8 @@ from filter import MaskFilter
 struct BitMask(Stringable, KeyElement):
     """BitMask is a 256 bit bitmask."""
 
-    alias IndexType = UInt8
+    alias IndexDType = DType.uint8
+    alias IndexType = SIMD[Self.IndexDType, 1]
     alias total_bits = 256
     alias total_bytes = Self.total_bits // 8
 
