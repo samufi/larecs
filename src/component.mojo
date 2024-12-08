@@ -8,7 +8,6 @@ from bitmask import BitMask
 trait IdentifiableType:
     """IdentifiableType is a trait for types that have a unique identifier."""
 
-    @parameter
     @staticmethod
     @always_inline
     fn get_type_identifier() -> Int:
@@ -60,9 +59,7 @@ struct ComponentInfo(ComponentInformable):
         return self.size
 
 
-struct ComponentReference[
-    is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable]
-]:
+struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
     """ComponentReference is an agnostic reference to ECS components.
 
     The ID is used to identify the component type. However, the
@@ -70,10 +67,14 @@ struct ComponentReference[
     create component references safely.
     """
 
-    var _id: Id
+    alias Id = BitMask.IndexType
+
+    var _id: Self.Id
     var _data: UnsafePointer[UInt8]
 
-    fn __init__[T: ComponentType](inout self, id: Id, ref [lifetime]value: T):
+    fn __init__[
+        T: ComponentType
+    ](inout self, id: Self.Id, ref [origin]value: T):
         self._id = id
         self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
@@ -98,7 +99,7 @@ struct ComponentReference[
         return self._data
 
     @always_inline
-    fn get_id(self) -> Id:
+    fn get_id(self) -> Self.Id:
         """Get the ID of the component."""
         return self._id
 
@@ -186,7 +187,7 @@ struct ComponentManager:
         else:
             return self._register[T, False]()
 
-    fn get_info[
+    fn get_info_arr[
         *Ts: ComponentType
     ](
         inout self,
@@ -211,7 +212,7 @@ struct ComponentManager:
             MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
 
-        ids = InlineArray[ComponentInfo, size]()
+        ids = InlineArray[ComponentInfo, size](unsafe_uninitialized=True)
 
         @parameter
         for i in range(size):
@@ -221,10 +222,8 @@ struct ComponentManager:
     fn get_ref[
         is_mutable: Bool, //,
         T: ComponentType,
-        lifetime: Origin[is_mutable],
-    ](inout self, ref [lifetime]value: T) raises -> ComponentReference[
-        Self.Id, lifetime
-    ]:
+        origin: Origin[is_mutable],
+    ](inout self, ref [origin]value: T) raises -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -232,7 +231,7 @@ struct ComponentManager:
         Parameters:
             is_mutable: Infer-only. Whether the reference is mutable.
             T: The component type.
-            lifetime: The lifetime of the reference.
+            origin: The origin of the reference.
 
         Args:
             value: The value of the component to be passed around.
@@ -240,4 +239,4 @@ struct ComponentManager:
         Raises:
             Error: If the component was not registered and the maximum number of components has been reached.
         """
-        return ComponentReference[Self.Id](self.get_id[T](), value)
+        return ComponentReference(self.get_id[T](), value)

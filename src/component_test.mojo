@@ -7,7 +7,6 @@ from collections import InlineList
 struct DummyComponentType(EqualityComparable, Stringable):
     var x: Int32
 
-    @parameter
     @staticmethod
     @always_inline
     fn get_type_identifier() -> Int:
@@ -41,7 +40,6 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](
 ):
     var x: Int32
 
-    @parameter
     @staticmethod
     @always_inline
     fn get_type_identifier() -> Int:
@@ -65,34 +63,34 @@ def test_component_info_initialization():
 
 def test_component_initialization():
     test_value = DummyComponentType(123)
-    component = ComponentReference[UInt32](1, test_value)
+    component = ComponentReference(1, test_value)
     assert_equal(component._id, 1)
     assert_not_equal(component._data, UnsafePointer[UInt8]())
 
 
 def test_component_value_getting():
     dummy_value = DummyComponentType(456)
-    component = ComponentReference[UInt32](1, dummy_value)
+    component = ComponentReference(1, dummy_value)
     assert_equal(component.unsafe_get_value[DummyComponentType](), dummy_value)
 
 
 def test_referencing():
     dummy_value = DummyComponentType(123)
     ptr_1 = UnsafePointer.address_of(dummy_value)
-    component = ComponentReference[UInt32](1, dummy_value)
+    component = ComponentReference(1, dummy_value)
     ptr_2 = component.get_unsafe_ptr()
     assert_equal(ptr_1.bitcast[UInt8](), ptr_2)
 
 
 def test_lifetime():
     dummy_value = DummyComponentType(456)
-    component = ComponentReference[UInt32](1, dummy_value)
+    component = ComponentReference(1, dummy_value)
     _ = component.get_unsafe_ptr()
 
 
 def test_component_reference_copy():
     original = DummyComponentType(789)
-    component = ComponentReference[UInt32](1, original)
+    component = ComponentReference(1, original)
     copied_component = component
     assert_equal(copied_component._id, component._id)
     assert_equal(copied_component._data, component._data)
@@ -100,7 +98,7 @@ def test_component_reference_copy():
 
 def test_component_reference_move():
     original = DummyComponentType(789)
-    component = ComponentReference[UInt32](1, original)
+    component = ComponentReference(1, original)
     moved_component = component^
     assert_equal(moved_component._id, 1)
     assert_not_equal(moved_component._data, UnsafePointer[UInt8]())
@@ -140,6 +138,15 @@ def test_component_manager_get_ref():
     component_ref2 = manager.get_ref(FlexibleDummyComponentType[1](123))
     assert_equal(component_ref2._id, 1)
 
+def test_component_manager_get_info_arr():
+    manager = ComponentManager()
+    info_arr = manager.get_info_arr[
+        DummyComponentType, FlexibleDummyComponentType[1]
+    ]()
+    assert_equal(info_arr[0].id, 0)
+    assert_equal(info_arr[1].id, 1)
+    assert_equal(info_arr[0].size, sizeof[DummyComponentType]())
+    assert_equal(info_arr[1].size, sizeof[FlexibleDummyComponentType[1]]())
 
 def main():
     test_component_info_initialization()
@@ -152,5 +159,7 @@ def main():
     test_component_reference_move()
     test_component_manager_get_info()
     test_component_manager_get_ref()
+    test_component_manager_get_info_arr()
 
     print("All tests passed.")
+
