@@ -53,6 +53,12 @@ struct Archetype(CollectionElement, CollectionElementNew):
         node_index: UInt,
         capacity: UInt = 10,
     ):
+        """Initializes the archetype with a given capacity.
+
+        Args:
+            node_index: The index of the archetype's node in the archetype graph.
+            capacity:   The initial capacity of the archetype.
+        """
         self._size = 0
         self._component_count = 0
         self._capacity = capacity
@@ -76,6 +82,13 @@ struct Archetype(CollectionElement, CollectionElementNew):
         ](),
         capacity: UInt = 10,
     ):
+        """Initializes the archetype with a given capacity and components.
+
+        Args:
+            node_index: The index of the archetype's node in the archetype graph.
+            components: The components of the archetype.
+            capacity:   The initial capacity of the archetype.
+        """
         constrained[
             Self.dType.is_integral(),
             "The component identifier type needs to be an integral type.",
@@ -102,6 +115,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
             ].alloc(self._capacity * int(components[i].get_size()))
 
     fn __init__(inout self, /, *, other: Self):
+        """Initializes the archetype as a copy of another archetype."""
         # Copy the attributes that can be trivially
         # copied via a simple assignment
         self._size = other._size
