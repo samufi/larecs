@@ -56,7 +56,6 @@ struct SimdDict[keyDType: DType, ValueType: CollectionElement, size: Int]:
     var _values: InlineArray[ValueType, size]
     var _keys: SIMD[keyDType, size]
     var _size: Int
-    
 
     fn __init__(inout self):
         self._values = InlineArray[ValueType, size](unsafe_uninitialized=True)

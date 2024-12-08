@@ -160,7 +160,7 @@ struct BitMaskGraph[
             The index of the node differing from the start node by the given indices.
         """
         var current_node = start_node_index
-        
+
         @parameter
         for i in range(size):
             var next_node = self._nodes[current_node].neighbours[
