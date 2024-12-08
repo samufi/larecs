@@ -61,4 +61,4 @@ struct EntityIndex:
     var index: UInt32
 
     # Entity's current archetype
-    var archetypeIndex: UInt32
+    var archetype_index: UInt32

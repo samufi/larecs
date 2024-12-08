@@ -1,7 +1,5 @@
 from bitmask import BitMask
 import random
-import benchmark
-from time import now
 from memory import UnsafePointer
 from testing import *
 from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig

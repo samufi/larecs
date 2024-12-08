@@ -1,6 +1,7 @@
 from testing import *
 from bitmask import BitMask
 from graph import Node, BitMaskGraph
+from collections import InlineArray
 
 
 def test_node_initialization():
@@ -61,12 +62,12 @@ def test_get_node_index():
     graph = BitMaskGraph[-1]()
     bit_mask2 = BitMask(0, 2)
     bit_mask1 = BitMask(0)
-    node_index = graph.get_node_index(0, 0, 2)
+    node_index = graph.get_node_index(InlineArray[Int, 2](0, 2))
     assert_equal(node_index, 2)
     assert_equal(graph._nodes[1].bit_mask, bit_mask1)
     assert_equal(graph._nodes[node_index].bit_mask, bit_mask2)
 
-    assert_equal(graph.get_node_index(0, 5, 5), 0)
+    assert_equal(graph.get_node_index(InlineArray[Int, 2](5, 5), 0), 0)
     assert_equal(graph._nodes[3].bit_mask, BitMask(5))
 
 
@@ -79,6 +80,15 @@ struct S:
 
     fn add(inout self, owned node_mask: BitMask, owned value: Int):
         self.l.append(Node(node_mask, value))
+
+
+def test_has_value():
+    graph = BitMaskGraph[-1]()
+    bit_mask = BitMask(0, 2)
+    value = 42
+    node_index = graph.add_node(bit_mask, value)
+    assert_equal(graph.has_value(node_index), True)
+    assert_equal(graph.has_value(0), False)
 
 
 def main():

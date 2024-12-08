@@ -1,13 +1,16 @@
 from sys.info import sizeof
-from collections import Dict
+from collections import (
+    InlineArray,
+)  # Dict,
+from stupid_dict import SimdDict, StupidDict as Dict
 from types import get_max_uint_size, TrivialIntable
 from memory import UnsafePointer
+from bitmask import BitMask
 
 
 trait IdentifiableType:
     """IdentifiableType is a trait for types that have a unique identifier."""
 
-    @parameter
     @staticmethod
     @always_inline
     fn get_type_identifier() -> Int:
@@ -18,21 +21,48 @@ trait ComponentType(IdentifiableType, Movable):
     pass
 
 
+trait ComponentInformable(Intable):
+    """ComponentInformable is a trait for
+    classes representing component information.
+    """
+
+    @always_inline
+    fn get_id(self) -> UInt8:
+        ...
+
+    @always_inline
+    fn get_size(self) -> UInt32:
+        ...
+
+
 @value
 @register_passable("trivial")
-struct ComponentInfo[dType: DType]:
-    alias Id = SIMD[dType, 1]
+struct ComponentInfo(ComponentInformable):
+    """ComponentInfo is a class representing information on componnets."""
+
+    alias dType = DType.uint8
+    alias Id = SIMD[Self.dType, 1]
     var id: Self.Id
     var size: UInt32
 
     @staticmethod
-    fn new[T: AnyType](id: Self.Id) -> ComponentInfo[dType]:
-        return ComponentInfo[dType](id, sizeof[T]())
+    fn new[T: AnyType](id: Self.Id) -> ComponentInfo:
+        return ComponentInfo(id, sizeof[T]())
+
+    @always_inline
+    fn __int__(self) -> Int:
+        return int(self.id)
+
+    @always_inline
+    fn get_id(self) -> Self.Id:
+        return self.id
+
+    @always_inline
+    fn get_size(self) -> UInt32:
+        return self.size
 
 
-struct ComponentReference[
-    is_mutable: Bool, //, Id: TrivialIntable, lifetime: Origin[is_mutable].type
-]:
+struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
     """ComponentReference is an agnostic reference to ECS components.
 
     The ID is used to identify the component type. However, the
@@ -40,10 +70,14 @@ struct ComponentReference[
     create component references safely.
     """
 
-    var _id: Id
+    alias Id = BitMask.IndexType
+
+    var _id: Self.Id
     var _data: UnsafePointer[UInt8]
 
-    fn __init__[T: ComponentType](inout self, id: Id, ref [lifetime]value: T):
+    fn __init__[
+        T: ComponentType
+    ](inout self, id: Self.Id, ref [origin]value: T):
         self._id = id
         self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
@@ -68,33 +102,34 @@ struct ComponentReference[
         return self._data
 
     @always_inline
-    fn get_id(self) -> Id:
+    fn get_id(self) -> Self.Id:
         """Get the ID of the component."""
         return self._id
 
 
-struct ComponentManager[dType: DType]:
+struct ComponentManager:
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
     references for passing them around.
     """
 
-    alias Id = SIMD[dType, 1]
+    alias dType = BitMask.IndexDType
+    alias Id = SIMD[Self.dType, 1]
 
-    var _components: Dict[Int, ComponentInfo[dType]]
     alias max_size = get_max_uint_size[Self.Id]()
+    var _components: Dict[Int, ComponentInfo]
 
-    fn __init__(inout self) raises:
-        @parameter
-        if not dType.is_integral():
-            raise Error("dType needs to be an integral type.")
-
-        self._components = Dict[Int, ComponentInfo[dType]]()
+    fn __init__(inout self):
+        constrained[
+            Self.dType.is_integral(),
+            "dType needs to be an integral type.",
+        ]()
+        self._components = Dict[Int, ComponentInfo]()
 
     fn _register[
         T: ComponentType, check_existent: Bool = True
-    ](inout self) raises -> ComponentInfo[dType] as component_info:
+    ](inout self) raises -> ComponentInfo as component_info:
         """Register a new component type.
 
         Parameters:
@@ -122,9 +157,7 @@ struct ComponentManager[dType: DType]:
                 + " elements in a component manager of this type."
             )
 
-        component_info = ComponentInfo[dType].new[T](
-            Self.Id(len(self._components))
-        )
+        component_info = ComponentInfo.new[T](Self.Id(len(self._components)))
         self._components[T.get_type_identifier()] = component_info
 
     fn get_id[T: ComponentType](inout self) raises -> Self.Id:
@@ -143,7 +176,8 @@ struct ComponentManager[dType: DType]:
         else:
             return self._register[T, False]().id
 
-    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo[dType]:
+    @always_inline
+    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo:
         """Get the info of a component type.
 
         If the component does not yet have an ID, register the component.
@@ -151,19 +185,48 @@ struct ComponentManager[dType: DType]:
         Raises:
             Error: If the component was not registered and the maximum number of components has been reached.
         """
-        if T.get_type_identifier() in self._components:
+        try:
             return self._components[T.get_type_identifier()]
-        else:
+        except Error:
             return self._register[T, False]()
+
+    fn get_info_arr[
+        *Ts: ComponentType
+    ](
+        inout self,
+    ) raises -> InlineArray[
+        ComponentInfo,
+        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+    ] as ids:
+        """Get the IDs of multiple component types.
+
+        If a component does not yet have an ID, register the component.
+
+        Parameters:
+            Ts: The component types.
+
+        Returns:
+            An InlineArray with the IDs of the component types.
+
+        Raises:
+            Error: If the component was not registered and the maximum number of components has been reached.
+        """
+        alias size = VariadicPack[
+            MutableAnyOrigin, ComponentType, *Ts
+        ].__len__()
+
+        ids = InlineArray[ComponentInfo, size](unsafe_uninitialized=True)
+
+        @parameter
+        for i in range(size):
+            ids[i] = self.get_info[Ts[i]]()
 
     @always_inline
     fn get_ref[
         is_mutable: Bool, //,
         T: ComponentType,
-        lifetime: Origin[is_mutable].type,
-    ](inout self, ref [lifetime]value: T) raises -> ComponentReference[
-        Self.Id, lifetime
-    ]:
+        origin: Origin[is_mutable],
+    ](inout self, ref [origin]value: T) raises -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -171,7 +234,7 @@ struct ComponentManager[dType: DType]:
         Parameters:
             is_mutable: Infer-only. Whether the reference is mutable.
             T: The component type.
-            lifetime: The lifetime of the reference.
+            origin: The origin of the reference.
 
         Args:
             value: The value of the component to be passed around.
@@ -179,4 +242,4 @@ struct ComponentManager[dType: DType]:
         Raises:
             Error: If the component was not registered and the maximum number of components has been reached.
         """
-        return ComponentReference[Self.Id](self.get_id[T](), value)
+        return ComponentReference(self.get_id[T](), value)

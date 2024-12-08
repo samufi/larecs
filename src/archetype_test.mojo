@@ -2,6 +2,8 @@ from archetype import Archetype
 from component import ComponentInfo, ComponentReference, ComponentManager
 from entity import Entity
 from memory import UnsafePointer
+from collections import InlineArray
+from pool import EntityPool
 from testing import *
 
 
@@ -20,24 +22,28 @@ struct DummyComponentType3:
     var x: UInt32
 
 
+alias CArr = InlineArray[ComponentInfo, 2]
+
+
 def test_archetype_init():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype(10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    arr = CArr(component1, component2)
+    var archetype = Archetype(4, arr, capacity=10)
 
     assert_equal(archetype._capacity, 10)
     assert_equal(len(archetype), 0)
+    assert_equal(archetype.get_node_index(), 4)
     assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
 
 def test_archetype_reserve():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
-    assert_equal(archetype._capacity, 10)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
@@ -65,9 +71,9 @@ def test_archetype_reserve():
 
 
 def test_get_entity():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     var entity = Entity(0, 0)
     archetype._entities.append(entity)
@@ -75,9 +81,9 @@ def test_get_entity():
 
 
 def test_archetype_remove():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     var entity1 = Entity(0, 0)
     var entity2 = Entity(1, 0)
@@ -101,9 +107,9 @@ def test_archetype_remove():
 
 
 def test_archetype_has_component():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     assert_equal(archetype.has_component(1), True)
     assert_equal(archetype.has_component(2), True)
@@ -111,9 +117,9 @@ def test_archetype_has_component():
 
 
 def test_archetype_get_component_ptr():
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=2, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     var entity = Entity(0, 0)
     archetype._entities.append(entity)
@@ -125,9 +131,9 @@ def test_archetype_get_component_ptr():
 
 def test_archetype_move():
     # TODO: not all fields are tested
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=5, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=5, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     ptr1 = archetype._get_component_ptr(0, 1)
     ptr2 = archetype._get_component_ptr(0, 5)
@@ -144,9 +150,9 @@ def test_archetype_move():
 
 def test_archetype_copy():
     # TODO: not all fields are tested
-    var component1 = ComponentInfo[DType.uint8](id=1, size=4)
-    var component2 = ComponentInfo[DType.uint8](id=5, size=8)
-    var archetype = Archetype[DType.uint8](10, component1, component2)
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=5, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
 
     var archetype2 = Archetype(other=archetype)
 
@@ -160,6 +166,46 @@ def test_archetype_copy():
     assert_equal(archetype._ids[1], archetype2._ids[1])
 
 
+def test_archetype_add():
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
+
+    var entity = Entity(10, 3)
+    var index = archetype.add(entity)
+
+    assert_equal(index, 0)
+    assert_equal(len(archetype), 1)
+    assert_equal(archetype.get_entity(0), entity)
+
+
+def test_archetype_extend():
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
+    var entity_pool = EntityPool()
+
+    var start_index = archetype.extend(5, entity_pool)
+
+    assert_equal(start_index, 0)
+    assert_equal(len(archetype), 5)
+
+    start_index = archetype.extend(5, entity_pool)
+
+    assert_equal(start_index, 5)
+    assert_equal(len(archetype), 10)
+    for i in range(10):
+        assert_equal(archetype.get_entity(i).id, i + 1)
+
+
+def test_archetype_has_relation():
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var archetype = Archetype(0, CArr(component1, component2))
+
+    assert_equal(archetype.has_relation(), False)
+
+
 def main():
     print("Running tests...")
     test_archetype_init()
@@ -170,4 +216,7 @@ def main():
     test_archetype_get_component_ptr()
     test_archetype_move()
     test_archetype_copy()
+    test_archetype_add()
+    test_archetype_extend()
+    test_archetype_has_relation()
     print("All tests passed!")

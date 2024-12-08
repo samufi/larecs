@@ -37,11 +37,10 @@ struct EntityPool:
         self._available -= 1
         return self._entities[int(curr)]
 
-    fn _get_new(inout self) -> Entity:
+    fn _get_new(inout self) -> Entity as entity:
         """Allocates and returns a new entity. For internal use."""
         entity = Entity(EntityId(len(self._entities)))
         self._entities.append(entity)
-        return entity
 
     fn recycle(inout self, enitity: Entity) raises:
         """Hands an entity back for recycling."""

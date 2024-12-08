@@ -8,7 +8,7 @@ from stupid_dict import StupidDict as Dict
 
 
 @value
-struct Node[DataType: AnyTrivialRegType](CollectionElement):
+struct Node[DataType: KeyElement](CollectionElement):
     """Node in a BitMaskGraph.
 
     Parameters:
@@ -41,7 +41,11 @@ struct Node[DataType: AnyTrivialRegType](CollectionElement):
         self.bit_mask = bit_mask
 
 
-struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
+struct BitMaskGraph[
+    DataType: KeyElement, //,
+    null_value: DataType,
+    hint_trivial_type: Bool = False,
+]:
     """A graph where each node is identified by a BitMask.
 
     The graph is intended to be used for fast lookup of data
@@ -54,13 +58,15 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
     Parameters:
         DataType:   The type of the value stored in the nodes.
         null_value: The place holder stored in nodes by default.
+        hint_trivial_type: Hint to the compiler whether the type
+                    is trivially copyable.
     """
 
     # The node index indicating a non-established link.
     alias null_index = Node[DataType].null_index
 
     # The list of nodes in the graph.
-    var _nodes: List[Node[DataType]]
+    var _nodes: List[Node[DataType], hint_trivial_type=hint_trivial_type]
 
     # A mapping for random lookup of nodes by their mask.
     # Used for slow lookup of nodes.
@@ -73,7 +79,9 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
             first_value: The value stored in the first node,
                          corresponding to an empty bitmask.
         """
-        self._nodes = List[Node[DataType]]()
+        self._nodes = List[
+            Node[DataType], hint_trivial_type=hint_trivial_type
+        ]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value)
 
@@ -128,30 +136,40 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
 
         return to_node_index
 
-    fn get_node_index(
+    fn get_node_index[
+        T: Intable, size: Int
+    ](
         inout self,
+        different_bits: InlineArray[T, size],
         start_node_index: Int = 0,
-        *different_bits: BitMask.IndexType,
     ) -> Int:
         """Returns the index of the node differing from the start node
         by the given indices.
 
         If necessary, creates a new node and links it to the start node.
 
+        Parameters:
+            T:                The type of the indices.
+            size:             The number of indices.
+
         Args:
-            start_node_index: The index of the start node.
             different_bits:   The indices of the bits that differ between the nodes.
+            start_node_index: The index of the start node.
 
         Returns:
             The index of the node differing from the start node by the given indices.
         """
         var current_node = start_node_index
-        for mask_index in different_bits:
+
+        @parameter
+        for i in range(size):
             var next_node = self._nodes[current_node].neighbours[
-                int(mask_index)
+                int(different_bits[i])
             ]
             if next_node == Self.null_index:
-                next_node = self.create_link(current_node, mask_index)
+                next_node = self.create_link(
+                    current_node, int(different_bits[i])
+                )
             current_node = next_node
         return current_node
 
@@ -165,3 +183,11 @@ struct BitMaskGraph[DataType: AnyTrivialRegType, //, null_value: DataType]:
             node_index: The index of the node.
         """
         return self._nodes[node_index].value
+
+    fn has_value(self: Self, node_index: Int) -> Bool:
+        """Returns whether the node at the given index has a value.
+
+        Args:
+            node_index: The index of the node.
+        """
+        return self[node_index] != Self.null_value

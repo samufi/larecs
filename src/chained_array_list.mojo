@@ -6,53 +6,53 @@ from memory import UnsafePointer
 # This should improve consistency and correctness.
 
 
-@value
-struct _ChainedArrayListIter[
-    list_mutability: Bool, //,
-    T: CollectionElementNew,
-    page_size: UInt,
-    list_lifetime: Origin[list_mutability].type,
-    forward: Bool = True,
-]:
-    """Iterator for ChainedArrayList.
+# @value
+# struct _ChainedArrayListIter[
+#     list_mutability: Bool, //,
+#     T: CollectionElementNew,
+#     page_size: UInt,
+#     list_origin: Origin[list_mutability],
+#     forward: Bool = True,
+# ]:
+#     """Iterator for ChainedArrayList.
 
-    Parameters:
-        list_mutability: Whether the reference to the list is mutable.
-        T: The type of the elements in the list.
-        page_size: The size of the individual arrays containing the list's data.
-        list_lifetime: The lifetime of the List
-        forward: The iteration direction. `False` is backwards.
-    """
+#     Parameters:
+#         list_mutability: Whether the reference to the list is mutable.
+#         T: The type of the elements in the list.
+#         page_size: The size of the individual arrays containing the list's data.
+#         list_origin: The lifetime of the List
+#         forward: The iteration direction. `False` is backwards.
+#     """
 
-    alias list_type = ChainedArrayList[T, page_size]
+#     alias list_type = ChainedArrayList[T, page_size]
 
-    var index: Int
-    var src: Pointer[Self.list_type, list_lifetime]
+#     var index: Int
+#     var src: Pointer[Self.list_type, list_origin]
 
-    fn __iter__(self) -> Self:
-        return self
+#     fn __iter__(self) -> Self:
+#         return self
 
-    fn __next__(
-        inout self,
-    ) -> Pointer[T, list_lifetime]:
-        @parameter
-        if forward:
-            self.index += 1
-            return Pointer.address_of(self.src[][self.index - 1])
-        else:
-            self.index -= 1
-            return Pointer.address_of(self.src[][self.index])
+#     fn __next__(
+#         inout self,
+#     ) -> Pointer[T, list_origin]:
+#         @parameter
+#         if forward:
+#             self.index += 1
+#             return Pointer.address_of(self.src[][self.index - 1])
+#         else:
+#             self.index -= 1
+#             return Pointer.address_of(self.src[][self.index])
 
-    @always_inline
-    fn __has_next__(self) -> Bool:
-        return self.__len__() > 0
+#     @always_inline
+#     fn __has_next__(self) -> Bool:
+#         return self.__len__() > 0
 
-    fn __len__(self) -> Int:
-        @parameter
-        if forward:
-            return len(self.src[]) - self.index
-        else:
-            return self.index
+#     fn __len__(self) -> Int:
+#         @parameter
+#         if forward:
+#             return len(self.src[]) - self.index
+#         else:
+#             return self.index
 
 
 struct ChainedArrayList[
@@ -158,15 +158,16 @@ struct ChainedArrayList[
         """
         return Pointer.address_of(self[idx])
 
-    fn __iter__(
-        ref [_]self: Self,
-    ) -> _ChainedArrayListIter[ElementType, page_size, __origin_of(self)]:
-        """Iterate over elements of the list, returning immutable references.
+    # @always_inline
+    # fn __iter__(
+    #     ref [_]self: Self,
+    # ) -> _ChainedArrayListIter[ElementType, page_size, __origin_of(self)]:
+    #     """Iterate over elements of the list, returning immutable references.
 
-        Returns:
-            An iterator of immutable references to the list elements.
-        """
-        return _ChainedArrayListIter(0, Pointer.address_of(self))
+    #     Returns:
+    #         An iterator of immutable references to the list elements.
+    #     """
+    #     return _ChainedArrayListIter(0, Pointer.address_of(self))
 
     fn append(inout self, owned value: ElementType):
         """Append an element to the list.
