@@ -58,16 +58,16 @@ fn benchmark_new_entities_10_000() raises:
 
 
 fn run_all_world_benchmarks() raises:
-    print("Running all bitmask benchmarks...")
+    print("Running all world benchmarks...")
     config = BenchConfig(min_runtime_secs=2, show_progress=True)
     bench = Bench(config)
     # bench.bench_function[benchmark_new_entities_10_000](
     #     BenchId("benchmark_new_entities_10_000")
     # )
+    report = benchmark.run[benchmark_new_entities_10_000]()
+    report.print()
     bench.dump_report()
 
 
 def main():
-    # run_all_bitmask_benchmarks()
-    report = benchmark.run[benchmark_new_entities_10_000]()
-    report.print()
+    run_all_world_benchmarks()
