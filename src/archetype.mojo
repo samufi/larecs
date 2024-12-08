@@ -48,8 +48,26 @@ struct Archetype(CollectionElement, CollectionElementNew):
     # Index of the the archetype's node in the archetype graph
     var _node_index: UInt
 
+    fn __init__(
+        inout self,
+        node_index: UInt,
+        capacity: UInt = 10,
+    ):
+        self._size = 0
+        self._component_count = 0
+        self._capacity = capacity
+        self._ids = SIMD[Self.dType, Self.max_size]()
+        self._data = InlineArray[
+            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+        ](UnsafePointer[UInt8]())
+        self._item_sizes = InlineArray[
+            UInt32, Self.max_size, run_destructors=True
+        ](0)
+        self._entities = List[Entity]()
+        self._node_index = node_index
+
     fn __init__[
-        component_count: Int = 0
+        component_count: Int
     ](
         inout self,
         node_index: UInt,
@@ -70,18 +88,8 @@ struct Archetype(CollectionElement, CollectionElementNew):
             + ".",
         ]()
 
-        self._size = 0
+        self.__init__(node_index, capacity)
         self._component_count = component_count
-        self._capacity = capacity
-        self._ids = SIMD[Self.dType, Self.max_size]()
-        self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
-        ](UnsafePointer[UInt8]())
-        self._item_sizes = InlineArray[
-            UInt32, Self.max_size, run_destructors=True
-        ](0)
-        self._entities = List[Entity]()
-        self._node_index = node_index
 
         @parameter
         for i in range(component_count):
@@ -187,6 +195,31 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._entities[index]
 
     @always_inline
+    fn unsafe_set(
+        inout self, index: Int, id: Self.Id, value: UnsafePointer[UInt8]
+    ):
+        """Sets the component with the given id at the given index."""
+        memcpy(
+            self._get_component_ptr(index, id),
+            value,
+            int(self._item_sizes[int(id)]),
+        )
+
+    @always_inline
+    fn set(inout self, index: UInt, value: ComponentReference) raises:
+        """Sets the component with the given id at the given index.
+
+        Raises:
+            Error: If the archetype does not contain the component.
+        """
+        self.assert_has_component(value.get_id())
+        self.unsafe_set(index, value.get_id(), value.get_unsafe_ptr())
+
+    # fn get(inout self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
+    #     """Returns the component with the given id at the given index."""
+    #     return ComponentReference[__origin_of(self)](id, self._get_component_ptr(index, id))
+
+    @always_inline
     fn _get_component_ptr(
         self, index: UInt, id: Self.Id
     ) -> UnsafePointer[UInt8]:
@@ -194,9 +227,25 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._data[int(id)] + index * int(self._item_sizes[int(id)])
 
     @always_inline
+    fn get_component_ptr(
+        self, index: UInt, id: Self.Id
+    ) raises -> UnsafePointer[UInt8]:
+        """Returns the component with the given id at the given index."""
+        self.assert_has_component(id)
+        return self._get_component_ptr(index, id)
+
+    @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id."""
         return bool(self._data[int(id)])
+
+    @always_inline
+    fn assert_has_component(self, id: Self.Id) raises:
+        """Raises if the archetype does not contain the given component id."""
+        if not self.has_component(id):
+            raise Error(
+                "Archetype does not contain component with id " + str(id) + "."
+            )
 
     @always_inline
     fn has_relation(self) -> Bool:
@@ -261,7 +310,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
             entity_pool: The pool to get the entities from.
 
         Returns:
-            The index of the first newly added entity in the 
+            The index of the first newly added entity in the
             archetype. The other new entities are at consecutive
             `count` indices.
         """
