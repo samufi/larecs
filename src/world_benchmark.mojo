@@ -57,7 +57,7 @@ fn benchmark_new_entities_10_000() raises:
         keep(world.new_entity(pos, vel).id)
 
 
-fn run_all_bitmask_benchmarks() raises:
+fn run_all_world_benchmarks() raises:
     print("Running all bitmask benchmarks...")
     config = BenchConfig(min_runtime_secs=2, show_progress=True)
     bench = Bench(config)
