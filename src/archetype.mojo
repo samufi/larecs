@@ -176,18 +176,20 @@ struct Archetype(CollectionElement, CollectionElementNew):
         if new_capacity <= self._capacity:
             return
 
-        self._capacity = new_capacity
         for i in range(self._component_count):
             id = int(self._ids[i])
+            old_size = int(self._item_sizes[id]) * self._capacity
             new_size = int(self._item_sizes[id]) * new_capacity
             new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
                 self._data[id],
-                new_size,
+                old_size,
             )
             self._data[id].free()
             self._data[id] = new_memory
+
+        self._capacity = new_capacity
 
     @always_inline
     fn get_entity(self, index: UInt) -> ref [self._entities] Entity:
