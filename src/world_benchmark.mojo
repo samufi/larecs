@@ -52,7 +52,8 @@ fn benchmark_new_entities_10_000() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
-    for _ in range(50_000):
+    for _ in range(10_000):
+        # keep(world.new_entity().id)
         keep(world.new_entity(pos, vel).id)
 
 

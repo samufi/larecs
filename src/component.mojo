@@ -1,5 +1,8 @@
 from sys.info import sizeof
-from collections import Dict, InlineArray
+from collections import (
+    InlineArray,
+)  # Dict,
+from stupid_dict import SimdDict, StupidDict as Dict
 from types import get_max_uint_size, TrivialIntable
 from memory import UnsafePointer
 from bitmask import BitMask
@@ -114,8 +117,8 @@ struct ComponentManager:
     alias dType = BitMask.IndexDType
     alias Id = SIMD[Self.dType, 1]
 
-    var _components: Dict[Int, ComponentInfo]
     alias max_size = get_max_uint_size[Self.Id]()
+    var _components: Dict[Int, ComponentInfo]
 
     fn __init__(inout self):
         constrained[
@@ -182,9 +185,9 @@ struct ComponentManager:
         Raises:
             Error: If the component was not registered and the maximum number of components has been reached.
         """
-        if T.get_type_identifier() in self._components:
+        try:
             return self._components[T.get_type_identifier()]
-        else:
+        except Error:
             return self._register[T, False]()
 
     fn get_info_arr[

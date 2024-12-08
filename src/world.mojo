@@ -219,6 +219,7 @@ struct World:
             .bitcast[T]()[0]
         )
 
+    @always_inline
     fn _check_locked(self) raises:
         """
         Checks if the world is locked, and panics if so.
@@ -503,11 +504,12 @@ struct World:
     #     """
     #     return &Relationsworld: self
 
+    @always_inline
     fn is_locked(self) -> Bool:
         """
         Rreturns whether the world is locked by any queries.
         """
-        debug_warn("World.is_locked() is not implemented")
+        # debug_warn("World.is_locked() is not implemented")
         return False
         # TODO
         # return self._locks.is_locked()
