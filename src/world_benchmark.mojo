@@ -46,6 +46,7 @@ struct Velocity(ComponentType):
 
 #     bencher.iter_custom[bench_fn]()
 
+
 fn benchmark_new_entities_10_000() raises:
     world = World()
     pos = Position(1.0, 2.0)
@@ -53,7 +54,6 @@ fn benchmark_new_entities_10_000() raises:
 
     for _ in range(50_000):
         keep(world.new_entity(pos, vel).id)
-
 
 
 fn run_all_bitmask_benchmarks() raises:

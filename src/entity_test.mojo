@@ -29,10 +29,14 @@ fn benchmark_entity_is_zero(inout bencher: Bencher) capturing:
 
     bencher.iter_custom[bench_fn]()
 
+
 fn run_all_bitmask_benchmarks() raises:
     bench = Bench(BenchConfig(min_runtime_secs=0.1))
-    bench.bench_function[benchmark_entity_is_zero](BenchId("benchmark_entity_is_zero"))
+    bench.bench_function[benchmark_entity_is_zero](
+        BenchId("benchmark_entity_is_zero")
+    )
     bench.dump_report()
+
 
 # TODO
 # fn example_entity():

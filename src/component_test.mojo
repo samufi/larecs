@@ -138,6 +138,7 @@ def test_component_manager_get_ref():
     component_ref2 = manager.get_ref(FlexibleDummyComponentType[1](123))
     assert_equal(component_ref2._id, 1)
 
+
 def test_component_manager_get_info_arr():
     manager = ComponentManager()
     info_arr = manager.get_info_arr[
@@ -147,6 +148,7 @@ def test_component_manager_get_info_arr():
     assert_equal(info_arr[1].id, 1)
     assert_equal(info_arr[0].size, sizeof[DummyComponentType]())
     assert_equal(info_arr[1].size, sizeof[FlexibleDummyComponentType[1]]())
+
 
 def main():
     test_component_info_initialization()
@@ -162,4 +164,3 @@ def main():
     test_component_manager_get_info_arr()
 
     print("All tests passed.")
-
