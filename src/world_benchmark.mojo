@@ -54,7 +54,9 @@ fn benchmark_new_entities_10_000() raises:
 
     for _ in range(10_000):
         # keep(world.new_entity().id)
-        keep(world.new_entity(pos, vel).id)
+        # keep(world.new_entity(pos, vel).id)
+        entity = world.new_entity(pos, vel)
+        keep(world.get[Position](entity).x)
 
 
 fn run_all_world_benchmarks() raises:
