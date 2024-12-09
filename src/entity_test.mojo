@@ -1,7 +1,6 @@
 from testing import *
-import benchmark
+from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
 from entity import Entity, EntityIndex
-from time import now
 from archetype import Archetype
 from collections import InlineArray
 
@@ -19,18 +18,24 @@ def test_zero_entity():
     assert_false(Entity(1, 0).is_zero())
 
 
-fn benchmark_entity_is_zero():
+fn benchmark_entity_is_zero(inout bencher: Bencher) capturing:
     e = Entity()
 
-    is_zero = False
+    @parameter
+    fn bench_fn(calls: Int) capturing -> Int:
+        for _ in range(calls):
+            keep(e.is_zero())
+        return calls
 
-    var n: Int = 1000000
+    bencher.iter_custom[bench_fn]()
 
-    for _ in range(n):
-        is_zero = e.is_zero()
 
-    if now() == 0:
-        print(is_zero)
+fn run_all_bitmask_benchmarks() raises:
+    bench = Bench(BenchConfig(min_runtime_secs=0.1))
+    bench.bench_function[benchmark_entity_is_zero](
+        BenchId("benchmark_entity_is_zero")
+    )
+    bench.dump_report()
 
 
 # TODO
@@ -61,5 +66,6 @@ def main():
     test_entity_as_index()
     test_zero_entity()
     print("All tests passed.")
+    run_all_bitmask_benchmarks()
     # report = benchmark.run[benchmark_entity_is_zero]()
     # report.print()
