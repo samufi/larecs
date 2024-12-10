@@ -223,7 +223,7 @@ struct World:
     @always_inline
     fn _check_locked(self) raises:
         """
-        Checks if the world is locked, and panics if so.
+        Checks if the world is locked, and raises if so.
         """
         if self.is_locked():
             raise Error("Attempt to modify a locked world.")
@@ -508,7 +508,7 @@ struct World:
     @always_inline
     fn is_locked(self) -> Bool:
         """
-        Rreturns whether the world is locked by any queries.
+        Returns whether the world is locked by any queries.
         """
         # debug_warn("World.is_locked() is not implemented")
         return False
