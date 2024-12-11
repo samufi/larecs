@@ -1,9 +1,10 @@
-from collections import Dict
+# from collections import Dict
 import random
 from bitmask import BitMask
 from memory import UnsafePointer
 from testing import *
 from stupid_dict import StupidDict
+from bitmask_lookup import BitMaskLookup
 from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
 
 
@@ -25,8 +26,8 @@ fn get_random_bitmask_list(
 
 
 def test_dict():
-    correct_dict = Dict[BitMask, Int]()
-    test_dict = StupidDict[BitMask, Int]()
+    correct_dict = StupidDict[BitMask, Int]()
+    test_dict = BitMaskLookup[Int]()
     n = 10000
     bitmasks = get_random_bitmask_list(n)
     for i in range(n):
@@ -129,4 +130,5 @@ fn run_all_dict_benchmarks() raises:
 
 
 def main():
+    test_dict()
     run_all_dict_benchmarks()
