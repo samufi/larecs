@@ -263,13 +263,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 "Archetype does not contain component with id " + str(id) + "."
             )
 
-    @always_inline
-    fn has_relation(self) -> Bool:
-        """Returns whether the archetype has self relation component."""
-        # TODO
-        # return self.has_relation_component
-        return False
-
     fn remove(inout self, index: UInt) raises -> Bool:
         """Removes an entity and its components from the archetype.
 
@@ -319,7 +312,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
     fn extend(
         inout self, count: Int, inout entity_pool: EntityPool
     ) -> Int as start_index:
-        """Adds an entity to the archetype.
+        """Extends the archetype by `count` entities from the provided pool.
 
         Args:
             count: The number of entities to add.

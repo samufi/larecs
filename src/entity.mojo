@@ -29,24 +29,34 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     var id: EntityId  # Entity ID
     var gen: UInt16  # Entity generation
 
+    @always_inline
     fn __init__(inout self, id: EntityId = 0, gen: UInt16 = 0):
         self.id = id
         self.gen = gen
 
+    @always_inline
     fn __eq__(self, other: Entity) -> Bool:
         return self.id == other.id and self.gen == other.gen
 
+    @always_inline
     fn __ne__(self, other: Entity) -> Bool:
         return not (self == other)
 
+    @always_inline
+    fn __bool__(self) -> Bool:
+        return self.id != 0
+
+    @always_inline
     fn __str__(self) -> String:
         return "Entity(" + str(self.id) + ", " + str(self.gen) + ")"
 
-    fn __hash__(self) -> UInt:
-        var output: UInt = int(self.id)
+    @always_inline
+    fn __hash__(self) -> UInt as output:
+        """Returns a unique hash."""
+        output = int(self.id)
         output |= bit_reverse(int(self.gen))
-        return output
 
+    @always_inline
     fn is_zero(self) -> Bool:
         """Returns whether this entity is the reserved zero entity."""
         return self.id == 0

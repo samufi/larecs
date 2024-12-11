@@ -198,14 +198,6 @@ def test_archetype_extend():
         assert_equal(archetype.get_entity(i).id, i + 1)
 
 
-def test_archetype_has_relation():
-    var component1 = ComponentInfo(id=1, size=4)
-    var component2 = ComponentInfo(id=2, size=8)
-    var archetype = Archetype(0, CArr(component1, component2))
-
-    assert_equal(archetype.has_relation(), False)
-
-
 def main():
     print("Running tests...")
     test_archetype_init()
@@ -218,5 +210,4 @@ def main():
     test_archetype_copy()
     test_archetype_add()
     test_archetype_extend()
-    test_archetype_has_relation()
     print("All tests passed!")

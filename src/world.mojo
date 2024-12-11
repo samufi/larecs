@@ -116,6 +116,7 @@ struct World:
 
         return archetype_index
 
+    @always_inline
     fn new_entity(inout self) raises -> Entity as entity:
         """Returns a new or recycled [Entity].
 
@@ -222,7 +223,7 @@ struct World:
     @always_inline
     fn _check_locked(self) raises:
         """
-        Checks if the world is locked, and panics if so.
+        Checks if the world is locked, and raises if so.
         """
         if self.is_locked():
             raise Error("Attempt to modify a locked world.")
@@ -507,7 +508,7 @@ struct World:
     @always_inline
     fn is_locked(self) -> Bool:
         """
-        Rreturns whether the world is locked by any queries.
+        Returns whether the world is locked by any queries.
         """
         # debug_warn("World.is_locked() is not implemented")
         return False
@@ -871,7 +872,10 @@ struct World:
         """
         entity = self._entity_pool.get()
         idx = self._archetypes[archetype_index].add(entity)
-        self._entities.append(EntityIndex(idx, archetype_index))
+        if entity.id == len(self._entities):
+            self._entities.append(EntityIndex(idx, archetype_index))
+        else:
+            self._entities[int(entity.id)] = EntityIndex(idx, archetype_index)
 
     fn _create_entities[
         element_origin: MutableOrigin
@@ -881,14 +885,15 @@ struct World:
         """
         archetype = self._archetypes[archetype_index]
         arch_start_idx = archetype.extend(count, self._entity_pool)
-        entitiy_start_idx = len(self._entities)
-        self._entities.resize(
-            len(self._entities) + count, EntityIndex(-1, archetype_index)
-        )
-        for i in range(count):
-            self._entities[entitiy_start_idx + i].archetype_index = (
-                arch_start_idx + i
+        last_entity_id = archetype.get_entity(arch_start_idx + count).id
+        if last_entity_id > len(self._entities):
+            self._entities.resize(
+                int(last_entity_id), EntityIndex(0, archetype_index)
             )
+        for i in range(arch_start_idx, arch_start_idx + count):
+            entity_id = int(archetype.get_entity(i).id)
+            self._entities[entity_id].archetype_index = archetype_index
+            self._entities[entity_id].index = arch_start_idx + i
 
     # fn removeEntities(self, filter: Filter) -> int:
     #     """
