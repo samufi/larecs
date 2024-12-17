@@ -17,7 +17,7 @@ from bitmask import BitMask
 from collections import InlineArray
 
 
-struct World:
+struct World[*component_types: AnyType]:
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -53,7 +53,7 @@ struct World:
         Archetype
     ]  # Archetypes that have no relations components.
 
-    var _component_manager: ComponentManager  # Component manager.
+    var _component_manager: ComponentManager[*component_types]  # Component manager.
 
     fn __init__(inout self) raises:
         """
@@ -65,7 +65,7 @@ struct World:
             EntityIndex(0, 0)
         )
         self._entity_pool = EntityPool()
-        self._component_manager = ComponentManager()
+        self._component_manager = ComponentManager[*component_types]()
 
         # TODO
         # var _target_entities = bitSet

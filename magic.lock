@@ -1625,6 +1625,7 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
+  license_family: BSD
   size: 16393
   timestamp: 1734432564346
 - kind: conda
@@ -1693,6 +1694,7 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
+  license_family: BSD
   size: 16336
   timestamp: 1734432570482
 - kind: conda
@@ -1743,6 +1745,7 @@ packages:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=13
   license: MIT
+  license_family: MIT
   size: 72255
   timestamp: 1734373823254
 - kind: conda
@@ -2025,6 +2028,7 @@ packages:
   - liblapacke 3.9.0 26_linux64_openblas
   - blas * openblas
   license: BSD-3-Clause
+  license_family: BSD
   size: 16338
   timestamp: 1734432576650
 - kind: conda
@@ -2773,6 +2777,7 @@ packages:
   - python >=3.9
   - requests >=2.7,<3.dev0
   license: Apache-2.0
+  license_family: APACHE
   size: 17147
   timestamp: 1734345675510
 - kind: conda

@@ -34,7 +34,7 @@ def test_new_entity():
 
 
 def test_new_entity_with_components():
-    world = World()
+    world = World[Position, Velocity]()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.new_entity(pos, vel)
@@ -47,7 +47,7 @@ def test_new_entity_with_components():
 
 
 def test_get_archetype_index():
-    world = World()
+    world = World[Position, Velocity]()
     pos = Position(12, 654)
     vel = Velocity(0.1, 0.2)
     _ = world.new_entity(pos)
@@ -75,7 +75,7 @@ def test_get_archetype_index():
 
 
 def test_set_component():
-    world = World()
+    world = World[Position, Velocity]()
     pos = Position(3.0, 4.0)
     entity = world.new_entity(pos)
     pos = Position(2.0, 7.0)
