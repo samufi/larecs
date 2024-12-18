@@ -1,6 +1,23 @@
-from benchmark import keep, BenchId
+from benchmark import (
+    keep,
+    BenchId,
+    BenchConfig as BenchConfig_,
+    Bench as Bench_,
+)
 from time import perf_counter_ns
 from collections import Dict
+
+
+fn DefaultConfig() raises -> BenchConfig_ as config:
+    """Returns the default configuration for benchmarking."""
+    config = BenchConfig_(min_runtime_secs=2, max_batch_size=100)
+    config.tabular_view = True
+    config.verbose_timing = True
+
+
+fn DefaultBench() raises -> Bench_ as bench:
+    """Returns the default benchmarking struct."""
+    bench = Bench_(DefaultConfig())
 
 
 @value

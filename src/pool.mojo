@@ -187,5 +187,5 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
     fn reset(inout self):
         """Recycles all _entities. Does NOT free the reserved memory."""
         self._pool.clear()
-        self._next = 0
+        self._next = ElementType(0)
         self._available = 0
