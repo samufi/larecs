@@ -264,8 +264,10 @@ alias FullManager = ComponentManager[
     FlexibleDummyComponentType[255],
 ]
 
+
 fn test(manager: ComponentManager) -> None:
     print(manager.get_id[FlexibleDummyComponentType[0]]())
+
 
 fn benchmark_get_first_id_1_000_000(inout bencher: Bencher) capturing:
     # create a component manager with 256 components
