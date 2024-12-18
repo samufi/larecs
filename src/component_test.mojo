@@ -40,11 +40,6 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](
 ):
     var x: Int32
 
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return type_hash
-
     fn __eq__(self, other: Self) -> Bool:
         return self.x == other.x
 
