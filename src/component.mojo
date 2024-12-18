@@ -107,6 +107,13 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         """Get the ID of the component."""
         return self._id
 
+fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
+    @parameter
+    for i in range(len(VariadicList(Ts))):
+        @parameter
+        if _type_is_eq[T, Ts[i]]():
+            return True
+    return False
 
 struct ComponentManager[*component_types: AnyType]:
     """ComponentManager is a manager for ECS components.
@@ -130,14 +137,11 @@ struct ComponentManager[*component_types: AnyType]:
         ]()
 
     @always_inline
-    fn get_id[T: ComponentType](inout self) raises -> Self.Id:
+    fn get_id[T: ComponentType](inout self) -> Self.Id:
         """Get the ID of a component type.
 
         Parameters:
             T: The component type.
-
-        Raises:
-            Error: If the component is not part of the component manager.
         """
 
         @parameter
@@ -145,16 +149,21 @@ struct ComponentManager[*component_types: AnyType]:
             @parameter
             if _type_is_eq[T, component_types[i]]():
                 return i
-        raise Error("Component is not in the list of considered component types.")
+        
+        # This constraint will fail if the component type is not in the list.
+        constrained[
+            _contains_type[T, *component_types](),
+            "The used component is not in the component parameter list.",
+        ]()
+
+        # This is unreachable.
+        return -1
 
     @always_inline
-    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo:
+    fn get_info[T: ComponentType](inout self) -> ComponentInfo:
         """Get the info of a component type.
 
         If the component does not yet have an ID, register the component.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
         return ComponentInfo.new[T](self.get_id[T]())
 
@@ -195,7 +204,7 @@ struct ComponentManager[*component_types: AnyType]:
         is_mutable: Bool, //,
         T: ComponentType,
         origin: Origin[is_mutable],
-    ](inout self, ref [origin]value: T) raises -> ComponentReference[origin]:
+    ](inout self, ref [origin]value: T) -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -207,8 +216,5 @@ struct ComponentManager[*component_types: AnyType]:
 
         Args:
             value: The value of the component to be passed around.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
         return ComponentReference(self.get_id[T](), value)
