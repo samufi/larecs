@@ -73,6 +73,7 @@ def test_component_value_getting():
     component = ComponentReference(1, dummy_value)
     assert_equal(component.unsafe_get_value[DummyComponentType](), dummy_value)
 
+
 def test_referencing():
     dummy_value = DummyComponentType(123)
     ptr_1 = UnsafePointer.address_of(dummy_value)
@@ -111,7 +112,9 @@ def test_component_manager_get_info():
 
 
 def test_component_manager_get_ref():
-    manager = ComponentManager[DummyComponentType, FlexibleDummyComponentType[1]]()
+    manager = ComponentManager[
+        DummyComponentType, FlexibleDummyComponentType[1]
+    ]()
     component_ref = manager.get_ref(DummyComponentType(123))
     assert_equal(component_ref._id, 0)
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
@@ -120,7 +123,9 @@ def test_component_manager_get_ref():
 
 
 def test_component_manager_get_info_arr():
-    manager = ComponentManager[DummyComponentType, FlexibleDummyComponentType[1]]()
+    manager = ComponentManager[
+        DummyComponentType, FlexibleDummyComponentType[1]
+    ]()
     info_arr = manager.get_info_arr[
         DummyComponentType, FlexibleDummyComponentType[1]
     ]()

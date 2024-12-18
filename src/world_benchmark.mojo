@@ -9,6 +9,7 @@ struct Position(ComponentType):
     var x: Float32
     var y: Float32
 
+
 @value
 struct Velocity(ComponentType):
     var dx: Float32

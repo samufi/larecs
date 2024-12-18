@@ -107,13 +107,16 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         """Get the ID of the component."""
         return self._id
 
+
 fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
     @parameter
     for i in range(len(VariadicList(Ts))):
+
         @parameter
         if _type_is_eq[T, Ts[i]]():
             return True
     return False
+
 
 struct ComponentManager[*component_types: AnyType]:
     """ComponentManager is a manager for ECS components.
@@ -146,10 +149,11 @@ struct ComponentManager[*component_types: AnyType]:
 
         @parameter
         for i in range(len(VariadicList(component_types))):
+
             @parameter
             if _type_is_eq[T, component_types[i]]():
                 return i
-        
+
         # This constraint will fail if the component type is not in the list.
         constrained[
             _contains_type[T, *component_types](),

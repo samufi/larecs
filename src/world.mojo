@@ -53,7 +53,9 @@ struct World[*component_types: AnyType]:
         Archetype
     ]  # Archetypes that have no relations components.
 
-    var _component_manager: ComponentManager[*component_types]  # Component manager.
+    var _component_manager: ComponentManager[
+        *component_types
+    ]  # Component manager.
 
     fn __init__(inout self) raises:
         """
