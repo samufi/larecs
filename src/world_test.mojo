@@ -45,6 +45,7 @@ def test_new_entity_with_components():
     for _ in range(10_000):
         _ = world.new_entity(pos, vel)
 
+
 def test_entity_get():
     world = World()
     pos = Position(1.0, 2.0)
@@ -53,6 +54,7 @@ def test_entity_get():
     assert_equal(world.get[Position](entity).x, pos.x)
     world.get[Position](entity).x = 123
     assert_equal(world.get[Position](entity).x, 123)
+
 
 def test_get_archetype_index():
     world = World[Position, Velocity]()
