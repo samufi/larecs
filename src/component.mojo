@@ -140,7 +140,7 @@ struct ComponentManager[*component_types: AnyType]:
         ]()
 
     @always_inline
-    fn get_id[T: ComponentType](inout self) -> Self.Id:
+    fn get_id[T: ComponentType](self) -> Self.Id:
         """Get the ID of a component type.
 
         Parameters:
@@ -164,7 +164,7 @@ struct ComponentManager[*component_types: AnyType]:
         return -1
 
     @always_inline
-    fn get_info[T: ComponentType](inout self) -> ComponentInfo:
+    fn get_info[T: ComponentType](self) -> ComponentInfo:
         """Get the info of a component type.
 
         If the component does not yet have an ID, register the component.
@@ -175,7 +175,7 @@ struct ComponentManager[*component_types: AnyType]:
     fn get_info_arr[
         *Ts: ComponentType
     ](
-        inout self,
+        self,
     ) raises -> InlineArray[
         ComponentInfo,
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
@@ -208,7 +208,7 @@ struct ComponentManager[*component_types: AnyType]:
         is_mutable: Bool, //,
         T: ComponentType,
         origin: Origin[is_mutable],
-    ](inout self, ref [origin]value: T) -> ComponentReference[origin]:
+    ](self, ref [origin]value: T) -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
