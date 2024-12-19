@@ -19,6 +19,8 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
     alias Id = SIMD[Self.dType, 1]
 
+    alias Index = UInt32
+
     # The maximal number of components in the archetype.
     alias max_size = get_max_uint_size[Self.Id]()
 
@@ -165,9 +167,15 @@ struct Archetype(CollectionElement, CollectionElementNew):
         for i in range(self._component_count):
             self._data[int(self._ids[i])].free()
 
+    @always_inline
     fn __len__(self) -> Int:
         """Returns the number of entities in the archetype."""
         return self._size
+
+    @always_inline
+    fn __bool__(self) -> Bool:
+        """Returns whether the archetype contains entities."""
+        return bool(self._size)
 
     @always_inline
     fn get_node_index(self) -> UInt:

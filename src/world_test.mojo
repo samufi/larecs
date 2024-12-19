@@ -47,7 +47,7 @@ def test_new_entity_with_components():
 
 
 def test_entity_get():
-    world = World()
+    world = World[Position, Velocity]()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.new_entity(pos, vel)
@@ -104,11 +104,50 @@ def test_set_component():
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
 
+def test_remove_entity():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+    world.remove_entity(entity)
+
+    with assert_raises():
+        _ = world.get[Position](entity)
+    with assert_raises():
+        _ = world.get[Velocity](entity)
+    assert_equal(len(world._archetypes[1]._entities), 0)
+    assert_equal(len(world._entity_pool), 0)
+
+
+def test_remove_archetype():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity1 = world.new_entity(pos, vel)
+    entity2 = world.new_entity(pos, vel)
+    world.remove_entity(entity1)
+
+    with assert_raises():
+        _ = world.get[Position](entity1)
+    with assert_raises():
+        _ = world.get[Velocity](entity1)
+    assert_equal(len(world._archetypes), 2)
+    assert_equal(len(world._archetypes[1]._entities), 1)
+    assert_equal(len(world._entity_pool), 1)
+
+    world.remove_entity(entity2)
+    assert_equal(len(world._archetypes), 1)
+    assert_equal(len(world._archetypes[1]._entities), 0)
+    assert_equal(len(world._entity_pool), 0)
+
+
 def main():
-    print("Running tests...")
+    print("Running additional tests...")
     test_new_entity()
     test_new_entity_with_components()
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
-    print("All tests passed.")
+    test_remove_entity()
+    test_remove_archetype()
+    print("All additional tests passed.")
