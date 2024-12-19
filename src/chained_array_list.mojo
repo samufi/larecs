@@ -76,12 +76,14 @@ struct ChainedArrayList[
     alias PageType = UnsafePointer[ElementType]
 
     var _pages: List[Self.PageType]
-    var _size: UInt
+    var _removed_indices: List[Int]
+    var _is_alive: List[Bool]
 
     fn __init__(inout self):
         """Create a new empty list."""
-        self._size = 0
         self._pages = List[Self.PageType]()
+        self._removed_indices = List[Int]()
+        self._is_alive = List[Bool]()
 
     fn __init__(inout self, owned *elements: ElementType):
         """Create a new empty list."""
@@ -91,13 +93,14 @@ struct ChainedArrayList[
 
     fn __moveinit__(inout self, owned other: Self):
         """Move the contents of another list into a new list."""
-        self._size = other._size
-        self._pages = other._pages
+        self._pages = other._pages^
+        self._removed_indices = other._removed_indices^
+        self._is_alive = other._is_alive^
 
     fn __del__(owned self):
         """Destroy all the elements in the list and free the memory."""
 
-        full_pages = self._size // Self.page_size
+        full_pages = len(self._is_alive) // Self.page_size
 
         for i in range(full_pages):
             if self._pages[i]:
@@ -106,7 +109,7 @@ struct ChainedArrayList[
                 self._pages[i].free()
 
         if self._pages and self._pages[full_pages]:
-            for j in range(self._size % Self.page_size):
+            for j in range(len(self._is_alive) % Self.page_size):
                 (self._pages[full_pages] + j).destroy_pointee()
             self._pages[full_pages].free()
 
@@ -117,7 +120,7 @@ struct ChainedArrayList[
         Returns:
             The number of elements in the list.
         """
-        return self._size
+        return len(self._is_alive) - len(self._removed_indices)
 
     @always_inline
     fn __bool__(self) -> Bool:
@@ -140,9 +143,30 @@ struct ChainedArrayList[
         Returns:
             A reference to the item at the given index.
         """
-        debug_assert(0 <= idx < self._size, "Index must be within bounds.")
+        debug_assert(
+            0 <= idx < len(self._is_alive), "Index must be within bounds."
+        )
+        debug_assert(self._is_alive[idx], "Element must be alive.")
 
         return (self._pages[idx // Self.page_size] + idx % Self.page_size)[]
+
+    @always_inline
+    fn remove(inout self: Self, owned idx: Int):
+        """Mark the element at the given index for removal.
+
+        The item is not deleted immediately, but will be overwritte
+        when a new item is appended to the list.
+
+        Args:
+            idx: The index of the item.
+        """
+        debug_assert(
+            0 <= idx < len(self._is_alive), "Index must be within bounds."
+        )
+        debug_assert(self._is_alive[idx], "Element must be alive.")
+
+        self._removed_indices.append(idx)
+        self._is_alive[idx] = False
 
     @always_inline
     fn get_ptr(
@@ -175,10 +199,19 @@ struct ChainedArrayList[
         Args:
             value: The element to append.
         """
-        page_index = self._size // Self.page_size
+        if self._removed_indices:
+            idx = self._removed_indices.pop()
+            self._is_alive[idx] = True
+            self[idx] = value^
+            return
+
+        idx = len(self._is_alive)
+        self._is_alive.append(True)
+
+        page_index = idx // Self.page_size
         if page_index == len(self._pages):
             self._pages.append(Self.PageType.alloc(Self.page_size))
-        (
-            self._pages[page_index] + self._size % Self.page_size
-        ).init_pointee_move(value^)
-        self._size += 1
+
+        (self._pages[page_index] + idx % Self.page_size).init_pointee_move(
+            value^
+        )
