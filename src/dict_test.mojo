@@ -46,5 +46,6 @@ def _test_dict():
             with assert_raises():
                 _ = test_dict[mask]
 
+
 def main():
     _test_dict()
