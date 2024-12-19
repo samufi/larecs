@@ -1,7 +1,7 @@
-from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
+from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
+from custom_benchmark import DefaultBench
 from world import World
 from component import ComponentType, ComponentInfo
-import benchmark
 
 
 @value
@@ -37,26 +37,36 @@ struct Velocity(ComponentType):
 #     bencher.iter_custom[bench_fn]()
 
 
-fn benchmark_new_entities_10_000() raises:
+fn benchmark_new_entities_1_000_000(inout bencher: Bencher) raises capturing:
     world = World[Position, Velocity]()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
-    for _ in range(10_000):
-        # keep(world.new_entity().id)
-        keep(world.new_entity(pos, vel).id)
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(1_000_000):
+            # keep(world.new_entity().id)
+            # keep(world.new_entity(pos, vel).id)
+            entity = world.new_entity(pos, vel)
+            keep(world.get[Position](entity).x)
+
+    bencher.iter[bench_fn]()
 
 
 fn run_all_world_benchmarks() raises:
-    print("Running all world benchmarks...")
-    config = BenchConfig(min_runtime_secs=2, show_progress=True)
-    bench = Bench(config)
+    bench = DefaultBench()
+    run_all_world_benchmarks(bench)
+    bench.dump_report()
+
+
+fn run_all_world_benchmarks(inout bench: Bench) raises:
     # bench.bench_function[benchmark_new_entities_10_000](
     #     BenchId("benchmark_new_entities_10_000")
     # )
-    report = benchmark.run[benchmark_new_entities_10_000]()
-    report.print()
-    bench.dump_report()
+    bench.bench_function[benchmark_new_entities_1_000_000](
+        BenchId("10^6 * new_entities")
+    )
 
 
 def main():
