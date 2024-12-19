@@ -213,6 +213,9 @@ struct World[*component_types: AnyType]:
             Error: If the entity does not have the component.
         """
         entity_index = self._entities[int(entity.id)]
+        if not self._entity_pool.is_alive(entity):
+            raise Error("Can't get component of a removed entity.")
+
         return (
             self._archetypes[int(entity_index.archetype_index)]
             .get_component_ptr(
@@ -230,52 +233,52 @@ struct World[*component_types: AnyType]:
         if self.is_locked():
             raise Error("Attempt to modify a locked world.")
 
-    # fn RemoveEntity(self, entity: Entity):
-    #     """
-    #     RemoveEntity removes an [Entity], making it eligible for recycling.
+    fn remove_entity(inout self, entity: Entity) raises:
+        """
+        RemoveEntity removes an [Entity], making it eligible for recycling.
 
-    #     Panics when called on a locked world or for an already removed entity.
-    #     Do not use during [Query] iteration!
-    #     """
-    #     self._check_locked()
+        Do not use during [Query] iteration!
 
-    #     if !self._entity_pool.Alive(entity):
-    #         panic("can't remove a dead entity")
+        Args:
+            entity: The entity to remove.
 
-    #     var index = &self._entities[entity.id]
-    #     var oldArch = index.arch
+        Raises:
+            Error: If the world is locked or the entity is already removed.
+        """
+        self._check_locked()
 
-    #     if self._listener != nil:
-    #         var oldRel *Id
-    #         if oldArch.HasRelationComponent:
-    #             oldRel = &oldArch.RelationComponent
+        if not self._entity_pool.is_alive(entity):
+            raise Error("The entity to remove is already removed.")
 
-    #         var oldIds []Id
-    #         if len(oldArch.node.Ids) > 0:
-    #             oldIds = oldArch.node.Ids
+        index = self._entities[int(entity.id)]
+        old_archetype_index = int(index.archetype_index)
+        old_archetype = self._archetypes.get_ptr(old_archetype_index)
 
-    #         var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, nil, &oldArch.Mask, self._listener.Components(), oldRel, nil):
-    #             var lock = self.lock()
-    #             self._listener.Notify(self, EntityEventEntity: entity, Removed: oldArch.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: oldArch.RelationTarget, EventTypes: bits)
-    #             self.unlock(lock)
+        # if self._listener != nil:
+        #     var oldRel *Id
+        #     if old_archetype.HasRelationComponent:
+        #         oldRel = &old_archetype.RelationComponent
 
-    #     var swapped = oldArch.Remove(index.index)
+        #     var oldIds []Id
+        #     if len(old_archetype.node.Ids) > 0:
+        #         oldIds = old_archetype.node.Ids
 
-    #     self._entity_pool.Recycle(entity)
+        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+        #     var trigger = self._listener.Subscriptions() & bits
+        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
+        #         var lock = self.lock()
+        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
+        #         self.unlock(lock)
 
-    #     if swapped:
-    #         var swapEntity = oldArch.GetEntity(index.index)
-    #         self._entities[swapEntity.id].index = index.index
+        var swapped = old_archetype[].remove(int(index.index))
 
-    #     index.arch = nil
+        self._entity_pool.recycle(entity)
 
-    #     if self._target_entities.get(entity.id):
-    #         self.cleanupArchetypes(entity)
-    #         self._target_entities.Set(entity.id, false)
+        if swapped:
+            swap_entity = old_archetype[].get_entity(int(index.index))
+            self._entities[int(swap_entity.id)].index = index.index
 
-    #     self.cleanupArchetype(oldArch)
+        self._cleanup_archetype(old_archetype_index)
 
     # fn Alive(self, entity: Entity) -> bool:
     #     """
@@ -949,13 +952,13 @@ struct World[*component_types: AnyType]:
     #             index.arch = nil
 
     #             if self._target_entities.Get(entity.id):
-    #                 self.cleanupArchetypes(entity)
+    #                 self._cleanup_archetypes(entity)
     #                 self._target_entities.Set(entity.id, false)
 
     #             self.entityPool.Recycle(entity)
 
     #         arch.Reset()
-    #         self.cleanupArchetype(arch)
+    #         self._cleanup_archetype(arch)
 
     #     self.unlock(lock)
 
@@ -1057,7 +1060,7 @@ struct World[*component_types: AnyType]:
     #     if !target.IsZero():
     #         self._target_entities.Set(target.id, true)
 
-    #     self.cleanupArchetype(oldArch)
+    #     self._cleanup_archetype(oldArch)
 
     #     return arch, &oldMask, oldTarget, oldRel
 
@@ -1217,7 +1220,7 @@ struct World[*component_types: AnyType]:
     #     # However, this should not be possible as processing an entity twice
     #     # would mean an illegal component addition/removal.
     #     oldArch.Reset()
-    #     self.cleanupArchetype(oldArch)
+    #     self._cleanup_archetype(oldArch)
 
     #     return arch, startIdx
 
@@ -1301,7 +1304,7 @@ struct World[*component_types: AnyType]:
     #         self._target_entities.Set(target.id, true)
 
     #     var oldTarget = oldArch.RelationTarget
-    #     self.cleanupArchetype(oldArch)
+    #     self._cleanup_archetype(oldArch)
 
     #     if self._listener != nil:
     #         var trigger = self._listener.Subscriptions() & event.TargetChanged
@@ -1393,7 +1396,7 @@ struct World[*component_types: AnyType]:
     #     # However, this should not be possible as processing an entity twice
     #     # would mean an illegal component addition/removal.
     #     oldArch.Reset()
-    #     self.cleanupArchetype(oldArch)
+    #     self._cleanup_archetype(oldArch)
 
     #     return arch, uint32(startIdx), arch.Len()
 
@@ -1590,33 +1593,30 @@ struct World[*component_types: AnyType]:
 
     #     return arches
 
-    # fn cleanupArchetype(self, arch: *archetype):
-    #     """
-    #     Removes the archetype if it is empty, and has a relation to a dead target.
-    #     """
-    #     if arch.Len() > 0 || !arch.node.HasRelation:
-    #         return
+    @always_inline
+    fn _cleanup_archetype(inout self, archetype_index: Int):
+        """
+        Removes the archetype if it is empty, and has a relation to a dead target.
 
-    #     var target = arch.RelationTarget
-    #     if target.IsZero() || self.Alive(target):
-    #         return
+        Args:
+            archetype_index: The index of the archetype in the archetype list.
+        """
+        if self._archetypes[archetype_index]:
+            return
 
-    #     self.removeArchetype(arch)
+        self._remove_archetype(archetype_index)
 
-    # fn cleanupArchetypes(self, target: Entity):
-    #     """
-    #     Removes empty _archetypes that have a target relation to the given entity.
-    #     """
-    #     for _, node in enumerate(self._relation_nodes):
-    #         if arch, var ok = node.archetypeMap[target]; ok && arch.Len() == 0:
-    #             self.removeArchetype(arch)
+    @always_inline
+    fn _remove_archetype(inout self, archetype_index: Int):
+        """
+        Removes/de-activates a relation archetype.
 
-    # fn removeArchetype(self, arch: *archetype):
-    #     """
-    #     Removes/de-activates a relation archetype.
-    #     """
-    #     arch.node.RemoveArchetype(arch)
-    #     self.Cache().removeArchetype(arch)
+        Args:
+            archetype_index: The index of the archetype in the archetype list.
+        """
+        node_index = self._archetypes[archetype_index].get_node_index()
+        self._archetypes.remove(self._archetype_map[node_index])
+        self._archetype_map[node_index] = self._archetype_map.null_value
 
     # fn extendArchetypeLayouts(self, count: uint8):
     #     """
