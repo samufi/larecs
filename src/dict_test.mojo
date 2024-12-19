@@ -24,7 +24,7 @@ fn get_random_bitmask_list(
         )
 
 
-def test_dict():
+def _test_dict():
     correct_dict = Dict[BitMask, Int]()
     test_dict = StupidDict[BitMask, Int]()
     n = 10000
@@ -45,3 +45,6 @@ def test_dict():
         else:
             with assert_raises():
                 _ = test_dict[mask]
+
+def main():
+    _test_dict()
