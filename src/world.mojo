@@ -125,7 +125,7 @@ struct World[*component_types: AnyType]:
         Raises when called on a locked world.
         Do not use during [Query] iteration!
         """
-        self._check_locked()
+        self._assert_unlocked()
         entity = self._create_entity(0)
 
     fn new_entity[
@@ -146,7 +146,7 @@ struct World[*component_types: AnyType]:
         Args:
             components: The components to add to the entity.
         """
-        self._check_locked()
+        self._assert_unlocked()
 
         alias size = components.__len__()
 
@@ -213,8 +213,7 @@ struct World[*component_types: AnyType]:
             Error: If the entity does not have the component.
         """
         entity_index = self._entities[int(entity.id)]
-        if not self._entity_pool.is_alive(entity):
-            raise Error("Can't get component of a removed entity.")
+        self._assert_alive(entity)
 
         return (
             self._archetypes[int(entity_index.archetype_index)]
@@ -226,12 +225,23 @@ struct World[*component_types: AnyType]:
         )
 
     @always_inline
-    fn _check_locked(self) raises:
+    fn _assert_unlocked(self) raises:
         """
         Checks if the world is locked, and raises if so.
         """
         if self.is_locked():
             raise Error("Attempt to modify a locked world.")
+
+    @always_inline
+    fn _assert_alive(self, entity: Entity) raises:
+        """
+        Checks if the entity is alive, and raises if not.
+
+        Args:
+            entity: The entity to check.
+        """
+        if not self._entity_pool.is_alive(entity):
+            raise Error("The considered entity does not exist anymore.")
 
     fn remove_entity(inout self, entity: Entity) raises:
         """
@@ -245,10 +255,8 @@ struct World[*component_types: AnyType]:
         Raises:
             Error: If the world is locked or the entity is already removed.
         """
-        self._check_locked()
-
-        if not self._entity_pool.is_alive(entity):
-            raise Error("The entity to remove is already removed.")
+        self._assert_unlocked()
+        self._assert_alive(entity)
 
         index = self._entities[int(entity.id)]
         old_archetype_index = int(index.archetype_index)
@@ -280,11 +288,15 @@ struct World[*component_types: AnyType]:
 
         self._cleanup_archetype(old_archetype_index)
 
-    # fn Alive(self, entity: Entity) -> bool:
-    #     """
-    #     Alive reports whether an entity is still alive.
-    #     """
-    #     return self._entity_pool.Alive(entity)
+    @always_inline
+    fn is_alive(self, entity: Entity) -> Bool:
+        """
+        Alive reports whether an entity is still alive.
+
+        Args:
+            entity: The entity to check.
+        """
+        return self._entity_pool.is_alive(entity)
 
     # fn get(self, entity: Entity, comp: Id) -> unsafe:
     #     """
@@ -318,19 +330,19 @@ struct World[*component_types: AnyType]:
     #     var index = &self._entities[entity.id]
     #     return index.arch.get(index.index, comp)
 
-    # fn Has(self, entity: Entity, comp: Id) -> bool:
-    #     """
-    #     Has returns whether an [Entity] has a given component.
+    fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
+        """
+        Has returns whether an [Entity] has a given component.
 
-    #     Panics when called for a removed (and potentially recycled) entity.
+        Panics when called for a removed (and potentially recycled) entity.
 
-    #     See [World.HasUnchecked] for an optimized version for static _entities.
-    #     See also [github.com/mlange-42/arche/generic.Map.Has] for a generic variant.
-    #     """
-    #     if !self._entity_pool.Alive(entity):
-    #         panic("can't check for component of a dead entity")
-
-    #     return self._entities[entity.id].arch.HasComponent(comp)
+        See [World.HasUnchecked] for an optimized version for static _entities.
+        See also [github.com/mlange-42/arche/generic.Map.Has] for a generic variant.
+        """
+        self._assert_alive(entity)
+        return self._archetypes[int(self._entities[int(entity.id)].archetype_index)].has_component(
+            self._component_manager.get_id[T]()
+        )
 
     # fn HasUnchecked(self, entity: Entity, comp: Id) -> bool:
     #     """
@@ -441,7 +453,7 @@ struct World[*component_types: AnyType]:
     #     Can be used to run systematic simulations without the need to re-allocate memory for each run.
     #     Accelerates re-populating the world by a factor of 2-3.
     #     """
-    #     self._check_locked()
+    #     self._assert_unlocked()
 
     #     self._entities = self._entities[:1]
     #     self._target_entities.Reset()
@@ -634,7 +646,7 @@ struct World[*component_types: AnyType]:
 
     #     For world serialization with components and _resources, see module [github.com/mlange-42/arche-serde].
     #     """
-    #     self._check_locked()
+    #     self._assert_unlocked()
 
     #     if len(self._entity_pool._entities) > 1 || self._entity_pool.available > 0:
     #         panic("can set entity data only on a fresh or reset world")

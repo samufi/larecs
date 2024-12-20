@@ -140,6 +140,13 @@ def test_remove_archetype():
     assert_equal(len(world._archetypes[1]._entities), 0)
     assert_equal(len(world._entity_pool), 0)
 
+def test_world_has_component():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    entity = world.new_entity(pos)
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+
 
 def main():
     print("Running additional tests...")
@@ -150,4 +157,7 @@ def main():
     test_entity_get()
     test_remove_entity()
     test_remove_archetype()
+    test_world_has_component()
     print("All additional tests passed.")
+
+
