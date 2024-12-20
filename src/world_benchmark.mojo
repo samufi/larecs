@@ -54,6 +54,73 @@ fn benchmark_new_entities_1_000_000(inout bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
+fn benchmark_get_entity_1_000_000(inout bencher: Bencher) raises capturing:
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(1_000_000):
+            keep(world.get[Position](entity).x)
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_set_entity_1_000_000(inout bencher: Bencher) raises capturing:
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    pos2 = Position(2.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(500_000):
+            world.set(entity, pos2)
+            world.set(entity, pos)
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_set_entity_multiple_1_000_000(
+    inout bencher: Bencher,
+) raises capturing:
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    pos2 = Position(2.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    vel2 = Velocity(0.2, 0.2)
+    entity = world.new_entity(pos, vel)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(500_000):
+            world.set(entity, pos2, vel2)
+            world.set(entity, pos, vel)
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_has_1_000_000(inout bencher: Bencher) raises capturing:
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(1_000_000):
+            keep(world.has[Position](entity))
+
+    bencher.iter[bench_fn]()
+
+
 fn run_all_world_benchmarks() raises:
     bench = DefaultBench()
     run_all_world_benchmarks(bench)
@@ -67,6 +134,16 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     bench.bench_function[benchmark_new_entities_1_000_000](
         BenchId("10^6 * new_entities")
     )
+    bench.bench_function[benchmark_get_entity_1_000_000](
+        BenchId("10^6 * get_entity")
+    )
+    bench.bench_function[benchmark_set_entity_1_000_000](
+        BenchId("10^6 * set_entity")
+    )
+    bench.bench_function[benchmark_set_entity_multiple_1_000_000](
+        BenchId("10^6 * set_entity_multiple")
+    )
+    bench.bench_function[benchmark_has_1_000_000](BenchId("10^6 * has"))
 
 
 def main():
