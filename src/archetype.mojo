@@ -230,13 +230,23 @@ struct Archetype(CollectionElement, CollectionElementNew):
         )
 
     @always_inline
-    fn set(inout self, index: UInt, value: ComponentReference) raises:
+    fn set[
+        assert_has_component: Bool = True
+    ](inout self, index: UInt, value: ComponentReference) raises:
         """Sets the component with the given id at the given index.
 
+        Parameters:
+            assert_has_component: Whether to assert that the archetype
+                contains the component.
+
         Raises:
-            Error: If the archetype does not contain the component.
+            Error: If assert_has_component and the archetype does not contain the component.
         """
-        self.assert_has_component(value.get_id())
+
+        @parameter
+        if assert_has_component:
+            self.assert_has_component(value.get_id())
+
         self.unsafe_set(index, value.get_id(), value.get_unsafe_ptr())
 
     # fn get(inout self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
@@ -251,11 +261,26 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._data[int(id)] + index * int(self._item_sizes[int(id)])
 
     @always_inline
-    fn get_component_ptr(
-        self, index: UInt, id: Self.Id
-    ) raises -> UnsafePointer[UInt8]:
-        """Returns the component with the given id at the given index."""
-        self.assert_has_component(id)
+    fn get_component_ptr[
+        assert_has_component: Bool = True
+    ](self, index: UInt, id: Self.Id) raises -> UnsafePointer[UInt8]:
+        """Returns the component with the given id at the given index.
+
+        Args:
+            index:  The index of the entity.
+            id:     The id of the component.
+
+        Parameters:
+            assert_has_component: Whether to assert that the archetype
+                    contains the component.
+
+        Raises:
+            Error:  If assert_has_component and the archetype does not contain the component.
+        """
+
+        @parameter
+        if assert_has_component:
+            self.assert_has_component(id)
         return self._get_component_ptr(index, id)
 
     @always_inline
@@ -271,11 +296,14 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 "Archetype does not contain component with id " + str(id) + "."
             )
 
-    fn remove(inout self, index: UInt) raises -> Bool:
+    fn remove(inout self, index: UInt) -> Bool:
         """Removes an entity and its components from the archetype.
 
         Performs a swap-remove and reports whether a swap was necessary
         (i.e. not the last entity that was removed).
+
+        Args:
+            index: The index of the entity to remove.
         """
 
         self._size -= 1

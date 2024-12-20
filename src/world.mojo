@@ -122,8 +122,13 @@ struct World[*component_types: AnyType]:
     fn new_entity(inout self) raises -> Entity as entity:
         """Returns a new or recycled [Entity].
 
-        Raises when called on a locked world.
         Do not use during [Query] iteration!
+
+        Returns:
+            The new or recycled entity.
+
+        Raises:
+            Error: If the world is locked.
         """
         self._assert_unlocked()
         entity = self._create_entity(0)
@@ -132,9 +137,8 @@ struct World[*component_types: AnyType]:
         *Ts: ComponentType
     ](inout self, *components: *Ts) raises -> Entity as entity:
         """Returns a new or recycled [Entity].
-        The given component types are added to the entity.
 
-        Raises when called on a locked world.
+        The given component types are added to the entity.
         Do not use during [Query] iteration!
 
         ⚠️ Important:
@@ -145,6 +149,13 @@ struct World[*component_types: AnyType]:
 
         Args:
             components: The components to add to the entity.
+
+        Raises:
+            Error: If the world is locked.
+
+        Returns:
+            The new or recycled entity.
+
         """
         self._assert_unlocked()
 
@@ -178,10 +189,23 @@ struct World[*component_types: AnyType]:
 
         return
 
-    fn set[T: ComponentType](inout self, entity: Entity, component: T) raises:
+    fn set[
+        T: ComponentType
+    ](inout self, entity: Entity, owned component: T) raises:
         """
-        Overwrites a component for an [Entity], using the given pointer for the content.
+        Overwrites a component for an [Entity], using the given content.
+
+        Parameters:
+            T:         The type of the component.
+
+        Args:
+            entity:    The entity to modify.
+            component: The new component.
+
+        Raises:
+            Error: If the entity does not exist.
         """
+        self._assert_alive(entity)
         entity_index = self._entities[int(entity.id)]
         self._archetypes[int(entity_index.archetype_index)].set(
             int(entity_index.index),
@@ -190,10 +214,21 @@ struct World[*component_types: AnyType]:
 
     fn set[
         *Ts: ComponentType
-    ](inout self, entity: Entity, *components: *Ts) raises:
+    ](inout self, entity: Entity, owned *components: *Ts) raises:
         """
-        Overwrites a component for an [Entity], using the given pointer for the content.
+        Overwrites a component for an [Entity], using the given content.
+
+        Parameters:
+            Ts:        The types of the components.
+
+        Args:
+            entity:    The entity to modify.
+            components: The new components.
+
+        Raises:
+            Error: If the entity does not exist or does not have the component.
         """
+        self._assert_alive(entity)
         entity_index = self._entities[int(entity.id)]
         archetype = self._archetypes.get_ptr(int(entity_index.archetype_index))
 
@@ -210,7 +245,7 @@ struct World[*component_types: AnyType]:
         """Returns a reference to the given component of an [Entity].
 
         Raises:
-            Error: If the entity does not have the component.
+            Error: If the entity is not alive or does not have the component.
         """
         entity_index = self._entities[int(entity.id)]
         self._assert_alive(entity)
@@ -253,7 +288,7 @@ struct World[*component_types: AnyType]:
             entity: The entity to remove.
 
         Raises:
-            Error: If the world is locked or the entity is already removed.
+            Error: If the world is locked or the entity does not exist.
         """
         self._assert_unlocked()
         self._assert_alive(entity)
@@ -332,17 +367,15 @@ struct World[*component_types: AnyType]:
 
     fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
         """
-        Has returns whether an [Entity] has a given component.
+        Returns whether an [Entity] has a given component.
 
-        Panics when called for a removed (and potentially recycled) entity.
-
-        See [World.HasUnchecked] for an optimized version for static _entities.
-        See also [github.com/mlange-42/arche/generic.Map.Has] for a generic variant.
+        Raises:
+            Error: If the entity does not exist.
         """
         self._assert_alive(entity)
-        return self._archetypes[int(self._entities[int(entity.id)].archetype_index)].has_component(
-            self._component_manager.get_id[T]()
-        )
+        return self._archetypes[
+            int(self._entities[int(entity.id)].archetype_index)
+        ].has_component(self._component_manager.get_id[T]())
 
     # fn HasUnchecked(self, entity: Entity, comp: Id) -> bool:
     #     """
