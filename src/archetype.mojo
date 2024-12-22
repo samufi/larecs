@@ -1,5 +1,5 @@
 from sys.intrinsics import _type_is_eq
-from collections import InlineArray, InlineList
+from collections import InlineArray, InlineList, Optional
 from component import (
     ComponentInfo,
     ComponentReference,
@@ -57,7 +57,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
     fn __init__(
         inout self,
         node_index: UInt,
-        mask: BitMask,
+        mask: BitMask = BitMask(),
         capacity: UInt = 10,
     ):
         """Initializes the archetype with a given capacity.
@@ -86,18 +86,18 @@ struct Archetype(CollectionElement, CollectionElementNew):
     ](
         inout self,
         node_index: UInt,
-        mask: BitMask,
         components: InlineArray[ComponentInfo, component_count] = InlineArray[
             ComponentInfo, component_count
         ](),
+        mask: Optional[BitMask] = None,
         capacity: UInt = 10,
     ):
         """Initializes the archetype with a given capacity and components.
 
         Args:
             node_index: The index of the archetype's node in the archetype graph.
-            mask: The mask of the archetype's node in the archetype graph.
             components: The components of the archetype.
+            mask: The mask of the archetype's node in the archetype graph.
             capacity:   The initial capacity of the archetype.
         """
         constrained[
@@ -112,7 +112,15 @@ struct Archetype(CollectionElement, CollectionElementNew):
             + ".",
         ]()
 
-        self.__init__(node_index, mask, capacity)
+        var mask_: BitMask
+        if mask:
+            mask_ = mask.value()
+        else:
+            mask_ = BitMask()
+            for i in range(component_count):
+                mask_.set[True](components[i].get_id())
+
+        self.__init__(node_index, mask_, capacity)
         self._component_count = component_count
 
         @parameter

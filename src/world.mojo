@@ -63,9 +63,7 @@ struct World[*component_types: AnyType]:
         Creates a new [World].
         """
         self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
-        self._archetypes = ChainedArrayList[Archetype](
-            Archetype(0, BitMask(), capacity=0)
-        )
+        self._archetypes = ChainedArrayList[Archetype](Archetype(0, capacity=0))
         self._entities = List[EntityIndex, hint_trivial_type=True](
             EntityIndex(0, 0)
         )
@@ -122,8 +120,8 @@ struct World[*component_types: AnyType]:
         self._archetypes.append(
             Archetype(
                 node_index,
-                self._archetype_map.get_node_mask(node_index),
                 components,
+                self._archetype_map.get_node_mask(node_index),
             )
         )
 
@@ -810,7 +808,6 @@ struct World[*component_types: AnyType]:
 
     # ----------------- from world_internal.go -----------------
 
-
     # fn newEntities(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...ID):
     #     """
     #     Creates new _entities without returning a query over them.
@@ -1213,7 +1210,6 @@ struct World[*component_types: AnyType]:
     #     self._cleanup_archetype(old_archetype)
 
     #     return arch, startIdx
-
 
     # fn lock(self) -> uint8:
     #     """

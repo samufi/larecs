@@ -1,4 +1,5 @@
 from archetype import Archetype
+from bitmask import BitMask
 from component import ComponentInfo, ComponentReference, ComponentManager
 from entity import Entity
 from memory import UnsafePointer
