@@ -93,7 +93,7 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
     @always_inline
     fn unsafe_get_value[
         T: ComponentType
-    ](self) raises -> ref [__origin_of(self)] T:
+    ](self) -> ref [__origin_of(self)] T:
         """Get the value of the component."""
         return self._data.bitcast[T]()[0]
 
@@ -164,11 +164,35 @@ struct ComponentManager[*component_types: AnyType]:
         return -1
 
     @always_inline
-    fn get_info[T: ComponentType](self) -> ComponentInfo:
-        """Get the info of a component type.
+    fn get_id_arr[
+        *Ts: ComponentType
+    ](
+        self,
+    ) -> InlineArray[
+        Self.Id,
+        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+    ] as ids:
+        """Get the IDs of multiple component types.
 
-        If the component does not yet have an ID, register the component.
+        Parameters:
+            Ts: The component types.
+
+        Returns:
+            An InlineArray with the IDs of the component types.
         """
+        alias size = VariadicPack[
+            MutableAnyOrigin, ComponentType, *Ts
+        ].__len__()
+
+        ids = InlineArray[Self.Id, size](unsafe_uninitialized=True)
+
+        @parameter
+        for i in range(size):
+            ids[i] = self.get_id[Ts[i]]()
+
+    @always_inline
+    fn get_info[T: ComponentType](self) -> ComponentInfo:
+        """Get the info of a component type."""
         return ComponentInfo.new[T](self.get_id[T]())
 
     @always_inline
@@ -176,22 +200,17 @@ struct ComponentManager[*component_types: AnyType]:
         *Ts: ComponentType
     ](
         self,
-    ) raises -> InlineArray[
+    ) -> InlineArray[
         ComponentInfo,
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
     ] as ids:
         """Get the IDs of multiple component types.
-
-        If a component does not yet have an ID, register the component.
 
         Parameters:
             Ts: The component types.
 
         Returns:
             An InlineArray with the IDs of the component types.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
         alias size = VariadicPack[
             MutableAnyOrigin, ComponentType, *Ts
