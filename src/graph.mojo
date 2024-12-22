@@ -185,7 +185,6 @@ struct BitMaskGraph[
         """
         return self._nodes[node_index].bit_mask
 
-
     @always_inline
     fn __getitem__(
         ref [_]self: Self, owned node_index: Int

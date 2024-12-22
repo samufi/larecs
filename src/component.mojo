@@ -91,9 +91,7 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         self._data = existing._data
 
     @always_inline
-    fn unsafe_get_value[
-        T: ComponentType
-    ](self) -> ref [__origin_of(self)] T:
+    fn unsafe_get_value[T: ComponentType](self) -> ref [__origin_of(self)] T:
         """Get the value of the component."""
         return self._data.bitcast[T]()[0]
 
