@@ -79,9 +79,10 @@ def test_get_archetype_index():
 
     assert_equal(get_index[Position](), 1)
     assert_equal(get_index[Velocity](), 2)
+    assert_equal(get_index[Velocity, Position](), 3)
     assert_equal(get_index[Position, Velocity](), 3)
-    assert_equal(get_index[Velocity, Position](1), 3)
-    assert_equal(get_index[Velocity, Position](2), 3)
+    assert_equal(get_index[Velocity, Position](1), 2)
+    assert_equal(get_index[Velocity, Position](2), 1)
 
 
 def test_set_component():
