@@ -1,4 +1,5 @@
 from memory import UnsafePointer
+from collections import Optional
 
 from pool import EntityPool
 from entity import Entity, EntityIndex
@@ -62,7 +63,9 @@ struct World[*component_types: AnyType]:
         Creates a new [World].
         """
         self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
-        self._archetypes = ChainedArrayList[Archetype](Archetype(0, capacity=0))
+        self._archetypes = ChainedArrayList[Archetype](
+            Archetype(0, BitMask(), capacity=0)
+        )
         self._entities = List[EntityIndex, hint_trivial_type=True](
             EntityIndex(0, 0)
         )
@@ -107,14 +110,22 @@ struct World[*component_types: AnyType]:
             The archetype list index of the archetype differing from the start
             archetype by the components at the given indices.
         """
-        node_index = self._archetype_map.get_node_index(components)
+        node_index = self._archetype_map.get_node_index(
+            components, start_node_index
+        )
         if self._archetype_map.has_value(node_index):
             return self._archetype_map[node_index]
 
         archetype_index = len(self._archetypes)
         self._archetype_map[node_index] = archetype_index
 
-        self._archetypes.append(Archetype(node_index, components))
+        self._archetypes.append(
+            Archetype(
+                node_index,
+                self._archetype_map.get_node_mask(node_index),
+                components,
+            )
+        )
 
         return archetype_index
 
@@ -390,27 +401,169 @@ struct World[*component_types: AnyType]:
     #     """
     #     return self._entities[entity.id].arch.HasComponent(comp)
 
-    # fn Add(self, entity: Entity, comps: ...Id):
-    #     """
-    #     Add adds components to an [Entity].
+    @always_inline
+    fn add[
+        *Ts: ComponentType
+    ](inout self, entity: Entity, *add_components: *Ts) raises:
+        """
+        Adds components to an [Entity].
 
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called with components that can't be added because they are already present.
-    #     - when called on a locked world. Do not use during [Query] iteration!
+        Parameters:
+            Ts: The types of the components to add.
 
-    #     Note that calling a method with varargs in Go causes a slice allocation.
-    #     For maximum performance, pre-allocate a slice of component IDs and pass it using ellipsis:
+        Args:
+            entity:         The entity to modify.
+            add_components: The components to add.
 
-    #     # fast
-    #     world.Add(entity, idA, idB, idC)
-    #     # even faster
-    #     world.Add(entity, ids...)
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._remove_and_add(entity, add_components)
 
-    #     See also [World.Exchange].
-    #     See also the generic variants under [github.com/mlange-42/arche/generic.Map1], etc.
-    #     """
-    #     self.Exchange(entity, comps, nil)
+    @always_inline
+    fn remove[*Ts: ComponentType](inout self, entity: Entity) raises:
+        """
+        Removes components from an [Entity].
+
+        Parameters:
+            Ts: The types of the components to remove.
+
+        Args:
+            entity: The entity to modify.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._remove_and_add(
+            entity, remove_ids=self._component_manager.get_id_arr[*Ts]()
+        )
+
+    fn _remove_and_add[
+        rem_size: Int = 0, /, *Ts: ComponentType
+    ](
+        inout self,
+        entity: Entity,
+        *add_components: *Ts,
+        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = Optional[
+            InlineArray[Self.Id, rem_size]
+        ](None),
+    ) raises:
+        self._remove_and_add(entity, add_components, remove_ids)
+
+    fn _remove_and_add[
+        rem_size: Int = 0, /, *Ts: ComponentType
+    ](
+        inout self,
+        entity: Entity,
+        add_components: VariadicPack[_, ComponentType, *Ts],
+        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = Optional[
+            InlineArray[Self.Id, rem_size]
+        ](None),
+    ) raises:
+        """
+        Adds and removes components to an [Entity].
+
+        Parameters:
+            rem_size:   The number of components to remove.
+            Ts:         The types of the components to add.
+
+        Args:
+            entity:         The entity to modify.
+            add_components: The components to add.
+            remove_ids:     The IDs of the components to remove.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        alias add_size = add_components.__len__()
+
+        self._assert_unlocked()
+        self._assert_alive(entity)
+
+        @parameter
+        if not add_size and not rem_size:
+            return
+
+        index = self._entities[int(entity.id)]
+
+        old_archetype_index = int(index.archetype_index)
+        old_archetype = self._archetypes.get_ptr(old_archetype_index)
+        index_in_old_archetype = index.index
+
+        component_info = self._component_manager.get_info_arr[*Ts]()
+
+        # ToDo: Check that none of the components are added ore removed twice.
+
+        if old_archetype[].has_any_component(component_info):
+            raise Error("Entity already has one of the components to add.")
+
+        @parameter
+        if rem_size:
+            if not old_archetype[].has_all_components(remove_ids.value()):
+                raise Error(
+                    "Entity does not have one of the components to remove."
+                )
+
+            start_node_index = self._archetype_map.get_node_index(
+                remove_ids.value(), old_archetype[].get_node_index()
+            )
+        else:
+            start_node_index = old_archetype[].get_node_index()
+
+        archetype_index = self._get_archetype_index(
+            component_info, start_node_index
+        )
+
+        archetype = self._archetypes.get_ptr(archetype_index)
+        index_in_archetype = archetype[].add(entity)
+
+        # This code would be nicer, but does not work due to arguemnt exclusivity.
+        # Uncomment this if there is a workaround.
+        # old_archetype[].unsafe_copy_to(
+        #     archetype[],
+        #     int(index_in_old_archetype),
+        #     int(index),
+        # )
+        for i in range(old_archetype[]._component_count):
+            id = old_archetype[]._ids[i]
+
+            @parameter
+            if rem_size:
+                if not archetype[].has_component(id):
+                    continue
+
+            archetype[].unsafe_set(
+                index_in_archetype,
+                id,
+                old_archetype[]._get_component_ptr(
+                    int(index_in_old_archetype), old_archetype[]._ids[i]
+                ),
+            )
+
+        @parameter
+        for i in range(add_size):
+            archetype[].unsafe_set(
+                index_in_archetype,
+                component_info[i].id,
+                UnsafePointer.address_of(add_components[i]).bitcast[UInt8](),
+            )
+
+        swapped = old_archetype[].remove(int(index_in_old_archetype))
+        if swapped:
+            var swapEntity = old_archetype[].get_entity(int(index.index))
+            self._entities[int(swapEntity.id)].index = index.index
+
+        self._entities[int(entity.id)] = EntityIndex(
+            index_in_archetype, archetype_index
+        )
+        self._cleanup_archetype(old_archetype_index)
 
     # fn Assign(self, entity: Entity, comps: ...Component):
     #     """
@@ -427,54 +580,6 @@ struct World[*component_types: AnyType]:
     #     See also the generic variants under [github.com/mlange-42/arche/generic.Map1], etc.
     #     """
     #     self.assign(entity, Id, false, Entity, comps...)
-
-    # fn Set(self, entity: Entity, id: Id, comp: interface) -> unsafe:
-    #     """
-    #     Set overwrites a component for an [Entity], using the given pointer for the content.
-
-    #     The passed component must be a pointer.
-    #     Returns a pointer to the assigned memory.
-    #     The passed in pointer is not a valid reference to that memory!
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - if the entity does not have a component of that type.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See also [github.com/mlange-42/arche/generic.Map.Set] for a generic variant.
-    #     """
-    #     return self.copyTo(entity, id, comp)
-
-    # fn Remove(self, entity: Entity, comps: ...Id):
-    #     """
-    #     Remove removes components from an entity.
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called with components that can't be removed because they are not present.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See also [World.Exchange].
-    #     See also the generic variants under [github.com/mlange-42/arche/generic.Map1], etc.
-    #     """
-    #     self.Exchange(entity, nil, comps)
-
-    # fn Exchange(self, entity: Entity, add: []Id, rem: []Id):
-    #     """
-    #     Exchange adds and removes components in one pass.
-    #     This is more efficient than subsequent use of [World.Add] and [World.Remove].
-
-    #     When a [Relation] component is removed and another one is added,
-    #     the target entity of the relation is reset to zero.
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called with components that can't be added or removed because they are already present/not present, respectively.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See also [Relations.Exchange] and the generic variants under [github.com/mlange-42/arche/generic.Exchange].
-    #     """
-    #     self.exchange(entity, add, rem, Id, false, Entity)
 
     # fn Reset(self):
     #     """
@@ -705,67 +810,6 @@ struct World[*component_types: AnyType]:
 
     # ----------------- from world_internal.go -----------------
 
-    # fn newEntityTarget(self, targetID: ID, target: Entity, comps: ...ID) -> Entity:
-    #     """
-    #     Creates a new entity with a relation and a target entity.
-    #     """
-    #     self.checkLocked()
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     var arch = self._archetypes.Get(0)
-
-    #     if len(comps) > 0:
-    #         arch = self._find_or_create_archetype(arch, comps, nil, target)
-
-    #     self.checkRelation(arch, targetID)
-
-    #     var entity = self._create_entity(arch)
-
-    #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
-
-    #     if self._listener != nil:
-    #         var bits = subscription(true, false, len(comps) > 0, false, true, true)
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, &targetID):
-    #             self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: &targetID, EventTypes: bits)
-
-    #     return entity
-
-    # fn newEntityTargetWith(self, targetID: ID, target: Entity, comps: ...Component) -> Entity:
-    #     """
-    #     Creates a new entity with a relation and a target entity.
-    #     """
-    #     self.checkLocked()
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     var ids = make([]ID, len(comps))
-    #     for i, c in enumerate(comps):
-    #         ids[i] = c.ID
-
-    #     var arch = self._archetypes.Get(0)
-    #     arch = self._find_or_create_archetype(arch, ids, nil, target)
-    #     self.checkRelation(arch, targetID)
-
-    #     var entity = self._create_entity(arch)
-
-    #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
-
-    #     for _, c in enumerate(comps):
-    #         self.copyTo(entity, c.ID, c.Comp)
-
-    #     if self._listener != nil:
-    #         var bits = subscription(true, false, len(comps) > 0, false, true, true)
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, &targetID):
-    #             self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: ids, NewRelation: &targetID, EventTypes: bits)
-
-    #     return entity
 
     # fn newEntities(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...ID):
     #     """
@@ -1021,95 +1065,14 @@ struct World[*component_types: AnyType]:
     #     for i, c in enumerate(comps):
     #         ids[i] = c.ID
 
-    #     arch, oldMask, oldTarget, var oldRel = self.exchangeNoNotify(entity, ids, nil, relation, hasRelation, target)
+    #     arch, old_mask, oldTarget, var oldRel = self._exchange_without_notifying(entity, ids, nil, relation, hasRelation, target)
     #     for _, c in enumerate(comps):
     #         self.copyTo(entity, c.ID, c.Comp)
 
     #     if self._listener != nil:
-    #         self.notifyExchange(arch, oldMask, entity, ids, nil, oldTarget, oldRel)
+    #         self.notifyExchange(arch, old_mask, entity, ids, nil, oldTarget, oldRel)
 
-    # fn exchange(self, entity: Entity, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity):
-    #     """
-    #     exchange with relation target.
-    #     """
-    #     if self._listener != nil:
-    #         arch, oldMask, oldTarget, var oldRel = self.exchangeNoNotify(entity, add, rem, relation, hasRelation, target)
-    #         self.notifyExchange(arch, oldMask, entity, add, rem, oldTarget, oldRel)
-    #         return
-
-    #     self.exchangeNoNotify(entity, add, rem, relation, hasRelation, target)
-
-    # fn exchangeNoNotify(self, entity: Entity, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity):
-    #     """
-    #     perform exchange operation without notifying listeners.
-    #     """
-    #     self.checkLocked()
-
-    #     if !self.entityPool.Alive(entity):
-    #         panic("can't exchange components on a dead entity")
-
-    #     if len(add) == 0 && len(rem) == 0:
-    #         if hasRelation:
-    #             panic("exchange operation has no effect, but a relation is specified. Use World.Relation instead")
-
-    #         return nil, nil, Entity, nil
-
-    #     var index = &self._entities[entity.id]
-    #     var oldArch = index.arch
-
-    #     var oldMask = oldArch.Mask
-    #     var mask = self.getExchangeMask(oldMask, add, rem)
-
-    #     if hasRelation:
-    #         if !mask.Get(relation):
-    #             tp, var _ = self._registry.ComponentType(relation.id)
-    #             panic(fmt.Sprintf("can't add relation: resulting entity has no component %s", tp.Name()))
-
-    #         if !self._registry.IsRelation.Get(relation):
-    #             tp, var _ = self._registry.ComponentType(relation.id)
-    #             panic(fmt.Sprintf("can't add relation: %s is not a relation component", tp.Name()))
-
-    #     else
-    #         target = oldArch.RelationTarget
-    #         if !oldArch.RelationTarget.IsZero() && oldArch.Mask.ContainsAny(&self._registry.IsRelation):
-    #             for _, id in enumerate(rem):
-    #                 # Removing a relation
-    #                 if self._registry.IsRelation.Get(id):
-    #                     target = Entity
-    #                     break
-
-    #     var oldIDs = oldArch.Components()
-
-    #     var arch = self._find_or_create_archetype(oldArch, add, rem, target)
-    #     var newIndex = arch.Alloc(entity)
-
-    #     for _, id in enumerate(oldIDs):
-    #         if mask.Get(id):
-    #             var comp = oldArch.Get(index.index, id)
-    #             arch.SetPointer(newIndex, id, comp)
-
-    #     var swapped = oldArch.Remove(index.index)
-
-    #     if swapped:
-    #         var swapEntity = oldArch.GetEntity(index.index)
-    #         self._entities[swapEntity.id].index = index.index
-
-    #     self._entities[entity.id] = entityIndexarch: arch, index: newIndex
-
-    #     var oldRel *ID
-    #     if oldArch.HasRelationComponent:
-    #         oldRel = &oldArch.RelationComponent
-
-    #     var oldTarget = oldArch.RelationTarget
-
-    #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
-
-    #     self._cleanup_archetype(oldArch)
-
-    #     return arch, &oldMask, oldTarget, oldRel
-
-    # fn notifyExchange(self, arch: *archetype, oldMask: *Mask, entity: Entity, add: []ID, rem: []ID, oldTarget: Entity, oldRel: *ID):
+    # fn notifyExchange(self, arch: *archetype, old_mask: *Mask, entity: Entity, add: []ID, rem: []ID, oldTarget: Entity, oldRel: *ID):
     #     """
     #     notify listeners for an exchange.
     #     """
@@ -1126,33 +1089,15 @@ struct World[*component_types: AnyType]:
     #     var bits = subscription(false, false, len(add) > 0, len(rem) > 0, relChanged, relChanged || targChanged)
     #     var trigger = self._listener.Subscriptions() & bits
     #     if trigger != 0:
-    #         var changed = oldMask.Xor(&arch.Mask)
+    #         var changed = old_mask.Xor(&arch.Mask)
     #         var added = arch.Mask.And(&changed)
-    #         var removed = oldMask.And(&changed)
+    #         var removed = old_mask.And(&changed)
     #         if subscribes(trigger, &added, &removed, self._listener.Components(), oldRel, newRel):
     #             self._listener.Notify(self,
     #                 EntityEventEntity: entity, Added: added, Removed: removed,
     #                     AddedIDs: add, RemovedIDs: rem, OldRelation: oldRel, NewRelation: newRel,
     #                     OldTarget: oldTarget, EventTypes: bits,
     #             )
-
-    # fn getExchangeMask(self, mask: Mask, add: []ID, rem: []ID) -> Mask:
-    #     """
-    #     Modify a mask by adding and removing IDs.
-    #     """
-    #     for _, comp in enumerate(rem):
-    #         if !mask.Get(comp):
-    #             panic(fmt.Sprintf("entity does not have a component of type %v, can't remove", self._registry.Types[comp.id]))
-
-    #         mask.Set(comp, false)
-
-    #     for _, comp in enumerate(add):
-    #         if mask.Get(comp):
-    #             panic(fmt.Sprintf("entity already has component of type %v, can't add", self._registry.Types[comp.id]))
-
-    #         mask.Set(comp, true)
-
-    #     return mask
 
     # fn exchangeBatch(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity) -> int:
     #     """
@@ -1215,9 +1160,9 @@ struct World[*component_types: AnyType]:
 
     #     return int(totalEntities)
 
-    # fn exchangeArch(self, oldArch: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity):
-    #     var mask = self.getExchangeMask(oldArch.Mask, add, rem)
-    #     var oldIDs = oldArch.Components()
+    # fn exchangeArch(self, old_archetype: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity):
+    #     var mask = self._get_exchange_mask(old_archetype.Mask, add, rem)
+    #     var oldIDs = old_archetype.Components()
 
     #     if hasRelation:
     #         if !mask.Get(relation):
@@ -1229,15 +1174,15 @@ struct World[*component_types: AnyType]:
     #             panic(fmt.Sprintf("can't add relation: %s is not a relation component", tp.Name()))
 
     #     else
-    #         target = oldArch.RelationTarget
-    #         if !target.IsZero() && oldArch.Mask.ContainsAny(&self._registry.IsRelation):
+    #         target = old_archetype.RelationTarget
+    #         if !target.IsZero() && old_archetype.Mask.ContainsAny(&self._registry.IsRelation):
     #             for _, id in enumerate(rem):
     #                 # Removing a relation
     #                 if self._registry.IsRelation.Get(id):
     #                     target = Entity
     #                     break
 
-    #     var arch = self._find_or_create_archetype(oldArch, add, rem, target)
+    #     var arch = self._find_or_create_archetype(old_archetype, add, rem, target)
 
     #     var startIdx = arch.Len()
     #     var count = oldArchLen
@@ -1246,7 +1191,7 @@ struct World[*component_types: AnyType]:
     #     var i: uint32
     #     for i = 0 in range(i < count, i++):
     #         var idx = startIdx + i
-    #         var entity = oldArch.GetEntity(i)
+    #         var entity = old_archetype.GetEntity(i)
     #         var index = &self._entities[entity.id]
     #         arch.SetEntity(idx, entity)
     #         index.arch = arch
@@ -1254,206 +1199,21 @@ struct World[*component_types: AnyType]:
 
     #         for _, id in enumerate(oldIDs):
     #             if mask.Get(id):
-    #                 var comp = oldArch.Get(i, id)
+    #                 var comp = old_archetype.Get(i, id)
     #                 arch.SetPointer(idx, id, comp)
 
     #     if !target.IsZero():
     #         self._target_entities.Set(target.id, true)
 
-    #     # Theoretically, it could be oldArchLen < oldArch.Len(),
+    #     # Theoretically, it could be oldArchLen < old_archetype.Len(),
     #     # which means we can't reset the archetype.
     #     # However, this should not be possible as processing an entity twice
     #     # would mean an illegal component addition/removal.
-    #     oldArch.Reset()
-    #     self._cleanup_archetype(oldArch)
+    #     old_archetype.Reset()
+    #     self._cleanup_archetype(old_archetype)
 
     #     return arch, startIdx
 
-    # fn getRelation(self, entity: Entity, comp: ID) -> Entity:
-    #     """
-    #     getRelation returns the target entity for an entity relation.
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called for a missing component.
-    #     - when called for a component that is not a relation.
-
-    #     See [Relation] for details and examples.
-    #     """
-    #     if !self.entityPool.Alive(entity):
-    #         panic("can't get relation of a dead entity")
-
-    #     var index = &self._entities[entity.id]
-    #     self.checkRelation(index.arch, comp)
-
-    #     return index.arch.RelationTarget
-
-    # fn getRelationUnchecked(self, entity: Entity, comp: ID) -> Entity:
-    #     """
-    #     getRelationUnchecked returns the target entity for an entity relation.
-
-    #     getRelationUnchecked is an optimized version of [World.getRelation].
-    #     Does not check if the entity is alive or that the component ID is applicable.
-    #     """
-    #     _ = comp
-    #     var index = &self._entities[entity.id]
-    #     return index.arch.RelationTarget
-
-    # fn setRelation(self, entity: Entity, comp: ID, target: Entity):
-    #     """
-    #     setRelation sets the target entity for an entity relation.
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called for a removed (and potentially recycled) target.
-    #     - when called for a missing component.
-    #     - when called for a component that is not a relation.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See [Relation] for details and examples.
-    #     """
-    #     self.checkLocked()
-
-    #     if !self.entityPool.Alive(entity):
-    #         panic("can't set relation for a dead entity")
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     var index = &self._entities[entity.id]
-    #     self.checkRelation(index.arch, comp)
-
-    #     var oldArch = index.arch
-
-    #     if oldArch.RelationTarget == target:
-    #         return
-
-    #     var arch = oldArch.node.GetArchetype(target)
-    #     if arch == nil:
-    #         arch = self.createArchetype(oldArch.node, target, true)
-
-    #     var newIndex = arch.Alloc(entity)
-    #     for _, id in enumerate(oldArch.node.Ids):
-    #         var comp = oldArch.Get(index.index, id)
-    #         arch.SetPointer(newIndex, id, comp)
-
-    #     var swapped = oldArch.Remove(index.index)
-
-    #     if swapped:
-    #         var swapEntity = oldArch.GetEntity(index.index)
-    #         self._entities[swapEntity.id].index = index.index
-
-    #     self._entities[entity.id] = entityIndexarch: arch, index: newIndex
-
-    #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
-
-    #     var oldTarget = oldArch.RelationTarget
-    #     self._cleanup_archetype(oldArch)
-
-    #     if self._listener != nil:
-    #         var trigger = self._listener.Subscriptions() & event.TargetChanged
-    #         if trigger != 0 && subscribes(trigger, nil, nil, self._listener.Components(), &comp, &comp):
-    #             self._listener.Notify(self, EntityEventEntity: entity, OldRelation: &comp, NewRelation: &comp, OldTarget: oldTarget, EventTypes: event.TargetChanged)
-
-    # fn setRelationBatch(self, filter: Filter, comp: ID, target: Entity) -> int:
-    #     """
-    #     set relation target in batches.
-    #     """
-    #     var batches = batchArchetypes
-    #     var count = self.setRelationBatchNoNotify(filter, comp, target, &batches)
-    #     if self._listener != nil && self._listener.Subscriptions().Contains(event.TargetChanged):
-    #         self.notifyQuery(&batches)
-
-    #     return count
-
-    # fn setRelationBatchQuery(self, filter: Filter, comp: ID, target: Entity) -> Query:
-    #     var batches = batchArchetypes
-    #     self.setRelationBatchNoNotify(filter, comp, target, &batches)
-    #     var lock = self.lock()
-    #     return newBatchQuery(self, lock, &batches)
-
-    # fn setRelationBatchNoNotify(self, filter: Filter, comp: ID, target: Entity, batches: *batchArchetypes) -> int:
-    #     self.checkLocked()
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     var arches = self.getArchetypes(filter)
-    #     var lengths = make([]uint32, len(arches))
-    #     var totalEntities: uint32 = 0
-    #     for i, arch in enumerate(arches):
-    #         lengths[i] = arch.Len()
-    #         totalEntities += arch.Len()
-
-    #     for i, arch in enumerate(arches):
-    #         var archLen = lengths[i]
-
-    #         if archLen == 0:
-    #             continue
-
-    #         if arch.RelationTarget == target:
-    #             continue
-
-    #         newArch, start, var end = self.setRelationArch(arch, archLen, comp, target)
-    #         batches.Add(newArch, arch, start, end)
-
-    #     return int(totalEntities)
-
-    # fn setRelationArch(self, oldArch: *archetype, oldArchLen: uint32, comp: ID, target: Entity):
-    #     self.checkRelation(oldArch, comp)
-
-    #     # Before, _entities with unchanged target were included in the query,
-    #     # and events were emitted for them. Seems better to skip them completely,
-    #     # which is done in World.setRelationBatchNoNotify.
-    #     #if oldArch.RelationTarget == target:
-    #     #    return oldArch, 0, oldArchLen
-    #     #
-
-    #     var oldIDs = oldArch.Components()
-
-    #     var arch = oldArch.node.GetArchetype(target)
-    #     if arch == nil:
-    #         arch = self.createArchetype(oldArch.node, target, true)
-
-    #     var startIdx = arch.Len()
-    #     var count = oldArchLen
-    #     arch.AllocN(count)
-
-    #     var i: uint32
-    #     for i = 0 in range(i < count, i++):
-    #         var idx = startIdx + i
-    #         var entity = oldArch.GetEntity(i)
-    #         var index = &self._entities[entity.id]
-    #         arch.SetEntity(idx, entity)
-    #         index.arch = arch
-    #         index.index = idx
-
-    #         for _, id in enumerate(oldIDs):
-    #             var comp = oldArch.Get(i, id)
-    #             arch.SetPointer(idx, id, comp)
-
-    #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
-
-    #     # Theoretically, it could be oldArchLen < oldArch.Len(),
-    #     # which means we can't reset the archetype.
-    #     # However, this should not be possible as processing an entity twice
-    #     # would mean an illegal component addition/removal.
-    #     oldArch.Reset()
-    #     self._cleanup_archetype(oldArch)
-
-    #     return arch, uint32(startIdx), arch.Len()
-
-    # fn checkRelation(self, arch: *archetype, comp: ID):
-    #     if arch.node.Relation.id != comp.id:
-    #         self.relationError(arch, comp)
-
-    # fn relationError(self, arch: *archetype, comp: ID):
-    #     if !arch.HasComponent(comp):
-    #         panic(fmt.Sprintf("entity does not have relation component %v", self._registry.Types[comp.id]))
-
-    #     panic(fmt.Sprintf("not a relation component: %v", self._registry.Types[comp.id]))
 
     # fn lock(self) -> uint8:
     #     """
@@ -1485,127 +1245,6 @@ struct World[*component_types: AnyType]:
     #     var arch = index.arch
 
     #     return arch.Set(index.index, id, comp)
-
-    # fn _find_or_create_archetype(self, start: *archetype, add: []ID, rem: []ID, target: Entity):
-    #     """
-    #     Tries to find an archetype by traversing the archetype graph,
-    #     searching by mask and extending the graph if necessary.
-    #     A new archetype is created for the final graph node if not already present.
-    #     """
-    #     var curr = start.node
-    #     var mask = start.Mask
-    #     var relation = start.RelationComponent
-    #     var hasRelation = start.HasRelationComponent
-    #     for _, id in enumerate(rem):
-    #         # Not required, as removing happens only via exchange,
-    #         # which calls getExchangeMask, which does the same check.
-    #         #if !mask.Get(id):
-    #         #    panic(fmt.Sprintf("entity does not have a component of type %v, or it was removed twice", self._registry.Types[id.id]))
-    #         #
-    #         mask.Set(id, false)
-    #         if self._registry.IsRelation.Get(id):
-    #             relation = ID
-    #             hasRelation = false
-
-    #         if next, var ok = curr.TransitionRemove.Get(id.id); ok:
-    #             curr = next
-    #         else
-    #             next, var _ = self.findOrCreateArchetypeSlow(mask, relation, hasRelation)
-    #             next.TransitionAdd.Set(id.id, curr)
-    #             curr.TransitionRemove.Set(id.id, next)
-    #             curr = next
-
-    #     for _, id in enumerate(add):
-    #         if mask.Get(id):
-    #             panic(fmt.Sprintf("entity already has component of type %v, or it was added twice", self._registry.Types[id.id]))
-
-    #         if start.Mask.Get(id):
-    #             panic(fmt.Sprintf("component of type %v added and removed in the same exchange operation", self._registry.Types[id.id]))
-
-    #         mask.Set(id, true)
-    #         if self._registry.IsRelation.Get(id):
-    #             if hasRelation:
-    #                 panic("entity already has a relation component")
-
-    #             relation = id
-    #             hasRelation = true
-
-    #         if next, var ok = curr.TransitionAdd.Get(id.id); ok:
-    #             curr = next
-    #         else
-    #             next, var _ = self.findOrCreateArchetypeSlow(mask, relation, hasRelation)
-    #             next.TransitionRemove.Set(id.id, curr)
-    #             curr.TransitionAdd.Set(id.id, next)
-    #             curr = next
-
-    #     var arch = curr.GetArchetype(target)
-    #     if arch == nil:
-    #         arch = self.createArchetype(curr, target, true)
-
-    #     return arch
-
-    # fn findOrCreateArchetypeSlow(self, mask: Mask, relation: ID, hasRelation: bool):
-    #     """
-    #     Tries to find an archetype for a mask, when it can't be reached through the archetype graph.
-    #     Creates an archetype graph node.
-    #     """
-    #     if arch, var ok = self.findArchetypeSlow(mask); ok:
-    #         return arch, false
-
-    #     return self.createArchetypeNode(mask, relation, hasRelation), true
-
-    # fn findArchetypeSlow(self, mask: Mask):
-    #     """
-    #     Searches for an archetype by a mask.
-    #     """
-    #     var length = self._nodes.Len()
-    #     var i: int32
-    #     for i = 0 in range(i < length, i++):
-    #         var nd = self._nodes.Get(i)
-    #         if nd.Mask == mask:
-    #             return nd, true
-
-    #     return nil, false
-
-    # fn createArchetypeNode(self, mask: Mask, relation: ID, hasRelation: bool):
-    #     """
-    #     Creates a node in the archetype graph.
-    #     """
-    #     var capInc = self.config.CapacityIncrement
-    #     if hasRelation:
-    #         capInc = self.config.RelationCapacityIncrement
-
-    #     var types = mask.toTypes(&self._registry)
-
-    #     self._node_data.Add(_node_data)
-    #     self._nodes.Add(newArchNode(mask, self._node_data.Get(self._node_data.Len()-1), relation, hasRelation, capInc, types))
-    #     var nd = self._nodes.Get(self._nodes.Len() - 1)
-    #     self._relation_nodes = append(self._relation_nodes, nd)
-    #     self._node_pointers = append(self._node_pointers, nd)
-
-    #     return nd
-
-    # fn createArchetype(self, node: *archNode, target: Entity, forStorage: bool):
-    #     """
-    #     Creates an archetype for the given archetype graph node.
-    #     Initializes the archetype with a capacity according to CapacityIncrement if forStorage is true,
-    #     and with a capacity of 1 otherwise.
-    #     """
-    #     var arch *archetype
-    #     var layouts = capacityNonZero(self._registry.Count(), int(layoutChunkSize))
-
-    #     if node.HasRelation:
-    #         arch = node.CreateArchetype(uint8(layouts), target)
-    #     else
-    #         self._archetypes.Add(archetype)
-    #         self._archetype_data.Add(_archetype_data)
-    #         var archIndex = self._archetypes.Len() - 1
-    #         arch = self._archetypes.Get(archIndex)
-    #         arch.Init(node, self._archetype_data.Get(archIndex), archIndex, forStorage, uint8(layouts), Entity)
-    #         node.SetArchetype(arch)
-
-    #     self._filter_cache.addArchetype(arch)
-    #     return arch
 
     # fn getArchetypes(self, filter: Filter):
     #     """
@@ -1724,27 +1363,27 @@ struct World[*component_types: AnyType]:
     #             OldRelation: nil, NewRelation: newRel,
     #             OldTarget: Entity, EventTypes: 0,
 
-    #         var oldArch = batchArch.OldArchetype[i]
+    #         var old_archetype = batchArch.OldArchetype[i]
     #         var relChanged = newRel != nil
     #         var targChanged = !arch.RelationTarget.IsZero()
 
-    #         if oldArch != nil:
+    #         if old_archetype != nil:
     #             var oldRel *ID
-    #             if oldArch.HasRelationComponent:
-    #                 oldRel = &oldArch.RelationComponent
+    #             if old_archetype.HasRelationComponent:
+    #                 oldRel = &old_archetype.RelationComponent
 
     #             relChanged = false
     #             if oldRel != nil || newRel != nil:
     #                 relChanged = (oldRel == nil) != (newRel == nil) || *oldRel != *newRel
 
-    #             targChanged = oldArch.RelationTarget != arch.RelationTarget
-    #             var changed = event.Added.Xor(&oldArch.node.Mask)
+    #             targChanged = old_archetype.RelationTarget != arch.RelationTarget
+    #             var changed = event.Added.Xor(&old_archetype.node.Mask)
     #             event.Added = changed.And(&event.Added)
-    #             event.Removed = changed.And(&oldArch.node.Mask)
-    #             event.OldTarget = oldArch.RelationTarget
+    #             event.Removed = changed.And(&old_archetype.node.Mask)
+    #             event.OldTarget = old_archetype.RelationTarget
     #             event.OldRelation = oldRel
 
-    #         var bits = subscription(oldArch == nil, false, len(batchArch.Added) > 0, len(batchArch.Removed) > 0, relChanged, relChanged || targChanged)
+    #         var bits = subscription(old_archetype == nil, false, len(batchArch.Added) > 0, len(batchArch.Removed) > 0, relChanged, relChanged || targChanged)
     #         event.EventTypes = bits
 
     #         var trigger = self._listener.Subscriptions() & bits
