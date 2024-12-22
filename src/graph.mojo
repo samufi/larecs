@@ -174,6 +174,19 @@ struct BitMaskGraph[
         return current_node
 
     @always_inline
+    fn get_node_mask(self: Self, node_index: Int) -> BitMask:
+        """Returns the mask of the node at the given index.
+
+        Args:
+            node_index: The index of the node.
+
+        Returns:
+            The mask of the node.
+        """
+        return self._nodes[node_index].bit_mask
+
+
+    @always_inline
     fn __getitem__(
         ref [_]self: Self, owned node_index: Int
     ) -> ref [self._nodes[node_index].value] DataType:
