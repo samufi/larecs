@@ -55,7 +55,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
     var _mask: BitMask
 
     fn __init__(
-        inout self,
+        out self,
         node_index: UInt,
         mask: BitMask = BitMask(),
         capacity: UInt = 10,
@@ -84,12 +84,11 @@ struct Archetype(CollectionElement, CollectionElementNew):
     fn __init__[
         component_count: Int
     ](
-        inout self,
+        out self,
         node_index: UInt,
         components: InlineArray[ComponentInfo, component_count] = InlineArray[
             ComponentInfo, component_count
         ](),
-        mask: Optional[BitMask] = None,
         capacity: UInt = 10,
     ):
         """Initializes the archetype with a given capacity and components.
@@ -97,7 +96,30 @@ struct Archetype(CollectionElement, CollectionElementNew):
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             components: The components of the archetype.
+            capacity:   The initial capacity of the archetype.
+        """
+        mask_ = BitMask()
+        for i in range(component_count):
+            mask_.set[True](components[i].get_id())
+        self = Self(node_index, mask_, components, capacity)
+
+    fn __init__[
+        component_count: Int
+    ](
+        out self,
+        node_index: UInt,
+        mask: BitMask,
+        components: InlineArray[ComponentInfo, component_count] = InlineArray[
+            ComponentInfo, component_count
+        ](),
+        capacity: UInt = 10,
+    ):
+        """Initializes the archetype with a given capacity, components, and BitMask.
+
+        Args:
+            node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
+            components: The components of the archetype.
             capacity:   The initial capacity of the archetype.
         """
         constrained[
@@ -112,15 +134,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
             + ".",
         ]()
 
-        var mask_: BitMask
-        if mask:
-            mask_ = mask.value()
-        else:
-            mask_ = BitMask()
-            for i in range(component_count):
-                mask_.set[True](components[i].get_id())
-
-        self.__init__(node_index, mask_, capacity)
+        self = Self(node_index, mask, capacity)
         self._component_count = component_count
 
         @parameter
@@ -133,33 +147,9 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 UInt8
             ].alloc(self._capacity * int(components[i].get_size()))
 
-    fn __init__(inout self, /, *, other: Self):
+    fn copy(self) -> Self as other:
         """Initializes the archetype as a copy of another archetype."""
-        # Copy the attributes that can be trivially
-        # copied via a simple assignment
-        self._size = other._size
-        self._capacity = other._capacity
-        self._component_count = other._component_count
-        self._item_sizes = other._item_sizes
-        self._entities = other._entities
-        self._ids = other._ids
-        self._node_index = other._node_index
-        self._mask = other._mask
-
-        # Copy the data
-        self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
-        ](UnsafePointer[UInt8]())
-
-        for i in range(other._component_count):
-            id = int(other._ids[i])
-            size = other._capacity * int(other._item_sizes[id])
-            self._data[id] = UnsafePointer[UInt8].alloc(size)
-            memcpy(
-                self._data[id],
-                other._data[id],
-                size,
-            )
+        other = self
 
     fn __moveinit__(inout self, owned existing: Self):
         self._data = existing._data^
@@ -173,7 +163,8 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._mask = existing._mask
 
     fn __copyinit__(inout self, existing: Self):
-        self._data = existing._data
+        # Copy the attributes that can be trivially
+        # copied via a simple assignment
         self._size = existing._size
         self._capacity = existing._capacity
         self._component_count = existing._component_count
@@ -182,6 +173,21 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._ids = existing._ids
         self._node_index = existing._node_index
         self._mask = existing._mask
+
+        # Copy the data
+        self._data = InlineArray[
+            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+        ](UnsafePointer[UInt8]())
+
+        for i in range(existing._component_count):
+            id = int(existing._ids[i])
+            size = existing._capacity * int(existing._item_sizes[id])
+            self._data[id] = UnsafePointer[UInt8].alloc(size)
+            memcpy(
+                self._data[id],
+                existing._data[id],
+                size,
+            )
 
     fn __del__(owned self):
         for i in range(self._component_count):

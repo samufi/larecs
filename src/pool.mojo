@@ -4,7 +4,7 @@ from constants import MAX_UINT16
 
 
 trait IntableCollectionElement(Intable):
-    fn __init__(inout self, value: Int):
+    fn __init__[IndexerTy: Indexer](out self, value: IndexerTy):
         ...
 
 

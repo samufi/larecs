@@ -155,7 +155,7 @@ def test_archetype_copy():
     var component2 = ComponentInfo(id=5, size=8)
     var archetype = Archetype(0, CArr(component1, component2))
 
-    var archetype2 = Archetype(other=archetype)
+    var archetype2 = archetype.copy()
 
     assert_not_equal(
         archetype._get_component_ptr(0, 1), archetype2._get_component_ptr(0, 1)

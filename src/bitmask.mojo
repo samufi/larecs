@@ -27,10 +27,10 @@ struct BitMask(Stringable, KeyElement):
             self.set[True](bit)
 
     @always_inline
-    fn __init__(inout self, *bits: Self.IndexType):
+    fn __init__(out self, *bits: Self.IndexType):
         """Initializes the mask with the bits at the given indices set to True.
         """
-        self.__init__(bits)
+        self = Self(bits)
 
     fn __copyinit__(inout self, other: Self):
         """Initializes the mask with the other mask."""

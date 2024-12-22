@@ -89,7 +89,7 @@ struct ChainedArrayList[
         """Create a new empty list."""
         self = Self()
         for element in elements:
-            self.append(ElementType(other=element[]))
+            self.append(element[].copy())
 
     fn __moveinit__(inout self, owned other: Self):
         """Move the contents of another list into a new list."""

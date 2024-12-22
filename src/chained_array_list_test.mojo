@@ -11,9 +11,8 @@ struct TestElement(CollectionElementNew):
         self.value = value
         self.dealloc_counter = dealloc_counter
 
-    fn __init__(inout self, other: Self):
-        self.value = other.value
-        self.dealloc_counter = other.dealloc_counter
+    fn copy(self) -> Self as other:
+        other = Self(self.value, self.dealloc_counter)
 
     fn __moveinit__(inout self, owned other: Self):
         self.value = other.value

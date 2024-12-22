@@ -120,8 +120,8 @@ struct World[*component_types: AnyType]:
         self._archetypes.append(
             Archetype(
                 node_index,
-                components,
                 self._archetype_map.get_node_mask(node_index),
+                components,
             )
         )
 
