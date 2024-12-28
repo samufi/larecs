@@ -89,7 +89,7 @@ struct ChainedArrayList[
         """Create a new empty list."""
         self = Self()
         for element in elements:
-            self.append(element[].copy())
+            _ = self.add(element[].copy())
 
     fn __moveinit__(inout self, owned other: Self):
         """Move the contents of another list into a new list."""
@@ -155,7 +155,7 @@ struct ChainedArrayList[
         """Mark the element at the given index for removal.
 
         The item is not deleted immediately, but will be overwritte
-        when a new item is appended to the list.
+        when a new item is added to the list.
 
         Args:
             idx: The index of the item.
@@ -193,11 +193,11 @@ struct ChainedArrayList[
     #     """
     #     return _ChainedArrayListIter(0, Pointer.address_of(self))
 
-    fn append(inout self, owned value: ElementType):
+    fn add(inout self, owned value: ElementType) -> Int as idx:
         """Append an element to the list.
 
         Args:
-            value: The element to append.
+            value: The element to add.
         """
         if self._removed_indices:
             idx = self._removed_indices.pop()
