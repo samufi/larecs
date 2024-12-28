@@ -56,11 +56,20 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
     fn __init__(
         out self,
-        node_index: UInt,
-        mask: BitMask = BitMask(),
-        capacity: UInt = 10,
     ):
-        """Initializes the archetype with a given capacity.
+        """Initializes the 0 archetype without any component."""
+        self = Self(0, BitMask(), 0)
+
+    fn __init__(
+        out self,
+        node_index: UInt,
+        mask: BitMask,
+        capacity: UInt,
+    ):
+        """Initializes the archetype without allocating memory for components.
+
+        Note:
+            Do not use this constructor directly!
 
         Args:
             node_index: The index of the archetype's node in the archetype graph.
@@ -146,6 +155,34 @@ struct Archetype(CollectionElement, CollectionElementNew):
             self._data[int(components[i].get_id())] = UnsafePointer[
                 UInt8
             ].alloc(self._capacity * int(components[i].get_size()))
+
+    fn __init__(
+        out self,
+        node_index: UInt,
+        mask: BitMask,
+        component_manager: ComponentManager,
+        capacity: UInt = 10,
+    ):
+        """Initializes the archetype based on a given mask.
+
+        Args:
+            node_index: The index of the archetype's node in the archetype graph.
+            mask: The mask of the archetype's node in the archetype graph.
+            component_manager: The component manager.
+            capacity: The initial capacity of the archetype.
+        """
+        self = Self(node_index, mask, capacity)
+        self._component_count = 0
+
+        @parameter
+        for i in range(BitMask.total_bits):
+            if mask.get(i):
+                self._item_sizes[i] = component_manager.get_size[i]()
+                self._ids[self._component_count] = i
+                self._data[i] = UnsafePointer[UInt8].alloc(
+                    self._capacity * int(self._item_sizes[i])
+                )
+                self._component_count += 1
 
     fn copy(self) -> Self as other:
         """Initializes the archetype as a copy of another archetype."""
