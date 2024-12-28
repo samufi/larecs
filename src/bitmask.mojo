@@ -1,5 +1,56 @@
 from bit import pop_count, bit_not
 from filter import MaskFilter
+from collections import InlineList
+
+
+@value
+struct _BitMaksIndexIter:
+    """Iterator for ChainedArrayList."""
+
+    alias DataContainorType = SIMD[DType.uint8, BitMask.total_bytes]
+
+    var _byte_index: Int
+    var _offest_index: Int
+    var _bytes: Self.DataContainorType
+    var _mask: Self.DataContainorType
+    var _compare: Self.DataContainorType
+    var _index: UInt8
+    var _size: Int
+
+    fn __init__(out self, owned bytes: Self.DataContainorType):
+        self._bytes = bytes
+        self._mask = Self.DataContainorType(1)
+        self._compare = self._bytes & self._mask
+        self._byte_index = 0
+        self._offest_index = 0
+        self._index = 0
+        self._size = self._bytes.reduce_bit_count()
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(
+        inout self,
+    ) -> BitMask.IndexType:
+        for i in range(self._offest_index, 8):
+            for j in range(self._byte_index, 32):
+                if self._compare[j]:
+                    self._offest_index = i
+                    self._byte_index = j + 1
+                    self._index += 1
+                    return j * 8 + i
+            self._mask <<= 1
+            self._compare = self._bytes & self._mask
+            self._byte_index = 0
+        return 255
+
+    @always_inline
+    fn __has_next__(self) -> Bool:
+        return self._index < self._size
+
+    @always_inline
+    fn __len__(self) -> Int:
+        return int(self._size)
 
 
 @register_passable
@@ -142,9 +193,35 @@ struct BitMask(Stringable, KeyElement):
     @always_inline
     fn total_bits_set(self) -> Int:
         """Returns how many bits are set in this mask."""
-        # The cast to uint16 is necessary to avoid overflow
-        # in the reduce operation.
-        return int(pop_count(self._bytes).cast[DType.uint16]().reduce_add())
+        return self._bytes.reduce_bit_count()
+
+    @always_inline
+    fn get_indices(self) -> _BitMaksIndexIter as result:
+        result = _BitMaksIndexIter(self._bytes)
+
+    # fn get_indices(self, inout result: InlineList[Self.IndexType, 256]): # -> Int #as result: #TrivialInlineList[Self.IndexType, 256] as result:
+    #     """Returns the indices of the set bits.
+
+    #     For performance reasons, this is given as an InlineArray.
+    #     Non-existent values are set to -1.
+    #     """
+    #     # result = 0 #TrivialInlineList[Self.IndexType, 256](-1)
+    #     mask = SIMD[DType.uint8, 32](1)
+    #     @parameter
+    #     k = 0
+    #     @parameter
+    #     for i in range(8):
+    #         c = self._bytes & mask
+    #         @parameter
+    #         for j in range(32):
+    #             if c[j]:
+    #                 alias index = j*8 + i
+    #                 # result += index
+    #                 result[k] = index
+    #                 k += 1
+    #         mask <<= 1
+    #     # result.size = k
+    #     return
 
     fn __str__(self) -> String:
         """Implements str(...)."""
