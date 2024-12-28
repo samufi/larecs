@@ -63,7 +63,7 @@ struct World[*component_types: AnyType]:
         Creates a new [World].
         """
         self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
-        self._archetypes = ChainedArrayList[Archetype](Archetype(0, capacity=0))
+        self._archetypes = ChainedArrayList[Archetype](Archetype())
         self._entities = List[EntityIndex, hint_trivial_type=True](
             EntityIndex(0, 0)
         )
@@ -87,9 +87,45 @@ struct World[*component_types: AnyType]:
         # var node = self.createArchetypeNode(Mask, ID, false)
         # self.createArchetype(node, Entity, false)
 
-    fn _get_archetype_index(
+    fn _get_archetype_index[
+        size: Int
+    ](inout self, components: InlineArray[ComponentInfo, size],) -> Int:
+        """Returns the archetype list index of the archetype differing from
+        the archetype at the start node by the given indices.
+
+        If not start node is given, returns the archetypes with the
+        components at the given indices.
+
+        If necessary, creates a new archetype.
+
+        Args:
+            components:       The components that distinguish the archetypes.
+
+        Returns:
+            The archetype list index of the archetype differing from the start
+            archetype by the components at the given indices.
+        """
+        node_index = self._archetype_map.get_node_index(components, 0)
+        if self._archetype_map.has_value(node_index):
+            return self._archetype_map[node_index]
+
+        archetype_index = self._archetypes.add(
+            Archetype(
+                node_index,
+                self._archetype_map.get_node_mask(node_index),
+                components,
+            )
+        )
+
+        self._archetype_map[node_index] = archetype_index
+
+        return archetype_index
+
+    fn _get_archetype_index[
+        size: Int
+    ](
         inout self,
-        components: InlineArray[ComponentInfo, _],
+        components: InlineArray[Self.Id, size],
         start_node_index: Int = 0,
     ) -> Int:
         """Returns the archetype list index of the archetype differing from
@@ -114,16 +150,15 @@ struct World[*component_types: AnyType]:
         if self._archetype_map.has_value(node_index):
             return self._archetype_map[node_index]
 
-        archetype_index = len(self._archetypes)
-        self._archetype_map[node_index] = archetype_index
-
-        self._archetypes.append(
+        archetype_index = self._archetypes.add(
             Archetype(
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
-                components,
+                self._component_manager,
             )
         )
+
+        self._archetype_map[node_index] = archetype_index
 
         return archetype_index
 
@@ -178,7 +213,7 @@ struct World[*component_types: AnyType]:
         archetype = self._archetypes.get_ptr(archetype_index)
 
         @parameter
-        for i in range(components.__len__()):
+        for i in range(size):
             archetype[].unsafe_set(
                 int(index_in_archetype),
                 component_info[i].id,
@@ -322,7 +357,7 @@ struct World[*component_types: AnyType]:
         #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
         #         self.unlock(lock)
 
-        var swapped = old_archetype[].remove(int(index.index))
+        swapped = old_archetype[].remove(int(index.index))
 
         self._entity_pool.recycle(entity)
 
@@ -453,14 +488,14 @@ struct World[*component_types: AnyType]:
         self._remove_and_add(entity, add_components, remove_ids)
 
     fn _remove_and_add[
-        rem_size: Int = 0, /, *Ts: ComponentType
+        rem_size: Int = 0,
+        /,
+        *Ts: ComponentType,
     ](
         inout self,
         entity: Entity,
         add_components: VariadicPack[_, ComponentType, *Ts],
-        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = Optional[
-            InlineArray[Self.Id, rem_size]
-        ](None),
+        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
         Adds and removes components to an [Entity].
@@ -495,12 +530,19 @@ struct World[*component_types: AnyType]:
         old_archetype = self._archetypes.get_ptr(old_archetype_index)
         index_in_old_archetype = index.index
 
-        component_info = self._component_manager.get_info_arr[*Ts]()
+        var component_ids: Optional[InlineArray[Self.Id, add_size]] = None
 
-        # ToDo: Check that none of the components are added ore removed twice.
+        @parameter
+        if add_size:
+            component_ids = Optional[InlineArray[Self.Id, add_size]](
+                self._component_manager.get_id_arr[*Ts]()
+            )
+            if old_archetype[].has_any_component(component_ids.value()):
+                raise Error("Entity already has one of the components to add.")
 
-        if old_archetype[].has_any_component(component_info):
-            raise Error("Entity already has one of the components to add.")
+        start_node_index = old_archetype[].get_node_index()
+
+        var archetype_index: Int
 
         @parameter
         if rem_size:
@@ -509,15 +551,22 @@ struct World[*component_types: AnyType]:
                     "Entity does not have one of the components to remove."
                 )
 
-            start_node_index = self._archetype_map.get_node_index(
-                remove_ids.value(), old_archetype[].get_node_index()
-            )
+            @parameter
+            if add_size:
+                start_node_index = self._archetype_map.get_node_index(
+                    remove_ids.value(), start_node_index
+                )
+                archetype_index = self._get_archetype_index(
+                    component_ids.value(), start_node_index
+                )
+            else:
+                archetype_index = self._get_archetype_index(
+                    remove_ids.value(), start_node_index
+                )
         else:
-            start_node_index = old_archetype[].get_node_index()
-
-        archetype_index = self._get_archetype_index(
-            component_info, start_node_index
-        )
+            archetype_index = self._get_archetype_index(
+                component_ids.value(), start_node_index
+            )
 
         archetype = self._archetypes.get_ptr(archetype_index)
         index_in_archetype = archetype[].add(entity)
@@ -549,7 +598,7 @@ struct World[*component_types: AnyType]:
         for i in range(add_size):
             archetype[].unsafe_set(
                 index_in_archetype,
-                component_info[i].id,
+                component_ids.value()[i],
                 UnsafePointer.address_of(add_components[i]).bitcast[UInt8](),
             )
 
