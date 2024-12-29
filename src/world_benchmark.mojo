@@ -218,7 +218,6 @@ fn benchmark_add_remove_entity_with_new_arch_5_comp_1_000_000(
             FlexibleComponent[4],
             FlexibleComponent[5],
         ]()
-        entity = world.new_entity(c1, c2, c3, c4, c5)
         for _ in range(1_000_000):
             entity = world.new_entity(c1, c2, c3, c4, c5)
             world.remove_entity(entity)
