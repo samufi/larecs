@@ -116,6 +116,7 @@ fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
     return False
 
 
+@register_passable("trivial")
 struct ComponentManager[*component_types: AnyType]:
     """ComponentManager is a manager for ECS components.
 

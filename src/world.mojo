@@ -87,6 +87,7 @@ struct World[*component_types: AnyType]:
         # var node = self.createArchetypeNode(Mask, ID, false)
         # self.createArchetype(node, Entity, false)
 
+    @always_inline
     fn _get_archetype_index[
         size: Int
     ](inout self, components: InlineArray[ComponentInfo, size],) -> Int:
@@ -121,6 +122,7 @@ struct World[*component_types: AnyType]:
 
         return archetype_index
 
+    @always_inline
     fn _get_archetype_index[
         size: Int
     ](
@@ -409,6 +411,7 @@ struct World[*component_types: AnyType]:
     #     var index = &self._entities[entity.id]
     #     return index.arch.get(index.index, comp)
 
+    @always_inline
     fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
         """
         Returns whether an [Entity] has a given component.
@@ -1006,6 +1009,7 @@ struct World[*component_types: AnyType]:
 
     #     return arch, startIdx
 
+    @always_inline
     fn _create_entity(inout self, archetype_index: Int) -> Entity as entity:
         """
         Creates an Entity and adds it to the given archetype.
@@ -1017,6 +1021,7 @@ struct World[*component_types: AnyType]:
         else:
             self._entities[int(entity.id)] = EntityIndex(idx, archetype_index)
 
+    @always_inline
     fn _create_entities[
         element_origin: MutableOrigin
     ](inout self, archetype_index: Int, count: Int):
