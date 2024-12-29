@@ -382,41 +382,41 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     bench.bench_function[benchmark_new_entity_5_comp_1_000_000](
         BenchId("10^6 * new_entity 5 components")
     )
-    # bench.bench_function[
-    #     benchmark_add_remove_entity_with_existing_arch_1_comp_1_000_000
-    # ](BenchId("10^6 * add & remove entity (existing arch, 1 component)"))
-    # bench.bench_function[
-    #     benchmark_add_remove_entity_with_new_arch_1_comp_1_000_000
-    # ](BenchId("10^6 * add & remove entity (new arch, 1 component)"))
-    # bench.bench_function[
-    #     benchmark_add_remove_entity_with_existing_arch_5_comp_1_000_000
-    # ](BenchId("10^6 * add & remove entity (existing arch, 5 components)"))
-    # bench.bench_function[
-    #     benchmark_add_remove_entity_with_new_arch_5_comp_1_000_000
-    # ](BenchId("10^6 * add & remove entity (new arch, 5 components)"))
-    # bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
-    # bench.bench_function[benchmark_set_1_comp_1_000_000](
-    #     BenchId("10^6 * set 1 component")
-    # )
-    # bench.bench_function[benchmark_set_5_comp_1_000_000](
-    #     BenchId("10^6 * set 5 components")
-    # )
-    # bench.bench_function[benchmark_has_1_000_000](BenchId("10^6 * has"))
-    # bench.bench_function[benchmark_is_alive_1_000_000](
-    #     BenchId("10^6 * is_alive")
-    # )
-    # bench.bench_function[
-    #     benchmark_add_remove_1_comp_with_existing_arch_1_000_000
-    # ](BenchId("10^6 * add & remove 1 component (existing arch)"))
-    # bench.bench_function[benchmark_add_remove_1_comp_with_new_arch_1_000_000](
-    #     BenchId("10^6 * add & remove 1 component (new arch)")
-    # )
-    # bench.bench_function[
-    #     benchmark_add_remove_5_comp_with_existing_arch_1_000_000
-    # ](BenchId("10^6 * add & remove 5 components (existing arch)"))
-    # bench.bench_function[benchmark_add_remove_5_comp_with_new_arch_1_000_000](
-    #     BenchId("10^6 * add & remove 5 components (new arch)")
-    # )
+    bench.bench_function[
+        benchmark_add_remove_entity_with_existing_arch_1_comp_1_000_000
+    ](BenchId("10^6 * add & remove entity (existing arch, 1 component)"))
+    bench.bench_function[
+        benchmark_add_remove_entity_with_new_arch_1_comp_1_000_000
+    ](BenchId("10^6 * add & remove entity (new arch, 1 component)"))
+    bench.bench_function[
+        benchmark_add_remove_entity_with_existing_arch_5_comp_1_000_000
+    ](BenchId("10^6 * add & remove entity (existing arch, 5 components)"))
+    bench.bench_function[
+        benchmark_add_remove_entity_with_new_arch_5_comp_1_000_000
+    ](BenchId("10^6 * add & remove entity (new arch, 5 components)"))
+    bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
+    bench.bench_function[benchmark_set_1_comp_1_000_000](
+        BenchId("10^6 * set 1 component")
+    )
+    bench.bench_function[benchmark_set_5_comp_1_000_000](
+        BenchId("10^6 * set 5 components")
+    )
+    bench.bench_function[benchmark_has_1_000_000](BenchId("10^6 * has"))
+    bench.bench_function[benchmark_is_alive_1_000_000](
+        BenchId("10^6 * is_alive")
+    )
+    bench.bench_function[
+        benchmark_add_remove_1_comp_with_existing_arch_1_000_000
+    ](BenchId("10^6 * add & remove 1 component (existing arch)"))
+    bench.bench_function[benchmark_add_remove_1_comp_with_new_arch_1_000_000](
+        BenchId("10^6 * add & remove 1 component (new arch)")
+    )
+    bench.bench_function[
+        benchmark_add_remove_5_comp_with_existing_arch_1_000_000
+    ](BenchId("10^6 * add & remove 5 components (existing arch)"))
+    bench.bench_function[benchmark_add_remove_5_comp_with_new_arch_1_000_000](
+        BenchId("10^6 * add & remove 5 components (new arch)")
+    )
 
 
 def main():
