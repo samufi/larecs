@@ -365,6 +365,44 @@ fn benchmark_add_remove_5_comp_with_new_arch_1_000_000(
     bencher.iter[bench_fn]()
 
 
+fn benchmark_exchange_1_comp_with_new_arch_1_000_000(
+    inout bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = World[Position, Velocity]()
+        entity = world.new_entity(pos)
+        for _ in range(500_000):
+            world.remove_and[Position]().add(entity, vel)
+            world.remove_and[Velocity]().add(entity, pos)
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_exchange_1_comp_with_existing_arch_1_000_000(
+    inout bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = World[Position, Velocity]()
+        _ = world.new_entity(pos, vel)
+        _ = world.new_entity(pos)
+        entity = world.new_entity(pos)
+        for _ in range(500_000):
+            world.remove_and[Position]().add(entity, vel)
+            world.remove_and[Velocity]().add(entity, pos)
+
+    bencher.iter[bench_fn]()
+
+
 fn run_all_world_benchmarks() raises:
     bench = DefaultBench()
     run_all_world_benchmarks(bench)
@@ -415,6 +453,12 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     ](BenchId("10^6 * add & remove 5 components (existing arch)"))
     bench.bench_function[benchmark_add_remove_5_comp_with_new_arch_1_000_000](
         BenchId("10^6 * add & remove 5 components (new arch)")
+    )
+    bench.bench_function[
+        benchmark_exchange_1_comp_with_existing_arch_1_000_000
+    ](BenchId("10^6 * exchange 1 component (existing arch)"))
+    bench.bench_function[benchmark_exchange_1_comp_with_new_arch_1_000_000](
+        BenchId("10^6 * exchange 1 component (new arch)")
     )
 
 

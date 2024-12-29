@@ -106,7 +106,7 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         return self._id
 
 
-fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
+fn _contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
     @parameter
     for i in range(len(VariadicList(Ts))):
 
@@ -117,7 +117,7 @@ fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
 
 
 @register_passable("trivial")
-struct ComponentManager[*component_types: AnyType]:
+struct ComponentManager[*component_types: ComponentType]:
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create

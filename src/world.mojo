@@ -18,7 +18,51 @@ from bitmask import BitMask
 from collections import InlineArray
 
 
-struct World[*component_types: AnyType]:
+@value
+struct _Adder[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
+    """
+    Adder is a helper struct for removing and adding components to an [Entity].
+
+    It stores the components to remove and allows adding new components
+    in one go.
+
+    Parameters:
+        mut: The mutability of the world.
+        size: The number of components to remove.
+        component_types: The types of the components.
+    """
+
+    var _world: Pointer[World[*component_types], mut]
+    var _remove_ids: InlineArray[World[*component_types].Id, size]
+
+    @always_inline
+    fn add[
+        *AddTs: ComponentType
+    ](self, entity: Entity, *components: *AddTs) raises:
+        """
+        Removes and adds the components to an [Entity].
+
+        Parameters:
+            AddTs: The types of the components to add.
+
+        Args:
+            entity:         The entity to modify.
+            components: The components to add.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._world[]._remove_and_add[*AddTs](
+            entity,
+            components,
+            self._remove_ids,
+        )
+
+
+struct World[*component_types: ComponentType]:
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -478,34 +522,46 @@ struct World[*component_types: AnyType]:
             entity, remove_ids=self._component_manager.get_id_arr[*Ts]()
         )
 
+    @always_inline
+    fn remove_and[
+        *Ts: ComponentType
+    ](inout self) -> _Adder[
+        __origin_of(self),
+        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+        *component_types,
+    ]:
+        """
+        Returns a struct for removing and adding components to an Entity in one go.
+
+        Use as world.remove_and[Comp1, Comp2]().add(comp3, comp4).
+
+        Parameters:
+            Ts: The types of the components to remove.
+        """
+        return _Adder[
+            __origin_of(self),
+            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+            *component_types,
+        ](
+            Pointer.address_of(self),
+            self._component_manager.get_id_arr[*Ts](),
+        )
+
+    @always_inline
     fn _remove_and_add[
-        rem_size: Int = 0, /, *Ts: ComponentType
+        *Ts: ComponentType, rem_size: Int = 0
     ](
         inout self,
         entity: Entity,
         *add_components: *Ts,
-        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = Optional[
-            InlineArray[Self.Id, rem_size]
-        ](None),
-    ) raises:
-        self._remove_and_add(entity, add_components, remove_ids)
-
-    fn _remove_and_add[
-        rem_size: Int = 0,
-        /,
-        *Ts: ComponentType,
-    ](
-        inout self,
-        entity: Entity,
-        add_components: VariadicPack[_, ComponentType, *Ts],
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
         Adds and removes components to an [Entity].
 
         Parameters:
-            rem_size:   The number of components to remove.
-            Ts:         The types of the components to add.
+            Ts:       The types of the components to add.
+            rem_size: The number of components to remove.
 
         Args:
             entity:         The entity to modify.
@@ -517,6 +573,21 @@ struct World[*component_types: AnyType]:
             Error: when called with components that can't be added because they are already present.
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._remove_and_add(entity, add_components, remove_ids)
+
+    fn _remove_and_add[
+        *Ts: ComponentType, rem_size: Int = 0
+    ](
+        inout self,
+        entity: Entity,
+        add_components: VariadicPack[_, ComponentType, *Ts],
+        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
+    ) raises:
+        """
+        Adds and removes components to an [Entity].
+
+        See documentation of overloaded function for details.
         """
         alias add_size = add_components.__len__()
 

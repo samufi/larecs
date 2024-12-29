@@ -198,6 +198,28 @@ def test_world_remove():
     assert_equal(index1, world._entities[int(entity2.id)].index)
 
 
+def test_remove_and_add():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos)
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+
+    _ = world.remove_and[Velocity]()
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+
+    world.remove_and[Position]().add(entity, vel)
+    assert_false(world.has[Position](entity))
+    assert_true(world.has[Velocity](entity))
+    
+    with assert_raises():
+        world.remove_and[Position]().add(entity, vel)
+
+    assert_equal(world.get[Velocity](entity).dx, vel.dx)
+    assert_equal(world.get[Velocity](entity).dy, vel.dy)
+
 def main():
     print("Running additional tests...")
     test_new_entity()
@@ -210,4 +232,5 @@ def main():
     test_world_has_component()
     test_world_add()
     test_world_remove()
+    test_remove_and_add()
     print("All additional tests passed.")
