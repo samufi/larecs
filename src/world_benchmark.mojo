@@ -392,7 +392,7 @@ fn benchmark_exchange_1_comp_with_existing_arch_1_000_000(
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        _ = world.new_entity(pos, vel)
+        _ = world.new_entity(vel)
         _ = world.new_entity(pos)
         entity = world.new_entity(pos)
         for _ in range(500_000):
