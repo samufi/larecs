@@ -33,18 +33,17 @@ fn benchmark_new_entity_1_000_000(inout bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_new_entity_2_comp_1_000_000(
+fn benchmark_new_entity_1_comp_1_000_000(
     inout bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
 
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.new_entity(pos, vel).id)
+            keep(world.new_entity(pos).id)
 
     bencher.iter[bench_fn]()
 
@@ -413,8 +412,8 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     bench.bench_function[benchmark_new_entity_1_000_000](
         BenchId("10^6 * new_entity")
     )
-    bench.bench_function[benchmark_new_entity_2_comp_1_000_000](
-        BenchId("10^6 * new_entity 2 components")
+    bench.bench_function[benchmark_new_entity_1_comp_1_000_000](
+        BenchId("10^6 * new_entity 1 component")
     )
     bench.bench_function[benchmark_new_entity_5_comp_1_000_000](
         BenchId("10^6 * new_entity 5 components")

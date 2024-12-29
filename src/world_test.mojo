@@ -213,12 +213,13 @@ def test_remove_and_add():
     world.remove_and[Position]().add(entity, vel)
     assert_false(world.has[Position](entity))
     assert_true(world.has[Velocity](entity))
-    
+
     with assert_raises():
         world.remove_and[Position]().add(entity, vel)
 
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
+
 
 def main():
     print("Running additional tests...")
