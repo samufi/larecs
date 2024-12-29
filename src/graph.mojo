@@ -39,7 +39,7 @@ struct Node[DataType: KeyElement](CollectionElement):
         self.value = value
         self.neighbours = InlineArray[Int, 256](Self.null_index)
         self.bit_mask = bit_mask
-    
+
     fn copy(self) -> Self as other:
         other = Self(self.bit_mask, self.value)
 
