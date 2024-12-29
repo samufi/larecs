@@ -184,30 +184,30 @@ fn run_all_bitmask_benchmarks() raises:
 
 
 fn run_all_bitmask_benchmarks(inout bench: Bench) raises:
-    # bench.bench_function[benchmark_bitmask_get_1_000_000](
-    #     BenchId("10^6 * bitmask_get")
-    # )
-    # bench.bench_function[benchmark_bitmask_set_1_000_000](
-    #     BenchId("10^6 * bitmask_set")
-    # )
-    # bench.bench_function[benchmark_bitmask_flip_1_000_000](
-    #     BenchId("10^6 * bitmask_flip")
-    # )
-    # bench.bench_function[benchmark_bitmask_contains_1_000_000](
-    #     BenchId("10^6 * bitmask_contains")
-    # )
-    # bench.bench_function[benchmark_bitmask_contains_any_1_000_000](
-    #     BenchId("10^6 * bitmask_contains_any")
-    # )
-    # bench.bench_function[benchmark_bitmask_eq_1_000_000](
-    #     BenchId("10^6 * bitmask_eq")
-    # )
-    # bench.bench_function[benchmark_mask_filter_1_000_000](
-    #     BenchId("10^6 * mask_filter")
-    # )
-    # bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
-    #     BenchId("10^6 * get_indices")
-    # )
+    bench.bench_function[benchmark_bitmask_get_1_000_000](
+        BenchId("10^6 * bitmask_get")
+    )
+    bench.bench_function[benchmark_bitmask_set_1_000_000](
+        BenchId("10^6 * bitmask_set")
+    )
+    bench.bench_function[benchmark_bitmask_flip_1_000_000](
+        BenchId("10^6 * bitmask_flip")
+    )
+    bench.bench_function[benchmark_bitmask_contains_1_000_000](
+        BenchId("10^6 * bitmask_contains")
+    )
+    bench.bench_function[benchmark_bitmask_contains_any_1_000_000](
+        BenchId("10^6 * bitmask_contains_any")
+    )
+    bench.bench_function[benchmark_bitmask_eq_1_000_000](
+        BenchId("10^6 * bitmask_eq")
+    )
+    bench.bench_function[benchmark_mask_filter_1_000_000](
+        BenchId("10^6 * mask_filter")
+    )
+    bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
+        BenchId("10^6 * get_indices")
+    )
     bench.bench_function[benchmark_bitmask_get_each_1_000_000](
         BenchId("10^6 * get_each")
     )
