@@ -47,6 +47,7 @@ fn benchmark_new_entity_1_comp_1_000_000(
 
     bencher.iter[bench_fn]()
 
+
 fn prevent_inlining_new_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = World[Position, Velocity]()
@@ -76,6 +77,7 @@ fn benchmark_new_entity_5_comp_1_000_000(
             keep(world.new_entity(c1, c2, c3, c4, c5).id)
 
     bencher.iter[bench_fn]()
+
 
 fn prevent_inlining_new_entity_5_comp() raises:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -430,12 +432,12 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     bench.bench_function[benchmark_new_entity_5_comp_1_000_000](
         BenchId("10^6 * new_entity 5 components")
     )
-    bench.bench_function[
-        benchmark_add_remove_entity_1_comp_1_000_000
-    ](BenchId("10^6 * add & remove entity (1 component)"))
-    bench.bench_function[
-        benchmark_add_remove_entity_5_comp_1_000_000
-    ](BenchId("10^6 * add & remove entity (5 components)"))
+    bench.bench_function[benchmark_add_remove_entity_1_comp_1_000_000](
+        BenchId("10^6 * add & remove entity (1 component)")
+    )
+    bench.bench_function[benchmark_add_remove_entity_5_comp_1_000_000](
+        BenchId("10^6 * add & remove entity (5 components)")
+    )
     bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
     bench.bench_function[benchmark_set_1_comp_1_000_000](
         BenchId("10^6 * set 1 component")
@@ -456,7 +458,6 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     bench.bench_function[benchmark_exchange_1_comp_1_000_000](
         BenchId("10^6 * exchange 1 component")
     )
-
 
     # Functions to prevent inlining
     prevent_inlining_add_remove_entity_1_comp()
