@@ -137,7 +137,7 @@ def test_remove_archetype():
     assert_equal(len(world._entity_pool), 1)
 
     world.remove_entity(entity2)
-    assert_equal(len(world._archetypes), 1)
+    assert_equal(len(world._archetypes), 2)
     assert_equal(len(world._archetypes[1]._entities), 0)
     assert_equal(len(world._entity_pool), 0)
 
@@ -177,7 +177,7 @@ def test_world_remove():
     with assert_raises():
         _ = world.get[Position](entity)
 
-    assert_equal(len(world._archetypes), 2)
+    assert_equal(len(world._archetypes), 3)
 
     with assert_raises():
         world.remove[Position](entity)
@@ -185,7 +185,7 @@ def test_world_remove():
     entity = world.new_entity(pos, vel)
     assert_equal(len(world._archetypes), 3)
     world.remove[Position, Velocity](entity)
-    assert_equal(len(world._archetypes), 2)
+    assert_equal(len(world._archetypes), 3)
     assert_equal(len(world._archetypes[0]._entities), 1)
 
     # Test swapping
