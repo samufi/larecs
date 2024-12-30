@@ -1,6 +1,7 @@
 from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 from custom_benchmark import DefaultBench
 from world import World
+from entity import Entity
 from component import ComponentType, ComponentInfo
 
 
@@ -399,10 +400,14 @@ fn benchmark_exchange_1_comp_1_000_000(
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos)
-        for _ in range(500_000):
-            world.remove_and[Position]().add(entity, vel)
-            world.remove_and[Velocity]().add(entity, pos)
+        entities = List[Entity]()
+        for _ in range(1000):
+            entities.append(world.new_entity(pos))
+        for _ in range(1000):
+            for entity in entities:
+                world.remove_and[Position]().add(entity[], vel)
+            for entity in entities:
+                world.remove_and[Velocity]().add(entity[], pos)
 
     bencher.iter[bench_fn]()
 
