@@ -90,6 +90,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._entities = List[Entity]()
         self._node_index = node_index
 
+    @always_inline
     fn __init__[
         component_count: Int
     ](
@@ -390,6 +391,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 return False
         return True
 
+    @always_inline
     fn has_any_component[T: Intable](self, ids: InlineArray[T]) -> Bool:
         """Returns whether the archetype contains any of the given component ids.
         """

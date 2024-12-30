@@ -35,7 +35,6 @@ struct _Adder[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
     var _world: Pointer[World[*component_types], mut]
     var _remove_ids: InlineArray[World[*component_types].Id, size]
 
-    @always_inline
     fn add[
         *AddTs: ComponentType
     ](self, entity: Entity, *components: *AddTs) raises:
@@ -411,8 +410,6 @@ struct World[*component_types: ComponentType]:
             swap_entity = old_archetype[].get_entity(int(index.index))
             self._entities[int(swap_entity.id)].index = index.index
 
-        self._cleanup_archetype(old_archetype_index)
-
     @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
         """
@@ -481,7 +478,6 @@ struct World[*component_types: ComponentType]:
     #     """
     #     return self._entities[entity.id].arch.HasComponent(comp)
 
-    @always_inline
     fn add[
         *Ts: ComponentType
     ](inout self, entity: Entity, *add_components: *Ts) raises:
@@ -502,7 +498,6 @@ struct World[*component_types: ComponentType]:
         """
         self._remove_and_add(entity, add_components)
 
-    @always_inline
     fn remove[*Ts: ComponentType](inout self, entity: Entity) raises:
         """
         Removes components from an [Entity].
@@ -576,6 +571,7 @@ struct World[*component_types: ComponentType]:
         """
         self._remove_and_add(entity, add_components, remove_ids)
 
+    @always_inline
     fn _remove_and_add[
         *Ts: ComponentType, rem_size: Int = 0
     ](
@@ -684,23 +680,6 @@ struct World[*component_types: ComponentType]:
         self._entities[int(entity.id)] = EntityIndex(
             index_in_archetype, archetype_index
         )
-        self._cleanup_archetype(old_archetype_index)
-
-    # fn Assign(self, entity: Entity, comps: ...Component):
-    #     """
-    #     Assign assigns multiple components to an [Entity], using pointers for the content.
-
-    #     The components in the Comp field of [Component] must be pointers.
-    #     The passed pointers are no valid references to the assigned memory!
-
-    #     Panics:
-    #     - when called for a removed (and potentially recycled) entity.
-    #     - when called with components that can't be added because they are already present.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See also the generic variants under [github.com/mlange-42/arche/generic.Map1], etc.
-    #     """
-    #     self.assign(entity, Id, false, Entity, comps...)
 
     # fn Reset(self):
     #     """
@@ -1175,25 +1154,6 @@ struct World[*component_types: ComponentType]:
 
     #     return int(count)
 
-    # fn assign(self, entity: Entity, relation: ID, hasRelation: bool, target: Entity, comps: ...Component):
-    #     """
-    #     assign with relation target.
-    #     """
-    #     var len = len(comps)
-    #     if len == 0:
-    #         panic("no components given to assign")
-
-    #     var ids = make([]ID, len)
-    #     for i, c in enumerate(comps):
-    #         ids[i] = c.ID
-
-    #     arch, old_mask, oldTarget, var oldRel = self._exchange_without_notifying(entity, ids, nil, relation, hasRelation, target)
-    #     for _, c in enumerate(comps):
-    #         self.copyTo(entity, c.ID, c.Comp)
-
-    #     if self._listener != nil:
-    #         self.notifyExchange(arch, old_mask, entity, ids, nil, oldTarget, oldRel)
-
     # fn notifyExchange(self, arch: *archetype, old_mask: *Mask, entity: Entity, add: []ID, rem: []ID, oldTarget: Entity, oldRel: *ID):
     #     """
     #     notify listeners for an exchange.
@@ -1397,31 +1357,6 @@ struct World[*component_types: ComponentType]:
     #                 arches = append(arches, a)
 
     #     return arches
-
-    @always_inline
-    fn _cleanup_archetype(inout self, archetype_index: Int):
-        """
-        Removes the archetype if it is empty, and has a relation to a dead target.
-
-        Args:
-            archetype_index: The index of the archetype in the archetype list.
-        """
-        if self._archetypes[archetype_index]:
-            return
-
-        self._remove_archetype(archetype_index)
-
-    @always_inline
-    fn _remove_archetype(inout self, archetype_index: Int):
-        """
-        Removes/de-activates a relation archetype.
-
-        Args:
-            archetype_index: The index of the archetype in the archetype list.
-        """
-        node_index = self._archetypes[archetype_index].get_node_index()
-        self._archetypes.remove(self._archetype_map[node_index])
-        self._archetype_map[node_index] = self._archetype_map.null_value
 
     # fn extendArchetypeLayouts(self, count: uint8):
     #     """
