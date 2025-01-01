@@ -55,6 +55,20 @@ struct _EntityAccessor[
             .bitcast[T]()[0]
         )
 
+    @always_inline
+    fn get_ptr[
+        T: ComponentType
+    ](inout self) raises -> Pointer[T, __origin_of(self._archetype)]:
+        """Returns a reference to the given component of the Entity."""
+        return Pointer[origin = __origin_of(self._archetype)].address_of(
+            self._archetype[]
+            .get_component_ptr(
+                self._index_in_archetype,
+                self._component_manager.get_id[T](),
+            )
+            .bitcast[T]()[0]
+        )
+
 
 @value
 struct _EntityIterator[
