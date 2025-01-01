@@ -2,28 +2,7 @@ from testing import *
 from world import World
 from entity import Entity
 from component import ComponentType, ComponentInfo
-
-
-@value
-struct Position(ComponentType):
-    var x: Float32
-    var y: Float32
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 1
-
-
-@value
-struct Velocity(ComponentType):
-    var dx: Float32
-    var dy: Float32
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 2
+from test_utils import *
 
 
 def test_new_entity():
