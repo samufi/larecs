@@ -280,6 +280,7 @@ struct World[*component_types: ComponentType]:
 
         return
 
+    @always_inline
     fn get_entities(
         inout self,
     ) -> _EntityIterator[__origin_of(self._archetypes), *component_types,]:
@@ -289,12 +290,13 @@ struct World[*component_types: ComponentType]:
         Returns:
             An iterator with accessors to all entities with the given components.
         """
-        return _EntityIterator[__origin_of(self._archetypes), *component_types](
+        return _EntityIterator(
             self._component_manager,
             Pointer.address_of(self._archetypes),
             BitMask(),
         )
 
+    @always_inline
     fn get_entities[
         *Ts: ComponentType
     ](inout self) -> _EntityIterator[
