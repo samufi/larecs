@@ -141,7 +141,7 @@ fn run_all_query_benchmarks(inout bench: Bench) raises:
         BenchId("10^6 * query & get 2 comp")
     )
     bench.bench_function[benchmark_query_2_comp_ptr_1_000_000](
-        BenchId("10^6 * query & get 2 comp")
+        BenchId("10^6 * query & get ptr 2 comp")
     )
     bench.bench_function[benchmark_query_5_comp_1_000_000](
         BenchId("10^6 * query & get 5 comp")
