@@ -16,6 +16,7 @@ from component import (
 )
 from bitmask import BitMask
 from collections import InlineArray
+from query import _EntityIterator
 
 
 @value
@@ -277,6 +278,42 @@ struct World[*component_types: ComponentType]:
         #         self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
 
         return
+
+    fn get_entities(
+        inout self,
+    ) -> _EntityIterator[__origin_of(self._archetypes), *component_types,]:
+        """
+        Returns an iterator with accessors to all entities with the given components.
+
+        Returns:
+            An iterator with accessors to all entities with the given components.
+        """
+        return _EntityIterator[__origin_of(self._archetypes), *component_types](
+            self._component_manager,
+            Pointer.address_of(self._archetypes),
+            BitMask(),
+        )
+
+    fn get_entities[
+        *Ts: ComponentType
+    ](inout self) -> _EntityIterator[
+        __origin_of(self._archetypes),
+        *component_types,
+    ]:
+        """
+        Returns an iterator with accessors to all entities with the given components.
+
+        Parameters:
+            Ts: The types of the components.
+
+        Returns:
+            An iterator with accessors to all entities with the given components.
+        """
+        return _EntityIterator(
+            self._component_manager,
+            Pointer.address_of(self._archetypes),
+            BitMask(self._component_manager.get_id_arr[*Ts]()),
+        )
 
     fn set[
         T: ComponentType
