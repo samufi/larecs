@@ -1,6 +1,6 @@
 from bit import pop_count, bit_not
 from filter import MaskFilter
-from collections import InlineList
+from collections import InlineList, InlineArray
 
 
 @value
@@ -76,6 +76,18 @@ struct BitMask(Stringable, KeyElement):
         self._bytes = SIMD[DType.uint8, Self.total_bytes]()
         for bit in bits:
             self.set[True](bit)
+
+    @always_inline
+    fn __init__[
+        size: Int
+    ](inout self, bits: InlineArray[BitMask.IndexType, size]):
+        """Initializes the mask with the bits at the given indices set to True.
+        """
+        self._bytes = SIMD[DType.uint8, Self.total_bytes]()
+
+        @parameter
+        for i in range(size):
+            self.set[True](bits[i])
 
     @always_inline
     fn __init__(out self, *bits: Self.IndexType):
