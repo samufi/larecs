@@ -6,7 +6,6 @@ from archetype import Archetype
 from world import World
 
 
-@value
 struct _EntityAccessor[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
@@ -14,7 +13,7 @@ struct _EntityAccessor[
 ]:
     """Accessor for an Entity.
 
-    Caution: Only use this in the context it was created in.
+    Caution: use this only in the context it was created in.
     In particular, do not store it anywhere.
 
     Parameters:
@@ -27,6 +26,24 @@ struct _EntityAccessor[
     var _archetype: Pointer[Archetype, archetype_origin]
     var _index_in_archetype: Int
 
+    @always_inline
+    fn __init__(
+        out self,
+        component_manager: ComponentManager[*component_types],
+        archetype: Pointer[Archetype, archetype_origin],
+        index_in_archetype: Int,
+    ):
+        """
+        Parameters:
+            component_manager: The component manager.
+            archetype: The archetype of the entity.
+            index_in_archetype: The index of the entity in the archetype.
+        """
+        self._component_manager = component_manager
+        self._archetype = archetype
+        self._index_in_archetype = index_in_archetype
+
+    @always_inline
     fn get[T: ComponentType](inout self) raises -> ref [self._archetype] T:
         """Returns a reference to the given component of the Entity."""
         return (
@@ -104,9 +121,11 @@ struct _EntityIterator[
             # first call to __next__ will increment it.
             self._entity_index = -1
 
+    @always_inline
     fn __iter__(self) -> Self:
         return self
 
+    @always_inline
     fn _find_archetypes(inout self):
         """
         Find all archetypes that contain the mask.
@@ -123,6 +142,7 @@ struct _EntityIterator[
                 self._archetype_indices.append(i)
                 self._size += len(self._archetypes[][i])
 
+    @always_inline
     fn _next_archetype(inout self):
         """
         Move to the next archetype.
@@ -155,3 +175,7 @@ struct _EntityIterator[
     @always_inline
     fn __len__(self) -> Int:
         return self._size
+
+    @always_inline
+    fn __bool__(self) -> Bool:
+        return self.__has_next__()
