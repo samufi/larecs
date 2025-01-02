@@ -40,11 +40,6 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](
 ):
     var x: Int32
 
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return type_hash
-
     fn __eq__(self, other: Self) -> Bool:
         return self.x == other.x
 
@@ -79,10 +74,10 @@ def test_referencing():
     ptr_1 = UnsafePointer.address_of(dummy_value)
     component = ComponentReference(1, dummy_value)
     ptr_2 = component.get_unsafe_ptr()
-    assert_equal(ptr_1.bitcast[UInt8](), ptr_2)
+    assert_equal(int(ptr_1), int(ptr_2))
 
 
-def test_lifetime():
+def test_origin():
     dummy_value = DummyComponentType(456)
     component = ComponentReference(1, dummy_value)
     _ = component.get_unsafe_ptr()
@@ -104,34 +99,17 @@ def test_component_reference_move():
     assert_not_equal(moved_component._data, UnsafePointer[UInt8]())
 
 
-def test_component_manager_registration():
-    manager = ComponentManager()
-    _ = manager._register[DummyComponentType]()
-    assert_equal(manager.get_id[DummyComponentType](), 0)
-    with assert_raises():
-        _ = manager._register[DummyComponentType]()
-
-    @parameter
-    for i in range(1, 256):
-        _ = manager._register[FlexibleDummyComponentType[i]]()
-
-    @parameter
-    for i in range(1, 256):
-        assert_equal(manager.get_id[FlexibleDummyComponentType[i]](), i)
-
-    with assert_raises(contains="256"):
-        _ = manager._register[FlexibleDummyComponentType[1000]]()
-
-
 def test_component_manager_get_info():
-    manager = ComponentManager()
+    manager = ComponentManager[DummyComponentType]()
     info = manager.get_info[DummyComponentType]()
     assert_equal(info.id, 0)
     assert_equal(info.size, sizeof[DummyComponentType]())
 
 
 def test_component_manager_get_ref():
-    manager = ComponentManager()
+    manager = ComponentManager[
+        DummyComponentType, FlexibleDummyComponentType[1]
+    ]()
     component_ref = manager.get_ref(DummyComponentType(123))
     assert_equal(component_ref._id, 0)
     assert_not_equal(component_ref._data, UnsafePointer[UInt8]())
@@ -140,7 +118,9 @@ def test_component_manager_get_ref():
 
 
 def test_component_manager_get_info_arr():
-    manager = ComponentManager()
+    manager = ComponentManager[
+        DummyComponentType, FlexibleDummyComponentType[1]
+    ]()
     info_arr = manager.get_info_arr[
         DummyComponentType, FlexibleDummyComponentType[1]
     ]()
@@ -155,8 +135,7 @@ def main():
     test_component_initialization()
     test_component_value_getting()
     test_referencing()
-    test_lifetime()
-    test_component_manager_registration()
+    test_origin()
     test_component_reference_copy()
     test_component_reference_move()
     test_component_manager_get_info()

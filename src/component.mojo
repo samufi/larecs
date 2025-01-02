@@ -6,6 +6,7 @@ from stupid_dict import SimdDict, StupidDict as Dict
 from types import get_max_uint_size, TrivialIntable
 from memory import UnsafePointer
 from bitmask import BitMask
+from sys.intrinsics import _type_is_eq
 
 
 trait IdentifiableType:
@@ -17,7 +18,7 @@ trait IdentifiableType:
         ...
 
 
-trait ComponentType(IdentifiableType, Movable):
+trait ComponentType(Movable):
     pass
 
 
@@ -107,7 +108,17 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         return self._id
 
 
-struct ComponentManager:
+fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
+    @parameter
+    for i in range(len(VariadicList(Ts))):
+
+        @parameter
+        if _type_is_eq[T, Ts[i]]():
+            return True
+    return False
+
+
+struct ComponentManager[*component_types: AnyType]:
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
@@ -116,84 +127,55 @@ struct ComponentManager:
 
     alias dType = BitMask.IndexDType
     alias Id = SIMD[Self.dType, 1]
-
     alias max_size = get_max_uint_size[Self.Id]()
-    var _components: Dict[Int, ComponentInfo]
 
     fn __init__(inout self):
         constrained[
             Self.dType.is_integral(),
             "dType needs to be an integral type.",
         ]()
-        self._components = Dict[Int, ComponentInfo]()
+        constrained[
+            len(VariadicList(component_types)) <= Self.max_size,
+            "At most " + str(Self.max_size) + " component types are allowed.",
+        ]()
 
-    fn _register[
-        T: ComponentType, check_existent: Bool = True
-    ](inout self) raises -> ComponentInfo as component_info:
-        """Register a new component type.
-
-        Parameters:
-            T: The component type to register.
-            check_existent: Whether to check if the component type has already been registered.
-
-        Raises:
-            Error: If check_existent and the component type has already been registered.
-            Error: If the maximum number of components has been reached.
-        """
-
-        @parameter
-        if check_existent:
-            if T.get_type_identifier() in self._components:
-                raise Error(
-                    "A component with hash "
-                    + str(T.get_type_identifier())
-                    + " has already been registered."
-                )
-
-        if len(self._components) >= self.max_size:
-            raise Error(
-                "We cannot register more than "
-                + str(self.max_size)
-                + " elements in a component manager of this type."
-            )
-
-        component_info = ComponentInfo.new[T](Self.Id(len(self._components)))
-        self._components[T.get_type_identifier()] = component_info
-
-    fn get_id[T: ComponentType](inout self) raises -> Self.Id:
+    @always_inline
+    fn get_id[T: ComponentType](self) -> Self.Id:
         """Get the ID of a component type.
-
-        If the component does not yet have an ID, register the component.
 
         Parameters:
             T: The component type.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
-        if T.get_type_identifier() in self._components:
-            return self._components[T.get_type_identifier()].id
-        else:
-            return self._register[T, False]().id
+
+        @parameter
+        for i in range(len(VariadicList(component_types))):
+
+            @parameter
+            if _type_is_eq[T, component_types[i]]():
+                return i
+
+        # This constraint will fail if the component type is not in the list.
+        constrained[
+            _contains_type[T, *component_types](),
+            "The used component is not in the component parameter list.",
+        ]()
+
+        # This is unreachable.
+        return -1
 
     @always_inline
-    fn get_info[T: ComponentType](inout self) raises -> ComponentInfo:
+    fn get_info[T: ComponentType](self) -> ComponentInfo:
         """Get the info of a component type.
 
         If the component does not yet have an ID, register the component.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
-        try:
-            return self._components[T.get_type_identifier()]
-        except Error:
-            return self._register[T, False]()
+        return ComponentInfo.new[T](self.get_id[T]())
 
+    @always_inline
     fn get_info_arr[
         *Ts: ComponentType
     ](
-        inout self,
+        self,
     ) raises -> InlineArray[
         ComponentInfo,
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
@@ -226,7 +208,7 @@ struct ComponentManager:
         is_mutable: Bool, //,
         T: ComponentType,
         origin: Origin[is_mutable],
-    ](inout self, ref [origin]value: T) raises -> ComponentReference[origin]:
+    ](self, ref [origin]value: T) -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -238,8 +220,5 @@ struct ComponentManager:
 
         Args:
             value: The value of the component to be passed around.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
         return ComponentReference(self.get_id[T](), value)

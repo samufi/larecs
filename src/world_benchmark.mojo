@@ -9,21 +9,11 @@ struct Position(ComponentType):
     var x: Float32
     var y: Float32
 
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 1
-
 
 @value
 struct Velocity(ComponentType):
     var dx: Float32
     var dy: Float32
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 2
 
 
 # fn benchmark_new_entities_10_000(inout bencher: Bencher) capturing:
@@ -48,7 +38,7 @@ struct Velocity(ComponentType):
 
 
 fn benchmark_new_entities_10_000() raises:
-    world = World()
+    world = World[Position, Velocity]()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
