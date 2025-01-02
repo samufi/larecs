@@ -22,6 +22,9 @@ struct LockMask:
     fn lock(inout self) raises -> UInt8:
         """
         Locks the world and gets the Lock bit for later unlocking.
+
+        Raises:
+            Error: If the number of locks exceeds 256.
         """
         lock = self.bit_pool.get()
         self.locks.set[True](lock)
@@ -31,6 +34,9 @@ struct LockMask:
     fn unlock(inout self, lock: UInt8) raises:
         """
         Unlocks the given lock bit.
+
+        Raises:
+            Error: If the lock is not set.
         """
         if not self.locks.get(lock):
             raise Error(

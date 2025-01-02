@@ -1,5 +1,3 @@
-from collections import Optional
-
 from entity import Entity
 from bitmask import BitMask
 from component import ComponentType, ComponentManager
@@ -49,7 +47,11 @@ struct _EntityAccessor[
 
     @always_inline
     fn get[T: ComponentType](inout self) raises -> ref [self._archetype] T:
-        """Returns a reference to the given component of the Entity."""
+        """Returns a reference to the given component of the Entity.
+
+        Raises:
+            Error: If the entity does not have the component.
+        """
         return (
             self._archetype[]
             .get_component_ptr(
@@ -115,7 +117,7 @@ struct _EntityIterator[
     var _returned_elements: Int
     var _component_manager: ComponentManager[*component_types]
     var _lock_ptr: Pointer[LockMask, lock_origin]
-    var _lock: Optional[UInt8]
+    var _lock: UInt8
 
     fn __init__(
         out self,
@@ -125,7 +127,7 @@ struct _EntityIterator[
         ],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
-    ):
+    ) raises:
         """
         Parameters:
             component_manager: The component manager.
@@ -137,11 +139,14 @@ struct _EntityIterator[
             archetypes: a pointer to the world's archetypes.
             lock_ptr: a pointer to the world's locks.
             mask: The mask of the components to iterate over.
+
+        Raises:
+            Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         self._archetypes = archetypes
         self._component_manager = component_manager
         self._lock_ptr = lock_ptr
-        self._lock = None
+        self._lock = self._lock_ptr[].lock()
 
         # We start indexing at -1, because we want that the
         # index after returning __next__ always
@@ -179,16 +184,14 @@ struct _EntityIterator[
         self._lock = other._lock
 
     fn __del__(owned self):
-        if self._lock:
-            try:
-                self._lock_ptr[].unlock(self._lock.value())
-            except Error:
-                debug_warn("Failed to unlock the lock. This should not happen.")
+        try:
+            self._lock_ptr[].unlock(self._lock)
+        except Error:
+            debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    fn __iter__(owned self) raises -> Self as iterator:
+    fn __iter__(owned self) -> Self as iterator:
         iterator = self^
-        iterator._lock = iterator._lock_ptr[].lock()
 
     @always_inline
     fn _find_archetypes(inout self):

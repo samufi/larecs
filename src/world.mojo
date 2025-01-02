@@ -284,7 +284,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn get_entities(
         inout self,
-    ) -> _EntityIterator[
+    ) raises -> _EntityIterator[
         __origin_of(self._archetypes),
         __origin_of(self._locks),
         *component_types,
@@ -294,6 +294,9 @@ struct World[*component_types: ComponentType]:
 
         Returns:
             An iterator with accessors to all entities with the given components.
+
+        Raises:
+            Error: If the world is locked.
         """
         return _EntityIterator(
             self._component_manager,
