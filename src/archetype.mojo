@@ -12,6 +12,7 @@ from pool import EntityPool
 
 from types import get_max_uint_size, TrivialIntable
 
+alias DEFAULT_CAPACITY = 32
 
 struct Archetype(CollectionElement, CollectionElementNew):
     """Archetype represents an ECS archetype."""
@@ -99,7 +100,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         components: InlineArray[ComponentInfo, component_count] = InlineArray[
             ComponentInfo, component_count
         ](),
-        capacity: UInt = 10,
+        capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with a given capacity and components.
 
@@ -122,7 +123,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         components: InlineArray[ComponentInfo, component_count] = InlineArray[
             ComponentInfo, component_count
         ](),
-        capacity: UInt = 10,
+        capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with a given capacity, components, and BitMask.
 
@@ -162,7 +163,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         node_index: UInt,
         mask: BitMask,
         component_manager: ComponentManager,
-        capacity: UInt = 10,
+        capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype based on a given mask.
 
@@ -176,7 +177,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._component_count = 0
 
         @parameter
-        for i in range(BitMask.total_bits):
+        for i in range(component_manager.component_count):
             if mask.get(i):
                 self._item_sizes[i] = component_manager.get_size[i]()
                 self._ids[self._component_count] = i

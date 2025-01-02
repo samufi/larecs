@@ -127,6 +127,7 @@ struct ComponentManager[*component_types: ComponentType]:
     alias dType = BitMask.IndexDType
     alias Id = SIMD[Self.dType, 1]
     alias max_size = get_max_uint_size[Self.Id]()
+    alias component_count = len(VariadicList(component_types))
 
     fn __init__(inout self):
         constrained[
