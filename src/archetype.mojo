@@ -14,6 +14,7 @@ from types import get_max_uint_size, TrivialIntable
 
 alias DEFAULT_CAPACITY = 32
 
+
 struct Archetype(CollectionElement, CollectionElementNew):
     """Archetype represents an ECS archetype."""
 
