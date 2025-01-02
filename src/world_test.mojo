@@ -35,6 +35,17 @@ def test_entity_get():
     assert_equal(world.get[Position](entity).x, 123)
 
 
+def test_entity_get_ptr():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+    assert_equal(world.get[Position](entity).x, pos.x)
+    entity_pos = world.get_ptr[Position](entity)
+    entity_pos[].x = 123
+    assert_equal(world.get[Position](entity).x, 123)
+
+
 def test_get_archetype_index():
     world = World[Position, Velocity]()
     pos = Position(12, 654)
@@ -207,6 +218,7 @@ def main():
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
+    test_entity_get_ptr()
     test_remove_entity()
     test_remove_archetype()
     test_world_has_component()
