@@ -175,11 +175,33 @@ def test_query_component_reference():
         i += 1
 
 
+def test_query_has_component():
+    world = FullWorld()
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    n = 50
+
+    entities = List[Entity]()
+
+    for _ in range(n):
+        entities.append(world.new_entity(c0, c1, c2))
+
+    for entity in world.get_entities[FlexibleComponent[0]]():
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_true(entity.has[FlexibleComponent[1]]())
+        assert_true(entity.has[FlexibleComponent[2]]())
+        assert_false(entity.has[FlexibleComponent[3]]())
+
+
 def run_all_query_tests():
     test_query_component_reference()
     test_query_result_ids()
     test_query_length()
     test_query_get_set()
+    test_query_has_component()
 
 
 def main():
