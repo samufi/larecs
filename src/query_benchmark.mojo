@@ -127,6 +127,27 @@ fn benchmark_query_get_iter_1_000_000(
     bencher.iter[bench_fn]()
 
 
+fn benchmark_query_has_1_000_000(
+    inout bencher: Bencher,
+) raises capturing:
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+    c3 = FlexibleComponent[3](7.0, 8.0)
+    c4 = FlexibleComponent[4](9.0, 10.0)
+    c5 = FlexibleComponent[5](11.0, 12.0)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = FullWorld()
+        _ = world.new_entity(c1, c2, c3, c4, c5)
+        for entity in world.get_entities[FlexibleComponent[1]]():
+            for _ in range(1_000_000):
+                keep(entity.has[FlexibleComponent[1]]())
+
+    bencher.iter[bench_fn]()
+
+
 fn run_all_query_benchmarks() raises:
     bench = DefaultBench()
     run_all_query_benchmarks(bench)
@@ -134,6 +155,9 @@ fn run_all_query_benchmarks() raises:
 
 
 fn run_all_query_benchmarks(inout bench: Bench) raises:
+    bench.bench_function[benchmark_query_has_1_000_000](
+        BenchId("10^6 * query has")
+    )
     bench.bench_function[benchmark_query_1_comp_1_000_000](
         BenchId("10^6 * query & get 1 comp")
     )

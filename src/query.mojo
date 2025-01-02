@@ -59,7 +59,11 @@ struct _EntityAccessor[
     fn get_ptr[
         T: ComponentType
     ](inout self) raises -> Pointer[T, __origin_of(self._archetype)]:
-        """Returns a reference to the given component of the Entity."""
+        """Returns a reference to the given component of the Entity.
+
+        Raises:
+            Error: If the entity does not have the component.
+        """
         return Pointer[origin = __origin_of(self._archetype)].address_of(
             self._archetype[]
             .get_component_ptr(
@@ -67,6 +71,15 @@ struct _EntityAccessor[
                 self._component_manager.get_id[T](),
             )
             .bitcast[T]()[0]
+        )
+
+    @always_inline
+    fn has[T: ComponentType](self) -> Bool:
+        """
+        Returns whether an [Entity] has a given component.
+        """
+        return self._archetype[].has_component(
+            self._component_manager.get_id[T]()
         )
 
 
