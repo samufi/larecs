@@ -102,6 +102,29 @@ fn prevent_inlining_get() raises:
     keep(world.get[Position](entity).x)
 
 
+fn benchmark_get_ptr_1_000_000(inout bencher: Bencher) raises capturing:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = World[Position, Velocity]()
+        entity = world.new_entity(pos, vel)
+        for _ in range(1_000_000):
+            keep(world.get_ptr[Position](entity)[].x)
+
+    bencher.iter[bench_fn]()
+
+
+fn prevent_inlining_get_ptr() raises:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    world = World[Position, Velocity]()
+    entity = world.new_entity(pos, vel)
+    keep(world.get_ptr[Position](entity)[].x)
+
+
 fn benchmark_set_1_comp_1_000_000(inout bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
@@ -454,6 +477,7 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
         BenchId("10^6 * add & remove entity (5 components)")
     )
     bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
+    bench.bench_function[benchmark_get_ptr_1_000_000](BenchId("10^6 * get_ptr"))
     bench.bench_function[benchmark_set_1_comp_1_000_000](
         BenchId("10^6 * set 1 component")
     )
@@ -482,6 +506,7 @@ fn run_all_world_benchmarks(inout bench: Bench) raises:
     prevent_inlining_new_entity_1_comp()
     prevent_inlining_new_entity_5_comp()
     prevent_inlining_get()
+    prevent_inlining_get_ptr()
     prevent_inlining_set_1_comp()
     prevent_inlining_set_5_comp()
     prevent_inlining_exchange()

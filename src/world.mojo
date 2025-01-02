@@ -391,6 +391,28 @@ struct World[*component_types: ComponentType]:
         )
 
     @always_inline
+    fn get_ptr[
+        T: ComponentType
+    ](inout self, entity: Entity) raises -> Pointer[
+        T, __origin_of(self._archetypes[0])
+    ]:
+        """Returns a pointer to the given component of the Entity.
+
+        Raises:
+            Error: If the entity is not alive or does not have the component.
+        """
+        entity_index = self._entities[int(entity.id)]
+        self._assert_alive(entity)
+        return Pointer[origin = __origin_of(self._archetypes[0])].address_of(
+            self._archetypes[int(entity_index.archetype_index)]
+            .get_component_ptr(
+                int(entity_index.index),
+                self._component_manager.get_id[T](),
+            )
+            .bitcast[T]()[0]
+        )
+
+    @always_inline
     fn _assert_unlocked(self) raises:
         """
         Checks if the world is locked, and raises if so.
