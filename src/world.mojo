@@ -17,6 +17,7 @@ from component import (
 from bitmask import BitMask
 from collections import InlineArray
 from query import _EntityIterator
+from lock import LockMask
 
 
 @value
@@ -92,7 +93,7 @@ struct World[*component_types: ComponentType]:
     # _stats          _stats.World               # Cached world statistics.
     # _resources      Resources                 # World _resources.
     # _registry       componentRegistry         # Component _registry.
-    # _locks          lockMask                  # World _locks.
+    var _locks: LockMask  # World _locks.
 
     var _archetypes: ChainedArrayList[
         Archetype
@@ -113,6 +114,7 @@ struct World[*component_types: ComponentType]:
         )
         self._entity_pool = EntityPool()
         self._component_manager = ComponentManager[*component_types]()
+        self._locks = LockMask()
 
         # TODO
         # var _target_entities = bitSet
@@ -123,7 +125,6 @@ struct World[*component_types: ComponentType]:
         # self._archetype_data:  pagedSlice[_archetype_data],
         # self._nodes:          pagedSlice[archNode],
         # self._relation_nodes:  []*archNode,
-        # self._locks:          lockMask,
         # self._listener:       nil,
         # self._resources:      newResources(),
         # self._filter_cache:    newCache(),
@@ -282,7 +283,11 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn get_entities(
         inout self,
-    ) -> _EntityIterator[__origin_of(self._archetypes), *component_types,]:
+    ) -> _EntityIterator[
+        __origin_of(self._archetypes),
+        __origin_of(self._locks),
+        *component_types,
+    ]:
         """
         Returns an iterator with accessors to all entities with the given components.
 
@@ -292,14 +297,16 @@ struct World[*component_types: ComponentType]:
         return _EntityIterator(
             self._component_manager,
             Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
             BitMask(),
         )
 
     @always_inline
     fn get_entities[
         *Ts: ComponentType
-    ](inout self) -> _EntityIterator[
+    ](inout self) raises -> _EntityIterator[
         __origin_of(self._archetypes),
+        __origin_of(self._locks),
         *component_types,
     ]:
         """
@@ -314,6 +321,7 @@ struct World[*component_types: ComponentType]:
         return _EntityIterator(
             self._component_manager,
             Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
             BitMask(self._component_manager.get_id_arr[*Ts]()),
         )
 
@@ -813,23 +821,12 @@ struct World[*component_types: ComponentType]:
     #     """
     #     return &Batchw
 
-    # fn Relations(self):
-    #     """
-    #     Relations returns the [Relations] of the world, for accessing entity [Relation] targets.
-
-    #     See [Relations] for details.
-    #     """
-    #     return &Relationsworld: self
-
     @always_inline
     fn is_locked(self) -> Bool:
         """
         Returns whether the world is locked by any queries.
         """
-        # debug_warn("World.is_locked() is not implemented")
-        return False
-        # TODO
-        # return self._locks.is_locked()
+        return self._locks.is_locked()
 
     # fn Mask(self, entity: Entity) -> Mask:
     #     """
@@ -1357,24 +1354,17 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    # fn lock(self) -> uint8:
-    #     """
-    #     lock the world and get the lock bit for later unlocking.
-    #     """
-    #     return self._locks.Lock()
+    fn _lock(inout self) raises -> UInt8:
+        """
+        Locks the world and gets the lock bit for later unlocking.
+        """
+        return self._locks.lock()
 
-    # fn unlock(self, l: uint8):
-    #     """
-    #     unlock unlocks the given lock bit.
-    #     """
-    #     self._locks.Unlock(l)
-
-    # fn checkLocked(self):
-    #     """
-    #     checkLocked checks if the world is locked, and panics if so.
-    #     """
-    #     if self.is_locked():
-    #         panic("attempt to modify a locked world")
+    fn _unlock(inout self, lock: UInt8) raises:
+        """
+        Unlocks the given lock bit.
+        """
+        self._locks.unlock(lock)
 
     # fn copyTo(self, entity: Entity, id: ID, comp: interface) -> unsafe:
     #     """
