@@ -34,6 +34,22 @@ struct FlexibleComponent[i: Int](ComponentType):
     var y: Float64
 
 
+alias SmallWorld = World[
+    Position,
+    Velocity,
+    FlexibleComponent[0],
+    FlexibleComponent[1],
+    FlexibleComponent[2],
+    FlexibleComponent[3],
+    FlexibleComponent[4],
+    FlexibleComponent[5],
+    FlexibleComponent[6],
+    FlexibleComponent[7],
+    FlexibleComponent[8],
+    FlexibleComponent[9],
+    FlexibleComponent[10],
+]
+
 alias FullWorld = World[
     Position,
     Velocity,

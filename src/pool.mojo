@@ -75,6 +75,7 @@ struct EntityPool:
         return int(self._available)
 
 
+@value
 struct BitPool[LengthDType: DType = DType.uint16]:
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 

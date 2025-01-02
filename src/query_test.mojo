@@ -4,7 +4,7 @@ from entity import Entity
 
 
 def test_query_length():
-    world = FullWorld()
+    world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -98,7 +98,7 @@ def test_query_length():
 
 
 def test_query_result_ids():
-    world = FullWorld()
+    world = SmallWorld()
 
     c1 = FlexibleComponent[1](3.0, 4.0)
     c2 = FlexibleComponent[2](5.0, 6.0)
@@ -123,7 +123,7 @@ def test_query_result_ids():
 
 
 def test_query_get_set():
-    world = FullWorld()
+    world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -149,7 +149,7 @@ def test_query_get_set():
 
 
 def test_query_component_reference():
-    world = FullWorld()
+    world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -176,7 +176,7 @@ def test_query_component_reference():
 
 
 def test_query_has_component():
-    world = FullWorld()
+    world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -196,7 +196,54 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
+def test_query_lock():
+    world = SmallWorld()
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    _ = world.new_entity(c0, c1)
+    entity = world.new_entity(c0, c1)
+
+    first = True
+    for _ in world.get_entities[FlexibleComponent[0]]():
+        if not first:
+            break
+        assert_true(world.is_locked())
+        with assert_raises():
+            _ = world.new_entity(c0, c1, c2)
+        with assert_raises():
+            _ = world.add(entity, c2)
+        with assert_raises():
+            _ = world.remove[FlexibleComponent[0]](entity)
+
+        for _ in world.get_entities[FlexibleComponent[0]]():
+            if not first:
+                break
+            assert_true(world.is_locked())
+            with assert_raises():
+                _ = world.new_entity(c0, c1, c2)
+            with assert_raises():
+                _ = world.add(entity, c2)
+            with assert_raises():
+                _ = world.remove[FlexibleComponent[0]](entity)
+
+    assert_false(world.is_locked())
+    _ = world.new_entity(c0, c1, c2)
+    _ = world.add(entity, c2)
+    _ = world.remove[FlexibleComponent[1]](entity)
+
+    try:
+        for _ in world.get_entities[FlexibleComponent[0]]():
+            _ = world.new_entity(c0, c1, c2)
+    except:
+        assert_false(world.is_locked())
+        _ = world.new_entity(c0, c1, c2)
+
+
 def run_all_query_tests():
+    test_query_lock()
     test_query_component_reference()
     test_query_result_ids()
     test_query_length()

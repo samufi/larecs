@@ -1,9 +1,13 @@
+from collections import Optional
+
 from entity import Entity
 from bitmask import BitMask
 from component import ComponentType, ComponentManager
 from chained_array_list import ChainedArrayList
 from archetype import Archetype
 from world import World
+from lock import LockMask
+from debug_utils import debug_warn
 
 
 struct _EntityAccessor[
@@ -87,13 +91,17 @@ struct _EntityAccessor[
 struct _EntityIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
+    lock_origin: MutableOrigin,
     *component_types: ComponentType,
 ]:
     """Iterator for over all entities corresponding to a mask.
 
+    Locks the world while iterating.
+
     Parameters:
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List
+        lock_origin: The lifetime of the LockMask
         component_types: The types of the components.
     """
 
@@ -106,6 +114,8 @@ struct _EntityIterator[
     var _size: UInt
     var _returned_elements: Int
     var _component_manager: ComponentManager[*component_types]
+    var _lock_ptr: Pointer[LockMask, lock_origin]
+    var _lock: Optional[UInt8]
 
     fn __init__(
         out self,
@@ -113,6 +123,7 @@ struct _EntityIterator[
         owned archetypes: Pointer[
             ChainedArrayList[Archetype], archetype_origin
         ],
+        lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
     ):
         """
@@ -124,10 +135,13 @@ struct _EntityIterator[
         Args:
             component_manager: The component manager.
             archetypes: a pointer to the world's archetypes.
+            lock_ptr: a pointer to the world's locks.
             mask: The mask of the components to iterate over.
         """
         self._archetypes = archetypes
         self._component_manager = component_manager
+        self._lock_ptr = lock_ptr
+        self._lock = None
 
         # We start indexing at -1, because we want that the
         # index after returning __next__ always
@@ -148,9 +162,33 @@ struct _EntityIterator[
             # first call to __next__ will increment it.
             self._entity_index = -1
 
+    fn __moveinit__(
+        out self,
+        owned other: Self,
+    ):
+        self._archetypes = other._archetypes
+        self._current_archetype = other._current_archetype
+        self._archetype_list_index = other._archetype_list_index
+        self._archetype_indices = other._archetype_indices^
+        self._entity_index = other._entity_index
+        self._mask = other._mask^
+        self._size = other._size
+        self._returned_elements = other._returned_elements
+        self._component_manager = other._component_manager
+        self._lock_ptr = other._lock_ptr
+        self._lock = other._lock
+
+    fn __del__(owned self):
+        if self._lock:
+            try:
+                self._lock_ptr[].unlock(self._lock.value())
+            except Error:
+                debug_warn("Failed to unlock the lock. This should not happen.")
+
     @always_inline
-    fn __iter__(self) -> Self:
-        return self
+    fn __iter__(owned self) raises -> Self as iterator:
+        iterator = self^
+        iterator._lock = iterator._lock_ptr[].lock()
 
     @always_inline
     fn _find_archetypes(inout self):
