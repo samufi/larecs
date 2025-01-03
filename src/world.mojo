@@ -13,6 +13,7 @@ from component import (
     ComponentManager,
     ComponentInfo,
     ComponentType,
+    constrain_components_unique,
 )
 from bitmask import BitMask
 from collections import InlineArray
@@ -317,6 +318,8 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: If the entity does not exist or does not have the component.
         """
+        constrain_components_unique[*Ts]()
+
         self._assert_alive(entity)
         entity_index = self._entities[int(entity.id)]
         archetype = self._archetypes.get_ptr(int(entity_index.archetype_index))

@@ -106,6 +106,7 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         return self._id
 
 
+@always_inline
 fn _contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
     @parameter
     for i in range(len(VariadicList(Ts))):
@@ -114,6 +115,21 @@ fn _contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
         if _type_is_eq[T, Ts[i]]():
             return True
     return False
+
+
+@always_inline
+fn constrain_components_unique[*Ts: ComponentType]():
+    alias size = len(VariadicList(Ts))
+
+    @parameter
+    for i in range(size):
+
+        @parameter
+        for j in range(i + 1, size):
+            constrained[
+                not _type_is_eq[Ts[i], Ts[j]](),
+                "The component types need to be unique.",
+            ]()
 
 
 @register_passable("trivial")
@@ -184,6 +200,8 @@ struct ComponentManager[*component_types: ComponentType]:
             MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
 
+        constrain_components_unique[*Ts]()
+
         ids = InlineArray[Self.Id, size](unsafe_uninitialized=True)
 
         @parameter
@@ -215,6 +233,8 @@ struct ComponentManager[*component_types: ComponentType]:
         alias size = VariadicPack[
             MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
+
+        constrain_components_unique[*Ts]()
 
         ids = InlineArray[ComponentInfo, size](unsafe_uninitialized=True)
 
