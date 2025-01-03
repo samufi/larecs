@@ -71,6 +71,13 @@ def test_get_node_index():
     assert_equal(graph._nodes[3].bit_mask, BitMask(5))
 
 
+def test_get_node_mask():
+    graph = BitMaskGraph[-1]()
+    bit_mask = BitMask(0, 2)
+    node_index = graph.add_node(bit_mask, 42)
+    assert_equal(graph.get_node_mask(node_index), bit_mask)
+
+
 struct S:
     var l: List[Node[Int]]
 
@@ -99,4 +106,5 @@ def main():
     test_getitem()
     test_create_link()
     test_get_node_index()
+    test_get_node_mask()
     print("All tests passed.")

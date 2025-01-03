@@ -103,6 +103,39 @@ fn benchmark_bitmask_eq_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
+fn benchmark_bitmask_get_indices_1_000_000(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing:
+        for _ in range(1_000_000):
+            ind = mask.get_indices()
+            # keep(mask.get_indices()) #.data[10])
+            # @parameter
+            for i in ind:
+                keep(i)
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_bitmask_get_each_1_000_000(inout bencher: Bencher) capturing:
+    mask = get_random_bitmask()
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing:
+        for _ in range(1_000_000):
+            # ind = mask.get_indices()
+            # keep(mask.get_indices()) #.data[10])
+            @parameter
+            for i in range(256):
+                if mask.get(i):
+                    keep(i)
+
+    bencher.iter[bench_fn]()
+
+
 # fn BenchmarkMaskFilterNoPointer(b *testing.B):
 #     b.StopTimer()
 #     mask = maskFilterPointer{BitMask(0, 1, 2), BitMask()
@@ -167,10 +200,16 @@ fn run_all_bitmask_benchmarks(inout bench: Bench) raises:
         BenchId("10^6 * bitmask_contains_any")
     )
     bench.bench_function[benchmark_bitmask_eq_1_000_000](
-        BenchId("benchmark_bitmask_eq")
+        BenchId("10^6 * bitmask_eq")
     )
     bench.bench_function[benchmark_mask_filter_1_000_000](
         BenchId("10^6 * mask_filter")
+    )
+    bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
+        BenchId("10^6 * get_indices")
+    )
+    bench.bench_function[benchmark_bitmask_get_each_1_000_000](
+        BenchId("10^6 * get_each")
     )
 
 
