@@ -249,7 +249,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._node_index
 
     @always_inline
-    fn get_mask(self) -> BitMask:
+    fn get_mask(self) -> ref [self._mask] BitMask:
         """Returns the mask of the archetype's node in the archetype graph."""
         return self._mask
 
@@ -376,38 +376,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id."""
         return bool(self._data[int(id)])
-
-    @always_inline
-    fn has_all_components[T: Intable](self, ids: InlineArray[T]) -> Bool:
-        """Returns whether the archetype contains all the given component ids.
-        """
-        constrained[
-            _type_is_eq[T, Self.Id]() or _type_is_eq[T, ComponentInfo](),
-            (
-                "has_all_components can only be called with component ids or"
-                " ComponentInfo."
-            ),
-        ]()
-        for i in range(ids.size):
-            if not self._data[int(ids[i])]:
-                return False
-        return True
-
-    @always_inline
-    fn has_any_component[T: Intable](self, ids: InlineArray[T]) -> Bool:
-        """Returns whether the archetype contains any of the given component ids.
-        """
-        constrained[
-            _type_is_eq[T, Self.Id]() or _type_is_eq[T, ComponentInfo](),
-            (
-                "has_all_components can only be called with component ids or"
-                " ComponentInfo."
-            ),
-        ]()
-        for i in range(ids.size):
-            if self._data[int(ids[i])]:
-                return True
-        return False
 
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:

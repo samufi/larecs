@@ -607,39 +607,52 @@ struct World[*component_types: ComponentType]:
             component_ids = Optional[InlineArray[Self.Id, add_size]](
                 self._component_manager.get_id_arr[*Ts]()
             )
-            if old_archetype[].has_any_component(component_ids.value()):
-                raise Error("Entity already has one of the components to add.")
 
         start_node_index = old_archetype[].get_node_index()
 
-        var archetype_index: Int
+        var archetype_index: Int = -1
+        compare_mask = old_archetype[].get_mask()
+
+        alias add_error_msg = "Entity already has one of the components to add."
+        alias remove_error_msg = "Entity does not have one of the components to remove."
 
         @parameter
         if rem_size:
-            if not old_archetype[].has_all_components(remove_ids.value()):
-                raise Error(
-                    "Entity does not have one of the components to remove."
-                )
 
             @parameter
             if add_size:
                 start_node_index = self._archetype_map.get_node_index(
                     remove_ids.value(), start_node_index
                 )
-                archetype_index = self._get_archetype_index(
-                    component_ids.value(), start_node_index
+                if not compare_mask.contains(
+                    self._archetype_map.get_node_mask(start_node_index)
+                ):
+                    raise Error(remove_error_msg)
+
+                compare_mask = self._archetype_map.get_node_mask(
+                    start_node_index
                 )
             else:
                 archetype_index = self._get_archetype_index(
                     remove_ids.value(), start_node_index
                 )
-        else:
+
+        @parameter
+        if add_size:
             archetype_index = self._get_archetype_index(
                 component_ids.value(), start_node_index
             )
 
         archetype = self._archetypes.get_ptr(archetype_index)
         index_in_archetype = archetype[].add(entity)
+
+        @parameter
+        if add_size:
+            if not archetype[].get_mask().contains(compare_mask):
+                raise Error(add_error_msg)
+        else:
+            if not compare_mask.contains(archetype[].get_mask()):
+                raise Error(remove_error_msg)
 
         # This code would be nicer, but does not work due to arguemnt exclusivity.
         # Uncomment this if there is a workaround.
