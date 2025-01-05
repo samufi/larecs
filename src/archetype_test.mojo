@@ -1,4 +1,5 @@
 from archetype import Archetype
+from bitmask import BitMask
 from component import ComponentInfo, ComponentReference, ComponentManager
 from entity import Entity
 from memory import UnsafePointer
@@ -23,6 +24,7 @@ struct DummyComponentType3:
 
 
 alias CArr = InlineArray[ComponentInfo, 2]
+alias CArr3 = InlineArray[ComponentInfo, 3]
 
 
 def test_archetype_init():
@@ -49,28 +51,28 @@ def test_archetype_reserve():
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
-    archetype.reserve(20)
-    assert_equal(archetype._capacity, 20)
+    archetype.reserve(50)
+    assert_equal(archetype._capacity, 50)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
     archetype.reserve(5)
-    assert_equal(archetype._capacity, 20)
+    assert_equal(archetype._capacity, 50)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[1], 4)
     assert_equal(archetype._item_sizes[2], 8)
 
-    archetype.reserve(30)
-    assert_equal(archetype._capacity, 30)
+    archetype.reserve(60)
+    assert_equal(archetype._capacity, 60)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._component_count, 2)
     assert_equal(archetype._item_sizes[2], 8)
 
 
-def test_get_entity():
+def test_archetype_get_entity():
     var component1 = ComponentInfo(id=1, size=4)
     var component2 = ComponentInfo(id=2, size=8)
     var archetype = Archetype(0, CArr(component1, component2))
@@ -154,7 +156,7 @@ def test_archetype_copy():
     var component2 = ComponentInfo(id=5, size=8)
     var archetype = Archetype(0, CArr(component1, component2))
 
-    var archetype2 = Archetype(other=archetype)
+    var archetype2 = archetype.copy()
 
     assert_not_equal(
         archetype._get_component_ptr(0, 1), archetype2._get_component_ptr(0, 1)
@@ -198,11 +200,34 @@ def test_archetype_extend():
         assert_equal(archetype.get_entity(i).id, i + 1)
 
 
+def test_archetype_get_mask():
+    var component1 = ComponentInfo(id=1, size=4)
+    var component2 = ComponentInfo(id=2, size=8)
+    var component3 = ComponentInfo(id=3, size=8)
+    var archetype = Archetype(0, CArr3(component1, component2, component3))
+
+    var entity = Entity(10, 3)
+    _ = archetype.add(entity)
+
+    var mask = archetype.get_mask()
+    assert_equal(mask, BitMask(1, 2, 3))
+
+    var mask2 = BitMask(1, 2, 3)
+    assert_equal(mask == mask2, True)
+
+    mask2 = BitMask(1, 2, 4)
+    assert_equal(mask == mask2, False)
+
+    mask2 = BitMask(1, 2)
+    assert_equal(mask == mask2, False)
+
+
 def main():
     print("Running tests...")
+    test_archetype_get_mask()
     test_archetype_init()
     test_archetype_reserve()
-    test_get_entity()
+    test_archetype_get_entity()
     test_archetype_remove()
     test_archetype_has_component()
     test_archetype_get_component_ptr()

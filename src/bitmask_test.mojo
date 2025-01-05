@@ -1,5 +1,6 @@
 from bitmask import BitMask
 import random
+from collections import InlineArray
 from memory import UnsafePointer
 from testing import *
 from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
@@ -25,6 +26,15 @@ fn get_random_uint8_list(size: Int) -> List[UInt8] as vals:
         )
 
 
+fn unique(l: List[UInt8]) -> List[UInt8] as result:
+    mask = InlineArray[Bool, 256](0)
+    result = List[UInt8]()
+    for v in l:
+        if not mask[int(v[])]:
+            mask[int(v[])] = True
+            result.append(v[])
+
+
 @always_inline
 fn get_random_1_true_bitmasks(size: Int) -> List[BitMask] as vals:
     vals = List[BitMask](capacity=size)
@@ -45,6 +55,7 @@ fn run_all_bitmask_tests() raises:
     test_bit_mask_without_exclusive()
     test_bit_mask_256()
     test_bit_mask_eq()
+    test_bitmask_get_indices()
     print("Done")
 
 
@@ -146,7 +157,7 @@ fn test_bit_mask_256() raises:
     mask = BitMask()
     assert_equal(0, mask.total_bits_set())
 
-    for i in range(BitMask.total_bits):
+    for i in range(BitMask.total_bits - 1):
         mask.set(UInt8(i), True)
         assert_equal(i + 1, mask.total_bits_set())
         assert_true(mask.get(UInt8(i)))
@@ -170,6 +181,32 @@ fn test_bit_mask_256() raises:
 
     assert_true(mask.contains_any(BitMask(UInt8(6), UInt8(65), UInt8(111))))
     assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
+
+
+def test_bitmask_get_indices():
+    size = 100
+    random.seed(0)
+    indices = get_random_uint8_list(size)
+    var mask = BitMask()
+    for index in indices:
+        mask.set(index[], True)
+    unique_indices = unique(indices)
+
+    assert_equal(len(unique_indices), len(mask.get_indices()))
+    size = 0
+    for idx in mask.get_indices():
+        keep(idx)
+
+    for value in unique_indices:
+        found = False
+        for idx in mask.get_indices():
+            if value[] == idx:
+                found = True
+                break
+        assert_true(found, str(value[]) + " not found.")
+        size += 1
+
+    assert_equal(len(unique_indices), size)
 
 
 fn main() raises:

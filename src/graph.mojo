@@ -40,6 +40,9 @@ struct Node[DataType: KeyElement](CollectionElement):
         self.neighbours = InlineArray[Int, 256](Self.null_index)
         self.bit_mask = bit_mask
 
+    fn copy(self) -> Self as other:
+        other = Self(self.bit_mask, self.value)
+
 
 struct BitMaskGraph[
     DataType: KeyElement, //,
@@ -172,6 +175,20 @@ struct BitMaskGraph[
                 )
             current_node = next_node
         return current_node
+
+    @always_inline
+    fn get_node_mask(
+        self: Self, node_index: Int
+    ) -> ref [self._nodes[node_index].bit_mask] BitMask:
+        """Returns the mask of the node at the given index.
+
+        Args:
+            node_index: The index of the node.
+
+        Returns:
+            The mask of the node.
+        """
+        return self._nodes[node_index].bit_mask
 
     @always_inline
     fn __getitem__(

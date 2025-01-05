@@ -91,9 +91,7 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         self._data = existing._data
 
     @always_inline
-    fn unsafe_get_value[
-        T: ComponentType
-    ](self) raises -> ref [__origin_of(self)] T:
+    fn unsafe_get_value[T: ComponentType](self) -> ref [__origin_of(self)] T:
         """Get the value of the component."""
         return self._data.bitcast[T]()[0]
 
@@ -108,7 +106,8 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
         return self._id
 
 
-fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
+@always_inline
+fn _contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
     @parameter
     for i in range(len(VariadicList(Ts))):
 
@@ -118,7 +117,23 @@ fn _contains_type[T: AnyType, *Ts: AnyType]() -> Bool:
     return False
 
 
-struct ComponentManager[*component_types: AnyType]:
+@always_inline
+fn constrain_components_unique[*Ts: ComponentType]():
+    alias size = len(VariadicList(Ts))
+
+    @parameter
+    for i in range(size):
+
+        @parameter
+        for j in range(i + 1, size):
+            constrained[
+                not _type_is_eq[Ts[i], Ts[j]](),
+                "The component types need to be unique.",
+            ]()
+
+
+@register_passable("trivial")
+struct ComponentManager[*component_types: ComponentType]:
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
@@ -128,6 +143,7 @@ struct ComponentManager[*component_types: AnyType]:
     alias dType = BitMask.IndexDType
     alias Id = SIMD[Self.dType, 1]
     alias max_size = get_max_uint_size[Self.Id]()
+    alias component_count = len(VariadicList(component_types))
 
     fn __init__(inout self):
         constrained[
@@ -139,8 +155,9 @@ struct ComponentManager[*component_types: AnyType]:
             "At most " + str(Self.max_size) + " component types are allowed.",
         ]()
 
+    @staticmethod
     @always_inline
-    fn get_id[T: ComponentType](self) -> Self.Id:
+    fn get_id[T: ComponentType]() -> Self.Id:
         """Get the ID of a component type.
 
         Parameters:
@@ -163,52 +180,75 @@ struct ComponentManager[*component_types: AnyType]:
         # This is unreachable.
         return -1
 
+    @staticmethod
     @always_inline
-    fn get_info[T: ComponentType](self) -> ComponentInfo:
-        """Get the info of a component type.
-
-        If the component does not yet have an ID, register the component.
-        """
-        return ComponentInfo.new[T](self.get_id[T]())
-
-    @always_inline
-    fn get_info_arr[
+    fn get_id_arr[
         *Ts: ComponentType
-    ](
-        self,
-    ) raises -> InlineArray[
-        ComponentInfo,
+    ]() -> InlineArray[
+        Self.Id,
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
     ] as ids:
         """Get the IDs of multiple component types.
-
-        If a component does not yet have an ID, register the component.
 
         Parameters:
             Ts: The component types.
 
         Returns:
             An InlineArray with the IDs of the component types.
-
-        Raises:
-            Error: If the component was not registered and the maximum number of components has been reached.
         """
         alias size = VariadicPack[
             MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
 
+        constrain_components_unique[*Ts]()
+
+        ids = InlineArray[Self.Id, size](unsafe_uninitialized=True)
+
+        @parameter
+        for i in range(size):
+            ids[i] = Self.get_id[Ts[i]]()
+
+    @staticmethod
+    @always_inline
+    fn get_info[T: ComponentType]() -> ComponentInfo:
+        """Get the info of a component type."""
+        return ComponentInfo.new[T](Self.get_id[T]())
+
+    @staticmethod
+    @always_inline
+    fn get_info_arr[
+        *Ts: ComponentType
+    ]() -> InlineArray[
+        ComponentInfo,
+        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+    ] as ids:
+        """Get the IDs of multiple component types.
+
+        Parameters:
+            Ts: The component types.
+
+        Returns:
+            An InlineArray with the IDs of the component types.
+        """
+        alias size = VariadicPack[
+            MutableAnyOrigin, ComponentType, *Ts
+        ].__len__()
+
+        constrain_components_unique[*Ts]()
+
         ids = InlineArray[ComponentInfo, size](unsafe_uninitialized=True)
 
         @parameter
         for i in range(size):
-            ids[i] = self.get_info[Ts[i]]()
+            ids[i] = Self.get_info[Ts[i]]()
 
+    @staticmethod
     @always_inline
     fn get_ref[
         is_mutable: Bool, //,
         T: ComponentType,
         origin: Origin[is_mutable],
-    ](self, ref [origin]value: T) -> ComponentReference[origin]:
+    ](ref [origin]value: T) -> ComponentReference[origin]:
         """Get a type-agnostic reference to a component.
 
         If the component does not yet have an ID, register the component.
@@ -221,4 +261,25 @@ struct ComponentManager[*component_types: AnyType]:
         Args:
             value: The value of the component to be passed around.
         """
-        return ComponentReference(self.get_id[T](), value)
+        return ComponentReference(Self.get_id[T](), value)
+
+    @staticmethod
+    @always_inline
+    fn get_size[i: Int]() -> UInt32:
+        """Get the size of a component type.
+
+        Parameters:
+            i: The ID of the component type.
+        """
+
+        # @parameter
+        # if _type_is_eq[Int, component_types[i]]():
+        #     return i
+        # return 0
+        @parameter
+        for j in range(len(VariadicList(component_types))):
+
+            @parameter
+            if i == j:
+                return sizeof[component_types[j]]()
+        return 0
