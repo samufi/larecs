@@ -265,51 +265,30 @@ alias FullManager = ComponentManager[
 ]
 
 
-fn test(manager: ComponentManager) -> None:
-    print(manager.get_id[FlexibleDummyComponentType[0]]())
-
-
 fn benchmark_get_first_id_1_000_000(inout bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
-    test(manager)
 
     @always_inline
     @parameter
-    fn bench_fn() raises capturing -> None:
+    fn bench_fn() capturing -> None:
         for _ in range(1_000_000):
             keep(manager.get_id[FlexibleDummyComponentType[0]]())
 
-    try:
-        bencher.iter[bench_fn]()
-    except:
-        print("Error")
+    bencher.iter[bench_fn]()
 
 
 fn benchmark_get_last_id_1_000_000(inout bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
-    # @always_inline
-    # @parameter
-    # fn bench_fn(calls: Int) raises capturing -> Int:
-    #     for _ in range(calls):
-    #         sum += int(manager.get_id[FlexibleDummyComponentType[255]]())
-    #         keep(sum)
-    #     print(calls)
-    #     return calls
-
-    # bencher.iter_custom[bench_fn]()
     @always_inline
     @parameter
-    fn bench_fn() raises capturing -> None:
+    fn bench_fn() capturing -> None:
         for _ in range(1_000_000):
             keep(manager.get_id[FlexibleDummyComponentType[255]]())
 
-    try:
-        bencher.iter[bench_fn]()
-    except:
-        print("Error")
+    bencher.iter[bench_fn]()
 
 
 def run_all_component_benchmarks():
