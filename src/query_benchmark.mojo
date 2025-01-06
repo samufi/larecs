@@ -122,7 +122,7 @@ fn benchmark_query_get_iter_1_000_000(
         world = FullWorld()
         _ = world.new_entity(c1, c2, c3, c4, c5)
         for _ in range(1_000_000):
-            keep(world.get_entities[FlexibleComponent[1]]()._size)
+            keep(world.get_entities[FlexibleComponent[1]]()._lock)
 
     bencher.iter[bench_fn]()
 
