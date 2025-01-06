@@ -96,6 +96,13 @@ def test_query_length():
     )
     assert_equal(len(world.get_entities()), 5 * n)
 
+    iterator = world.get_entities[FlexibleComponent[0]]()
+    size = len(iterator)
+    while iterator.__has_next__():
+        _ = iterator.__next__()
+        size -= 1
+        assert_equal(size, len(iterator))
+
 
 def test_query_result_ids():
     world = SmallWorld()
