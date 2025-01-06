@@ -6,6 +6,7 @@ from archetype import Archetype
 from world import World
 from lock import LockMask
 from debug_utils import debug_warn
+from collections import InlineArray
 
 
 struct _EntityAccessor[
@@ -107,15 +108,21 @@ struct _EntityIterator[
         component_types: The types of the components.
     """
 
+    alias buffer_size = 16
     var _archetypes: Pointer[ChainedArrayList[Archetype], archetype_origin]
     var _current_archetype: Pointer[Archetype, archetype_origin]
-    var _next_archetype_index: Int
     var _entity_index: Int
     var _mask: BitMask
     var _has_next: Bool
     var _component_manager: ComponentManager[*component_types]
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
+
+    var _archlen: Int
+    var _archcount: Int
+    var _buffer_index: Int
+    var _max_buffer_index: Int
+    var _archetype_index_buffer: SIMD[DType.uint32, Self.buffer_size]
 
     fn __init__(
         out self,
@@ -145,19 +152,24 @@ struct _EntityIterator[
         self._component_manager = component_manager
         self._lock_ptr = lock_ptr
         self._lock = self._lock_ptr[].lock()
+        self._archlen = 0
+        self._archcount = len(self._archetypes[])
 
         # We start indexing at -1, because we want that the
         # index after returning __next__ always
         # corresponds to the last returned entity.
-        self._next_archetype_index = -1
         self._entity_index = -1
+        self._buffer_index = 0
+        self._max_buffer_index = Self.buffer_size
 
         self._mask = mask^
         self._current_archetype = self._archetypes[].get_ptr(0)
         self._has_next = False
-        self._find_next_archetype()
-        if self._next_archetype_index < len(self._archetypes[]):
+        self._archetype_index_buffer = SIMD[DType.uint32, Self.buffer_size](-1)
+        self._fill_archetype_buffer()
+        if self._archetype_index_buffer[0] >= 0:
             self._has_next = True
+            self._buffer_index = -1
             self._next_archetype()
 
             # We need to reset the index to -1, because the
@@ -171,12 +183,17 @@ struct _EntityIterator[
         self._archetypes = other._archetypes
         self._current_archetype = other._current_archetype
         self._has_next = other._has_next
-        self._next_archetype_index = other._next_archetype_index
         self._entity_index = other._entity_index
         self._mask = other._mask^
         self._component_manager = other._component_manager
         self._lock_ptr = other._lock_ptr
         self._lock = other._lock
+
+        self._archlen = other._archlen
+        self._archcount = other._archcount
+        self._archetype_index_buffer = other._archetype_index_buffer
+        self._buffer_index = other._buffer_index
+        self._max_buffer_index = other._max_buffer_index
 
     fn __del__(owned self):
         try:
@@ -188,22 +205,27 @@ struct _EntityIterator[
     fn __iter__(owned self) -> Self as iterator:
         iterator = self^
 
-    @always_inline
-    fn _find_next_archetype(inout self):
+    fn _fill_archetype_buffer(inout self):
         """
         Find the next archetype that contains the mask.
 
         Fills the _next_archetype_index attribute.
         """
-        for i in range(self._next_archetype_index + 1, len(self._archetypes[])):
+        buffer_index = 0
+        for i in range(
+            self._archetype_index_buffer[self._buffer_index] + 1,
+            self._archcount,
+        ):
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
                 and self._archetypes[][i]
             ):
-                self._next_archetype_index = i
-                return
+                self._archetype_index_buffer[buffer_index] = i
+                buffer_index += 1
+                if buffer_index >= Self.buffer_size:
+                    return
 
-        self._next_archetype_index = len(self._archetypes[])
+        self._max_buffer_index = buffer_index - 1
 
     @always_inline
     fn _next_archetype(inout self):
@@ -211,23 +233,25 @@ struct _EntityIterator[
         Moves to the next archetype.
         """
         self._entity_index = 0
+        self._buffer_index += 1
         self._current_archetype = self._archetypes[].get_ptr(
-            self._next_archetype_index
+            int(self._archetype_index_buffer[self._buffer_index])
         )
-        self._find_next_archetype()
+        self._archlen = len(self._current_archetype[])
+        if self._buffer_index >= Self.buffer_size - 1:
+            self._fill_archetype_buffer()
+            self._buffer_index = -1
 
+    @always_inline
     fn __next__(
         inout self,
     ) -> _EntityAccessor[
         __origin_of(self._current_archetype[]), *component_types
-    ]:
+    ] as accessor:
         self._entity_index += 1
-        if self._entity_index >= len(self._current_archetype[]) - 1:
-            if self._next_archetype_index >= len(self._archetypes[]):
-                self._has_next = False
-            elif self._entity_index >= len(self._current_archetype[]):
-                self._next_archetype()
-        return _EntityAccessor(
+        if self._entity_index >= self._archlen:
+            self._next_archetype()
+        accessor = _EntityAccessor(
             self._component_manager,
             self._current_archetype,
             self._entity_index,
@@ -237,7 +261,21 @@ struct _EntityIterator[
         if not self._has_next:
             return 0
         size = len(self._current_archetype[]) - self._entity_index - 1
-        for i in range(self._next_archetype_index, len(self._archetypes[])):
+        for i in range(
+            self._buffer_index + 1 % Self.buffer_size,
+            min(self._max_buffer_index + 1, Self.buffer_size),
+        ):
+            size += len(
+                self._archetypes[][int(self._archetype_index_buffer[i])]
+            )
+
+        if self._max_buffer_index < Self.buffer_size:
+            return size
+
+        for i in range(
+            self._archetype_index_buffer[Self.buffer_size - 1] + 1,
+            len(self._archetypes[]),
+        ):
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
                 and self._archetypes[][i]
@@ -248,8 +286,11 @@ struct _EntityIterator[
 
     @always_inline
     fn __has_next__(self) -> Bool:
-        return self._has_next
+        return (
+            self._buffer_index < self._max_buffer_index
+            or self._entity_index < self._archlen - 1
+        )
 
     @always_inline
     fn __bool__(self) -> Bool:
-        return self._has_next
+        return self.__has_next__()
