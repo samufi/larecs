@@ -96,7 +96,7 @@ struct _EntityIterator[
     lock_origin: MutableOrigin,
     *component_types: ComponentType,
 ]:
-    """Iterator for over all entities corresponding to a mask.
+    """Iterator over all entities corresponding to a mask.
 
     Locks the world while iterating.
 
