@@ -2,28 +2,7 @@ from testing import *
 from world import World
 from entity import Entity
 from component import ComponentType, ComponentInfo
-
-
-@value
-struct Position(ComponentType):
-    var x: Float32
-    var y: Float32
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 1
-
-
-@value
-struct Velocity(ComponentType):
-    var dx: Float32
-    var dy: Float32
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        return 2
+from test_utils import *
 
 
 def test_new_entity():
@@ -53,6 +32,17 @@ def test_entity_get():
     entity = world.new_entity(pos, vel)
     assert_equal(world.get[Position](entity).x, pos.x)
     world.get[Position](entity).x = 123
+    assert_equal(world.get[Position](entity).x, 123)
+
+
+def test_entity_get_ptr():
+    world = World[Position, Velocity]()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.new_entity(pos, vel)
+    assert_equal(world.get[Position](entity).x, pos.x)
+    entity_pos = world.get_ptr[Position](entity)
+    entity_pos[].x = 123
     assert_equal(world.get[Position](entity).x, 123)
 
 
@@ -228,6 +218,7 @@ def main():
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
+    test_entity_get_ptr()
     test_remove_entity()
     test_remove_archetype()
     test_world_has_component()

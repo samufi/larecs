@@ -75,6 +75,7 @@ struct EntityPool:
         return int(self._available)
 
 
+@value
 struct BitPool[LengthDType: DType = DType.uint16]:
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 
@@ -106,7 +107,11 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         self._available = 0
 
     fn get(inout self) raises -> UInt8:
-        """Returns a fresh or recycled bit."""
+        """Returns a fresh or recycled bit.
+
+        Raises:
+            Error: If the pool is full.
+        """
         if self._available == 0:
             return self._get_new()
 
@@ -119,7 +124,11 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         return self._bits[int(curr)]
 
     fn _get_new(inout self) raises -> UInt8 as bit:
-        """Allocates and returns a new bit. For internal use."""
+        """Allocates and returns a new bit. For internal use.
+
+        Raises:
+            Error: If the pool is full.
+        """
         if int(self._length) >= Self.capacity:
             raise Error(
                 String("Ran out of the capacity of {} bits").format(
