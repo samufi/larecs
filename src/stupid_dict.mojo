@@ -9,7 +9,7 @@ struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
 
     var _data: List[Tuple[KeyType, ValueType]]
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         self._data = List[Tuple[KeyType, ValueType]]()
 
     @always_inline
@@ -33,7 +33,7 @@ struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
                 return Optional(k_v[][1])
         return Optional[ValueType](None)
 
-    fn __setitem__(inout self, key: KeyType, value: ValueType):
+    fn __setitem__(mut self, key: KeyType, value: ValueType):
         for k_v in self._data:
             if k_v[][0] == key:
                 k_v[][1] = value
@@ -57,7 +57,7 @@ struct SimdDict[keyDType: DType, ValueType: CollectionElement, size: Int]:
     var _keys: SIMD[keyDType, size]
     var _size: Int
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         self._values = InlineArray[ValueType, size](unsafe_uninitialized=True)
         self._keys = SIMD[keyDType, size]()
         self._size = 0
@@ -80,7 +80,7 @@ struct SimdDict[keyDType: DType, ValueType: CollectionElement, size: Int]:
                 return Optional(self._values[i])
         return Optional[ValueType](None)
 
-    fn __setitem__(inout self, key: Self.KeyType, value: ValueType) raises:
+    fn __setitem__(mut self, key: Self.KeyType, value: ValueType) raises:
         for i in range(self._size):
             if self._keys[i] == key:
                 self._values[i] = value

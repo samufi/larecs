@@ -18,13 +18,13 @@ struct EntityPool:
     var _next: EntityId
     var _available: UInt32
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         self._entities = List[Entity]()
         self._entities.append(Entity(0, MAX_UINT16))
         self._next = 0
         self._available = 0
 
-    fn get(inout self) -> Entity:
+    fn get(mut self) -> Entity:
         """Returns a fresh or recycled entity."""
         if self._available == 0:
             return self._get_new()
@@ -37,12 +37,12 @@ struct EntityPool:
         self._available -= 1
         return self._entities[int(curr)]
 
-    fn _get_new(inout self) -> Entity as entity:
+    fn _get_new(mut self, out entity: Entity):
         """Allocates and returns a new entity. For internal use."""
         entity = Entity(EntityId(len(self._entities)))
         self._entities.append(entity)
 
-    fn recycle(inout self, enitity: Entity) raises:
+    fn recycle(mut self, enitity: Entity) raises:
         """Hands an entity back for recycling."""
         if enitity.id == 0:
             raise Error("Can't recycle reserved zero entity")
@@ -51,7 +51,7 @@ struct EntityPool:
         self._next, self._entities[int(enitity.id)].id = enitity.id, self._next
         self._available += 1
 
-    fn reset(inout self):
+    fn reset(mut self):
         """Recycles all entities. Does NOT free the reserved memory."""
         self._entities.resize(1)
         self._next = 0
@@ -100,13 +100,13 @@ struct BitPool[LengthDType: DType = DType.uint16]:
     var _length: Self.LengthType
     var _available: UInt8
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         self._bits = SIMD[DType.uint8, Self.capacity]()
         self._next = 0
         self._length = 0
         self._available = 0
 
-    fn get(inout self) raises -> UInt8:
+    fn get(mut self) raises -> UInt8:
         """Returns a fresh or recycled bit.
 
         Raises:
@@ -123,7 +123,7 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         self._available -= 1
         return self._bits[int(curr)]
 
-    fn _get_new(inout self) raises -> UInt8 as bit:
+    fn _get_new(mut self) raises -> UInt8:
         """Allocates and returns a new bit. For internal use.
 
         Raises:
@@ -139,14 +139,14 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         bit = UInt8(int(self._length))
         self._bits[int(self._length)] = bit
         self._length += 1
-        return
+        return bit
 
-    fn recycle(inout self, bit: UInt8):
+    fn recycle(mut self, bit: UInt8):
         """Hands a bit back for recycling."""
         self._next, self._bits[int(bit)] = bit, self._next
         self._available += 1
 
-    fn reset(inout self):
+    fn reset(mut self):
         """Recycles all bits."""
         self._next = 0
         self._length = 0
@@ -163,13 +163,13 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
     var _next: ElementType
     var _available: UInt32
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         """Creates a new, initialized entity pool."""
         self._pool = List[ElementType, True]()
         self._next = ElementType(0)
         self._available = 0
 
-    fn get(inout self) -> ElementType:
+    fn get(mut self) -> ElementType:
         """Returns a fresh or recycled entity."""
         if self._available == 0:
             return self._get_new()
@@ -182,18 +182,18 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
         self._available -= 1
         return self._pool[int(curr)]
 
-    fn _get_new(inout self) -> ElementType:
+    fn _get_new(mut self) -> ElementType:
         """Allocates and returns a new entity. For internal use."""
         element = ElementType(len(self._pool))
         self._pool.append(element)
         return element
 
-    fn recycle(inout self, element: ElementType):
+    fn recycle(mut self, element: ElementType):
         """Hands an entity back for recycling."""
         self._next, self._pool[int(element)] = element, self._next
         self._available += 1
 
-    fn reset(inout self):
+    fn reset(mut self):
         """Recycles all _entities. Does NOT free the reserved memory."""
         self._pool.clear()
         self._next = ElementType(0)

@@ -47,7 +47,7 @@ struct Bencher:
         self._time_ns = 0
         self._iters = 0
 
-    fn iter_custom[iter_fn: fn (Int) capturing -> Int](inout self: Self):
+    fn iter_custom[iter_fn: fn (Int) capturing -> Int](mut self: Self):
         """Times the execution of the given function.
 
         Parameters:
@@ -61,7 +61,7 @@ struct Bencher:
         time_passed = perf_counter_ns() - start
         self._time_ns += time_passed
 
-    fn reset_time(inout self: Self):
+    fn reset_time(mut self: Self):
         """Resets the time and iteration counters."""
         self._time_ns = 0
         self._iters = 0
@@ -148,8 +148,8 @@ struct Bench:
         self._results = List[Tuple[BenchId, Bencher]]()
 
     fn _bench_function_once[
-        bench_fn: fn (inout Bencher) capturing -> None
-    ](inout self, inout bencher: Bencher):
+        bench_fn: fn (mut Bencher) capturing -> None
+    ](mut self, mut bencher: Bencher):
         """Benchmarks the given function once and adjusts the batch size if required.
 
         Parameters:
@@ -176,8 +176,8 @@ struct Bench:
             return self._bench_function_once[bench_fn](bencher)
 
     fn bench_function[
-        bench_fn: fn (inout Bencher) capturing -> None
-    ](inout self, bench_id: BenchId):
+        bench_fn: fn (mut Bencher) capturing -> None
+    ](mut self, bench_id: BenchId):
         """Benchmarks the given function.
 
         Parameters:
@@ -208,7 +208,7 @@ struct Bench:
 
         self._results.append((bench_id, bencher))
 
-    fn dump_report(inout self):
+    fn dump_report(mut self):
         """Prints the results of the benchmarking."""
 
         for tuple in self._results:

@@ -18,7 +18,7 @@ def test_zero_entity():
     assert_false(Entity(1, 0).is_zero())
 
 
-fn benchmark_entity_is_zero(inout bencher: Bencher) capturing:
+fn benchmark_entity_is_zero(mut bencher: Bencher) capturing:
     e = Entity()
 
     @parameter

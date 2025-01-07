@@ -18,13 +18,13 @@ trait TrivialIntable(
     In the end, this trait should be one of UInt8, UInt16, UInt32, UInt64, etc.
     """
 
-    fn __init__(inout self, value: Int):
+    fn __init__(mut self, value: Int):
         ...
 
-    fn __init__(inout self, value: UInt):
+    fn __init__(mut self, value: UInt):
         ...
 
-    fn __iadd__(inout self: Self, rhs: Self):
+    fn __iadd__(mut self: Self, rhs: Self):
         ...
 
 

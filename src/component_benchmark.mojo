@@ -265,7 +265,7 @@ alias FullManager = ComponentManager[
 ]
 
 
-fn benchmark_get_first_id_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_get_first_id_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
@@ -278,7 +278,7 @@ fn benchmark_get_first_id_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_get_last_id_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_get_last_id_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
@@ -299,7 +299,7 @@ fn t[size: Int](arr: InlineArray[UInt8, size]) -> UInt8:
     return arr[0]
 
 
-fn benchmark_get_5_id_arr_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_get_5_id_arr_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
@@ -325,7 +325,7 @@ def run_all_component_benchmarks():
     bench.dump_report()
 
 
-def run_all_component_benchmarks(inout bench: Bench):
+def run_all_component_benchmarks(mut bench: Bench):
     bench.bench_function[benchmark_get_first_id_1_000_000](
         BenchId("10^6 * component_get_id[0]")
     )

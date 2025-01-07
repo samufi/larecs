@@ -33,7 +33,7 @@ from memory import UnsafePointer
 #         return self
 
 #     fn __next__(
-#         inout self,
+#         mut self,
 #     ) -> Pointer[T, list_origin]:
 #         @parameter
 #         if forward:
@@ -79,19 +79,19 @@ struct ChainedArrayList[
     var _removed_indices: List[Int]
     var _is_alive: List[Bool]
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         """Create a new empty list."""
         self._pages = List[Self.PageType]()
         self._removed_indices = List[Int]()
         self._is_alive = List[Bool]()
 
-    fn __init__(inout self, owned *elements: ElementType):
+    fn __init__(mut self, owned *elements: ElementType):
         """Create a new empty list."""
         self = Self()
         for element in elements:
             _ = self.add(element[].copy())
 
-    fn __moveinit__(inout self, owned other: Self):
+    fn __moveinit__(mut self, owned other: Self):
         """Move the contents of another list into a new list."""
         self._pages = other._pages^
         self._removed_indices = other._removed_indices^
@@ -151,7 +151,7 @@ struct ChainedArrayList[
         return (self._pages[idx // Self.page_size] + idx % Self.page_size)[]
 
     @always_inline
-    fn remove(inout self: Self, owned idx: Int):
+    fn remove(mut self: Self, owned idx: Int):
         """Mark the element at the given index for removal.
 
         The item is not deleted immediately, but will be overwritte
@@ -193,7 +193,7 @@ struct ChainedArrayList[
     #     """
     #     return _ChainedArrayListIter(0, Pointer.address_of(self))
 
-    fn add(inout self, owned value: ElementType) -> Int as idx:
+    fn add(mut self, owned value: ElementType) -> Int:
         """Append an element to the list.
 
         Args:
@@ -203,7 +203,7 @@ struct ChainedArrayList[
             idx = self._removed_indices.pop()
             self._is_alive[idx] = True
             self[idx] = value^
-            return
+            return idx
 
         idx = len(self._is_alive)
         self._is_alive.append(True)
@@ -215,3 +215,4 @@ struct ChainedArrayList[
         (self._pages[page_index] + idx % Self.page_size).init_pointee_move(
             value^
         )
+        return idx

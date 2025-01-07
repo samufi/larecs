@@ -10,15 +10,16 @@ from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
 
 
 @always_inline
-fn get_random_bitmask() -> BitMask as mask:
+fn get_random_bitmask() -> BitMask:
     mask = BitMask()
     for i in range(BitMask.total_bits):
         if random.random_float64() < 0.5:
             mask.set(UInt8(i), True)
+    return mask
 
 
 @always_inline
-fn get_random_uint8_list(size: Int) -> List[UInt8] as vals:
+fn get_random_uint8_list(size: Int, out vals: List[UInt8]):
     vals = List[UInt8](capacity=size)
     for _ in range(size):
         vals.append(
@@ -26,7 +27,7 @@ fn get_random_uint8_list(size: Int) -> List[UInt8] as vals:
         )
 
 
-fn unique(l: List[UInt8]) -> List[UInt8] as result:
+fn unique(l: List[UInt8], out result: List[UInt8]):
     mask = InlineArray[Bool, 256](0)
     result = List[UInt8]()
     for v in l:
@@ -36,7 +37,7 @@ fn unique(l: List[UInt8]) -> List[UInt8] as result:
 
 
 @always_inline
-fn get_random_1_true_bitmasks(size: Int) -> List[BitMask] as vals:
+fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
     vals = List[BitMask](capacity=size)
     for _ in range(size):
         vals.append(

@@ -12,7 +12,7 @@ struct DummyComponentType(EqualityComparable, Stringable):
     fn get_type_identifier() -> Int:
         return 12345
 
-    fn __init__(inout self, x: Int32):
+    fn __init__(mut self, x: Int32):
         self.x = x
 
     fn __eq__(self, other: Self) -> Bool:
@@ -24,10 +24,10 @@ struct DummyComponentType(EqualityComparable, Stringable):
     fn __str__(self) -> String:
         return "DummyComponentType(x: " + str(self.x) + ")"
 
-    fn __copyinit__(inout self, existing: Self):
+    fn __copyinit__(mut self, existing: Self):
         self.x = existing.x
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(mut self, owned existing: Self):
         self.x = existing.x
 
     fn __del__(owned self):

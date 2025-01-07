@@ -14,12 +14,12 @@ struct LockMask:
     var bit_pool: BitPool  # The bit pool for getting and recycling bits.
 
     @always_inline
-    fn __init__(inout self):
+    fn __init__(mut self):
         self.locks = BitMask()
         self.bit_pool = BitPool()
 
     @always_inline
-    fn lock(inout self) raises -> UInt8:
+    fn lock(mut self) raises -> UInt8:
         """
         Locks the world and gets the Lock bit for later unlocking.
 
@@ -31,7 +31,7 @@ struct LockMask:
         return lock
 
     @always_inline
-    fn unlock(inout self, lock: UInt8) raises:
+    fn unlock(mut self, lock: UInt8) raises:
         """
         Unlocks the given lock bit.
 
@@ -55,7 +55,7 @@ struct LockMask:
         return not self.locks.is_zero()
 
     @always_inline
-    fn reset(inout self):
+    fn reset(mut self):
         """
         Reset the locks and the pool.
         """

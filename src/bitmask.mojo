@@ -4,7 +4,7 @@ from collections import InlineList, InlineArray
 
 
 @value
-struct _BitMaksIndexIter:
+struct _BitMaskIndexIter:
     """Iterator for ChainedArrayList."""
 
     alias DataContainorType = SIMD[DType.uint8, BitMask.total_bytes]
@@ -30,7 +30,7 @@ struct _BitMaksIndexIter:
         return self
 
     fn __next__(
-        inout self,
+        mut self,
     ) -> BitMask.IndexType:
         for i in range(self._offest_index, 8):
             for j in range(self._byte_index, 32):
@@ -65,12 +65,12 @@ struct BitMask(Stringable, KeyElement):
     var _bytes: SIMD[DType.uint8, Self.total_bytes]
 
     @always_inline
-    fn __init__(inout self, *, bytes: SIMD[DType.uint8, Self.total_bytes]):
+    fn __init__(mut self, *, bytes: SIMD[DType.uint8, Self.total_bytes]):
         """Initializes the mask with the given bytes."""
         self._bytes = bytes
 
     @always_inline
-    fn __init__(inout self, bits: VariadicList[BitMask.IndexType]):
+    fn __init__(mut self, bits: VariadicList[BitMask.IndexType]):
         """Initializes the mask with the bits at the given indices set to True.
         """
         self._bytes = SIMD[DType.uint8, Self.total_bytes]()
@@ -80,7 +80,7 @@ struct BitMask(Stringable, KeyElement):
     @always_inline
     fn __init__[
         size: Int
-    ](inout self, bits: InlineArray[BitMask.IndexType, size]):
+    ](mut self, bits: InlineArray[BitMask.IndexType, size]):
         """Initializes the mask with the bits at the given indices set to True.
         """
         self._bytes = SIMD[DType.uint8, Self.total_bytes]()
@@ -95,7 +95,7 @@ struct BitMask(Stringable, KeyElement):
         """
         self = Self(bits)
 
-    fn __copyinit__(inout self, other: Self):
+    fn __copyinit__(mut self, other: Self):
         """Initializes the mask with the other mask."""
         self._bytes = other._bytes
 
@@ -151,7 +151,7 @@ struct BitMask(Stringable, KeyElement):
         return (self._bytes[int(index)] & mask) == mask
 
     @always_inline
-    fn set(inout self, bit: Self.IndexType, value: Bool):
+    fn set(mut self, bit: Self.IndexType, value: Bool):
         """Sets the state of bit at the given index."""
         if value:
             self.set[True](bit)
@@ -159,7 +159,7 @@ struct BitMask(Stringable, KeyElement):
             self.set[False](bit)
 
     @always_inline
-    fn set[value: Bool](inout self, bit: Self.IndexType):
+    fn set[value: Bool](mut self, bit: Self.IndexType):
         """Sets the state of bit at the given index."""
         var index: Self.IndexType = bit // 8
         var offset: Self.IndexType = bit - (8 * index)
@@ -171,7 +171,7 @@ struct BitMask(Stringable, KeyElement):
             self._bytes[int(index)] &= ~(1 << offset)
 
     @always_inline
-    fn flip(inout self, bit: Self.IndexType):
+    fn flip(mut self, bit: Self.IndexType):
         """Flips the state of bit at the given index."""
         var index: Self.IndexType = bit // 8
         var offset: Self.IndexType = bit - (8 * index)
@@ -188,7 +188,7 @@ struct BitMask(Stringable, KeyElement):
         return not self._bytes.reduce_or()
 
     @always_inline
-    fn reset(inout self):
+    fn reset(mut self):
         """Resets the mask setting all bits to False."""
         self._bytes = 0
 
@@ -208,32 +208,9 @@ struct BitMask(Stringable, KeyElement):
         return self._bytes.reduce_bit_count()
 
     @always_inline
-    fn get_indices(self) -> _BitMaksIndexIter as result:
-        result = _BitMaksIndexIter(self._bytes)
-
-    # fn get_indices(self, inout result: InlineList[Self.IndexType, 256]): # -> Int #as result: #TrivialInlineList[Self.IndexType, 256] as result:
-    #     """Returns the indices of the set bits.
-
-    #     For performance reasons, this is given as an InlineArray.
-    #     Non-existent values are set to -1.
-    #     """
-    #     # result = 0 #TrivialInlineList[Self.IndexType, 256](-1)
-    #     mask = SIMD[DType.uint8, 32](1)
-    #     @parameter
-    #     k = 0
-    #     @parameter
-    #     for i in range(8):
-    #         c = self._bytes & mask
-    #         @parameter
-    #         for j in range(32):
-    #             if c[j]:
-    #                 alias index = j*8 + i
-    #                 # result += index
-    #                 result[k] = index
-    #                 k += 1
-    #         mask <<= 1
-    #     # result.size = k
-    #     return
+    fn get_indices(self, out result: _BitMaskIndexIter):
+        """Returns the indices of the bits that are set."""
+        result = _BitMaskIndexIter(self._bytes)
 
     fn __str__(self) -> String:
         """Implements str(...)."""

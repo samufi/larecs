@@ -6,7 +6,7 @@ from component import ComponentType, ComponentInfo
 from test_utils import *
 
 
-fn benchmark_new_entity_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_new_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
@@ -18,7 +18,7 @@ fn benchmark_new_entity_1_000_000(inout bencher: Bencher) raises capturing:
 
 
 fn benchmark_query_1_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
@@ -36,7 +36,7 @@ fn benchmark_query_1_comp_1_000_000(
 
 
 fn benchmark_query_2_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -56,7 +56,7 @@ fn benchmark_query_2_comp_1_000_000(
 
 
 fn benchmark_query_2_comp_ptr_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -76,7 +76,7 @@ fn benchmark_query_2_comp_ptr_1_000_000(
 
 
 fn benchmark_query_5_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
     c2 = FlexibleComponent[2](5.0, 6.0)
@@ -108,7 +108,7 @@ fn benchmark_query_5_comp_1_000_000(
 
 
 fn benchmark_query_get_iter_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
     c2 = FlexibleComponent[2](5.0, 6.0)
@@ -128,7 +128,7 @@ fn benchmark_query_get_iter_1_000_000(
 
 
 fn benchmark_query_has_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
     c2 = FlexibleComponent[2](5.0, 6.0)
@@ -154,7 +154,7 @@ fn run_all_query_benchmarks() raises:
     bench.dump_report()
 
 
-fn run_all_query_benchmarks(inout bench: Bench) raises:
+fn run_all_query_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_query_has_1_000_000](
         BenchId("10^6 * query has")
     )

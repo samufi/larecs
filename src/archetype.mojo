@@ -187,11 +187,11 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 )
                 self._component_count += 1
 
-    fn copy(self) -> Self as other:
+    fn copy(self, out other: Self):
         """Initializes the archetype as a copy of another archetype."""
         other = self
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(mut self, owned existing: Self):
         self._data = existing._data^
         self._size = existing._size
         self._capacity = existing._capacity
@@ -202,7 +202,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._node_index = existing._node_index
         self._mask = existing._mask
 
-    fn __copyinit__(inout self, existing: Self):
+    fn __copyinit__(mut self, existing: Self):
         # Copy the attributes that can be trivially
         # copied via a simple assignment
         self._size = existing._size
@@ -254,11 +254,11 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._mask
 
     @always_inline
-    fn reserve(inout self):
+    fn reserve(mut self):
         """Extends the capacity of the archetype by factor 2."""
         self.reserve(self._capacity * 2)
 
-    fn reserve(inout self, new_capacity: UInt):
+    fn reserve(mut self, new_capacity: UInt):
         """Extends the capacity of the archetype to a given number.
 
         Does nothing if the new capacity is not larger than the current capacity.
@@ -291,7 +291,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
     @always_inline
     fn unsafe_set(
-        inout self, index: Int, id: Self.Id, value: UnsafePointer[UInt8]
+        mut self, index: Int, id: Self.Id, value: UnsafePointer[UInt8]
     ):
         """Sets the component with the given id at the given index."""
         memcpy(
@@ -303,7 +303,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
     @always_inline
     fn set[
         assert_has_component: Bool = True
-    ](inout self, index: UInt, value: ComponentReference) raises:
+    ](mut self, index: UInt, value: ComponentReference) raises:
         """Sets the component with the given id at the given index.
 
         Parameters:
@@ -320,7 +320,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
         self.unsafe_set(index, value.get_id(), value.get_unsafe_ptr())
 
-    # fn get(inout self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
+    # fn get(mut self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
     #     """Returns the component with the given id at the given index."""
     #     return ComponentReference[__origin_of(self)](id, self._get_component_ptr(index, id))
 
@@ -331,7 +331,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         """Returns the component with the given id at the given index."""
         return self._data[int(id)] + index * int(self._item_sizes[int(id)])
 
-    fn unsafe_copy_to(self, inout other: Self, index: UInt, other_index: UInt):
+    fn unsafe_copy_to(self, mut other: Self, index: UInt, other_index: UInt):
         """Copies all components of the entity at the given index to another archetype.
 
         Caution: This function does not check whether the other archetype
@@ -385,7 +385,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 "Archetype does not contain component with id " + str(id) + "."
             )
 
-    fn remove(inout self, index: UInt) -> Bool:
+    fn remove(mut self, index: UInt) -> Bool:
         """Removes an entity and its components from the archetype.
 
         Performs a swap-remove and reports whether a swap was necessary
@@ -418,7 +418,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
         return swapped
 
-    fn add(inout self, entity: Entity) -> Int:
+    fn add(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
 
         Args:
@@ -435,8 +435,10 @@ struct Archetype(CollectionElement, CollectionElementNew):
         return self._size - 1
 
     fn extend(
-        inout self, count: Int, inout entity_pool: EntityPool
-    ) -> Int as start_index:
+        mut self,
+        count: Int,
+        mut entity_pool: EntityPool,
+    ) -> Int:
         """Extends the archetype by `count` entities from the provided pool.
 
         Args:
@@ -456,3 +458,4 @@ struct Archetype(CollectionElement, CollectionElementNew):
         for _ in range(count):
             self._entities.append(entity_pool.get())
         self._size += count
+        return start_index
