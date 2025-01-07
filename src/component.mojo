@@ -76,17 +76,15 @@ struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
     var _id: Self.Id
     var _data: UnsafePointer[UInt8]
 
-    fn __init__[
-        T: ComponentType
-    ](inout self, id: Self.Id, ref [origin]value: T):
+    fn __init__[T: ComponentType](mut self, id: Self.Id, ref [origin]value: T):
         self._id = id
         self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(mut self, owned existing: Self):
         self._id = existing._id
         self._data = existing._data
 
-    fn __copyinit__(inout self, existing: Self):
+    fn __copyinit__(mut self, existing: Self):
         self._id = existing._id
         self._data = existing._data
 
@@ -145,7 +143,7 @@ struct ComponentManager[*component_types: ComponentType]:
     alias max_size = get_max_uint_size[Self.Id]()
     alias component_count = len(VariadicList(component_types))
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         constrained[
             Self.dType.is_integral(),
             "dType needs to be an integral type.",
@@ -184,10 +182,12 @@ struct ComponentManager[*component_types: ComponentType]:
     @always_inline
     fn get_id_arr[
         *Ts: ComponentType
-    ]() -> InlineArray[
-        Self.Id,
-        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
-    ] as ids:
+    ](
+        out ids: InlineArray[
+            Self.Id,
+            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+        ]
+    ):
         """Get the IDs of multiple component types.
 
         Parameters:
@@ -218,10 +218,12 @@ struct ComponentManager[*component_types: ComponentType]:
     @always_inline
     fn get_info_arr[
         *Ts: ComponentType
-    ]() -> InlineArray[
-        ComponentInfo,
-        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
-    ] as ids:
+    ](
+        out ids: InlineArray[
+            ComponentInfo,
+            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+        ]
+    ):
         """Get the IDs of multiple component types.
 
         Parameters:

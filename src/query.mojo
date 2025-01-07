@@ -47,7 +47,7 @@ struct _EntityAccessor[
         self._index_in_archetype = index_in_archetype
 
     @always_inline
-    fn get[T: ComponentType](inout self) raises -> ref [self._archetype] T:
+    fn get[T: ComponentType](mut self) raises -> ref [self._archetype] T:
         """Returns a reference to the given component of the Entity.
 
         Raises:
@@ -65,7 +65,7 @@ struct _EntityAccessor[
     @always_inline
     fn get_ptr[
         T: ComponentType
-    ](inout self) raises -> Pointer[T, __origin_of(self._archetype)]:
+    ](mut self) raises -> Pointer[T, __origin_of(self._archetype)]:
         """Returns a reference to the given component of the Entity.
 
         Raises:
@@ -203,10 +203,10 @@ struct _EntityIterator[
             debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    fn __iter__(owned self) -> Self as iterator:
+    fn __iter__(owned self, out iterator: Self):
         iterator = self^
 
-    fn _fill_archetype_buffer(inout self):
+    fn _fill_archetype_buffer(mut self):
         """
         Find the next archetypes that contain the mask.
 
@@ -232,7 +232,7 @@ struct _EntityIterator[
         self._max_buffer_index = buffer_index - 1
 
     @always_inline
-    fn _next_archetype(inout self):
+    fn _next_archetype(mut self):
         """
         Moves to the next archetype.
         """
@@ -254,10 +254,11 @@ struct _EntityIterator[
 
     @always_inline
     fn __next__(
-        inout self,
-    ) -> _EntityAccessor[
-        __origin_of(self._current_archetype[]), *component_types
-    ] as accessor:
+        mut self,
+        out accessor: _EntityAccessor[
+            __origin_of(self._current_archetype[]), *component_types
+        ],
+    ):
         self._entity_index += 1
         if self._entity_index >= self._archetype_size:
             self._next_archetype()

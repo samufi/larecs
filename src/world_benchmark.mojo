@@ -6,7 +6,7 @@ from component import ComponentType, ComponentInfo
 from test_utils import *
 
 
-fn benchmark_new_entity_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_new_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
@@ -18,7 +18,7 @@ fn benchmark_new_entity_1_000_000(inout bencher: Bencher) raises capturing:
 
 
 fn benchmark_new_entity_1_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
@@ -39,7 +39,7 @@ fn prevent_inlining_new_entity_1_comp() raises:
 
 
 fn benchmark_new_entity_5_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
@@ -79,7 +79,7 @@ fn prevent_inlining_new_entity_5_comp() raises:
     _ = world.new_entity(c1, c2, c3, c4, c5)
 
 
-fn benchmark_get_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
@@ -102,7 +102,7 @@ fn prevent_inlining_get() raises:
     keep(world.get[Position](entity).x)
 
 
-fn benchmark_get_ptr_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_get_ptr_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
@@ -125,7 +125,7 @@ fn prevent_inlining_get_ptr() raises:
     keep(world.get_ptr[Position](entity)[].x)
 
 
-fn benchmark_set_1_comp_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -153,7 +153,7 @@ fn prevent_inlining_set_1_comp() raises:
 
 
 fn benchmark_set_5_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
@@ -211,7 +211,7 @@ fn prevent_inlining_set_5_comp() raises:
 
 
 fn benchmark_add_remove_entity_1_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
@@ -238,7 +238,7 @@ fn prevent_inlining_add_remove_entity_1_comp() raises:
 
 
 fn benchmark_add_remove_entity_5_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
@@ -286,7 +286,7 @@ fn prevent_inlining_add_remove_entity_5_comp() raises:
     world.remove_entity(entity)
 
 
-fn benchmark_has_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
@@ -301,7 +301,7 @@ fn benchmark_has_1_000_000(inout bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_is_alive_1_000_000(inout bencher: Bencher) raises capturing:
+fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
@@ -317,7 +317,7 @@ fn benchmark_is_alive_1_000_000(inout bencher: Bencher) raises capturing:
 
 
 fn benchmark_add_remove_1_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -344,7 +344,7 @@ fn prevent_inlining_add_remove_1_comp() raises:
 
 
 fn benchmark_add_remove_5_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
@@ -406,7 +406,7 @@ fn prevent_inlining_add_remove_5_comp() raises:
 
 
 fn benchmark_exchange_1_comp_1_000_000(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
@@ -430,7 +430,7 @@ fn benchmark_exchange_1_comp_1_000_000(
 
 
 fn benchmark_exchange_1_comp_1_000_000_extra(
-    inout bencher: Bencher,
+    mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
@@ -460,7 +460,7 @@ fn run_all_world_benchmarks() raises:
     bench.dump_report()
 
 
-fn run_all_world_benchmarks(inout bench: Bench) raises:
+fn run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_new_entity_1_000_000](
         BenchId("10^6 * new_entity")
     )

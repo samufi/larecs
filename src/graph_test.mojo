@@ -81,11 +81,11 @@ def test_get_node_mask():
 struct S:
     var l: List[Node[Int]]
 
-    fn __init__(inout self):
+    fn __init__(mut self):
         self.l = List[Node[Int]]()
         self.add(BitMask(), -1)
 
-    fn add(inout self, owned node_mask: BitMask, owned value: Int):
+    fn add(mut self, owned node_mask: BitMask, owned value: Int):
         self.l.append(Node(node_mask, value))
 
 

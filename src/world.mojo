@@ -104,7 +104,7 @@ struct World[*component_types: ComponentType]:
         *component_types
     ]  # Component manager.
 
-    fn __init__(inout self) raises:
+    fn __init__(mut self) raises:
         """
         Creates a new [World].
         """
@@ -136,7 +136,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn _get_archetype_index[
         size: Int
-    ](inout self, components: InlineArray[ComponentInfo, size],) -> Int:
+    ](mut self, components: InlineArray[ComponentInfo, size],) -> Int:
         """Returns the archetype list index of the archetype differing from
         the archetype at the start node by the given indices.
 
@@ -172,7 +172,7 @@ struct World[*component_types: ComponentType]:
     fn _get_archetype_index[
         size: Int
     ](
-        inout self,
+        mut self,
         components: InlineArray[Self.Id, size],
         start_node_index: Int = 0,
     ) -> Int:
@@ -211,7 +211,7 @@ struct World[*component_types: ComponentType]:
         return archetype_index
 
     @always_inline
-    fn new_entity(inout self) raises -> Entity as entity:
+    fn new_entity(mut self, out entity: Entity) raises:
         """Returns a new or recycled [Entity].
 
         Do not use during [Query] iteration!
@@ -227,7 +227,7 @@ struct World[*component_types: ComponentType]:
 
     fn new_entity[
         *Ts: ComponentType
-    ](inout self, *components: *Ts) raises -> Entity as entity:
+    ](mut self, *components: *Ts, out entity: Entity) raises:
         """Returns a new or recycled [Entity].
 
         The given component types are added to the entity.
@@ -283,12 +283,13 @@ struct World[*component_types: ComponentType]:
 
     @always_inline
     fn get_entities(
-        inout self,
-    ) raises -> _EntityIterator[
-        __origin_of(self._archetypes),
-        __origin_of(self._locks),
-        *component_types,
-    ]:
+        mut self,
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+        ],
+    ) raises:
         """
         Returns an iterator with accessors to all entities with the given components.
 
@@ -298,7 +299,7 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: If the world is locked.
         """
-        return _EntityIterator(
+        iterator = _EntityIterator(
             self._component_manager,
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
@@ -308,11 +309,14 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn get_entities[
         *Ts: ComponentType
-    ](inout self) raises -> _EntityIterator[
-        __origin_of(self._archetypes),
-        __origin_of(self._locks),
-        *component_types,
-    ]:
+    ](
+        mut self,
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+        ],
+    ) raises:
         """
         Returns an iterator with accessors to all entities with the given components.
 
@@ -322,7 +326,7 @@ struct World[*component_types: ComponentType]:
         Returns:
             An iterator with accessors to all entities with the given components.
         """
-        return _EntityIterator(
+        iterator = _EntityIterator(
             self._component_manager,
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
@@ -331,7 +335,7 @@ struct World[*component_types: ComponentType]:
 
     fn set[
         T: ComponentType
-    ](inout self, entity: Entity, owned component: T) raises:
+    ](mut self, entity: Entity, owned component: T) raises:
         """
         Overwrites a component for an [Entity], using the given content.
 
@@ -354,7 +358,7 @@ struct World[*component_types: ComponentType]:
 
     fn set[
         *Ts: ComponentType
-    ](inout self, entity: Entity, owned *components: *Ts) raises:
+    ](mut self, entity: Entity, owned *components: *Ts) raises:
         """
         Overwrites a component for an [Entity], using the given content.
 
@@ -383,7 +387,7 @@ struct World[*component_types: ComponentType]:
 
     fn get[
         T: ComponentType
-    ](inout self, entity: Entity) raises -> ref [self._archetypes[0]] T:
+    ](mut self, entity: Entity) raises -> ref [self._archetypes[0]] T:
         """Returns a reference to the given component of an [Entity].
 
         Raises:
@@ -404,7 +408,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn get_ptr[
         T: ComponentType
-    ](inout self, entity: Entity) raises -> Pointer[
+    ](mut self, entity: Entity) raises -> Pointer[
         T, __origin_of(self._archetypes[0])
     ]:
         """Returns a pointer to the given component of the Entity.
@@ -442,7 +446,7 @@ struct World[*component_types: ComponentType]:
         if not self._entity_pool.is_alive(entity):
             raise Error("The considered entity does not exist anymore.")
 
-    fn remove_entity(inout self, entity: Entity) raises:
+    fn remove_entity(mut self, entity: Entity) raises:
         """
         RemoveEntity removes an [Entity], making it eligible for recycling.
 
@@ -555,7 +559,7 @@ struct World[*component_types: ComponentType]:
 
     fn add[
         *Ts: ComponentType
-    ](inout self, entity: Entity, *add_components: *Ts) raises:
+    ](mut self, entity: Entity, *add_components: *Ts) raises:
         """
         Adds components to an [Entity].
 
@@ -573,7 +577,7 @@ struct World[*component_types: ComponentType]:
         """
         self._remove_and_add(entity, add_components)
 
-    fn remove[*Ts: ComponentType](inout self, entity: Entity) raises:
+    fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
         """
         Removes components from an [Entity].
 
@@ -595,7 +599,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn remove_and[
         *Ts: ComponentType
-    ](inout self) -> _Adder[
+    ](mut self) -> _Adder[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
@@ -621,7 +625,7 @@ struct World[*component_types: ComponentType]:
     fn _remove_and_add[
         *Ts: ComponentType, rem_size: Int = 0
     ](
-        inout self,
+        mut self,
         entity: Entity,
         *add_components: *Ts,
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
@@ -650,7 +654,7 @@ struct World[*component_types: ComponentType]:
     fn _remove_and_add[
         *Ts: ComponentType, rem_size: Int = 0
     ](
-        inout self,
+        mut self,
         entity: Entity,
         add_components: VariadicPack[_, ComponentType, *Ts],
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
@@ -1137,7 +1141,7 @@ struct World[*component_types: ComponentType]:
     #     return arch, startIdx
 
     @always_inline
-    fn _create_entity(inout self, archetype_index: Int) -> Entity as entity:
+    fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
         """
         Creates an Entity and adds it to the given archetype.
         """
@@ -1151,7 +1155,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn _create_entities[
         element_origin: MutableOrigin
-    ](inout self, archetype_index: Int, count: Int):
+    ](mut self, archetype_index: Int, count: Int):
         """
         Creates multiple Entities and adds them to the given archetype.
         """
@@ -1373,13 +1377,13 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    fn _lock(inout self) raises -> UInt8:
+    fn _lock(mut self) raises -> UInt8:
         """
         Locks the world and gets the lock bit for later unlocking.
         """
         return self._locks.lock()
 
-    fn _unlock(inout self, lock: UInt8) raises:
+    fn _unlock(mut self, lock: UInt8) raises:
         """
         Unlocks the given lock bit.
         """

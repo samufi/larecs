@@ -6,7 +6,7 @@ from stupid_dict import StupidDict
 from bitmask import BitMask
 
 
-fn benchmark_dict_insert_1000(inout bencher: Bencher) capturing:
+fn benchmark_dict_insert_1000(mut bencher: Bencher) capturing:
     bitmasks = get_random_bitmask_list(1000)
     dict = StupidDict[BitMask, Int]()
 
@@ -19,7 +19,7 @@ fn benchmark_dict_insert_1000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_dict_get_1000(inout bencher: Bencher) capturing:
+fn benchmark_dict_get_1000(mut bencher: Bencher) capturing:
     bitmasks = get_random_bitmask_list(1000)
     bitmask_count = len(bitmasks)
 
@@ -42,7 +42,7 @@ fn benchmark_dict_get_1000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_dict_contains_1000(inout bencher: Bencher) capturing:
+fn benchmark_dict_contains_1000(mut bencher: Bencher) capturing:
     bitmasks = get_random_bitmask_list(1000)
     bitmask_count = len(bitmasks)
 
@@ -68,7 +68,7 @@ fn run_all_dict_benchmarks() raises:
     bench.dump_report()
 
 
-fn run_all_dict_benchmarks(inout bench: Bench) raises:
+fn run_all_dict_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_dict_insert_1000](
         BenchId("10^3 * dict_insert")
     )

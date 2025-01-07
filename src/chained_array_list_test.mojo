@@ -7,14 +7,14 @@ struct TestElement(CollectionElementNew):
     var value: Int
     var dealloc_counter: ArcPointer[Int]
 
-    fn __init__(inout self, value: Int, dealloc_counter: ArcPointer[Int]):
+    fn __init__(mut self, value: Int, dealloc_counter: ArcPointer[Int]):
         self.value = value
         self.dealloc_counter = dealloc_counter
 
-    fn copy(self) -> Self as other:
+    fn copy(self, out other: Self):
         other = Self(self.value, self.dealloc_counter)
 
-    fn __moveinit__(inout self, owned other: Self):
+    fn __moveinit__(mut self, owned other: Self):
         self.value = other.value
         self.dealloc_counter = other.dealloc_counter
 

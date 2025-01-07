@@ -30,7 +30,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     var gen: UInt16  # Entity generation
 
     @always_inline
-    fn __init__(inout self, id: EntityId = 0, gen: UInt16 = 0):
+    fn __init__(mut self, id: EntityId = 0, gen: UInt16 = 0):
         self.id = id
         self.gen = gen
 
@@ -51,7 +51,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         return "Entity(" + str(self.id) + ", " + str(self.gen) + ")"
 
     @always_inline
-    fn __hash__(self) -> UInt as output:
+    fn __hash__(self, out output: UInt):
         """Returns a unique hash."""
         output = int(self.id)
         output |= bit_reverse(int(self.gen))

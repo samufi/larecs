@@ -6,7 +6,7 @@ from bitmask_test import get_random_bitmask
 from bitmask import BitMask
 
 
-fn benchmark_bitmask_get_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_get_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
     val = random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
 
@@ -19,7 +19,7 @@ fn benchmark_bitmask_get_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_set_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_set_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
     val = random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
 
@@ -35,7 +35,7 @@ fn benchmark_bitmask_set_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_flip_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_flip_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
     val = random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
 
@@ -49,7 +49,7 @@ fn benchmark_bitmask_flip_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_contains_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_contains_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
     val = BitMask(random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]())
 
@@ -62,7 +62,7 @@ fn benchmark_bitmask_contains_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_contains_any_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_contains_any_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
     val = BitMask(random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]())
 
@@ -75,7 +75,7 @@ fn benchmark_bitmask_contains_any_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_mask_filter_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_mask_filter_1_000_000(mut bencher: Bencher) capturing:
     mask = BitMask(0, 1, 2).without()
     bits = BitMask(0, 1, 2)
 
@@ -88,7 +88,7 @@ fn benchmark_mask_filter_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_eq_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_eq_1_000_000(mut bencher: Bencher) capturing:
     mask1 = get_random_bitmask()
     mask2 = mask1
     mask3 = get_random_bitmask()
@@ -103,7 +103,7 @@ fn benchmark_bitmask_eq_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_get_indices_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_get_indices_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
 
     @always_inline
@@ -119,7 +119,7 @@ fn benchmark_bitmask_get_indices_1_000_000(inout bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_bitmask_get_each_1_000_000(inout bencher: Bencher) capturing:
+fn benchmark_bitmask_get_each_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
 
     @always_inline
@@ -183,7 +183,7 @@ fn run_all_bitmask_benchmarks() raises:
     bench.dump_report()
 
 
-fn run_all_bitmask_benchmarks(inout bench: Bench) raises:
+fn run_all_bitmask_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_bitmask_get_1_000_000](
         BenchId("10^6 * bitmask_get")
     )
