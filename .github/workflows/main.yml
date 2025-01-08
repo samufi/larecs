@@ -31,14 +31,14 @@ jobs:
     - name: Run tests
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo test --validate-doc-strings --sanitize address src/
+        magic run mojo test --validate-doc-strings --sanitize address -I src/ test
 
     - name: Check formatting
       run: |
         source /home/runner/.bash_profile 
-        if magic run mojo format src/*.mojo 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if magic run mojo format src/* 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
     
     - name: Run benchmarks
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo src/run_benchmarks.mojo
+        magic run mojo -I src/ benchmark/run_benchmarks.mojo
