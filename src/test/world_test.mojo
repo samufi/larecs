@@ -4,7 +4,7 @@ from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType, ComponentInfo
 
-from test_utils import *
+from larecs.test_utils import *
 
 
 def test_new_entity():
