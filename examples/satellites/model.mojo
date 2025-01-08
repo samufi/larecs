@@ -5,9 +5,10 @@ from components import Position, Velocity
 from python import Python
 
 
-fn update(mut world: World, parameters: Parameters) raises:
-    move(world, parameters)
-    accellerate(world, parameters)
+fn update(mut world: World, parameters: Parameters, time: Float64) raises:
+    for _ in range(int(time / parameters.dt)):
+        move(world, parameters)
+        accellerate(world, parameters)
 
 
 fn main() raises:
@@ -22,8 +23,8 @@ fn main() raises:
     plt.show(block=False)
 
     for _ in range(1000):
-        for _ in range(6000):
-            update(world, parameters)
+        # Update every 600s = 10 minutes
+        update(world, parameters, 600)
         data = position_to_numpy(world)
 
         ax.clear()
