@@ -1,9 +1,9 @@
 from benchmark import Bencher, Bench, keep, BenchId
 
 from custom_benchmark import DefaultBench
-from dict_test import get_random_bitmask_list
-from stupid_dict import StupidDict
-from bitmask import BitMask
+from larecs.test_utils import get_random_bitmask_list
+from larecs.stupid_dict import StupidDict
+from larecs.bitmask import BitMask
 
 
 fn benchmark_dict_insert_1000(mut bencher: Bencher) capturing:

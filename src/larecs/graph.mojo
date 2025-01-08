@@ -1,10 +1,10 @@
 from collections import InlineArray  # , Dict
-from bitmask import BitMask
+from .bitmask import BitMask
 
 # We use a stupid dict to circumvent a current
 # bug in the compiler causing a segfault when
 # using the Dict type.
-from stupid_dict import StupidDict as Dict
+from .stupid_dict import StupidDict as Dict
 
 
 @value
@@ -40,7 +40,7 @@ struct Node[DataType: KeyElement](CollectionElement):
         self.neighbours = InlineArray[Int, 256](Self.null_index)
         self.bit_mask = bit_mask
 
-    fn copy(self) -> Self as other:
+    fn copy(self, out other: Self):
         other = Self(self.bit_mask, self.value)
 
 

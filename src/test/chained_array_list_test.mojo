@@ -1,6 +1,6 @@
 from testing import *
-from chained_array_list import ChainedArrayList
 from memory import ArcPointer
+from larecs.chained_array_list import ChainedArrayList
 
 
 struct TestElement(CollectionElementNew):

@@ -1,6 +1,6 @@
 from testing import *
 from test_utils import *
-from entity import Entity
+from larecs.entity import Entity
 
 
 def test_query_length():

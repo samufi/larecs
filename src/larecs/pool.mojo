@@ -1,6 +1,6 @@
-from types import EntityId, get_max_uint_size_of_half_type, TrivialIntable
-from entity import Entity
-from constants import MAX_UINT16
+from .types import EntityId, get_max_uint_size_of_half_type, TrivialIntable
+from .entity import Entity
+from .constants import MAX_UINT16
 
 
 trait IntableCollectionElement(Intable):

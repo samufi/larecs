@@ -1,12 +1,13 @@
 from sys.info import sizeof
+from sys.intrinsics import _type_is_eq
 from collections import (
     InlineArray,
 )  # Dict,
-from stupid_dict import SimdDict, StupidDict as Dict
-from types import get_max_uint_size, TrivialIntable
 from memory import UnsafePointer
-from bitmask import BitMask
-from sys.intrinsics import _type_is_eq
+
+from .stupid_dict import SimdDict, StupidDict as Dict
+from .types import get_max_uint_size, TrivialIntable
+from .bitmask import BitMask
 
 
 trait IdentifiableType:

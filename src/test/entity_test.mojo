@@ -1,8 +1,8 @@
 from testing import *
-from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
-from entity import Entity, EntityIndex
-from archetype import Archetype
 from collections import InlineArray
+from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
+from larecs.entity import Entity, EntityIndex
+from larecs.archetype import Archetype
 
 
 def test_entity_as_index():

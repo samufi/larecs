@@ -2,8 +2,8 @@ from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 import random
 
 from custom_benchmark import DefaultBench
-from bitmask_test import get_random_bitmask
-from bitmask import BitMask
+from larecs.bitmask import BitMask
+from larecs.test_utils import get_random_bitmask
 
 
 fn benchmark_bitmask_get_1_000_000(mut bencher: Bencher) capturing:

@@ -1,9 +1,9 @@
 from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 from custom_benchmark import DefaultBench
-from world import World
-from entity import Entity
-from component import ComponentType, ComponentInfo
-from test_utils import *
+from larecs.test_utils import *
+from larecs.world import World
+from larecs.entity import Entity
+from larecs.component import ComponentType, ComponentInfo
 
 
 fn benchmark_new_entity_1_000_000(mut bencher: Bencher) raises capturing:

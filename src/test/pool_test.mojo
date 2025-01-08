@@ -3,9 +3,9 @@ from random import random_float64
 
 
 from collections import Dict
-from pool import EntityPool, BitPool, IntPool
-from entity import Entity
-from constants import MAX_UINT16, MASK_TOTAL_BITS
+from larecs.pool import EntityPool, BitPool, IntPool
+from larecs.entity import Entity
+from larecs.constants import MAX_UINT16, MASK_TOTAL_BITS
 from test_utils import assert_equal_lists
 
 

@@ -1,7 +1,8 @@
-from types import EntityId
 from bit import bit_reverse
-from archetype import Archetype
-from types import TrivialIntable
+
+from .types import EntityId
+from .archetype import Archetype
+from .types import TrivialIntable
 
 # # Reflection type of an [Entity].
 # var entityType = reflect.TypeOf(Entity{})

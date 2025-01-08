@@ -1,11 +1,12 @@
-from archetype import Archetype
-from bitmask import BitMask
-from component import ComponentInfo, ComponentReference, ComponentManager
-from entity import Entity
 from memory import UnsafePointer
 from collections import InlineArray
-from pool import EntityPool
 from testing import *
+
+from larecs.archetype import Archetype
+from larecs.bitmask import BitMask
+from larecs.component import ComponentInfo, ComponentReference, ComponentManager
+from larecs.entity import Entity
+from larecs.pool import EntityPool
 
 
 @value

@@ -1,12 +1,13 @@
-from entity import Entity
-from bitmask import BitMask
-from component import ComponentType, ComponentManager
-from chained_array_list import ChainedArrayList
-from archetype import Archetype
-from world import World
-from lock import LockMask
-from debug_utils import debug_warn
 from collections import InlineArray
+
+from .entity import Entity
+from .bitmask import BitMask
+from .component import ComponentType, ComponentManager
+from .chained_array_list import ChainedArrayList
+from .archetype import Archetype
+from .world import World
+from .lock import LockMask
+from .debug_utils import debug_warn
 
 
 struct _EntityAccessor[

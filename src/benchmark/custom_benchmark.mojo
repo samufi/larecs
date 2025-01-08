@@ -8,16 +8,17 @@ from time import perf_counter_ns
 from collections import Dict
 
 
-fn DefaultConfig() raises -> BenchConfig_ as config:
+fn DefaultConfig() raises -> BenchConfig_:
     """Returns the default configuration for benchmarking."""
     config = BenchConfig_(min_runtime_secs=2, max_batch_size=100)
     config.tabular_view = True
     config.verbose_timing = True
+    return config
 
 
-fn DefaultBench() raises -> Bench_ as bench:
+fn DefaultBench() raises -> Bench_:
     """Returns the default benchmarking struct."""
-    bench = Bench_(DefaultConfig())
+    return Bench_(DefaultConfig())
 
 
 @value

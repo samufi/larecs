@@ -1,16 +1,16 @@
 from sys.intrinsics import _type_is_eq
 from collections import InlineArray, InlineList, Optional
-from component import (
+from memory import memcpy, UnsafePointer
+from .component import (
     ComponentInfo,
     ComponentReference,
     ComponentManager,
 )
-from memory import memcpy, UnsafePointer
-from entity import Entity
-from bitmask import BitMask
-from pool import EntityPool
+from .entity import Entity
+from .bitmask import BitMask
+from .pool import EntityPool
+from .types import get_max_uint_size, TrivialIntable
 
-from types import get_max_uint_size, TrivialIntable
 
 alias DEFAULT_CAPACITY = 32
 

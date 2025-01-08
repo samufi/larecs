@@ -1,11 +1,84 @@
-from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
+from testing import assert_true, assert_false, assert_equal
+from testing.testing import Testable
+from random import random
+from memory import UnsafePointer
+from .component import ComponentType
+from .bitmask import BitMask
+from .world import World
 
-from custom_benchmark import DefaultBench
 
-from test_utils import *
-from component import ComponentManager
+trait TestableCollectionElement(CollectionElement, Testable):
+    pass
 
-alias FullManager = ComponentManager[
+fn get_random_bitmask_list(
+    count: Int, range_start: Int = 0, range_end: Int = 1000, out list: List[BitMask]
+):
+    list = List[BitMask]()
+    list.reserve(count)
+    for _ in range(count):
+        bytes = SIMD[DType.uint64, 4]()
+        bytes[0] = int(random.random_ui64(range_start, range_end))
+        list.append(
+            BitMask(
+                bytes=UnsafePointer.address_of(bytes).bitcast[
+                    SIMD[DType.uint8, 32]
+                ]()[]
+            )
+        )
+
+@always_inline
+fn get_random_bitmask() -> BitMask:
+    mask = BitMask()
+    for i in range(BitMask.total_bits):
+        if random.random_float64() < 0.5:
+            mask.set(UInt8(i), True)
+    return mask
+
+fn assert_equal_lists[
+    T: TestableCollectionElement
+](a: List[T], b: List[T], msg: String = "") raises:
+    assert_equal(len(a), len(b), msg)
+    for i in range(len(a)):
+        assert_equal(a[i], b[i], msg)
+
+
+@value
+struct Position(ComponentType):
+    var x: Float64
+    var y: Float64
+
+
+@value
+struct Velocity(ComponentType):
+    var dx: Float64
+    var dy: Float64
+
+
+@value
+struct FlexibleComponent[i: Int](ComponentType):
+    var x: Float64
+    var y: Float64
+
+
+alias SmallWorld = World[
+    Position,
+    Velocity,
+    FlexibleComponent[0],
+    FlexibleComponent[1],
+    FlexibleComponent[2],
+    FlexibleComponent[3],
+    FlexibleComponent[4],
+    FlexibleComponent[5],
+    FlexibleComponent[6],
+    FlexibleComponent[7],
+    FlexibleComponent[8],
+    FlexibleComponent[9],
+    FlexibleComponent[10],
+]
+
+alias FullWorld = World[
+    Position,
+    Velocity,
     FlexibleComponent[0],
     FlexibleComponent[1],
     FlexibleComponent[2],
@@ -260,82 +333,4 @@ alias FullManager = ComponentManager[
     FlexibleComponent[251],
     FlexibleComponent[252],
     FlexibleComponent[253],
-    FlexibleComponent[254],
-    FlexibleComponent[255],
 ]
-
-
-fn benchmark_get_first_id_1_000_000(mut bencher: Bencher) capturing:
-    # create a component manager with 256 components
-    manager = FullManager()
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing -> None:
-        for _ in range(1_000_000):
-            keep(manager.get_id[FlexibleComponent[0]]())
-
-    bencher.iter[bench_fn]()
-
-
-fn benchmark_get_last_id_1_000_000(mut bencher: Bencher) capturing:
-    # create a component manager with 256 components
-    manager = FullManager()
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing -> None:
-        for _ in range(1_000_000):
-            keep(manager.get_id[FlexibleComponent[255]]())
-
-    bencher.iter[bench_fn]()
-
-
-from collections import InlineArray
-from memory import UnsafePointer
-
-
-fn t[size: Int](arr: InlineArray[UInt8, size]) -> UInt8:
-    return arr[0]
-
-
-fn benchmark_get_5_id_arr_1_000_000(mut bencher: Bencher) capturing:
-    # create a component manager with 256 components
-    manager = FullManager()
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing -> None:
-        for _ in range(1_000_000):
-            arr = manager.get_id_arr[
-                FlexibleComponent[1],
-                FlexibleComponent[0],
-                FlexibleComponent[2],
-                FlexibleComponent[3],
-                FlexibleComponent[4],
-            ]()
-            keep(arr[0])
-
-    bencher.iter[bench_fn]()
-
-
-def run_all_component_benchmarks():
-    bench = DefaultBench()
-    run_all_component_benchmarks(bench)
-    bench.dump_report()
-
-
-def run_all_component_benchmarks(mut bench: Bench):
-    bench.bench_function[benchmark_get_first_id_1_000_000](
-        BenchId("10^6 * component_get_id[0]")
-    )
-    bench.bench_function[benchmark_get_last_id_1_000_000](
-        BenchId("10^6 * component_get_id[255]")
-    )
-    bench.bench_function[benchmark_get_5_id_arr_1_000_000](
-        BenchId("10^6 * component_get_id_arr (5 components)")
-    )
-
-
-def main():
-    run_all_component_benchmarks()

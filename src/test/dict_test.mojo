@@ -1,27 +1,10 @@
 from collections import Dict
 import random
-from bitmask import BitMask
+from larecs.bitmask import BitMask
 from memory import UnsafePointer
 from testing import *
-from stupid_dict import StupidDict
-from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
-
-
-fn get_random_bitmask_list(
-    count: Int, range_start: Int = 0, range_end: Int = 1000
-) -> List[BitMask] as list:
-    list = List[BitMask]()
-    list.reserve(count)
-    for _ in range(count):
-        bytes = SIMD[DType.uint64, 4]()
-        bytes[0] = int(random.random_ui64(range_start, range_end))
-        list.append(
-            BitMask(
-                bytes=UnsafePointer.address_of(bytes).bitcast[
-                    SIMD[DType.uint8, 32]
-                ]()[]
-            )
-        )
+from larecs.stupid_dict import StupidDict
+from larecs.test_utils import get_random_bitmask_list
 
 
 def _test_dict():

@@ -1,4 +1,4 @@
-from bitmask import BitMask
+from .bitmask import BitMask
 
 
 # Filter is the interface for logic filters.

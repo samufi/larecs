@@ -1,7 +1,7 @@
 from testing import *
-from bitmask import BitMask
-from graph import Node, BitMaskGraph
 from collections import InlineArray
+from larecs.bitmask import BitMask
+from larecs.graph import Node, BitMaskGraph
 
 
 def test_node_initialization():

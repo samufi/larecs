@@ -1,5 +1,5 @@
-from bitmask import BitMask
-from pool import BitPool
+from .bitmask import BitMask
+from .pool import BitPool
 
 
 @value

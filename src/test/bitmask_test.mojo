@@ -1,9 +1,9 @@
-from bitmask import BitMask
 import random
 from collections import InlineArray
 from memory import UnsafePointer
 from testing import *
-from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
+from benchmark import keep
+from larecs.bitmask import BitMask
 
 
 # ------ Helper functions ------

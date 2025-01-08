@@ -1,24 +1,23 @@
 from memory import UnsafePointer
-from collections import Optional
+from collections import Optional, InlineArray
 
-from pool import EntityPool
-from entity import Entity, EntityIndex
-from archetype import Archetype
-from graph import BitMaskGraph
-from bitmask import BitMask
-from types import TrivialIntable
-from chained_array_list import ChainedArrayList
-from debug_utils import debug_warn
-from component import (
+from .pool import EntityPool
+from .entity import Entity, EntityIndex
+from .archetype import Archetype
+from .graph import BitMaskGraph
+from .bitmask import BitMask
+from .types import TrivialIntable
+from .chained_array_list import ChainedArrayList
+from .debug_utils import debug_warn
+from .component import (
     ComponentManager,
     ComponentInfo,
     ComponentType,
     constrain_components_unique,
 )
-from bitmask import BitMask
-from collections import InlineArray
-from query import _EntityIterator
-from lock import LockMask
+from .bitmask import BitMask
+from .query import _EntityIterator
+from .lock import LockMask
 
 
 @value

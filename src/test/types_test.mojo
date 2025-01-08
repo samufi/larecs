@@ -1,5 +1,5 @@
 from testing import *
-from types import *
+from larecs.types import *
 
 
 def test_get_max_uint_size():

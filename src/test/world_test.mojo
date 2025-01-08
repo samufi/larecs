@@ -1,7 +1,9 @@
 from testing import *
-from world import World
-from entity import Entity
-from component import ComponentType, ComponentInfo
+
+from larecs.world import World
+from larecs.entity import Entity
+from larecs.component import ComponentType, ComponentInfo
+
 from test_utils import *
 
 

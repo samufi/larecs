@@ -1,7 +1,7 @@
 from testing import *
-from component import *
 from sys.info import sizeof
 from collections import InlineList
+from larecs.component import *
 
 
 struct DummyComponentType(EqualityComparable, Stringable):
