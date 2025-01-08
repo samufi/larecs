@@ -6,7 +6,7 @@ from collections import Dict
 from larecs.pool import EntityPool, BitPool, IntPool
 from larecs.entity import Entity
 from larecs.constants import MAX_UINT16, MASK_TOTAL_BITS
-from test_utils import assert_equal_lists
+from larecs.test_utils import assert_equal_lists
 
 
 def test_entity_pool_constructor():

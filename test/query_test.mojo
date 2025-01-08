@@ -1,5 +1,5 @@
 from testing import *
-from test_utils import *
+from larecs.test_utils import *
 from larecs.entity import Entity
 
 
