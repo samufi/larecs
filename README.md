@@ -1,16 +1,17 @@
 # Larecs - lucid archetype-based ECS
 
-This is a performance-oriented archetype-based ECS. 
+This is a performance-oriented archetype-based ECS for Mojo. 
 
-It is based on the ECS [Arche](https://github.com/mlange-42/arche) implemented in Go language.
+Larecs is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
 
-This package is still under construction, so the API might change in future versions.
+Larecs is still under construction, so the API might change in future versions. It can, however, already be used for 
+testing purposes.
 
 ## Installation
 
 ### Prerequisites
 
-This project is written in [Mojo](https://docs.modular.com/mojo/manual/get-started), which needs to be installed in order to compile, test, or use the software.
+This package is written in and for [Mojo](https://docs.modular.com/mojo/manual/get-started), which needs to be installed in order to compile, test, or use the software.
 If Mojo and the command line interface [Magic](https://docs.modular.com/magic/) are available, dependencies can be installed by navigating to the project directory and executing the following command: 
 
 ```
