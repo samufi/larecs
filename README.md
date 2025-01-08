@@ -1,8 +1,10 @@
 # Larecs - lucid archetype-based ECS
 
-This is a Mojo port of the archetype-based ECS [Arche](https://github.com/mlange-42/arche).
+This is a performance-oriented archetype-based ECS. 
 
-This software is under construction and not fully working at the moment.
+It is based on the ECS [Arche](https://github.com/mlange-42/arche) implemented in Go language.
+
+This package is still under construction, so the API might change in future versions.
 
 ## Installation
 
