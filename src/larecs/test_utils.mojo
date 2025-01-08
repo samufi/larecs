@@ -10,8 +10,12 @@ from .world import World
 trait TestableCollectionElement(CollectionElement, Testable):
     pass
 
+
 fn get_random_bitmask_list(
-    count: Int, range_start: Int = 0, range_end: Int = 1000, out list: List[BitMask]
+    count: Int,
+    range_start: Int = 0,
+    range_end: Int = 1000,
+    out list: List[BitMask],
 ):
     list = List[BitMask]()
     list.reserve(count)
@@ -26,6 +30,7 @@ fn get_random_bitmask_list(
             )
         )
 
+
 @always_inline
 fn get_random_bitmask() -> BitMask:
     mask = BitMask()
@@ -33,6 +38,7 @@ fn get_random_bitmask() -> BitMask:
         if random.random_float64() < 0.5:
             mask.set(UInt8(i), True)
     return mask
+
 
 fn assert_equal_lists[
     T: TestableCollectionElement
