@@ -25,13 +25,13 @@ magic shell
 
 This includes `magic install`, so it is okay to omit the former step.
 
-### Build a package
+### Build the package
 
-You can build larecs as a standalaone package as follows:
+You can build larecs as a package as follows:
 
 1. Clone the repository / download the files.
 2. Navigate to the `src/` subfolder.
-3. Execute `mojo package larecs`
+3. Execute `mojo package larecs`.
 4. Move the newly created file `larecs.mojopkg` to your project's source directory.
 
 ### Include source directly for compiler and LSP
@@ -45,10 +45,10 @@ mojo run -I "path/to/larecs/src" example.mojo
 
 To let VSCode and the LSP know of larecs, include it as follows:
 
-1. Go to VSCode's `File -> Preferences -> Settings` page
-2. Go to the `Extensions -> Mojo` section
-3. Look for the setting `Lsp: Include Dirs`
-4. Click on `add item` and insert the path to the `larecs` subdirectory.
+1. Go to VSCode's `File -> Preferences -> Settings` page.
+2. Go to the `Extensions -> Mojo` section.
+3. Look for the setting `Lsp: Include Dirs`.
+4. Click on `add item` and insert the path to the `src/` subdirectory.
 
 ## Next steps
 
