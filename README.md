@@ -68,18 +68,37 @@ struct Position:
     var x: Float64
     var y: Float64
 
+
+@value
+struct IsStatic:
+    pass
+
+
 @value
 struct Velocity:
     var x: Float64
     var y: Float64
 
 
-# Define a system
-fn move(mut world: World) raises:
+# Run the ECS
+fn main() raises:
+    # Create a world, list all components that will / may be used
+    world = World[Position, Velocity, IsStatic]()
 
-    # Iterate over all entities that have a position and a velocity
+    for _ in range(100):
+        # Add an entity. The returned value is the
+        # entity's ID, which can be used to access the entity later
+        entity = world.new_entity(Position(0, 0), IsStatic())
+
+        # For example, we may want to change the entity's position
+        world.get[Position](entity).x = 2
+
+        # Or we may want to remove the IsStatic component
+        # and add a velocity component to the entity
+        world.remove_and[IsStatic]().add[Velocity](entity, Velocity(2, 2))
+
+    # We can query entiteis with specific components
     for entity in world.get_entities[Position, Velocity]():
-        
         # use get_ptr to get a pointer to a specific component
         position = entity.get_ptr[Position]()
 
@@ -88,34 +107,6 @@ fn move(mut world: World) raises:
 
         position[].x += velocity.x
         position[].y += velocity.y
-
-
-# Add a function for the world's setup
-fn add_entities(mut world: World, count: Int) raises:
-    
-    for _ in range(count):
-        
-        # Add an entity
-        # The returned value is the entity's ID, which can be used 
-        # to access the entity later
-        entity = world.new_entity(Position(0, 0), Velocity(1, 1))
-
-        # For example, we may want to change the velocity of the entity
-        world.get[Velocity](entity).x = 2
-
-
-# Run the ECS
-fn main() raises:
-    
-    # Create a world, list all components that will / may be used
-    world = World[Position, Velocity]()
-
-    # Call the setup function
-    add_entities(world, 100)
-
-    # Run the update function
-    for _ in range(1000):
-        move(world)
 ```
 
 
