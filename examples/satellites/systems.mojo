@@ -6,7 +6,7 @@ from python import PythonObject, Python
 
 
 fn move(mut world: World, parameters: Parameters) raises:
-    for entity in world.get_entities[Position, Velocity]():
+    for entity in world.query[Position, Velocity]():
         position = entity.get_ptr[Position]()
         velocity = entity.get_ptr[Velocity]()
 
@@ -17,7 +17,7 @@ fn move(mut world: World, parameters: Parameters) raises:
 fn accellerate(mut world: World, parameters: Parameters) raises:
     constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
 
-    for entity in world.get_entities[Position, Velocity]():
+    for entity in world.query[Position, Velocity]():
         position = entity.get[Position]()
         velocity = entity.get_ptr[Velocity]()
 
@@ -44,11 +44,11 @@ fn get_random_velocity() -> Velocity:
 
 fn add_satellites(mut world: World, count: Int) raises:
     for _ in range(count):
-        _ = world.new_entity(get_random_position(), get_random_velocity())
+        _ = world.add_entity(get_random_position(), get_random_velocity())
 
 
 fn position_to_numpy(mut world: World, out numpy_array: PythonObject) raises:
-    iterator = world.get_entities[Position]()
+    iterator = world.query[Position]()
 
     np = Python.import_module("numpy")
     numpy_array = np.zeros((len(iterator), 2))

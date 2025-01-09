@@ -37,8 +37,8 @@ fn benchmark_entity_is_zero(mut bencher: Bencher) capturing:
 #     pos_id = component_id[Position](&world)
 #     vel_id = component_id[Velocity](&world)
 
-#     e1 = world.new_entity()
-#     e2 = world.new_entity(pos_id, vel_id)
+#     e1 = world.add_entity()
+#     e2 = world.add_entity(pos_id, vel_id)
 
 #     fmt.Println(e1.is_zero(), e2.is_zero())
 #     # Output: False False
@@ -47,7 +47,7 @@ fn benchmark_entity_is_zero(mut bencher: Bencher) capturing:
 #     world = new_world()
 
 #     var e1 Entity
-#     var e2 Entity = world.new_entity()
+#     var e2 Entity = world.add_entity()
 
 #     fmt.Println(e1.is_zero(), e2.is_zero())
 #     # Output: True False

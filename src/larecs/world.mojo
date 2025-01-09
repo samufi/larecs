@@ -68,7 +68,7 @@ struct World[*component_types: ComponentType]:
     World is the central type holding entity and component data, as well as resources.
 
     The World provides all the basic ECS functionality of Larecs,
-    like [World.Query], [World.new_entity], [World.Add], [World.Remove] or [World.RemoveEntity].
+    like [World.Query], [World.add_entity], [World.Add], [World.Remove] or [World.RemoveEntity].
 
     For more advanced functionality, see [World.Relations], [World.Resources],
     [World.Batch], [World.Cache] and [Builder].
@@ -77,7 +77,7 @@ struct World[*component_types: ComponentType]:
     alias Id = BitMask.IndexType
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
-    # _target_entities bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
+    # _tarquery bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
     # _relation_nodes  []*archNode               # Archetype nodes that have an entity relation.
     # _filter_cache    Cache                     # Cache for registered filters.
     # _nodes          pagedSlice[archNode]      # The archetype graph.
@@ -117,9 +117,9 @@ struct World[*component_types: ComponentType]:
         self._locks = LockMask()
 
         # TODO
-        # var _target_entities = bitSet
-        # _target_entities.ExtendTo(1)
-        # self._target_entities = _target_entities
+        # var _tarquery = bitSet
+        # _tarquery.ExtendTo(1)
+        # self._tarquery = _tarquery
 
         # self._registry:       newComponentRegistry(),
         # self._archetype_data:  pagedSlice[_archetype_data],
@@ -210,7 +210,7 @@ struct World[*component_types: ComponentType]:
         return archetype_index
 
     @always_inline
-    fn new_entity(mut self, out entity: Entity) raises:
+    fn add_entity(mut self, out entity: Entity) raises:
         """Returns a new or recycled [Entity].
 
         Do not use during [Query] iteration!
@@ -224,7 +224,7 @@ struct World[*component_types: ComponentType]:
         self._assert_unlocked()
         entity = self._create_entity(0)
 
-    fn new_entity[
+    fn add_entity[
         *Ts: ComponentType
     ](mut self, *components: *Ts, out entity: Entity) raises:
         """Returns a new or recycled [Entity].
@@ -281,7 +281,7 @@ struct World[*component_types: ComponentType]:
         return
 
     @always_inline
-    fn get_entities(
+    fn query(
         mut self,
         out iterator: _EntityIterator[
             __origin_of(self._archetypes),
@@ -306,7 +306,7 @@ struct World[*component_types: ComponentType]:
         )
 
     @always_inline
-    fn get_entities[
+    fn query[
         *Ts: ComponentType
     ](
         mut self,
@@ -785,7 +785,7 @@ struct World[*component_types: ComponentType]:
     #     self._assert_unlocked()
 
     #     self._entities = self._entities[:1]
-    #     self._target_entities.Reset()
+    #     self._tarquery.Reset()
     #     self._entity_pool.Reset()
     #     self._locks.Reset()
     #     self._resources.reset()
@@ -979,8 +979,8 @@ struct World[*component_types: ComponentType]:
     #     self._entity_pool.available = data.Available
 
     #     self._entities = make([]entityIndex, len(data.Entities), capacity)
-    #     self._target_entities = bitSet
-    #     self._target_entities.ExtendTo(capacity)
+    #     self._tarquery = bitSet
+    #     self._tarquery.ExtendTo(capacity)
 
     #     var arch = self._archetypes.get(0)
     #     for _, idx in enumerate(data.Alive):
@@ -1094,7 +1094,7 @@ struct World[*component_types: ComponentType]:
     #     if hasTarget:
     #         self.checkRelation(arch, targetID)
     #         if !target.IsZero():
-    #             self._target_entities.Set(target.id, true)
+    #             self._tarquery.Set(target.id, true)
 
     #     var startIdx = arch.Len()
     #     self.createEntities(arch, uint32(count))
@@ -1125,7 +1125,7 @@ struct World[*component_types: ComponentType]:
     #     if hasTarget:
     #         self.checkRelation(arch, targetID)
     #         if !target.IsZero():
-    #             self._target_entities.Set(target.id, true)
+    #             self._tarquery.Set(target.id, true)
 
     #     var startIdx = arch.Len()
     #     self.createEntities(arch, uint32(count))
@@ -1221,9 +1221,9 @@ struct World[*component_types: ComponentType]:
     #             var index = &self._entities[entity.id]
     #             index.arch = nil
 
-    #             if self._target_entities.Get(entity.id):
+    #             if self._tarquery.Get(entity.id):
     #                 self._cleanup_archetypes(entity)
-    #                 self._target_entities.Set(entity.id, false)
+    #                 self._tarquery.Set(entity.id, false)
 
     #             self.entityPool.Recycle(entity)
 
@@ -1365,7 +1365,7 @@ struct World[*component_types: ComponentType]:
     #                 arch.SetPointer(idx, id, comp)
 
     #     if !target.IsZero():
-    #         self._target_entities.Set(target.id, true)
+    #         self._tarquery.Set(target.id, true)
 
     #     # Theoretically, it could be oldArchLen < old_archetype.Len(),
     #     # which means we can't reset the archetype.
