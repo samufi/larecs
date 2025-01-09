@@ -88,7 +88,7 @@ fn main() raises:
     for _ in range(100):
         # Add an entity. The returned value is the
         # entity's ID, which can be used to access the entity later
-        entity = world.new_entity(Position(0, 0), IsStatic())
+        entity = world.add_entity(Position(0, 0), IsStatic())
 
         # For example, we may want to change the entity's position
         world.get[Position](entity).x = 2
@@ -98,7 +98,7 @@ fn main() raises:
         world.remove_and[IsStatic]().add(entity, Velocity(2, 2))
 
     # We can query entiteis with specific components
-    for entity in world.get_entities[Position, Velocity]():
+    for entity in world.query[Position, Velocity]():
         # use get_ptr to get a pointer to a specific component
         position = entity.get_ptr[Position]()
 

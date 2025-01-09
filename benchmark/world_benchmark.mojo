@@ -6,18 +6,18 @@ from larecs.entity import Entity
 from larecs.component import ComponentType, ComponentInfo
 
 
-fn benchmark_new_entity_1_000_000(mut bencher: Bencher) raises capturing:
+fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.new_entity().id)
+            keep(world.add_entity().id)
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_new_entity_1_comp_1_000_000(
+fn benchmark_add_entity_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -27,18 +27,18 @@ fn benchmark_new_entity_1_comp_1_000_000(
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.new_entity(pos).id)
+            keep(world.add_entity(pos).id)
 
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_new_entity_1_comp() raises:
+fn prevent_inlining_add_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = World[Position, Velocity]()
-    _ = world.new_entity(pos)
+    _ = world.add_entity(pos)
 
 
-fn benchmark_new_entity_5_comp_1_000_000(
+fn benchmark_add_entity_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -58,12 +58,12 @@ fn benchmark_new_entity_5_comp_1_000_000(
             FlexibleComponent[5],
         ]()
         for _ in range(1_000_000):
-            keep(world.new_entity(c1, c2, c3, c4, c5).id)
+            keep(world.add_entity(c1, c2, c3, c4, c5).id)
 
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_new_entity_5_comp() raises:
+fn prevent_inlining_add_entity_5_comp() raises:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -76,7 +76,7 @@ fn prevent_inlining_new_entity_5_comp() raises:
         FlexibleComponent[4],
         FlexibleComponent[5],
     ]()
-    _ = world.new_entity(c1, c2, c3, c4, c5)
+    _ = world.add_entity(c1, c2, c3, c4, c5)
 
 
 fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
@@ -87,7 +87,7 @@ fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos, vel)
+        entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.get[Position](entity).x)
 
@@ -98,7 +98,7 @@ fn prevent_inlining_get() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
-    entity = world.new_entity(pos, vel)
+    entity = world.add_entity(pos, vel)
     keep(world.get[Position](entity).x)
 
 
@@ -110,7 +110,7 @@ fn benchmark_get_ptr_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos, vel)
+        entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.get_ptr[Position](entity)[].x)
 
@@ -121,7 +121,7 @@ fn prevent_inlining_get_ptr() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
-    entity = world.new_entity(pos, vel)
+    entity = world.add_entity(pos, vel)
     keep(world.get_ptr[Position](entity)[].x)
 
 
@@ -134,7 +134,7 @@ fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos, vel)
+        entity = world.add_entity(pos, vel)
         for _ in range(500_000):
             world.set(entity, pos2)
             world.set(entity, pos)
@@ -147,7 +147,7 @@ fn prevent_inlining_set_1_comp() raises:
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
-    entity = world.new_entity(pos, vel)
+    entity = world.add_entity(pos, vel)
     world.set(entity, pos2)
     world.set(entity, pos)
 
@@ -177,7 +177,7 @@ fn benchmark_set_5_comp_1_000_000(
             FlexibleComponent[4],
             FlexibleComponent[5],
         ]()
-        entity = world.new_entity(c1, c2, c3, c4, c5)
+        entity = world.add_entity(c1, c2, c3, c4, c5)
         for _ in range(500_000):
             world.set(entity, c1_2, c2_2, c3_2, c4_2, c5_2)
             world.set(entity, c1, c2, c3, c4, c5)
@@ -205,7 +205,7 @@ fn prevent_inlining_set_5_comp() raises:
         FlexibleComponent[4],
         FlexibleComponent[5],
     ]()
-    entity = world.new_entity(c1, c2, c3, c4, c5)
+    entity = world.add_entity(c1, c2, c3, c4, c5)
     world.set(entity, c1_2, c2_2, c3_2, c4_2, c5_2)
     world.set(entity, c1, c2, c3, c4, c5)
 
@@ -222,7 +222,7 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
         entities = List[Entity]()
         for _ in range(1000):
             for _ in range(1000):
-                entities.append(world.new_entity(pos))
+                entities.append(world.add_entity(pos))
             for entity in entities:
                 world.remove_entity(entity[])
             entities.clear()
@@ -233,7 +233,7 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
 fn prevent_inlining_add_remove_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = World[Position, Velocity]()
-    entity = world.new_entity(pos)
+    entity = world.add_entity(pos)
     world.remove_entity(entity)
 
 
@@ -260,7 +260,7 @@ fn benchmark_add_remove_entity_5_comp_1_000_000(
         entities = List[Entity]()
         for _ in range(1000):
             for _ in range(1000):
-                entities.append(world.new_entity(c1, c2, c3, c4, c5))
+                entities.append(world.add_entity(c1, c2, c3, c4, c5))
             for entity in entities:
                 world.remove_entity(entity[])
             entities.clear()
@@ -282,7 +282,7 @@ fn prevent_inlining_add_remove_entity_5_comp() raises:
         FlexibleComponent[4],
         FlexibleComponent[5],
     ]()
-    entity = world.new_entity(c1, c2, c3, c4, c5)
+    entity = world.add_entity(c1, c2, c3, c4, c5)
     world.remove_entity(entity)
 
 
@@ -294,7 +294,7 @@ fn benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos, vel)
+        entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.has[Position](entity))
 
@@ -309,7 +309,7 @@ fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos, vel)
+        entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.is_alive(entity))
 
@@ -326,7 +326,7 @@ fn benchmark_add_remove_1_comp_1_000_000(
     @parameter
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
-        entity = world.new_entity(pos)
+        entity = world.add_entity(pos)
         for _ in range(1_000_000):
             world.add(entity, vel)
             world.remove[Velocity](entity)
@@ -338,7 +338,7 @@ fn prevent_inlining_add_remove_1_comp() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
-    entity = world.new_entity(pos)
+    entity = world.add_entity(pos)
     world.add(entity, vel)
     world.remove[Velocity](entity)
 
@@ -364,7 +364,7 @@ fn benchmark_add_remove_5_comp_1_000_000(
             FlexibleComponent[4],
             FlexibleComponent[5],
         ]()
-        entity = world.new_entity(pos)
+        entity = world.add_entity(pos)
         for _ in range(1_000_000):
             world.add(entity, c1, c2, c3, c4, c5)
             world.remove[
@@ -394,7 +394,7 @@ fn prevent_inlining_add_remove_5_comp() raises:
         FlexibleComponent[4],
         FlexibleComponent[5],
     ]()
-    entity = world.new_entity(pos)
+    entity = world.add_entity(pos)
     world.add(entity, c1, c2, c3, c4, c5)
     world.remove[
         FlexibleComponent[1],
@@ -416,7 +416,7 @@ fn benchmark_exchange_1_comp_1_000_000(
             entities = List[Entity]()
             component0 = FlexibleComponent[0](1.0, 2.0)
             for _ in range(1000):
-                entities.append(world.new_entity(component0))
+                entities.append(world.add_entity(component0))
 
             @parameter
             for i in range(20):
@@ -440,7 +440,7 @@ fn benchmark_exchange_1_comp_1_000_000_extra(
         world = World[Position, Velocity]()
         entities = List[Entity]()
         for _ in range(1000):
-            entities.append(world.new_entity(pos))
+            entities.append(world.add_entity(pos))
 
     bencher.iter[bench_fn]()
 
@@ -449,7 +449,7 @@ fn prevent_inlining_exchange() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
-    entity = world.new_entity(vel)
+    entity = world.add_entity(vel)
     world.remove_and[Velocity]().add(entity, pos)
     world.remove_and[Position]().add(entity, vel)
 
@@ -461,14 +461,14 @@ fn run_all_world_benchmarks() raises:
 
 
 fn run_all_world_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_new_entity_1_000_000](
-        BenchId("10^6 * new_entity")
+    bench.bench_function[benchmark_add_entity_1_000_000](
+        BenchId("10^6 * add_entity")
     )
-    bench.bench_function[benchmark_new_entity_1_comp_1_000_000](
-        BenchId("10^6 * new_entity 1 component")
+    bench.bench_function[benchmark_add_entity_1_comp_1_000_000](
+        BenchId("10^6 * add_entity 1 component")
     )
-    bench.bench_function[benchmark_new_entity_5_comp_1_000_000](
-        BenchId("10^6 * new_entity 5 components")
+    bench.bench_function[benchmark_add_entity_5_comp_1_000_000](
+        BenchId("10^6 * add_entity 5 components")
     )
     bench.bench_function[benchmark_add_remove_entity_1_comp_1_000_000](
         BenchId("10^6 * add & remove entity (1 component)")
@@ -503,8 +503,8 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     prevent_inlining_add_remove_entity_5_comp()
     prevent_inlining_add_remove_1_comp()
     prevent_inlining_add_remove_5_comp()
-    prevent_inlining_new_entity_1_comp()
-    prevent_inlining_new_entity_5_comp()
+    prevent_inlining_add_entity_1_comp()
+    prevent_inlining_add_entity_5_comp()
     prevent_inlining_get()
     prevent_inlining_get_ptr()
     prevent_inlining_set_1_comp()
