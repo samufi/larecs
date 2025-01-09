@@ -51,11 +51,99 @@ To let VSCode and the LSP know of larecs, include it as follows:
 3. Look for the setting `Lsp: Include Dirs`.
 4. Click on `add item` and insert the path to the `src/` subdirectory.
 
+## Usage
+
+Below there is a simple example covering the most important functionality.
+Have a look at the `examples` subdirectory for more elaborate examples. 
+A full API reference is still in the making.
+
+```python
+# Import the package
+from larecs import World
+
+
+# Define components
+@value
+struct Position:
+    var x: Float64
+    var y: Float64
+
+
+@value
+struct IsStatic:
+    pass
+
+
+@value
+struct Velocity:
+    var x: Float64
+    var y: Float64
+
+
+# Run the ECS
+fn main() raises:
+    # Create a world, list all components that will / may be used
+    world = World[Position, Velocity, IsStatic]()
+
+    for _ in range(100):
+        # Add an entity. The returned value is the
+        # entity's ID, which can be used to access the entity later
+        entity = world.new_entity(Position(0, 0), IsStatic())
+
+        # For example, we may want to change the entity's position
+        world.get[Position](entity).x = 2
+
+        # Or we may want to remove the IsStatic component
+        # and add a velocity component to the entity
+        world.remove_and[IsStatic]().add(entity, Velocity(2, 2))
+
+    # We can query entiteis with specific components
+    for entity in world.get_entities[Position, Velocity]():
+        # use get_ptr to get a pointer to a specific component
+        position = entity.get_ptr[Position]()
+
+        # use get to get a reference / copy of a specific component
+        velocity = entity.get[Velocity]()
+
+        position[].x += velocity.x
+        position[].y += velocity.y
+```
+
+
+## Limitations
+
+### Only trivial types can be components
+
+Larecs currently only supports trivial types as components, i.e., structs 
+that have a fixed size in memory. Using types with heap-allocated memory will
+result in memory leaks and / or undefined behaviour, and as of now there is no
+good way to enforce that only compatible types are used. 
+Hence, it is to the user to take care of this.
+
+Note that using types with heap-allocated memory is typically a bad idea for
+ECS and should be avoided anyway.
+
+### Inefficient dictionary for first-time archetype lookup
+
+Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo, larecs uses a very 
+inefficient dict implementation for first-time archetype lookup. 
+As long as the number of component combinations (archetypes) is limited,
+this issue is insignificant. The problem will be fixed as soon as possible.
+
 ## Next steps
 
-The next mile stones are the following
-- Add further useful functionality for queries, e.g. batches.
-- Improve the usability and performance of the ECS. 
+The goal of larecs is to provide a user-friendly ECS with maximal efficiency. 
+In the near future, larecs will take the following steps:
+- Add built-in support for [resources](https://mlange-42.github.io/arche/guide/resources/) 
+  and [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
+- Build an online API documentation.
+- Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
+- Add further options to filter entities (e.g. "does not have component").
+- Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo.
+- Improve performance by locking in to components as parameters.
+- Add possibilities to exploit the benefits of SIMD (discussion needed).
+- Fix the dictionary issue mentioned above.
+- Add a versioning scheme.
 
 ## License
 
