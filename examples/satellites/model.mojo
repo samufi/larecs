@@ -5,8 +5,8 @@ from components import Position, Velocity
 from python import Python
 
 
-fn update(mut world: World, parameters: Parameters, time: Float64) raises:
-    for _ in range(int(time / parameters.dt)):
+fn update(mut world: World, parameters: Parameters, step: Float64) raises:
+    for _ in range(int(step / parameters.dt)):
         move(world, parameters)
         accellerate(world, parameters)
 

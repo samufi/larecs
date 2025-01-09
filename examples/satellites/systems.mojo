@@ -6,9 +6,9 @@ from python import PythonObject, Python
 
 
 fn move(mut world: World, parameters: Parameters) raises:
-    for properties in world.get_entities[Position, Velocity]():
-        position = properties.get_ptr[Position]()
-        velocity = properties.get_ptr[Velocity]()
+    for entity in world.get_entities[Position, Velocity]():
+        position = entity.get_ptr[Position]()
+        velocity = entity.get_ptr[Velocity]()
 
         position[].x += velocity[].x * parameters.dt
         position[].y += velocity[].y * parameters.dt
@@ -17,9 +17,9 @@ fn move(mut world: World, parameters: Parameters) raises:
 fn accellerate(mut world: World, parameters: Parameters) raises:
     constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
 
-    for properties in world.get_entities[Position, Velocity]():
-        position = properties.get[Position]()
-        velocity = properties.get_ptr[Velocity]()
+    for entity in world.get_entities[Position, Velocity]():
+        position = entity.get[Position]()
+        velocity = entity.get_ptr[Velocity]()
 
         multiplier = constant * (position.x**2 + position.y**2) ** (-1.5)
 
@@ -54,8 +54,8 @@ fn position_to_numpy(mut world: World, out numpy_array: PythonObject) raises:
     numpy_array = np.zeros((len(iterator), 2))
 
     i = 0
-    for properties in iterator:
-        position = properties.get[Position]()
+    for entity in iterator:
+        position = entity.get[Position]()
 
         numpy_array[i, 0] = position.x
         numpy_array[i, 1] = position.y
