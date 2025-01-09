@@ -95,7 +95,7 @@ fn main() raises:
 
         # Or we may want to remove the IsStatic component
         # and add a velocity component to the entity
-        world.remove_and[IsStatic]().add[Velocity](entity, Velocity(2, 2))
+        world.remove_and[IsStatic]().add(entity, Velocity(2, 2))
 
     # We can query entiteis with specific components
     for entity in world.get_entities[Position, Velocity]():
