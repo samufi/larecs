@@ -147,4 +147,4 @@ In the near future, larecs will take the following steps:
 
 ## License
 
-The repository currently contains code Go code by Martin Lange, licensed under the [MIT license](https://github.com/mlange-42/arche/blob/main/LICENSE). This code will be removed eventually. The Mojo files are licensed under the [LGPL3](https://www.gnu.org/licenses/lgpl-3.0.de.html). 
+This project is distributed under the [LGPL3](LICENSE) license.
