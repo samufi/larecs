@@ -35,16 +35,16 @@ You can build Larecs as a package as follows:
 3. Execute `mojo package larecs`.
 4. Move the newly created file `larecs.mojopkg` to your project's source directory.
 
-### Include source directly for compiler and LSP
+### Include source directly for compiler and language server
 
-To better see what Larecs does, access the source while debugging, and adjust the Larecs 
-source, you can include it into the run command as follows:
+To access the source while debugging and adjust the Larecs 
+source code, you can include it into the run command as follows:
 
 ```
 mojo run -I "path/to/larecs/src" example.mojo
 ```
 
-To let VSCode and the LSP know of Larecs, include it as follows:
+To let VSCode and the language server know of Larecs, include it as follows:
 
 1. Go to VSCode's `File -> Preferences -> Settings` page.
 2. Go to the `Extensions -> Mojo` section.
