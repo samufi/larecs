@@ -202,12 +202,12 @@ def test_remove_and_add():
     assert_true(world.has[Position](entity))
     assert_false(world.has[Velocity](entity))
 
-    world.replace[Position]().add(entity, vel)
+    world.replace[Position]().by(entity, vel)
     assert_false(world.has[Position](entity))
     assert_true(world.has[Velocity](entity))
 
     with assert_raises():
-        world.replace[Position]().add(entity, vel)
+        world.replace[Position]().by(entity, vel)
 
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
