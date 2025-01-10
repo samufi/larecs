@@ -653,7 +653,9 @@ struct World[*component_types: ComponentType]:
         """
         Returns a struct for removing and adding components to an Entity in one go.
 
-        Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, entity=entity)`.
+        Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, comp5, entity=entity)`.
+
+        The number of removed components does not need to match the number of added components.
 
         Parameters:
             Ts: The types of the components to remove.
