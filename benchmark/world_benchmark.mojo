@@ -405,7 +405,7 @@ fn prevent_inlining_add_remove_5_comp() raises:
     ](entity)
 
 
-fn benchmark_exchange_1_comp_1_000_000(
+fn benchmark_replace_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
@@ -422,14 +422,14 @@ fn benchmark_exchange_1_comp_1_000_000(
             for i in range(20):
                 component = FlexibleComponent[i + 1](1.0, 2.0)
                 for entity in entities:
-                    world.remove_and[FlexibleComponent[i]]().add(
+                    world.replace[FlexibleComponent[i]]().by(
                         entity[], component
                     )
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_exchange_1_comp_1_000_000_extra(
+fn benchmark_replace_1_comp_1_000_000_extra(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -445,13 +445,13 @@ fn benchmark_exchange_1_comp_1_000_000_extra(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_exchange() raises:
+fn prevent_inlining_replace() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = World[Position, Velocity]()
     entity = world.add_entity(vel)
-    world.remove_and[Velocity]().add(entity, pos)
-    world.remove_and[Position]().add(entity, vel)
+    world.replace[Velocity]().by(entity, pos)
+    world.replace[Position]().by(entity, vel)
 
 
 fn run_all_world_benchmarks() raises:
@@ -494,8 +494,8 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_remove_5_comp_1_000_000](
         BenchId("10^6 * add & remove 5 components")
     )
-    bench.bench_function[benchmark_exchange_1_comp_1_000_000](
-        BenchId("10^6 * exchange 1 component")
+    bench.bench_function[benchmark_replace_1_comp_1_000_000](
+        BenchId("10^6 * replace 1 component")
     )
 
     # Functions to prevent inlining
@@ -509,7 +509,7 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     prevent_inlining_get_ptr()
     prevent_inlining_set_1_comp()
     prevent_inlining_set_5_comp()
-    prevent_inlining_exchange()
+    prevent_inlining_replace()
     prevent_inlining_add_remove_5_comp()
 
 

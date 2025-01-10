@@ -21,7 +21,9 @@ from .lock import LockMask
 
 
 @value
-struct _Adder[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
+struct _Replacer[
+    mut: MutableOrigin, size: Int, *component_types: ComponentType
+]:
     """
     Adder is a helper struct for removing and adding components to an [Entity].
 
@@ -37,7 +39,7 @@ struct _Adder[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
     var _world: Pointer[World[*component_types], mut]
     var _remove_ids: InlineArray[World[*component_types].Id, size]
 
-    fn add[
+    fn by[
         *AddTs: ComponentType
     ](self, entity: Entity, *components: *AddTs) raises:
         """
@@ -596,9 +598,9 @@ struct World[*component_types: ComponentType]:
         )
 
     @always_inline
-    fn remove_and[
+    fn replace[
         *Ts: ComponentType
-    ](mut self) -> _Adder[
+    ](mut self) -> _Replacer[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
@@ -606,12 +608,12 @@ struct World[*component_types: ComponentType]:
         """
         Returns a struct for removing and adding components to an Entity in one go.
 
-        Use as world.remove_and[Comp1, Comp2]().add(comp3, comp4).
+        Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, entity=entity)`.
 
         Parameters:
             Ts: The types of the components to remove.
         """
-        return _Adder[
+        return _Replacer[
             __origin_of(self),
             VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
             *component_types,
