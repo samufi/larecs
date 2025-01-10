@@ -97,7 +97,7 @@ fn main() raises:
         # and add a velocity component to the entity
         world.remove_and[IsStatic]().add(entity, Velocity(2, 2))
 
-    # We can query entiteis with specific components
+    # We can query entities with specific components
     for entity in world.query[Position, Velocity]():
         # use get_ptr to get a pointer to a specific component
         position = entity.get_ptr[Position]()
@@ -118,7 +118,7 @@ Larecs currently only supports trivial types as components, i.e., structs
 that have a fixed size in memory. Using types with heap-allocated memory will
 result in memory leaks and / or undefined behaviour, and as of now there is no
 good way to enforce that only compatible types are used. 
-Hence, it is to the user to take care of this.
+Hence, it is up to the user to take care of this.
 
 Note that using types with heap-allocated memory is typically a bad idea for
 ECS and should be avoided anyway.
