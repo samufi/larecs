@@ -25,7 +25,7 @@ struct _Replacer[
     mut: MutableOrigin, size: Int, *component_types: ComponentType
 ]:
     """
-    Adder is a helper struct for removing and adding components to an [Entity].
+    Replacer is a helper struct for removing and adding components to an [Entity].
 
     It stores the components to remove and allows adding new components
     in one go.
