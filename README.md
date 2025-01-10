@@ -28,7 +28,7 @@ This includes `magic install`, so it is okay to omit the former step.
 
 ### Build the package
 
-You can build larecs as a package as follows:
+You can build Larecs as a package as follows:
 
 1. Clone the repository / download the files.
 2. Navigate to the `src/` subfolder.
@@ -37,14 +37,14 @@ You can build larecs as a package as follows:
 
 ### Include source directly for compiler and LSP
 
-To better see what larecs does, access the source while debugging, and adjust the larecs 
+To better see what Larecs does, access the source while debugging, and adjust the Larecs 
 source, you can include it into the run command as follows:
 
 ```
 mojo run -I "path/to/larecs/src" example.mojo
 ```
 
-To let VSCode and the LSP know of larecs, include it as follows:
+To let VSCode and the LSP know of Larecs, include it as follows:
 
 1. Go to VSCode's `File -> Preferences -> Settings` page.
 2. Go to the `Extensions -> Mojo` section.
@@ -93,9 +93,9 @@ fn main() raises:
         # For example, we may want to change the entity's position
         world.get[Position](entity).x = 2
 
-        # Or we may want to remove the IsStatic component
-        # and add a velocity component to the entity
-        world.replace[IsStatic]().add(entity, Velocity(2, 2))
+        # Or we may want to replace the IsStatic component
+        # of the entity by a Velocity component
+        world.replace[IsStatic]().by(Velocity(2, 2), entity=entity)
 
     # We can query entities with specific components
     for entity in world.query[Position, Velocity]():
@@ -125,15 +125,15 @@ ECS and should be avoided anyway.
 
 ### Inefficient dictionary for first-time archetype lookup
 
-Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo, larecs uses a very 
+Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo, Larecs uses a very 
 inefficient dict implementation for first-time archetype lookup. 
 As long as the number of component combinations (archetypes) is limited,
 this issue is insignificant. The problem will be fixed as soon as possible.
 
 ## Next steps
 
-The goal of larecs is to provide a user-friendly ECS with maximal efficiency. 
-In the near future, larecs will take the following steps:
+The goal of Larecs is to provide a user-friendly ECS with maximal efficiency. 
+In the near future, Larecs will take the following steps:
 - Add built-in support for [resources](https://mlange-42.github.io/arche/guide/resources/) 
   and [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - Build an online API documentation.

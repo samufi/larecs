@@ -64,6 +64,31 @@ struct _Replacer[
             self._remove_ids,
         )
 
+    fn by[
+        *AddTs: ComponentType
+    ](self, *components: *AddTs, entity: Entity) raises:
+        """
+        Removes and adds the components to an [Entity].
+
+        Parameters:
+            AddTs: The types of the components to add.
+
+        Args:
+            components: The components to add.
+            entity:     The entity to modify.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._world[]._remove_and_add[*AddTs](
+            entity,
+            components,
+            self._remove_ids,
+        )
+
 
 struct World[*component_types: ComponentType]:
     """
@@ -570,6 +595,26 @@ struct World[*component_types: ComponentType]:
         Args:
             entity:         The entity to modify.
             add_components: The components to add.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called on a locked world. Do not use during [Query] iteration.
+        """
+        self._remove_and_add(entity, add_components)
+
+    fn add[
+        *Ts: ComponentType
+    ](mut self, *add_components: *Ts, entity: Entity) raises:
+        """
+        Adds components to an [Entity].
+
+        Parameters:
+            Ts: The types of the components to add.
+
+        Args:
+            add_components: The components to add.
+            entity:         The entity to modify.
 
         Raises:
             Error: when called for a removed (and potentially recycled) entity.
