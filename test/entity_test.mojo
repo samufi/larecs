@@ -1,6 +1,5 @@
 from testing import *
 from collections import InlineArray
-from custom_benchmark import Bencher, keep, Bench, BenchId, BenchConfig
 from larecs.entity import Entity, EntityIndex
 from larecs.archetype import Archetype
 
@@ -18,16 +17,6 @@ def test_zero_entity():
     assert_false(Entity(1, 0).is_zero())
 
 
-fn benchmark_entity_is_zero(mut bencher: Bencher) capturing:
-    e = Entity()
-
-    @parameter
-    fn bench_fn(calls: Int) capturing -> Int:
-        for _ in range(calls):
-            keep(e.is_zero())
-        return calls
-
-    bencher.iter_custom[bench_fn]()
 
 
 # TODO
