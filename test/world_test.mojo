@@ -58,7 +58,7 @@ def test_get_archetype_index():
 
     fn get_index[T: ComponentType]() capturing raises -> Int:
         return world._get_archetype_index(
-            world._component_manager.get_info_arr[T]()
+            world._component_manager.get_id_arr[T]()
         )
 
     fn get_index[
@@ -183,11 +183,11 @@ def test_world_remove():
     # Test swapping
     entity1 = world.add_entity(pos, vel)
     entity2 = world.add_entity(pos, vel)
-    index1 = world._entities[int(entity1.id)].index
-    index2 = world._entities[int(entity2.id)].index
+    index1 = world._entities[entity1.id].index
+    index2 = world._entities[entity2.id].index
     assert_not_equal(index1, index2)
     world.remove[Position](entity1)
-    assert_equal(index1, world._entities[int(entity2.id)].index)
+    assert_equal(index1, world._entities[entity2.id].index)
 
 
 def test_remove_and_add():

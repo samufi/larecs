@@ -104,7 +104,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 1st removal. Entity is "
-                + str(p._entities[int(e.id)]),
+                + str(p._entities[e.id]),
             )
 
         for _ in range(10):
@@ -119,7 +119,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 1st recycling. Entity is "
-                + str(p._entities[int(e.id)]),
+                + str(p._entities[e.id]),
             )
 
         assert_equal(0, p._available, "No more _entities should be available")
@@ -140,7 +140,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 2nd removal. Entity is "
-                + str(p._entities[int(e.id)]),
+                + str(p._entities[e.id]),
             )
 
 
@@ -150,7 +150,7 @@ def test_bit_pool():
     assert_equal(p.capacity, 256)
 
     for i in range(p.capacity):
-        assert_equal(i, int(p.get()))
+        assert_equal(i, Int(p.get()))
 
     with assert_raises():
         _ = p.get()
@@ -159,7 +159,7 @@ def test_bit_pool():
         p.recycle(i)
 
     for i in range(9, -1, -1):
-        assert_equal(i, int(p.get()))
+        assert_equal(i, Int(p.get()))
 
     with assert_raises():
         _ = p.get()
@@ -167,7 +167,7 @@ def test_bit_pool():
     p.reset()
 
     for i in range(p.capacity):
-        assert_equal(i, int(p.get()))
+        assert_equal(i, Int(p.get()))
 
     with assert_raises():
         _ = p.get()
@@ -176,7 +176,7 @@ def test_bit_pool():
         p.recycle(i)
 
     for i in range(9, -1, -1):
-        assert_equal(i, int(p.get()))
+        assert_equal(i, Int(p.get()))
 
 
 def test_int_pool():

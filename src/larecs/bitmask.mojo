@@ -50,7 +50,7 @@ struct _BitMaskIndexIter:
 
     @always_inline
     fn __len__(self) -> Int:
-        return int(self._size)
+        return self._size
 
 
 @register_passable
@@ -145,10 +145,10 @@ struct BitMask(Stringable, KeyElement):
 
         Returns False for bit >= Self.total_bits.
         """
-        var index: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * index)
+        var idx: Self.IndexType = bit // 8
+        var offset: Self.IndexType = bit - (8 * idx)
         mask = 1 << offset
-        return (self._bytes[int(index)] & mask) == mask
+        return (self._bytes[index(idx)] & mask) == mask
 
     @always_inline
     fn set(mut self, bit: Self.IndexType, value: Bool):
@@ -161,21 +161,21 @@ struct BitMask(Stringable, KeyElement):
     @always_inline
     fn set[value: Bool](mut self, bit: Self.IndexType):
         """Sets the state of bit at the given index."""
-        var index: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * index)
+        var idx: Self.IndexType = bit // 8
+        var offset: Self.IndexType = bit - (8 * idx)
 
         @parameter
         if value:
-            self._bytes[int(index)] |= 1 << offset
+            self._bytes[index(idx)] |= 1 << offset
         else:
-            self._bytes[int(index)] &= ~(1 << offset)
+            self._bytes[index(idx)] &= ~(1 << offset)
 
     @always_inline
     fn flip(mut self, bit: Self.IndexType):
         """Flips the state of bit at the given index."""
-        var index: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * index)
-        self._bytes[int(index)] ^= 1 << offset
+        var idx: Self.IndexType = bit // 8
+        var offset: Self.IndexType = bit - (8 * idx)
+        self._bytes[index(idx)] ^= 1 << offset
 
     @always_inline
     fn invert(self) -> BitMask:

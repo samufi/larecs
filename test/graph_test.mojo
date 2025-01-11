@@ -62,12 +62,12 @@ def test_get_node_index():
     graph = BitMaskGraph[-1]()
     bit_mask2 = BitMask(0, 2)
     bit_mask1 = BitMask(0)
-    node_index = graph.get_node_index(InlineArray[Int, 2](0, 2))
+    node_index = graph.get_node_index(InlineArray[UInt8, 2](0, 2))
     assert_equal(node_index, 2)
     assert_equal(graph._nodes[1].bit_mask, bit_mask1)
     assert_equal(graph._nodes[node_index].bit_mask, bit_mask2)
 
-    assert_equal(graph.get_node_index(InlineArray[Int, 2](5, 5), 0), 0)
+    assert_equal(graph.get_node_index(InlineArray[UInt8, 2](5, 5), 0), 0)
     assert_equal(graph._nodes[3].bit_mask, BitMask(5))
 
 

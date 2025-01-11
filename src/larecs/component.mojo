@@ -23,47 +23,6 @@ trait ComponentType(Movable):
     pass
 
 
-trait ComponentInformable(Intable):
-    """ComponentInformable is a trait for
-    classes representing component information.
-    """
-
-    @always_inline
-    fn get_id(self) -> UInt8:
-        ...
-
-    @always_inline
-    fn get_size(self) -> UInt32:
-        ...
-
-
-@value
-@register_passable("trivial")
-struct ComponentInfo(ComponentInformable):
-    """ComponentInfo is a class representing information on componnets."""
-
-    alias dType = DType.uint8
-    alias Id = SIMD[Self.dType, 1]
-    var id: Self.Id
-    var size: UInt32
-
-    @staticmethod
-    fn new[T: AnyType](id: Self.Id) -> ComponentInfo:
-        return ComponentInfo(id, sizeof[T]())
-
-    @always_inline
-    fn __int__(self) -> Int:
-        return int(self.id)
-
-    @always_inline
-    fn get_id(self) -> Self.Id:
-        return self.id
-
-    @always_inline
-    fn get_size(self) -> UInt32:
-        return self.size
-
-
 struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
     """ComponentReference is an agnostic reference to ECS components.
 
@@ -217,21 +176,21 @@ struct ComponentManager[*component_types: ComponentType]:
 
     @staticmethod
     @always_inline
-    fn get_info_arr[
+    fn get_size_arr[
         *Ts: ComponentType
     ](
-        out ids: InlineArray[
-            ComponentInfo,
+        out size_arr: InlineArray[
+            UInt32,
             VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         ]
     ):
-        """Get the IDs of multiple component types.
+        """Get the sizes of multiple component types.
 
         Parameters:
             Ts: The component types.
 
         Returns:
-            An InlineArray with the IDs of the component types.
+            An InlineArray with the sizes of the component types.
         """
         alias size = VariadicPack[
             MutableAnyOrigin, ComponentType, *Ts
@@ -239,11 +198,11 @@ struct ComponentManager[*component_types: ComponentType]:
 
         constrain_components_unique[*Ts]()
 
-        ids = InlineArray[ComponentInfo, size](unsafe_uninitialized=True)
+        size_arr = InlineArray[UInt32, size](unsafe_uninitialized=True)
 
         @parameter
         for i in range(size):
-            ids[i] = Self.get_info[Ts[i]]()
+            size_arr[i] = Self.get_size[i]()
 
     @staticmethod
     @always_inline

@@ -3,8 +3,8 @@ from .entity import Entity
 from .constants import MAX_UINT16
 
 
-trait IntableCollectionElement(Intable):
-    fn __init__[IndexerTy: Indexer](out self, value: IndexerTy):
+trait IndexingCollectionElement(Indexer):
+    fn __init__[T: Intable](out self, value: T):
         ...
 
 
@@ -16,7 +16,7 @@ struct EntityPool:
 
     var _entities: List[Entity]
     var _next: EntityId
-    var _available: UInt32
+    var _available: Int
 
     fn __init__(mut self):
         self._entities = List[Entity]()
@@ -30,12 +30,12 @@ struct EntityPool:
             return self._get_new()
 
         curr = self._next
-        self._entities[int(self._next)].id, self._next = (
+        self._entities[self._next].id, self._next = (
             self._next,
-            self._entities[int(self._next)].id,
+            self._entities[self._next].id,
         )
         self._available -= 1
-        return self._entities[int(curr)]
+        return self._entities[curr]
 
     fn _get_new(mut self, out entity: Entity):
         """Allocates and returns a new entity. For internal use."""
@@ -47,8 +47,8 @@ struct EntityPool:
         if enitity.id == 0:
             raise Error("Can't recycle reserved zero entity")
 
-        self._entities[int(enitity.id)].gen += 1
-        self._next, self._entities[int(enitity.id)].id = enitity.id, self._next
+        self._entities[enitity.id].gen += 1
+        self._next, self._entities[enitity.id].id = enitity.id, self._next
         self._available += 1
 
     fn reset(mut self):
@@ -60,11 +60,11 @@ struct EntityPool:
     fn is_alive(self, entity: Entity) -> Bool:
         """Returns whether an entity is still alive, based on the entity's generations.
         """
-        return entity.gen == self._entities[int(entity.id)].gen
+        return entity.gen == self._entities[entity.id].gen
 
     fn __len__(self) -> Int:
         """Returns the current number of used entities."""
-        return len(self._entities) - 1 - int(self._available)
+        return len(self._entities) - 1 - self._available
 
     fn capacity(self) -> Int:
         """Returns the current capacity (used and recycled entities)."""
@@ -72,33 +72,25 @@ struct EntityPool:
 
     fn available(self) -> Int:
         """Returns the current number of available/recycled entities."""
-        return int(self._available)
+        return self._available
 
 
 @value
-struct BitPool[LengthDType: DType = DType.uint16]:
+struct BitPool:
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 
     This implementation uses an implicit list.
-
-    Parameters:
-        LengthDType: The data type of the length attribute of the pool.
-                     This controls how many bits can be stored in the pool,
-                     namely 2 ** (number_of_bits(LengthType) / 2).
     """
 
-    alias LengthType = SIMD[LengthDType, 1]
-
-    # The length must be able to express that the pool is full.
-    # Hence, the capacity must be smaller than the maximum value of the length type.
-    # Since the capacity must be a power of 2, the largest possible capacity is
-    # half of the maximum value.
-    alias capacity = get_max_uint_size_of_half_type[Self.LengthType]()
-
+    alias capacity = Int(UInt8.MAX_FINITE) + 1
     var _bits: SIMD[DType.uint8, Self.capacity]
     var _next: UInt8
-    var _length: Self.LengthType
     var _available: UInt8
+
+    # The length must be able to express that the pool is full.
+    # Hence, the data type must be larger than the index
+    # data type.
+    var _length: UInt16
 
     fn __init__(mut self):
         self._bits = SIMD[DType.uint8, Self.capacity]()
@@ -116,12 +108,12 @@ struct BitPool[LengthDType: DType = DType.uint16]:
             return self._get_new()
 
         curr = self._next
-        self._next, self._bits[int(self._next)] = (
-            self._bits[int(self._next)],
+        self._next, self._bits[index(self._next)] = (
+            self._bits[index(self._next)],
             self._next,
         )
         self._available -= 1
-        return self._bits[int(curr)]
+        return self._bits[index(curr)]
 
     fn _get_new(mut self) raises -> UInt8:
         """Allocates and returns a new bit. For internal use.
@@ -129,21 +121,21 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         Raises:
             Error: If the pool is full.
         """
-        if int(self._length) >= Self.capacity:
+        if self._length >= Self.capacity:
             raise Error(
                 String("Ran out of the capacity of {} bits").format(
                     Self.capacity
                 )
             )
 
-        bit = UInt8(int(self._length))
-        self._bits[int(self._length)] = bit
+        bit = self._length.cast[DType.uint8]()
+        self._bits[index(self._length)] = bit
         self._length += 1
         return bit
 
     fn recycle(mut self, bit: UInt8):
         """Hands a bit back for recycling."""
-        self._next, self._bits[int(bit)] = bit, self._next
+        self._next, self._bits[index(bit)] = bit, self._next
         self._available += 1
 
     fn reset(mut self):
@@ -153,7 +145,7 @@ struct BitPool[LengthDType: DType = DType.uint16]:
         self._available = 0
 
 
-struct IntPool[ElementType: IntableCollectionElement = Int]:
+struct IntPool[ElementType: IndexingCollectionElement = Int]:
     """IntPool is a pool implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
@@ -175,12 +167,12 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
             return self._get_new()
 
         curr = self._next
-        self._next, self._pool[int(self._next)] = (
-            self._pool[int(self._next)],
+        self._next, self._pool[self._next] = (
+            self._pool[self._next],
             self._next,
         )
         self._available -= 1
-        return self._pool[int(curr)]
+        return self._pool[curr]
 
     fn _get_new(mut self) -> ElementType:
         """Allocates and returns a new entity. For internal use."""
@@ -190,7 +182,7 @@ struct IntPool[ElementType: IntableCollectionElement = Int]:
 
     fn recycle(mut self, element: ElementType):
         """Hands an entity back for recycling."""
-        self._next, self._pool[int(element)] = element, self._next
+        self._next, self._pool[element] = element, self._next
         self._available += 1
 
     fn reset(mut self):
