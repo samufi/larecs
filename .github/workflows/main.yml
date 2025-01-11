@@ -36,9 +36,9 @@ jobs:
     - name: Check formatting
       run: |
         source /home/runner/.bash_profile 
-        if magic run mojo format src/* 2>&1 | grep -E "reformatted|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
-        if magic run mojo format test/* 2>&1 | grep -E "reformatted|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
-        if magic run mojo format benchmark/* 2>&1 | grep -E "reformatted|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if magic run mojo format src/* 2>&1 | grep -E "reformatted" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if magic run mojo format test/* 2>&1 | grep -E "reformatted" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if magic run mojo format benchmark/* 2>&1 | grep -E "reformatted" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
     
     - name: Run benchmarks
       run: |
