@@ -170,12 +170,6 @@ struct ComponentManager[*component_types: ComponentType]:
 
     @staticmethod
     @always_inline
-    fn get_info[T: ComponentType]() -> ComponentInfo:
-        """Get the info of a component type."""
-        return ComponentInfo.new[T](Self.get_id[T]())
-
-    @staticmethod
-    @always_inline
     fn get_size_arr[
         *Ts: ComponentType
     ](
@@ -233,15 +227,4 @@ struct ComponentManager[*component_types: ComponentType]:
         Parameters:
             i: The ID of the component type.
         """
-
-        # @parameter
-        # if _type_is_eq[Int, component_types[i]]():
-        #     return i
-        # return 0
-        @parameter
-        for j in range(len(VariadicList(component_types))):
-
-            @parameter
-            if i == j:
-                return sizeof[component_types[j]]()
-        return 0
+        return sizeof[component_types[i]]()
