@@ -162,7 +162,11 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn _get_archetype_index[
         size: Int
-    ](mut self, components: InlineArray[ComponentInfo, size],) -> Int:
+    ](
+        mut self,
+        components: InlineArray[Self.Id, size],
+        sizes: InlineArray[UInt32, size],
+    ) -> Int:
         """Returns the archetype list index of the archetype differing from
         the archetype at the start node by the given indices.
 
@@ -173,6 +177,7 @@ struct World[*component_types: ComponentType]:
 
         Args:
             components:       The components that distinguish the archetypes.
+            sizes:            The sizes of the components.
 
         Returns:
             The archetype list index of the archetype differing from the start
@@ -187,6 +192,7 @@ struct World[*component_types: ComponentType]:
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
                 components,
+                sizes,
             )
         )
 
@@ -279,18 +285,21 @@ struct World[*component_types: ComponentType]:
 
         alias size = components.__len__()
 
-        component_info = self._component_manager.get_info_arr[*Ts]()
-        archetype_index = self._get_archetype_index(component_info)
+        component_ids = self._component_manager.get_id_arr[*Ts]()
+        component_sizes = self._component_manager.get_size_arr[*Ts]()
+        archetype_index = self._get_archetype_index(
+            component_ids, component_sizes
+        )
         entity = self._create_entity(archetype_index)
-        index_in_archetype = self._entities[int(entity.id)].index
+        index_in_archetype = self._entities[entity.id].index
 
         archetype = self._archetypes.get_ptr(archetype_index)
 
         @parameter
         for i in range(size):
             archetype[].unsafe_set(
-                int(index_in_archetype),
-                component_info[i].id,
+                index_in_archetype,
+                component_ids[i],
                 UnsafePointer.address_of(components[i]).bitcast[UInt8](),
             )
 
@@ -376,9 +385,9 @@ struct World[*component_types: ComponentType]:
             Error: If the entity does not exist.
         """
         self._assert_alive(entity)
-        entity_index = self._entities[int(entity.id)]
-        self._archetypes[int(entity_index.archetype_index)].set(
-            int(entity_index.index),
+        entity_index = self._entities[entity.id]
+        self._archetypes[entity_index.archetype_index].set(
+            entity_index.index,
             self._component_manager.get_ref(component),
         )
 
@@ -401,13 +410,13 @@ struct World[*component_types: ComponentType]:
         constrain_components_unique[*Ts]()
 
         self._assert_alive(entity)
-        entity_index = self._entities[int(entity.id)]
-        archetype = self._archetypes.get_ptr(int(entity_index.archetype_index))
+        entity_index = self._entities[entity.id]
+        archetype = self._archetypes.get_ptr(entity_index.archetype_index)
 
         @parameter
         for i in range(components.__len__()):
             archetype[].set(
-                int(entity_index.index),
+                entity_index.index,
                 self._component_manager.get_ref(components[i]),
             )
 
@@ -419,13 +428,13 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
-        entity_index = self._entities[int(entity.id)]
+        entity_index = self._entities[entity.id]
         self._assert_alive(entity)
 
         return (
-            self._archetypes[int(entity_index.archetype_index)]
+            self._archetypes[entity_index.archetype_index]
             .get_component_ptr(
-                int(entity_index.index),
+                entity_index.index,
                 self._component_manager.get_id[T](),
             )
             .bitcast[T]()[0]
@@ -442,12 +451,12 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
-        entity_index = self._entities[int(entity.id)]
+        entity_index = self._entities[entity.id]
         self._assert_alive(entity)
         return Pointer[origin = __origin_of(self._archetypes[0])].address_of(
-            self._archetypes[int(entity_index.archetype_index)]
+            self._archetypes[entity_index.archetype_index]
             .get_component_ptr(
-                int(entity_index.index),
+                entity_index.index,
                 self._component_manager.get_id[T](),
             )
             .bitcast[T]()[0]
@@ -487,8 +496,8 @@ struct World[*component_types: ComponentType]:
         self._assert_unlocked()
         self._assert_alive(entity)
 
-        index = self._entities[int(entity.id)]
-        old_archetype_index = int(index.archetype_index)
+        idx = self._entities[entity.id]
+        old_archetype_index = idx.archetype_index
         old_archetype = self._archetypes.get_ptr(old_archetype_index)
 
         # if self._listener != nil:
@@ -507,13 +516,13 @@ struct World[*component_types: ComponentType]:
         #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
         #         self.unlock(lock)
 
-        swapped = old_archetype[].remove(int(index.index))
+        swapped = old_archetype[].remove(idx.index)
 
         self._entity_pool.recycle(entity)
 
         if swapped:
-            swap_entity = old_archetype[].get_entity(int(index.index))
-            self._entities[int(swap_entity.id)].index = index.index
+            swap_entity = old_archetype[].get_entity(idx.index)
+            self._entities[swap_entity.id].index = idx.index
 
     @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
@@ -567,7 +576,7 @@ struct World[*component_types: ComponentType]:
         """
         self._assert_alive(entity)
         return self._archetypes[
-            int(self._entities[int(entity.id)].archetype_index)
+            self._entities[entity.id].archetype_index
         ].has_component(self._component_manager.get_id[T]())
 
     # fn HasUnchecked(self, entity: Entity, comp: Id) -> bool:
@@ -721,11 +730,11 @@ struct World[*component_types: ComponentType]:
         if not add_size and not rem_size:
             return
 
-        index = self._entities[int(entity.id)]
+        idx = self._entities[entity.id]
 
-        old_archetype_index = int(index.archetype_index)
+        old_archetype_index = idx.archetype_index
         old_archetype = self._archetypes.get_ptr(old_archetype_index)
-        index_in_old_archetype = index.index
+        index_in_old_archetype = idx.index
 
         var component_ids: Optional[InlineArray[Self.Id, add_size]] = None
 
@@ -800,7 +809,7 @@ struct World[*component_types: ComponentType]:
                 index_in_archetype,
                 id,
                 old_archetype[]._get_component_ptr(
-                    int(index_in_old_archetype), old_archetype[]._ids[i]
+                    index(index_in_old_archetype), old_archetype[]._ids[i]
                 ),
             )
 
@@ -812,12 +821,12 @@ struct World[*component_types: ComponentType]:
                 UnsafePointer.address_of(add_components[i]).bitcast[UInt8](),
             )
 
-        swapped = old_archetype[].remove(int(index_in_old_archetype))
+        swapped = old_archetype[].remove(index_in_old_archetype)
         if swapped:
-            var swapEntity = old_archetype[].get_entity(int(index.index))
-            self._entities[int(swapEntity.id)].index = index.index
+            var swapEntity = old_archetype[].get_entity(idx.index)
+            self._entities[swapEntity.id].index = idx.index
 
-        self._entities[int(entity.id)] = EntityIndex(
+        self._entities[entity.id] = EntityIndex(
             index_in_archetype, archetype_index
         )
 
@@ -1198,7 +1207,7 @@ struct World[*component_types: ComponentType]:
         if entity.id == len(self._entities):
             self._entities.append(EntityIndex(idx, archetype_index))
         else:
-            self._entities[int(entity.id)] = EntityIndex(idx, archetype_index)
+            self._entities[entity.id] = EntityIndex(idx, archetype_index)
 
     @always_inline
     fn _create_entities[
@@ -1212,10 +1221,10 @@ struct World[*component_types: ComponentType]:
         last_entity_id = archetype.get_entity(arch_start_idx + count).id
         if last_entity_id > len(self._entities):
             self._entities.resize(
-                int(last_entity_id), EntityIndex(0, archetype_index)
+                index(last_entity_id), EntityIndex(0, archetype_index)
             )
         for i in range(arch_start_idx, arch_start_idx + count):
-            entity_id = int(archetype.get_entity(i).id)
+            entity_id = archetype.get_entity(i).id
             self._entities[entity_id].archetype_index = archetype_index
             self._entities[entity_id].index = arch_start_idx + i
 

@@ -54,8 +54,8 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     @always_inline
     fn __hash__(self, out output: UInt):
         """Returns a unique hash."""
-        output = int(self.id)
-        output |= bit_reverse(int(self.gen))
+        output = Int(self.id)
+        output |= bit_reverse(Int(self.gen))
 
     @always_inline
     fn is_zero(self) -> Bool:

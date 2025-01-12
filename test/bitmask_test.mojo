@@ -31,8 +31,8 @@ fn unique(l: List[UInt8], out result: List[UInt8]):
     mask = InlineArray[Bool, 256](0)
     result = List[UInt8]()
     for v in l:
-        if not mask[int(v[])]:
-            mask[int(v[])] = True
+        if not mask[v[]]:
+            mask[v[]] = True
             result.append(v[])
 
 

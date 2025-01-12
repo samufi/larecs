@@ -132,23 +132,29 @@ struct ChainedArrayList[
         return len(self) > 0
 
     @always_inline
-    fn __getitem__(
-        ref [_]self: Self, owned idx: Int
-    ) -> ref [self] Self.ElementType:
+    fn __getitem__[
+        T: Indexer
+    ](ref [_]self: Self, owned idx: T) -> ref [self] Self.ElementType:
         """Get a `Pointer` to the element at the given index.
 
         Args:
             idx: The index of the item.
 
+        Parameters:
+            T: The type of the index.
+
         Returns:
             A reference to the item at the given index.
         """
         debug_assert(
-            0 <= idx < len(self._is_alive), "Index must be within bounds."
+            0 <= Int(idx) < len(self._is_alive), "Index must be within bounds."
         )
         debug_assert(self._is_alive[idx], "Element must be alive.")
 
-        return (self._pages[idx // Self.page_size] + idx % Self.page_size)[]
+        return (
+            self._pages[index(idx) // Self.page_size]
+            + index(idx) % Self.page_size
+        )[]
 
     @always_inline
     fn remove(mut self: Self, owned idx: Int):
@@ -169,13 +175,18 @@ struct ChainedArrayList[
         self._is_alive[idx] = False
 
     @always_inline
-    fn get_ptr(
-        ref [_]self: Self, owned idx: Int
-    ) -> Pointer[Self.ElementType, __origin_of(self)]:
+    fn get_ptr[
+        T: Indexer
+    ](ref [_]self: Self, idx: T) -> Pointer[
+        Self.ElementType, __origin_of(self)
+    ]:
         """Get a `Pointer` to the element at the given index.
 
         Args:
             idx: The index of the item.
+
+        Parameters:
+            T: The type of the index.
 
         Returns:
             A reference to the item at the given index.
@@ -185,7 +196,7 @@ struct ChainedArrayList[
     # @always_inline
     # fn __iter__(
     #     ref [_]self: Self,
-    # ) -> _ChainedArrayListIter[ElementType, page_size, __origin_of(self)]:
+    # ) -> _ChainedArrayListIter[ElementType, page_size, __origin_of(self]:
     #     """Iterate over elements of the list, returning immutable references.
 
     #     Returns:

@@ -108,9 +108,9 @@ struct BitMaskGraph[
         return len(self._nodes) - 1
 
     @always_inline
-    fn create_link(
-        mut self, from_node_index: Int, changed_bit: BitMask.IndexType
-    ) -> Int:
+    fn create_link[
+        T: Indexer
+    ](mut self, from_node_index: T, changed_bit: BitMask.IndexType) -> Int:
         """Creates a link between two nodes.
 
         Note: this does not check whether the link is already established.
@@ -118,6 +118,9 @@ struct BitMaskGraph[
         Args:
             from_node_index: The index of the node from which the link is created.
             changed_bit:     The index of the bit that differs between the nodes.
+
+        Parameters:
+            T: The type of the index of the node from which the link is created.
 
         Returns:
             The index of the node to which the link is created.
@@ -130,21 +133,19 @@ struct BitMaskGraph[
         else:
             to_node_index = self.add_node(new_mask)
 
-        self._nodes[from_node_index].neighbours[
-            int(changed_bit)
-        ] = to_node_index
-        self._nodes[to_node_index].neighbours[
-            int(changed_bit)
-        ] = from_node_index
+        self._nodes[from_node_index].neighbours[changed_bit] = to_node_index
+        self._nodes[to_node_index].neighbours[changed_bit] = index(
+            from_node_index
+        )
 
         return to_node_index
 
     fn get_node_index[
-        T: Intable, size: Int
+        size: Int
     ](
         mut self,
-        different_bits: InlineArray[T, size],
-        start_node_index: Int = 0,
+        different_bits: InlineArray[BitMask.IndexType, size],
+        start_node_index: UInt = 0,
     ) -> Int:
         """Returns the index of the node differing from the start node
         by the given indices.
@@ -152,7 +153,6 @@ struct BitMaskGraph[
         If necessary, creates a new node and links it to the start node.
 
         Parameters:
-            T:                The type of the indices.
             size:             The number of indices.
 
         Args:
@@ -167,19 +167,19 @@ struct BitMaskGraph[
         @parameter
         for i in range(size):
             var next_node = self._nodes[current_node].neighbours[
-                int(different_bits[i])
+                different_bits[i]
             ]
             if next_node == Self.null_index:
-                next_node = self.create_link(
-                    current_node, int(different_bits[i])
-                )
+                next_node = self.create_link(current_node, different_bits[i])
             current_node = next_node
         return current_node
 
     @always_inline
-    fn get_node_mask(
-        self: Self, node_index: Int
-    ) -> ref [self._nodes[node_index].bit_mask] BitMask:
+    fn get_node_mask[
+        T: Indexer
+    ](self: Self, node_index: T) -> ref [
+        self._nodes[node_index].bit_mask
+    ] BitMask:
         """Returns the mask of the node at the given index.
 
         Args:
@@ -191,9 +191,11 @@ struct BitMaskGraph[
         return self._nodes[node_index].bit_mask
 
     @always_inline
-    fn __getitem__(
-        ref [_]self: Self, owned node_index: Int
-    ) -> ref [self._nodes[node_index].value] DataType:
+    fn __getitem__[
+        T: Indexer
+    ](ref [_]self: Self, node_index: T) -> ref [
+        self._nodes[node_index].value
+    ] DataType:
         """Returns the value stored in the node at the given index.
 
         Args:
@@ -201,7 +203,7 @@ struct BitMaskGraph[
         """
         return self._nodes[node_index].value
 
-    fn has_value(self: Self, node_index: Int) -> Bool:
+    fn has_value[T: Indexer](self: Self, node_index: T) -> Bool:
         """Returns whether the node at the given index has a value.
 
         Args:

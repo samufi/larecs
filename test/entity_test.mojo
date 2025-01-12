@@ -8,15 +8,13 @@ def test_entity_as_index():
     entity = Entity(1, 0)
     arr = List[Int](0, 1, 2)
 
-    val = arr[int(entity.id)]
+    val = arr[entity.id]
     _ = val
 
 
 def test_zero_entity():
     assert_true(Entity().is_zero())
     assert_false(Entity(1, 0).is_zero())
-
-
 
 
 # TODO

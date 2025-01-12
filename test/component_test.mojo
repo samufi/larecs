@@ -50,12 +50,6 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](
         return "FlexibleDummyComponentType(x: " + str(self.x) + ")"
 
 
-def test_component_info_initialization():
-    info = ComponentInfo.new[DummyComponentType](1)
-    assert_equal(info.id, 1)
-    assert_equal(info.size, 4)
-
-
 def test_component_initialization():
     test_value = DummyComponentType(123)
     component = ComponentReference(1, test_value)
@@ -74,7 +68,7 @@ def test_referencing():
     ptr_1 = UnsafePointer.address_of(dummy_value)
     component = ComponentReference(1, dummy_value)
     ptr_2 = component.get_unsafe_ptr()
-    assert_equal(int(ptr_1), int(ptr_2))
+    assert_equal(Int(ptr_1), Int(ptr_2))
 
 
 def test_origin():
@@ -99,13 +93,6 @@ def test_component_reference_move():
     assert_not_equal(moved_component._data, UnsafePointer[UInt8]())
 
 
-def test_component_manager_get_info():
-    manager = ComponentManager[DummyComponentType]()
-    info = manager.get_info[DummyComponentType]()
-    assert_equal(info.id, 0)
-    assert_equal(info.size, sizeof[DummyComponentType]())
-
-
 def test_component_manager_get_ref():
     manager = ComponentManager[
         DummyComponentType, FlexibleDummyComponentType[1]
@@ -117,29 +104,25 @@ def test_component_manager_get_ref():
     assert_equal(component_ref2._id, 1)
 
 
-def test_component_manager_get_info_arr():
+def test_component_manager_get_size_arr():
     manager = ComponentManager[
         DummyComponentType, FlexibleDummyComponentType[1]
     ]()
-    info_arr = manager.get_info_arr[
+    size_arr = manager.get_size_arr[
         DummyComponentType, FlexibleDummyComponentType[1]
     ]()
-    assert_equal(info_arr[0].id, 0)
-    assert_equal(info_arr[1].id, 1)
-    assert_equal(info_arr[0].size, sizeof[DummyComponentType]())
-    assert_equal(info_arr[1].size, sizeof[FlexibleDummyComponentType[1]]())
+    assert_equal(size_arr[0], sizeof[DummyComponentType]())
+    assert_equal(size_arr[1], sizeof[FlexibleDummyComponentType[1]]())
 
 
 def main():
-    test_component_info_initialization()
     test_component_initialization()
     test_component_value_getting()
     test_referencing()
     test_origin()
     test_component_reference_copy()
     test_component_reference_move()
-    test_component_manager_get_info()
     test_component_manager_get_ref()
-    test_component_manager_get_info_arr()
+    test_component_manager_get_size_arr()
 
     print("All tests passed.")
