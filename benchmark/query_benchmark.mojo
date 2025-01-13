@@ -2,7 +2,7 @@ from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 from custom_benchmark import DefaultBench
 from larecs.world import World
 from larecs.entity import Entity
-from larecs.component import ComponentType, ComponentInfo
+from larecs.component import ComponentType
 from larecs.test_utils import *
 
 

@@ -6,7 +6,7 @@ from python import Python
 
 
 fn update(mut world: World, parameters: Parameters, step: Float64) raises:
-    for _ in range(int(step / parameters.dt)):
+    for _ in range(Int(step / parameters.dt)):
         move(world, parameters)
         accellerate(world, parameters)
 

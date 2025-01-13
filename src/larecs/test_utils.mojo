@@ -21,7 +21,7 @@ fn get_random_bitmask_list(
     list.reserve(count)
     for _ in range(count):
         bytes = SIMD[DType.uint64, 4]()
-        bytes[0] = int(random.random_ui64(range_start, range_end))
+        bytes[0] = Int(random.random_ui64(range_start, range_end))
         list.append(
             BitMask(
                 bytes=UnsafePointer.address_of(bytes).bitcast[

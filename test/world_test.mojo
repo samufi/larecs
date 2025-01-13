@@ -2,7 +2,7 @@ from testing import *
 
 from larecs.world import World
 from larecs.entity import Entity
-from larecs.component import ComponentType, ComponentInfo
+from larecs.component import ComponentType
 
 from larecs.test_utils import *
 

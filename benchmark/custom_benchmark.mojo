@@ -166,7 +166,7 @@ struct Bench:
                 bencher.num_iters *= 2
             else:
                 bencher.num_iters = (
-                    int(
+                    Int(
                         bencher.num_iters
                         * self.config.min_iter_runtime_ns
                         / time_passed
