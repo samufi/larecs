@@ -11,7 +11,6 @@ from .chained_array_list import ChainedArrayList
 from .debug_utils import debug_warn
 from .component import (
     ComponentManager,
-    ComponentInfo,
     ComponentType,
     constrain_components_unique,
 )
@@ -794,8 +793,8 @@ struct World[*component_types: ComponentType]:
         # Uncomment this if there is a workaround.
         # old_archetype[].unsafe_copy_to(
         #     archetype[],
-        #     int(index_in_old_archetype),
-        #     int(index),
+        #     index_in_old_archetype,
+        #     index,
         # )
         for i in range(old_archetype[]._component_count):
             id = old_archetype[]._ids[i]

@@ -1,0 +1,67 @@
+name: Publish API docs
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+env:
+  MODO_VERSION: v0.2.0
+  MDBOOK_VERSION: v0.4.43
+
+jobs:
+
+  publish:
+    name: Publish API docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Larecs
+        uses: actions/checkout@v3
+      - name: Install magic CLI
+        run: |
+          curl -ssL https://magic.modular.com | bash
+          source /home/runner/.bash_profile
+      - name: Install mojo and dependencies
+        run: |
+          source /home/runner/.bash_profile
+          magic install --locked
+          
+      - name: Download Modo
+        run: |
+          curl -sSL https://github.com/mlange-42/modo/releases/download/${{env.MODO_VERSION}}/modo-${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz
+      - name: Download mdBook
+        run: |
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/${{env.MDBOOK_VERSION}}/mdbook-${{env.MDBOOK_VERSION}}-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+
+      - name: Generate JSON docs
+        run: |
+          source /home/runner/.bash_profile
+          magic run mojo doc -o larecs.json src/larecs
+      - name: Create Markdown
+        run: |
+          ./modo markdown -i larecs.json --mdbook
+
+      - name: Run mdBook
+        run: |
+          ./mdbook build markdown --dest-dir ../public
+
+      - name: Archive Markdown artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown
+          path: markdown
+      - name: Archive HTML artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: public
+          path: public
+
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: gh-pages
+          build_dir: public
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

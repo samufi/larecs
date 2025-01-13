@@ -3,7 +3,7 @@ from custom_benchmark import DefaultBench
 from larecs.test_utils import *
 from larecs.world import World
 from larecs.entity import Entity
-from larecs.component import ComponentType, ComponentInfo
+from larecs.component import ComponentType
 
 
 fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
