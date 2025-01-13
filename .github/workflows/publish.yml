@@ -40,11 +40,11 @@ jobs:
           magic run mojo doc -o larecs.json src/larecs
       - name: Create Markdown
         run: |
-          modo markdown -i larecs.json --mdbook
+          ./modo markdown -i larecs.json --mdbook
 
       - name: Run mdBook
         run: |
-          mdbook build markdown --dest-dir ../public
+          ./mdbook build markdown --dest-dir ../public
 
       - name: Archive Markdown artifacts
         uses: actions/upload-artifact@v4
