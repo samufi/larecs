@@ -136,7 +136,6 @@ The goal of Larecs is to provide a user-friendly ECS with maximal efficiency.
 In the near future, Larecs will take the following steps:
 - Add built-in support for [resources](https://mlange-42.github.io/arche/guide/resources/) 
   and [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
-- Build an online API documentation.
 - Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
 - Add further options to filter entities (e.g. "does not have component").
 - Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo.
