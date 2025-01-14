@@ -19,12 +19,11 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     """Entity identifier.
     Holds an entity ID and it's generation for recycling.
 
-    Entities are only created via the [World], using [World.NewEntity] or [World.NewEntityWith].
-    Batch creation of entities is possible via [Builder].
+    Entities are only created via the [..world.World], using [..world.World.add_entity].
 
     ⚠️ Important:
     Entities are intended to be stored and passed around via copy, not via pointers!
-    The zero value should be used to indicate "nil", and can be checked with [Entity.is_zero].
+    The zero value should be used to indicate "nil", and can be checked with [.Entity.is_zero].
     """
 
     var id: EntityId  # Entity ID
