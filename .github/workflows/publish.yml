@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: v0.2.0
+  MODO_VERSION: v0.3.0
   MDBOOK_VERSION: v0.4.43
 
 jobs:

@@ -55,7 +55,7 @@ struct _Replacer[
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be added because they are already present.
             Error: when called with components that can't be removed because they are not present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._world[]._remove_and_add[*AddTs](
             entity,
@@ -80,7 +80,7 @@ struct _Replacer[
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be added because they are already present.
             Error: when called with components that can't be removed because they are not present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._world[]._remove_and_add[*AddTs](
             entity,
@@ -94,10 +94,7 @@ struct World[*component_types: ComponentType]:
     World is the central type holding entity and component data, as well as resources.
 
     The World provides all the basic ECS functionality of Larecs,
-    like [World.Query], [World.add_entity], [World.Add], [World.Remove] or [World.RemoveEntity].
-
-    For more advanced functionality, see [World.Relations], [World.Resources],
-    [World.Batch], [World.Cache] and [Builder].
+    like [.World.query], [.World.add_entity], [.World.add], [.World.remove], [.World.get] or [.World.remove_entity].
     """
 
     alias Id = BitMask.IndexType
@@ -131,7 +128,7 @@ struct World[*component_types: ComponentType]:
 
     fn __init__(mut self) raises:
         """
-        Creates a new [World].
+        Creates a new [.World].
         """
         self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
         self._archetypes = ChainedArrayList[Archetype](Archetype())
@@ -243,9 +240,9 @@ struct World[*component_types: ComponentType]:
 
     @always_inline
     fn add_entity(mut self, out entity: Entity) raises:
-        """Returns a new or recycled [Entity].
+        """Returns a new or recycled [..entity.Entity `Entity`].
 
-        Do not use during [Query] iteration!
+        Do not use during [.World.query] iteration!
 
         Returns:
             The new or recycled entity.
@@ -259,13 +256,13 @@ struct World[*component_types: ComponentType]:
     fn add_entity[
         *Ts: ComponentType
     ](mut self, *components: *Ts, out entity: Entity) raises:
-        """Returns a new or recycled [Entity].
+        """Returns a new or recycled [..entity.Entity `Entity`].
 
         The given component types are added to the entity.
-        Do not use during [Query] iteration!
+        Do not use during [.World.query] iteration!
 
         ⚠️ Important:
-        Entities are intended to be stored and passed around via copy, not via pointers! See [Entity].
+        Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity `Entity`].
 
         Parameters:
             Ts: The components to add to the entity.
@@ -274,10 +271,10 @@ struct World[*component_types: ComponentType]:
             components: The components to add to the entity.
 
         Raises:
-            Error: If the world is locked.
+            Error: If the world is [.World.is_locked locked].
 
         Returns:
-            The new or recycled entity.
+            The new or recycled [..entity.Entity `Entity`].
 
         """
         self._assert_unlocked()
@@ -325,13 +322,13 @@ struct World[*component_types: ComponentType]:
         ],
     ) raises:
         """
-        Returns an iterator with accessors to all entities with the given components.
+        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
 
         Returns:
             An iterator with accessors to all entities with the given components.
 
         Raises:
-            Error: If the world is locked.
+            Error: If the world is [.World.is_locked locked].
         """
         iterator = _EntityIterator(
             self._component_manager,
@@ -352,13 +349,16 @@ struct World[*component_types: ComponentType]:
         ],
     ) raises:
         """
-        Returns an iterator with accessors to all entities with the given components.
+        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
 
         Parameters:
             Ts: The types of the components.
 
         Returns:
             An iterator with accessors to all entities with the given components.
+
+        Raises:
+            Error: If the world is [.World.is_locked locked].
         """
         iterator = _EntityIterator(
             self._component_manager,
@@ -371,7 +371,7 @@ struct World[*component_types: ComponentType]:
         T: ComponentType
     ](mut self, entity: Entity, owned component: T) raises:
         """
-        Overwrites a component for an [Entity], using the given content.
+        Overwrites a component for an [..entity.Entity `Entity`], using the given content.
 
         Parameters:
             T:         The type of the component.
@@ -381,7 +381,7 @@ struct World[*component_types: ComponentType]:
             component: The new component.
 
         Raises:
-            Error: If the entity does not exist.
+            Error: If the [..entity.Entity `Entity`] does not exist.
         """
         self._assert_alive(entity)
         entity_index = self._entities[entity.id]
@@ -394,7 +394,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, entity: Entity, owned *components: *Ts) raises:
         """
-        Overwrites a component for an [Entity], using the given content.
+        Overwrites a component for an [..entity.Entity `Entity`], using the given content.
 
         Parameters:
             Ts:        The types of the components.
@@ -422,7 +422,7 @@ struct World[*component_types: ComponentType]:
     fn get[
         T: ComponentType
     ](mut self, entity: Entity) raises -> ref [self._archetypes[0]] T:
-        """Returns a reference to the given component of an [Entity].
+        """Returns a reference to the given component of an [..entity.Entity `Entity`].
 
         Raises:
             Error: If the entity is not alive or does not have the component.
@@ -445,7 +445,7 @@ struct World[*component_types: ComponentType]:
     ](mut self, entity: Entity) raises -> Pointer[
         T, __origin_of(self._archetypes[0])
     ]:
-        """Returns a pointer to the given component of the Entity.
+        """Returns a pointer to the given component of the [..entity.Entity `Entity`].
 
         Raises:
             Error: If the entity is not alive or does not have the component.
@@ -482,9 +482,9 @@ struct World[*component_types: ComponentType]:
 
     fn remove_entity(mut self, entity: Entity) raises:
         """
-        RemoveEntity removes an [Entity], making it eligible for recycling.
+        RemoveEntity removes an [..entity.Entity `Entity`], making it eligible for recycling.
 
-        Do not use during [Query] iteration!
+        Do not use during [.World.query] iteration!
 
         Args:
             entity: The entity to remove.
@@ -526,7 +526,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
         """
-        Alive reports whether an entity is still alive.
+        Alive reports whether an [..entity.Entity `Entity`] is still alive.
 
         Args:
             entity: The entity to check.
@@ -568,7 +568,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
         """
-        Returns whether an [Entity] has a given component.
+        Returns whether an [..entity.Entity `Entity`] has a given component.
 
         Raises:
             Error: If the entity does not exist.
@@ -595,7 +595,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, entity: Entity, *add_components: *Ts) raises:
         """
-        Adds components to an [Entity].
+        Adds components to an [..entity.Entity `Entity`].
 
         Parameters:
             Ts: The types of the components to add.
@@ -607,7 +607,7 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be added because they are already present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add(entity, add_components)
 
@@ -615,7 +615,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, *add_components: *Ts, entity: Entity) raises:
         """
-        Adds components to an [Entity].
+        Adds components to an [..entity.Entity `Entity`].
 
         Parameters:
             Ts: The types of the components to add.
@@ -627,13 +627,13 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be added because they are already present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add(entity, add_components)
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
         """
-        Removes components from an [Entity].
+        Removes components from an [..entity.Entity `Entity`].
 
         Parameters:
             Ts: The types of the components to remove.
@@ -644,7 +644,7 @@ struct World[*component_types: ComponentType]:
         Raises:
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be removed because they are not present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add(
             entity, remove_ids=self._component_manager.get_id_arr[*Ts]()
@@ -687,7 +687,7 @@ struct World[*component_types: ComponentType]:
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
-        Adds and removes components to an [Entity].
+        Adds and removes components to an [..entity.Entity `Entity`].
 
         Parameters:
             Ts:       The types of the components to add.
@@ -702,7 +702,7 @@ struct World[*component_types: ComponentType]:
             Error: when called for a removed (and potentially recycled) entity.
             Error: when called with components that can't be added because they are already present.
             Error: when called with components that can't be removed because they are not present.
-            Error: when called on a locked world. Do not use during [Query] iteration.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add(entity, add_components, remove_ids)
 
@@ -716,7 +716,7 @@ struct World[*component_types: ComponentType]:
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
-        Adds and removes components to an [Entity].
+        Adds and removes components to an [..entity.Entity `Entity`].
 
         See documentation of overloaded function for details.
         """
@@ -903,7 +903,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn is_locked(self) -> Bool:
         """
-        Returns whether the world is locked by any queries.
+        Returns whether the world is locked by any [.World.query queries].
         """
         return self._locks.is_locked()
 
