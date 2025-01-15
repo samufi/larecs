@@ -26,3 +26,11 @@ menu:
       url: "https://github.com/samufi/larecs"
       params:
         icon: github
+
+params:
+  search:
+    enable: true
+    type: flexsearch
+    flexsearch:
+      # index page by: content | summary | heading | title
+      index: content
