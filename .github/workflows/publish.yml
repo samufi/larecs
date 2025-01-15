@@ -45,7 +45,7 @@ jobs:
           ./modo docs/content -i larecs.json --format=hugo
       - name: Run hugo
         run: |
-          hugo -s docs -d public
+          hugo -s docs
 
       - name: Archive Markdown artifacts
         uses: actions/upload-artifact@v4
@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public
-          path: public
+          path: docs/public
 
       - name: Deploy to GitHub Pages
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
