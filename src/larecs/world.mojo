@@ -240,7 +240,7 @@ struct World[*component_types: ComponentType]:
 
     @always_inline
     fn add_entity(mut self, out entity: Entity) raises:
-        """Returns a new or recycled [..entity.Entity `Entity`].
+        """Returns a new or recycled [..entity.Entity].
 
         Do not use during [.World.query] iteration!
 
@@ -256,13 +256,13 @@ struct World[*component_types: ComponentType]:
     fn add_entity[
         *Ts: ComponentType
     ](mut self, *components: *Ts, out entity: Entity) raises:
-        """Returns a new or recycled [..entity.Entity `Entity`].
+        """Returns a new or recycled [..entity.Entity].
 
         The given component types are added to the entity.
         Do not use during [.World.query] iteration!
 
         ⚠️ Important:
-        Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity `Entity`].
+        Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity].
 
         Parameters:
             Ts: The components to add to the entity.
@@ -274,7 +274,7 @@ struct World[*component_types: ComponentType]:
             Error: If the world is [.World.is_locked locked].
 
         Returns:
-            The new or recycled [..entity.Entity `Entity`].
+            The new or recycled [..entity.Entity].
 
         """
         self._assert_unlocked()
@@ -371,7 +371,7 @@ struct World[*component_types: ComponentType]:
         T: ComponentType
     ](mut self, entity: Entity, owned component: T) raises:
         """
-        Overwrites a component for an [..entity.Entity `Entity`], using the given content.
+        Overwrites a component for an [..entity.Entity], using the given content.
 
         Parameters:
             T:         The type of the component.
@@ -381,7 +381,7 @@ struct World[*component_types: ComponentType]:
             component: The new component.
 
         Raises:
-            Error: If the [..entity.Entity `Entity`] does not exist.
+            Error: If the [..entity.Entity] does not exist.
         """
         self._assert_alive(entity)
         entity_index = self._entities[entity.id]
@@ -394,7 +394,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, entity: Entity, owned *components: *Ts) raises:
         """
-        Overwrites a component for an [..entity.Entity `Entity`], using the given content.
+        Overwrites a component for an [..entity.Entity], using the given content.
 
         Parameters:
             Ts:        The types of the components.
@@ -422,7 +422,7 @@ struct World[*component_types: ComponentType]:
     fn get[
         T: ComponentType
     ](mut self, entity: Entity) raises -> ref [self._archetypes[0]] T:
-        """Returns a reference to the given component of an [..entity.Entity `Entity`].
+        """Returns a reference to the given component of an [..entity.Entity].
 
         Raises:
             Error: If the entity is not alive or does not have the component.
@@ -445,7 +445,7 @@ struct World[*component_types: ComponentType]:
     ](mut self, entity: Entity) raises -> Pointer[
         T, __origin_of(self._archetypes[0])
     ]:
-        """Returns a pointer to the given component of the [..entity.Entity `Entity`].
+        """Returns a pointer to the given component of the [..entity.Entity].
 
         Raises:
             Error: If the entity is not alive or does not have the component.
@@ -482,7 +482,7 @@ struct World[*component_types: ComponentType]:
 
     fn remove_entity(mut self, entity: Entity) raises:
         """
-        RemoveEntity removes an [..entity.Entity `Entity`], making it eligible for recycling.
+        RemoveEntity removes an [..entity.Entity], making it eligible for recycling.
 
         Do not use during [.World.query] iteration!
 
@@ -526,7 +526,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
         """
-        Alive reports whether an [..entity.Entity `Entity`] is still alive.
+        Alive reports whether an [..entity.Entity] is still alive.
 
         Args:
             entity: The entity to check.
@@ -568,7 +568,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
         """
-        Returns whether an [..entity.Entity `Entity`] has a given component.
+        Returns whether an [..entity.Entity] has a given component.
 
         Raises:
             Error: If the entity does not exist.
@@ -595,7 +595,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, entity: Entity, *add_components: *Ts) raises:
         """
-        Adds components to an [..entity.Entity `Entity`].
+        Adds components to an [..entity.Entity].
 
         Parameters:
             Ts: The types of the components to add.
@@ -615,7 +615,7 @@ struct World[*component_types: ComponentType]:
         *Ts: ComponentType
     ](mut self, *add_components: *Ts, entity: Entity) raises:
         """
-        Adds components to an [..entity.Entity `Entity`].
+        Adds components to an [..entity.Entity].
 
         Parameters:
             Ts: The types of the components to add.
@@ -633,7 +633,7 @@ struct World[*component_types: ComponentType]:
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
         """
-        Removes components from an [..entity.Entity `Entity`].
+        Removes components from an [..entity.Entity].
 
         Parameters:
             Ts: The types of the components to remove.
@@ -687,7 +687,7 @@ struct World[*component_types: ComponentType]:
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
-        Adds and removes components to an [..entity.Entity `Entity`].
+        Adds and removes components to an [..entity.Entity].
 
         Parameters:
             Ts:       The types of the components to add.
@@ -716,7 +716,7 @@ struct World[*component_types: ComponentType]:
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
-        Adds and removes components to an [..entity.Entity `Entity`].
+        Adds and removes components to an [..entity.Entity].
 
         See documentation of overloaded function for details.
         """
