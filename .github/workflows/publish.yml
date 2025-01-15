@@ -33,7 +33,7 @@ jobs:
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: '{{env.HUGO_VERSION}}'
+          hugo-version: '${{env.HUGO_VERSION}}'
           extended: true
       
       - name: Generate JSON docs
