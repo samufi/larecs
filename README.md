@@ -4,7 +4,7 @@ This is a performance-oriented archetype-based ECS for [Mojo](https://www.modula
 
 Larecs is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
 
-Larecs is still under construction, so the API might change in future versions.
+The Larecs package is still under construction, so the API might change in future versions.
 It can, however, already be used for testing purposes.
 
 ## Installation
@@ -53,9 +53,11 @@ To let VSCode and the language server know of Larecs, include it as follows:
 
 ## Usage
 
+Refer to the [API docs](https://samufi.github.io/larecs/) for details
+on how to use Larecs. 
+
 Below there is a simple example covering the most important functionality.
 Have a look at the `examples` subdirectory for more elaborate examples. 
-A full API reference is still in the making.
 
 ```python
 # Import the package
