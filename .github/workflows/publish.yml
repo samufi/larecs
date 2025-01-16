@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: e9d1486 # 0.4.0
+  MODO_VERSION: 6f7c9c3 # 0.4.0
   HUGO_VERSION: 0.140.2
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
           magic run mojo doc -o larecs.json src/larecs
       - name: Create Markdown
         run: |
-          ./modo/modo docs/content -i larecs.json --format=hugo --short-links
+          ./modo/modo docs/content -i larecs.json --format=hugo --short-links --exports
       - name: Run hugo
         run: |
           hugo -s docs
