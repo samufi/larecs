@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: 6f7c9c3 # 0.4.0
+  MODO_VERSION: 0.6.0
   HUGO_VERSION: 0.140.2
 
 jobs:
@@ -27,24 +27,24 @@ jobs:
           source /home/runner/.bash_profile
           magic install --locked
         
-      - name: Setup Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.23.x'
-      - name: Clone Modo
-        run: |
-          git clone https://github.com/mlange-42/modo.git
-          cd modo
-          git checkout ${{env.MODO_VERSION}}
-      - name: Build Modo
-        run: |
-          cd modo
-          go get .
-          go build .
-          
-      #- name: Download Modo
+      #- name: Setup Go
+      #  uses: actions/setup-go@v3
+      #  with:
+      #    go-version: '1.23.x'
+      #- name: Clone Modo
       #  run: |
-      #    curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz
+      #    git clone https://github.com/mlange-42/modo.git
+      #    cd modo
+      #    git checkout ${{env.MODO_VERSION}}
+      #- name: Build Modo
+      #  run: |
+      #    cd modo
+      #    go get .
+      #    go build .
+          
+      - name: Download Modo
+        run: |
+          curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz
       
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
