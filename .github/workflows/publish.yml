@@ -58,7 +58,7 @@ jobs:
           magic run mojo doc -o larecs.json src/larecs
       - name: Create Markdown
         run: |
-          ./modo/modo docs/content -i larecs.json --exports --short-links --format=hugo --templates=docs/modo
+          ./modo docs/content -i larecs.json --exports --short-links --format=hugo --templates=docs/modo
       - name: Run hugo
         run: |
           hugo -s docs
