@@ -28,3 +28,18 @@
 .content :where(h1, h2, h3, h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) code {
   font-size: 100%;
 }
+
+/* smaller headings */
+.content :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 2.0rem;
+}
+
+.content :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.66rem;
+  margin-top: 2.0rem;
+}
+
+.content :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.4rem;
+  margin-top: 1.66rem;
+}
