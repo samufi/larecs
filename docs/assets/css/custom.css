@@ -1,0 +1,45 @@
+/* paragraph line height */
+.content :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
+  margin-top: 0.66rem;
+  line-height: 1.33rem;
+}
+
+/* list line height */
+.content :where(ul):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-top: 0.66rem;
+}
+
+.content :where(ul):not(:where([class~="not-prose"], [class~="not-prose"] *)) li {
+  margin-top: 0.0rem;
+  margin-bottom: 0.0rem;
+}
+
+/* code blocks */
+.hx-mt-6 {
+  margin-top: 0.66rem;
+}
+
+.hextra-code-block pre {
+  text-wrap: auto;
+  font-size: 1.0em;
+}
+
+/* code in headings */
+.content :where(h1, h2, h3, h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) code {
+  font-size: 100%;
+}
+
+/* smaller headings */
+.content :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 2.0rem;
+}
+
+.content :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.66rem;
+  margin-top: 2.0rem;
+}
+
+.content :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  font-size: 1.4rem;
+  margin-top: 1.66rem;
+}
