@@ -48,7 +48,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     @always_inline
     fn __str__(self) -> String:
-        return "Entity(" + str(self.id) + ", " + str(self.gen) + ")"
+        return "Entity(" + String(self.id) + ", " + String(self.gen) + ")"
 
     @always_inline
     fn __hash__(self, out output: UInt):
