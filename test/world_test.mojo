@@ -10,7 +10,7 @@ from larecs.test_utils import *
 def test_add_entity():
     world = World()
     entity = world.add_entity()
-    assert_true(entity.id == 1)
+    assert_true(entity._id == 1)
     assert_false(entity.is_zero())
 
 
@@ -183,11 +183,11 @@ def test_world_remove():
     # Test swapping
     entity1 = world.add_entity(pos, vel)
     entity2 = world.add_entity(pos, vel)
-    index1 = world._entities[entity1.id].index
-    index2 = world._entities[entity2.id].index
+    index1 = world._entities[entity1._id].index
+    index2 = world._entities[entity2._id].index
     assert_not_equal(index1, index2)
     world.remove[Position](entity1)
-    assert_equal(index1, world._entities[entity2.id].index)
+    assert_equal(index1, world._entities[entity2._id].index)
 
 
 def test_remove_and_add():

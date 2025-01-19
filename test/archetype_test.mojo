@@ -180,7 +180,7 @@ def test_archetype_extend():
     assert_equal(start_index, 5)
     assert_equal(len(archetype), 10)
     for i in range(10):
-        assert_equal(archetype.get_entity(i).id, i + 1)
+        assert_equal(archetype.get_entity(i)._id, i + 1)
 
 
 def test_archetype_get_mask():
