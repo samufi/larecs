@@ -28,12 +28,12 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     var _id: EntityId
     """Entity ID"""
-    var _gen: UInt16
+    var _gen: UInt32
     """Entity generation"""
 
     @doc_private
     @always_inline
-    fn __init__(mut self, id: EntityId = 0, gen: UInt16 = 0):
+    fn __init__(mut self, id: EntityId = 0, gen: UInt32 = 0):
         self._id = id
         self._gen = gen
 
