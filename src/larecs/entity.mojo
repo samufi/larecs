@@ -65,7 +65,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         return self._id
 
     @always_inline
-    fn gen(self) -> UInt16:
+    fn gen(self) -> UInt32:
         """Returns the entity's Generation."""
         return self._gen
 
