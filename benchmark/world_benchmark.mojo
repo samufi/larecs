@@ -12,7 +12,7 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.add_entity()._id)
+            keep(world.add_entity().id())
 
     bencher.iter[bench_fn]()
 
@@ -27,7 +27,7 @@ fn benchmark_add_entity_1_comp_1_000_000(
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.add_entity(pos)._id)
+            keep(world.add_entity(pos).id())
 
     bencher.iter[bench_fn]()
 
@@ -58,7 +58,7 @@ fn benchmark_add_entity_5_comp_1_000_000(
             FlexibleComponent[5],
         ]()
         for _ in range(1_000_000):
-            keep(world.add_entity(c1, c2, c3, c4, c5)._id)
+            keep(world.add_entity(c1, c2, c3, c4, c5).id())
 
     bencher.iter[bench_fn]()
 

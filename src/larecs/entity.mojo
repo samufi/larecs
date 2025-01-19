@@ -60,6 +60,16 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         output |= bit_reverse(Int(self._gen))
 
     @always_inline
+    fn id(self) -> EntityId:
+        """Returns the entity's ID."""
+        return self._id
+
+    @always_inline
+    fn gen(self) -> UInt16:
+        """Returns the entity's Generation."""
+        return self._gen
+
+    @always_inline
     fn is_zero(self) -> Bool:
         """Returns whether this entity is the reserved zero entity."""
         return self._id == 0

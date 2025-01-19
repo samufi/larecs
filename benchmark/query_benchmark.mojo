@@ -12,7 +12,7 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     fn bench_fn() capturing raises:
         world = World[Position, Velocity]()
         for _ in range(1_000_000):
-            keep(world.add_entity()._id)
+            keep(world.add_entity().id())
 
     bencher.iter[bench_fn]()
 

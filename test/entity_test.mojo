@@ -8,7 +8,7 @@ def test_entity_as_index():
     entity = Entity(1, 0)
     arr = List[Int](0, 1, 2)
 
-    val = arr[entity._id]
+    val = arr[entity.id()]
     _ = val
 
 
