@@ -26,17 +26,20 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     The zero value should be used to indicate "nil", and can be checked with [.Entity.is_zero].
     """
 
-    var id: EntityId  # Entity ID
-    var gen: UInt16  # Entity generation
+    var _id: EntityId
+    """Entity ID"""
+    var _gen: UInt32
+    """Entity generation"""
 
+    @doc_private
     @always_inline
-    fn __init__(mut self, id: EntityId = 0, gen: UInt16 = 0):
-        self.id = id
-        self.gen = gen
+    fn __init__(mut self, id: EntityId = 0, gen: UInt32 = 0):
+        self._id = id
+        self._gen = gen
 
     @always_inline
     fn __eq__(self, other: Entity) -> Bool:
-        return self.id == other.id and self.gen == other.gen
+        return self._id == other._id and self._gen == other._gen
 
     @always_inline
     fn __ne__(self, other: Entity) -> Bool:
@@ -44,22 +47,32 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     @always_inline
     fn __bool__(self) -> Bool:
-        return self.id != 0
+        return self._id != 0
 
     @always_inline
     fn __str__(self) -> String:
-        return "Entity(" + str(self.id) + ", " + str(self.gen) + ")"
+        return "Entity(" + str(self._id) + ", " + str(self._gen) + ")"
 
     @always_inline
     fn __hash__(self, out output: UInt):
         """Returns a unique hash."""
-        output = Int(self.id)
-        output |= bit_reverse(Int(self.gen))
+        output = Int(self._id)
+        output |= bit_reverse(Int(self._gen))
+
+    @always_inline
+    fn get_id(self) -> EntityId:
+        """Returns the entity's ID."""
+        return self._id
+
+    @always_inline
+    fn get_gen(self) -> UInt32:
+        """Returns the entity's Generation."""
+        return self._gen
 
     @always_inline
     fn is_zero(self) -> Bool:
         """Returns whether this entity is the reserved zero entity."""
-        return self.id == 0
+        return self._id == 0
 
 
 @value

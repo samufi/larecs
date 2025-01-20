@@ -30,9 +30,9 @@ struct EntityPool:
             return self._get_new()
 
         curr = self._next
-        self._entities[self._next].id, self._next = (
+        self._entities[self._next]._id, self._next = (
             self._next,
-            self._entities[self._next].id,
+            self._entities[self._next].get_id(),
         )
         self._available -= 1
         return self._entities[curr]
@@ -44,11 +44,14 @@ struct EntityPool:
 
     fn recycle(mut self, enitity: Entity) raises:
         """Hands an entity back for recycling."""
-        if enitity.id == 0:
+        if enitity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
-        self._entities[enitity.id].gen += 1
-        self._next, self._entities[enitity.id].id = enitity.id, self._next
+        self._entities[enitity.get_id()]._gen += 1
+        self._next, self._entities[enitity.get_id()]._id = (
+            enitity.get_id(),
+            self._next,
+        )
         self._available += 1
 
     fn reset(mut self):
@@ -60,7 +63,7 @@ struct EntityPool:
     fn is_alive(self, entity: Entity) -> Bool:
         """Returns whether an entity is still alive, based on the entity's generations.
         """
-        return entity.gen == self._entities[entity.id].gen
+        return entity._gen == self._entities[entity.get_id()]._gen
 
     fn __len__(self) -> Int:
         """Returns the current number of used entities."""
