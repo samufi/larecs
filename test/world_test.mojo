@@ -10,7 +10,7 @@ from larecs.test_utils import *
 def test_add_entity():
     world = World()
     entity = world.add_entity()
-    assert_true(entity.id() == 1)
+    assert_true(entity.get_id() == 1)
     assert_false(entity.is_zero())
 
 

@@ -104,7 +104,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 1st removal. Entity is "
-                + str(p._entities[e.id()]),
+                + str(p._entities[e.get_id()]),
             )
 
         for _ in range(10):
@@ -119,7 +119,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 1st recycling. Entity is "
-                + str(p._entities[e.id()]),
+                + str(p._entities[e.get_id()]),
             )
 
         assert_equal(0, p._available, "No more _entities should be available")
@@ -140,7 +140,7 @@ def test_entity_pool_stochastic():
                 "Wrong alive state of entity "
                 + str(e)
                 + " after 2nd removal. Entity is "
-                + str(p._entities[e.id()]),
+                + str(p._entities[e.get_id()]),
             )
 
 

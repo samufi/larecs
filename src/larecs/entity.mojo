@@ -60,12 +60,12 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         output |= bit_reverse(Int(self._gen))
 
     @always_inline
-    fn id(self) -> EntityId:
+    fn get_id(self) -> EntityId:
         """Returns the entity's ID."""
         return self._id
 
     @always_inline
-    fn gen(self) -> UInt32:
+    fn get_gen(self) -> UInt32:
         """Returns the entity's Generation."""
         return self._gen
 
