@@ -196,7 +196,7 @@ struct ComponentManager[*component_types: ComponentType]:
 
         @parameter
         for i in range(size):
-            size_arr[i] = Self.get_size[i]()
+            size_arr[i] = sizeof[Ts[i]]()
 
     @staticmethod
     @always_inline
