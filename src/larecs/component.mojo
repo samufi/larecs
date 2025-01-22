@@ -39,12 +39,16 @@ fn constrain_valid_components[*Ts: ComponentType]() -> Bool:
     return True
 
 
-fn get_sizes[*Ts: ComponentType]() -> InlineArray[UInt, len(VariadicList(Ts))]:
+fn get_sizes[
+    *Ts: ComponentType
+]() -> InlineArray[UInt32, len(VariadicList(Ts))]:
     constrained[
         len(VariadicList(Ts)) > 0,
         "At least one component is needed.",
     ]()
-    sizes = InlineArray[UInt, len(VariadicList(Ts))](unsafe_uninitialized=True)
+    sizes = InlineArray[UInt32, len(VariadicList(Ts))](
+        unsafe_uninitialized=True
+    )
 
     @parameter
     for i in range(len(VariadicList(Ts))):

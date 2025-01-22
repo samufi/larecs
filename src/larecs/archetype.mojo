@@ -154,7 +154,7 @@ struct Archetype[
         for i in range(component_count):
             self._ids[i] = component_ids[i]
             self._data[component_ids[i]] = UnsafePointer[UInt8].alloc(
-                self._capacity * component_manager.component_sizes[i]
+                self._capacity * index(component_manager.component_sizes[i])
             )
 
     fn __init__(
@@ -178,7 +178,7 @@ struct Archetype[
             if mask.get(i):
                 self._ids[self._component_count] = i
                 self._data[i] = UnsafePointer[UInt8].alloc(
-                    self._capacity * component_manager.component_sizes[i]
+                    self._capacity * index(component_manager.component_sizes[i])
                 )
                 self._component_count += 1
 
@@ -214,7 +214,9 @@ struct Archetype[
 
         for i in range(existing._component_count):
             id = existing._ids[i]
-            var size = existing._capacity * component_manager.component_sizes[i]
+            size = existing._capacity * index(
+                component_manager.component_sizes[i]
+            )
             self._data[id] = UnsafePointer[UInt8].alloc(size)
             memcpy(
                 self._data[id],
@@ -264,9 +266,13 @@ struct Archetype[
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = component_manager.component_sizes[id] * self._capacity
-            var new_size = component_manager.component_sizes[id] * new_capacity
-            var new_memory = UnsafePointer[UInt8].alloc(new_size)
+            old_size = (
+                index(component_manager.component_sizes[id]) * self._capacity
+            )
+            new_size = (
+                index(component_manager.component_sizes[id]) * new_capacity
+            )
+            new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
                 self._data[id],
@@ -290,7 +296,7 @@ struct Archetype[
         memcpy(
             self._get_component_ptr(index(idx), id),
             value,
-            component_manager.component_sizes[id],
+            index(component_manager.component_sizes[id]),
         )
 
     @always_inline
@@ -403,7 +409,7 @@ struct Archetype[
                 memcpy(
                     self._get_component_ptr(index(idx), id),
                     self._get_component_ptr(self._size, id),
-                    component_manager.component_sizes[id],
+                    index(component_manager.component_sizes[id]),
                 )
         else:
             _ = self._entities.pop()
