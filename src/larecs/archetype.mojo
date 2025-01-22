@@ -14,8 +14,17 @@ from .types import get_max_uint_size, TrivialIntable
 alias DEFAULT_CAPACITY = 32
 
 
-struct Archetype(CollectionElement, CollectionElementNew):
-    """Archetype represents an ECS archetype."""
+struct Archetype[
+    *Ts: ComponentType,
+    component_manager: ComponentManager[*Ts],
+](CollectionElement, CollectionElementNew):
+    """
+    Archetype represents an ECS archetype.
+
+    Parameters:
+        Ts: The component types of the archetype.
+        component_manager: The component manager.
+    """
 
     alias dType = BitMask.IndexDType
 
@@ -39,9 +48,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
     # number of components.
     var _component_count: UInt
-
-    # Sizes of the component types by column
-    var _item_sizes: InlineArray[UInt32, Self.max_size, run_destructors=True]
 
     # The indices of the present components
     var _ids: SIMD[Self.dType, Self.max_size]
@@ -85,9 +91,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
         ](UnsafePointer[UInt8]())
-        self._item_sizes = InlineArray[
-            UInt32, Self.max_size, run_destructors=True
-        ](0)
         self._entities = List[Entity]()
         self._node_index = node_index
 
@@ -158,7 +161,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
         @parameter
         for i in range(component_count):
-            self._item_sizes[component_ids[i]] = component_sizes[i]
             self._ids[i] = component_ids[i]
             self._data[component_ids[i]] = UnsafePointer[UInt8].alloc(
                 self._capacity * index(component_sizes[i])
@@ -185,10 +187,9 @@ struct Archetype(CollectionElement, CollectionElementNew):
         @parameter
         for i in range(component_manager.component_count):
             if mask.get(i):
-                self._item_sizes[i] = component_manager.get_size[i]()
                 self._ids[self._component_count] = i
                 self._data[i] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(self._item_sizes[i])
+                    self._capacity * component_manager.component_sizes[i]
                 )
                 self._component_count += 1
 
@@ -201,7 +202,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._size = existing._size
         self._capacity = existing._capacity
         self._component_count = existing._component_count
-        self._item_sizes = existing._item_sizes^
         self._entities = existing._entities^
         self._ids = existing._ids
         self._node_index = existing._node_index
@@ -213,7 +213,6 @@ struct Archetype(CollectionElement, CollectionElementNew):
         self._size = existing._size
         self._capacity = existing._capacity
         self._component_count = existing._component_count
-        self._item_sizes = existing._item_sizes
         self._entities = existing._entities
         self._ids = existing._ids
         self._node_index = existing._node_index
@@ -226,7 +225,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
         for i in range(existing._component_count):
             id = existing._ids[i]
-            size = existing._capacity * index(existing._item_sizes[id])
+            var size = existing._capacity * component_manager.component_sizes[i]
             self._data[id] = UnsafePointer[UInt8].alloc(size)
             memcpy(
                 self._data[id],
@@ -276,9 +275,9 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_capacity
-            new_memory = UnsafePointer[UInt8].alloc(new_size)
+            old_size = component_manager.component_sizes[id] * self._capacity
+            var new_size = component_manager.component_sizes[id] * new_capacity
+            var new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
                 self._data[id],
@@ -302,7 +301,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
         memcpy(
             self._get_component_ptr(index(idx), id),
             value,
-            index(self._item_sizes[id]),
+            component_manager.component_sizes[id],
         )
 
     @always_inline
@@ -333,7 +332,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
-        return self._data[id] + idx * index(self._item_sizes[id])
+        return self._data[id] + idx * component_manager.component_sizes[id]
 
     fn unsafe_copy_to(self, mut other: Self, idx: UInt, other_index: UInt):
         """Copies all components of the entity at the given index to another archetype.
@@ -409,14 +408,13 @@ struct Archetype(CollectionElement, CollectionElementNew):
 
             for i in range(self._component_count):
                 id = self._ids[i]
-                size = self._item_sizes[id]
-                if size == 0:
+                if component_manager.component_sizes[id] == 0:
                     continue
 
                 memcpy(
                     self._get_component_ptr(index(idx), id),
                     self._get_component_ptr(self._size, id),
-                    index(size),
+                    component_manager.component_sizes[id],
                 )
         else:
             _ = self._entities.pop()
