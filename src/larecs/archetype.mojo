@@ -33,7 +33,7 @@ struct Archetype[
     alias Index = UInt32
 
     # The maximal number of components in the archetype.
-    alias max_size = get_max_uint_size[Self.Id]()
+    alias max_size = component_manager.component_count
 
     # Pointers to the component data.
     var _data: InlineArray[
@@ -48,6 +48,12 @@ struct Archetype[
 
     # number of components.
     var _component_count: UInt
+
+    # Sizes of the component types by column
+    var _item_sizes: InlineArray[
+        UInt32,
+        Self.max_size,
+    ]
 
     # The indices of the present components
     var _ids: SIMD[Self.dType, Self.max_size]
@@ -88,6 +94,7 @@ struct Archetype[
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
         ](UnsafePointer[UInt8]())
+        self._item_sizes = component_manager.component_sizes
         self._entities = List[Entity]()
         self._node_index = node_index
 
@@ -154,7 +161,7 @@ struct Archetype[
         for i in range(component_count):
             self._ids[i] = component_ids[i]
             self._data[component_ids[i]] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_manager.component_sizes[i])
+                self._capacity * index(self._item_sizes[i])
             )
 
     fn __init__(
@@ -178,7 +185,7 @@ struct Archetype[
             if mask.get(i):
                 self._ids[self._component_count] = i
                 self._data[i] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(component_manager.component_sizes[i])
+                    self._capacity * index(self._item_sizes[i])
                 )
                 self._component_count += 1
 
@@ -191,6 +198,7 @@ struct Archetype[
         self._size = existing._size
         self._capacity = existing._capacity
         self._component_count = existing._component_count
+        self._item_sizes = existing._item_sizes^
         self._entities = existing._entities^
         self._ids = existing._ids
         self._node_index = existing._node_index
@@ -202,6 +210,7 @@ struct Archetype[
         self._size = existing._size
         self._capacity = existing._capacity
         self._component_count = existing._component_count
+        self._item_sizes = existing._item_sizes
         self._entities = existing._entities
         self._ids = existing._ids
         self._node_index = existing._node_index
@@ -214,9 +223,7 @@ struct Archetype[
 
         for i in range(existing._component_count):
             id = existing._ids[i]
-            size = existing._capacity * index(
-                component_manager.component_sizes[i]
-            )
+            size = existing._capacity * index(existing._item_sizes[id])
             self._data[id] = UnsafePointer[UInt8].alloc(size)
             memcpy(
                 self._data[id],
@@ -266,8 +273,8 @@ struct Archetype[
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = component_manager.component_sizes[id] * self._capacity
-            new_size = component_manager.component_sizes[id] * new_capacity
+            old_size = self._item_sizes[id] * self._capacity
+            new_size = self._item_sizes[id] * new_capacity
             new_memory = UnsafePointer[UInt8].alloc(index(new_size))
             memcpy(
                 new_memory,
@@ -292,7 +299,7 @@ struct Archetype[
         memcpy(
             self._get_component_ptr(index(idx), id),
             value,
-            index(component_manager.component_sizes[id]),
+            index(self._item_sizes[id]),
         )
 
     @always_inline
@@ -323,7 +330,7 @@ struct Archetype[
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
-        return self._data[id] + idx * component_manager.component_sizes[id]
+        return self._data[id] + idx * self._item_sizes[id]
 
     fn unsafe_copy_to(self, mut other: Self, idx: UInt, other_index: UInt):
         """Copies all components of the entity at the given index to another archetype.
@@ -399,7 +406,7 @@ struct Archetype[
 
             for i in range(self._component_count):
                 id = self._ids[i]
-                size = component_manager.component_sizes[id]
+                size = self._item_sizes[id]
                 if size == 0:
                     continue
 
