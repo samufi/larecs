@@ -267,16 +267,16 @@ struct Archetype[
         for i in range(self._component_count):
             id = self._ids[i]
             old_size = (
-                index(component_manager.component_sizes[id]) * self._capacity
+                component_manager.component_sizes[id] * self._capacity
             )
             new_size = (
-                index(component_manager.component_sizes[id]) * new_capacity
+                component_manager.component_sizes[id] * new_capacity
             )
-            new_memory = UnsafePointer[UInt8].alloc(new_size)
+            new_memory = UnsafePointer[UInt8].alloc(index(new_size))
             memcpy(
                 new_memory,
                 self._data[id],
-                old_size,
+                index(old_size),
             )
             self._data[id].free()
             self._data[id] = new_memory
@@ -403,13 +403,14 @@ struct Archetype[
 
             for i in range(self._component_count):
                 id = self._ids[i]
-                if component_manager.component_sizes[id] == 0:
+                size = component_manager.component_sizes[id]
+                if size == 0:
                     continue
 
                 memcpy(
                     self._get_component_ptr(index(idx), id),
                     self._get_component_ptr(self._size, id),
-                    index(component_manager.component_sizes[id]),
+                    index(size),
                 )
         else:
             _ = self._entities.pop()
