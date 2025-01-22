@@ -39,9 +39,7 @@ fn constrain_valid_components[*Ts: ComponentType]() -> Bool:
     return True
 
 
-fn get_sizes[
-    *Ts: ComponentType
-]() -> SIMD[DType.uint32, BitMask.total_bits]:
+fn get_sizes[*Ts: ComponentType]() -> SIMD[DType.uint32, BitMask.total_bits]:
     constrained[
         len(VariadicList(Ts)) > 0,
         "At least one component is needed.",

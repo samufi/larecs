@@ -155,7 +155,8 @@ struct Archetype[
             id = component_ids[i]
             self._ids[i] = id
             self._data[id] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_manager.component_sizes[index(id)])
+                self._capacity
+                * index(component_manager.component_sizes[index(id)])
             )
 
     fn __init__(
@@ -267,8 +268,12 @@ struct Archetype[
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = component_manager.component_sizes[index(id)] * self._capacity
-            new_size = component_manager.component_sizes[index(id)] * new_capacity
+            old_size = (
+                component_manager.component_sizes[index(id)] * self._capacity
+            )
+            new_size = (
+                component_manager.component_sizes[index(id)] * new_capacity
+            )
             new_memory = UnsafePointer[UInt8].alloc(index(new_size))
             memcpy(
                 new_memory,
@@ -324,7 +329,9 @@ struct Archetype[
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
-        return self._data[id] + idx * component_manager.component_sizes[index(id)]
+        return (
+            self._data[id] + idx * component_manager.component_sizes[index(id)]
+        )
 
     fn unsafe_copy_to(self, mut other: Self, idx: UInt, other_index: UInt):
         """Copies all components of the entity at the given index to another archetype.
