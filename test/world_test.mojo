@@ -8,7 +8,7 @@ from larecs.test_utils import *
 
 
 def test_add_entity():
-    world = World()
+    world = World[Position]()
     entity = world.add_entity()
     assert_true(entity.get_id() == 1)
     assert_false(entity.is_zero())
@@ -58,14 +58,14 @@ def test_get_archetype_index():
 
     fn get_index[T: ComponentType]() capturing raises -> Int:
         return world._get_archetype_index(
-            world._component_manager.get_id_arr[T]()
+            world.component_manager.get_id_arr[T]()
         )
 
     fn get_index[
         T1: ComponentType, T2: ComponentType
     ](start: Int = 0) capturing raises -> Int:
         return world._get_archetype_index(
-            world._component_manager.get_id_arr[T1, T2](),
+            world.component_manager.get_id_arr[T1, T2](),
             start_node_index=start,
         )
 
