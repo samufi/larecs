@@ -294,9 +294,9 @@ struct World[*component_types: ComponentType]:
         ```mojo {doctest="add_entity_comps"}
         world = World[Position, Velocity]()
         e = world.add_entity(
-                Position(0, 0),
-                Velocity(0.5, -0.5)
-            )
+            Position(0, 0),
+            Velocity(0.5, -0.5),
+        )
         ```
 
         Parameters:
