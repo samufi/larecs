@@ -205,9 +205,9 @@ fn run_all_bitmask_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_mask_filter_1_000_000](
         BenchId("10^6 * mask_filter")
     )
-    bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
-        BenchId("10^6 * get_indices")
-    )
+    # bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
+    #     BenchId("10^6 * get_indices")
+    # )
     bench.bench_function[benchmark_bitmask_get_each_1_000_000](
         BenchId("10^6 * get_each")
     )
