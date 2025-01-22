@@ -33,11 +33,13 @@ struct Archetype[
     alias Index = UInt32
 
     # The maximal number of components in the archetype.
-    alias max_size = component_manager.component_count
+    alias max_size = get_max_uint_size[Self.Id]()
 
     # Pointers to the component data.
     var _data: InlineArray[
-        UnsafePointer[UInt8], Self.max_size, run_destructors=True
+        UnsafePointer[UInt8],
+        component_manager.component_count,
+        run_destructors=True,
     ]
 
     # Current number of entities.
@@ -52,7 +54,7 @@ struct Archetype[
     # Sizes of the component types by column
     var _item_sizes: InlineArray[
         UInt32,
-        Self.max_size,
+        component_manager.component_count,
     ]
 
     # The indices of the present components
@@ -92,7 +94,9 @@ struct Archetype[
         self._capacity = capacity
         self._ids = SIMD[Self.dType, Self.max_size]()
         self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+            UnsafePointer[UInt8],
+            component_manager.component_count,
+            run_destructors=True,
         ](UnsafePointer[UInt8]())
         self._item_sizes = component_manager.component_sizes
         self._entities = List[Entity]()
@@ -218,7 +222,9 @@ struct Archetype[
 
         # Copy the data
         self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+            UnsafePointer[UInt8],
+            component_manager.component_count,
+            run_destructors=True,
         ](UnsafePointer[UInt8]())
 
         for i in range(existing._component_count):
