@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: 9aa8642 #0.6.0
+  MODO_VERSION: 9706b55 #0.6.0
   HUGO_VERSION: 0.140.2
 
 jobs:
@@ -54,19 +54,11 @@ jobs:
           hugo-version: '${{env.HUGO_VERSION}}'
           extended: true
       
-      #- name: Generate JSON docs
-      #  run: |
-      #    source /home/runner/.bash_profile
-      #    magic run mojo doc -o docs/larecs.json src/larecs
-      - name: Create Markdown
+      - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
           source /home/runner/.bash_profile
           ./modo/modo build docs/
-      #- name: Run doctests
-      #  run: |
-      #    source /home/runner/.bash_profile
-      #    magic run mojo test -I src docs/doctest
-      - name: Run hugo
+      - name: Run Hugo
         run: |
           hugo -s docs
 
