@@ -13,7 +13,7 @@ tests: doctest/
 format: plain
 
 # Re-structure docs according to package re-exports.
-use-exports: true
+exports: true
 
 # Use shortened cross-ref link labels.
 short-links: true
