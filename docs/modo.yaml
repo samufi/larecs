@@ -29,13 +29,11 @@ dry-run: false
 case-insensitive: false
 
 # Directories to scan for templates to overwrite builtin templates.
-templates: []
+templates: 
+  - modo
 
 # Shell commands to run before build as well as test.
-pre-run:
-  - |
-    echo You can use pre- and post-commands...
-    echo to run 'mojo doc', 'mojo test', etc.
+pre-run: []
 
 # Shell commands to run before build.
 pre-build: []

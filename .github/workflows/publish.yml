@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: 12ed383 #0.6.0
+  MODO_VERSION: bca61f4 #0.6.0
   HUGO_VERSION: 0.140.2
 
 jobs:
@@ -27,6 +27,7 @@ jobs:
           source /home/runner/.bash_profile
           magic install --locked
         
+      # Install Modo from commit hash
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
@@ -41,7 +42,8 @@ jobs:
           cd modo
           go get .
           go build .
-          
+      
+      # Install Modo from release tyg
       #- name: Download Modo
       #  run: |
       #    curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz modo/
@@ -58,7 +60,7 @@ jobs:
           magic run mojo doc -o larecs.json src/larecs
       - name: Create Markdown
         run: |
-          ./modo/modo docs/content -i larecs.json --exports --short-links --format=hugo --doctest=docs/doctest --templates=docs/modo
+          ./modo/modo build docs/
       - name: Run doctests
         run: |
           source /home/runner/.bash_profile
