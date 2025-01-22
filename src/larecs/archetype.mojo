@@ -266,12 +266,8 @@ struct Archetype[
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = (
-                component_manager.component_sizes[id] * self._capacity
-            )
-            new_size = (
-                component_manager.component_sizes[id] * new_capacity
-            )
+            old_size = component_manager.component_sizes[id] * self._capacity
+            new_size = component_manager.component_sizes[id] * new_capacity
             new_memory = UnsafePointer[UInt8].alloc(index(new_size))
             memcpy(
                 new_memory,
