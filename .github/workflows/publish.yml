@@ -57,7 +57,7 @@ jobs:
       - name: Generate JSON docs
         run: |
           source /home/runner/.bash_profile
-          magic run mojo doc -o larecs.json src/larecs
+          magic run mojo doc -o docs/larecs.json src/larecs
       - name: Create Markdown
         run: |
           ./modo/modo build docs/
