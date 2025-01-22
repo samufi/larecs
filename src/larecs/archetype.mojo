@@ -64,15 +64,12 @@ struct Archetype[
     fn __init__(
         out self,
     ):
-        """Initializes the 0 archetype without any component."""
-        self = Self(0, BitMask(), 0)
+        """Initializes the zero archetype without any component."""
+        self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
-    fn __init__(
-        out self,
-        node_index: UInt,
-        mask: BitMask,
-        capacity: UInt,
-    ):
+    fn __init__[
+        *, used_internally: Bool
+    ](out self, node_index: UInt, mask: BitMask, capacity: UInt,):
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -103,23 +100,19 @@ struct Archetype[
         component_ids: InlineArray[Self.Id, component_count] = InlineArray[
             Self.Id, component_count
         ](),
-        component_sizes: InlineArray[UInt32, component_count] = InlineArray[
-            UInt32, component_count
-        ](),
         capacity: UInt = DEFAULT_CAPACITY,
     ):
-        """Initializes the archetype with a given capacity and components.
+        """Initializes the archetype with given components.
 
         Args:
             node_index:      The index of the archetype's node in the archetype graph.
             component_ids:   The IDs of the components of the archetype.
-            component_sizes: The sizes of the components of the archetype.
             capacity:        The initial capacity of the archetype.
         """
         mask_ = BitMask()
         for i in range(component_count):
             mask_.set[True](component_ids[i])
-        self = Self(node_index, mask_, component_ids, component_sizes, capacity)
+        self = Self(node_index, mask_, component_ids, capacity)
 
     fn __init__[
         component_count: Int
@@ -127,22 +120,20 @@ struct Archetype[
         out self,
         node_index: UInt,
         mask: BitMask,
-        component_ids: InlineArray[Self.Id, component_count] = InlineArray[
-            Self.Id, component_count
-        ](),
-        component_sizes: InlineArray[UInt32, component_count] = InlineArray[
-            UInt32, component_count
-        ](),
+        component_ids: InlineArray[Self.Id, component_count],
         capacity: UInt = DEFAULT_CAPACITY,
     ):
-        """Initializes the archetype with a given capacity, components, and BitMask.
+        """Initializes the archetype with given components and BitMask.
+
+        The components in the archetyoe are determined by the component_ids.
+        The mask is not checked for consistency with the component IDs.
 
         Args:
             node_index: The index of the archetype's node in the archetype graph.
-            mask: The mask of the archetype's node in the archetype graph.
-            component_ids:   The IDs of the components of the archetype.
-            component_sizes: The sizes of the components of the archetype.
-            capacity:        The initial capacity of the archetype.
+            mask: The mask of the archetype's node in the archetype graph
+                  (not used in initializer; not checked for consistency with component_ids).
+            component_ids: The IDs of the components of the archetype.
+            capacity: The initial capacity of the archetype.
         """
         constrained[
             Self.dType.is_integral(),
@@ -156,21 +147,20 @@ struct Archetype[
             + ".",
         ]()
 
-        self = Self(node_index, mask, capacity)
+        self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = component_count
 
         @parameter
         for i in range(component_count):
             self._ids[i] = component_ids[i]
             self._data[component_ids[i]] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_sizes[i])
+                self._capacity * component_manager.component_sizes[i]
             )
 
     fn __init__(
         out self,
         node_index: UInt,
         mask: BitMask,
-        component_manager: ComponentManager,
         capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype based on a given mask.
@@ -178,10 +168,9 @@ struct Archetype[
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
-            component_manager: The component manager.
             capacity: The initial capacity of the archetype.
         """
-        self = Self(node_index, mask, capacity)
+        self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = 0
 
         @parameter

@@ -204,36 +204,6 @@ struct ComponentManager[*component_types: ComponentType]():
 
     @staticmethod
     @always_inline
-    fn get_size_arr[
-        *Ts: ComponentType
-    ](
-        out size_arr: InlineArray[
-            UInt32,
-            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
-        ]
-    ):
-        """Get the sizes of multiple component types.
-
-        Parameters:
-            Ts: The component types.
-
-        Returns:
-            An InlineArray with the sizes of the component types.
-        """
-        alias size = VariadicPack[
-            MutableAnyOrigin, ComponentType, *Ts
-        ].__len__()
-
-        constrain_components_unique[*Ts]()
-
-        size_arr = InlineArray[UInt32, size](unsafe_uninitialized=True)
-
-        @parameter
-        for i in range(size):
-            size_arr[i] = sizeof[Ts[i]]()
-
-    @staticmethod
-    @always_inline
     fn get_ref[
         is_mutable: Bool, //,
         T: ComponentType,

@@ -157,22 +157,14 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn _get_archetype_index[
         size: Int
-    ](
-        mut self,
-        components: InlineArray[Self.Id, size],
-        sizes: InlineArray[UInt32, size],
-    ) -> Int:
+    ](mut self, components: InlineArray[Self.Id, size]) -> Int:
         """Returns the archetype list index of the archetype differing from
         the archetype at the start node by the given indices.
-
-        If not start node is given, returns the archetypes with the
-        components at the given indices.
 
         If necessary, creates a new archetype.
 
         Args:
             components:       The components that distinguish the archetypes.
-            sizes:            The sizes of the components.
 
         Returns:
             The archetype list index of the archetype differing from the start
@@ -187,7 +179,6 @@ struct World[*component_types: ComponentType]:
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
                 components,
-                sizes,
             )
         )
 
@@ -201,13 +192,10 @@ struct World[*component_types: ComponentType]:
     ](
         mut self,
         components: InlineArray[Self.Id, size],
-        start_node_index: Int = 0,
+        start_node_index: Int,
     ) -> Int:
-        """Returns the archetype list index of the archetype differing from
-        the archetype at the start node by the given indices.
-
-        If not start node is given, returns the archetypes with the
-        components at the given indices.
+        """Returns the archetype list index of the archetype
+        with the given component indices.
 
         If necessary, creates a new archetype.
 
@@ -229,7 +217,6 @@ struct World[*component_types: ComponentType]:
             Self.Archetype(
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
-                Self.component_manager,
             )
         )
 
@@ -281,10 +268,7 @@ struct World[*component_types: ComponentType]:
         alias size = components.__len__()
 
         component_ids = Self.component_manager.get_id_arr[*Ts]()
-        component_sizes = Self.component_manager.get_size_arr[*Ts]()
-        archetype_index = self._get_archetype_index(
-            component_ids, component_sizes
-        )
+        archetype_index = self._get_archetype_index(component_ids)
         entity = self._create_entity(archetype_index)
         index_in_archetype = self._entities[entity.get_id()].index
 
