@@ -41,14 +41,12 @@ fn constrain_valid_components[*Ts: ComponentType]() -> Bool:
 
 fn get_sizes[
     *Ts: ComponentType
-]() -> InlineArray[UInt32, len(VariadicList(Ts))]:
+]() -> SIMD[DType.uint32, BitMask.total_bits]:
     constrained[
         len(VariadicList(Ts)) > 0,
         "At least one component is needed.",
     ]()
-    sizes = InlineArray[UInt32, len(VariadicList(Ts))](
-        unsafe_uninitialized=True
-    )
+    sizes = SIMD[DType.uint32, 256](0)
 
     @parameter
     for i in range(len(VariadicList(Ts))):
