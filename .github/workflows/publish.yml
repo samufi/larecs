@@ -67,6 +67,11 @@ jobs:
         run: |
           hugo -s docs
 
+      - name: Archive Doc-tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: doctest
+          path: docs/doctest
       - name: Archive Markdown artifacts
         uses: actions/upload-artifact@v4
         with:
