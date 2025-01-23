@@ -793,7 +793,7 @@ struct World[*component_types: ComponentType]:
                 index_in_archetype,
                 id,
                 old_archetype[]._get_component_ptr(
-                    index(index_in_old_archetype), old_archetype[]._ids[i]
+                    index(index_in_old_archetype), id
                 ),
             )
 
