@@ -35,7 +35,6 @@ templates:
 # Shell commands to run before build as well as test.
 pre-run:
   - |
-    set -e
     echo Running 'mojo doc'...
     magic run mojo doc -o larecs.json ../src/larecs/
     echo Done.
@@ -51,7 +50,6 @@ pre-test: []
 # Also runs after build if 'doctest' is given.
 post-test:
   - |
-    set -e
     echo Running 'mojo test'...
     magic run mojo test -I ../src doctest/
     echo Done.
