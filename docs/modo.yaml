@@ -10,7 +10,7 @@ output: content/
 tests: doctest/
 
 # Output format. One of (plain|hugo|mdbook).
-format: plain
+format: hugo
 
 # Re-structure docs according to package re-exports.
 exports: true
@@ -29,7 +29,7 @@ dry-run: false
 case-insensitive: false
 
 # Directories to scan for templates to overwrite builtin templates.
-templates: 
+templates:
   - modo
 
 # Shell commands to run before build as well as test.
