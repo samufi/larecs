@@ -2,7 +2,6 @@ from sys.intrinsics import _type_is_eq
 from collections import InlineArray, InlineList, Optional
 from memory import memcpy, UnsafePointer
 from .component import (
-    ComponentReference,
     ComponentManager,
 )
 from .entity import Entity
@@ -305,81 +304,74 @@ struct Archetype[
         )
 
     @always_inline
-    fn set[
-        T: Indexer, /, assert_has_component: Bool = True
-    ](mut self, index: T, value: ComponentReference) raises:
-        """Sets the component with the given id at the given index.
-
-        Parameters:
-            T: Thetype of the index.
-            assert_has_component: Whether to assert that the archetype
-                contains the component.
-
-        Raises:
-            Error: If assert_has_component and the archetype does not contain the component.
-        """
-
-        @parameter
-        if assert_has_component:
-            self.assert_has_component(value.get_id())
-
-        self.unsafe_set(index, value.get_id(), value.get_unsafe_ptr())
-
-    # fn get(mut self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
-    #     """Returns the component with the given id at the given index."""
-    #     return ComponentReference[__origin_of(self)](id, self._get_component_ptr(index, id))
-
-    @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
-        return self._data[id] + idx * index(self._item_sizes[id])
-
-    fn unsafe_copy_to(self, mut other: Self, idx: UInt, other_index: UInt):
-        """Copies all components of the entity at the given index to another archetype.
-
-        Caution: This function does not check whether the other archetype
-                 contains the component.
-
-        Args:
-            other: The archetype to copy the components to.
-            idx: The index of the entity.
-            other_index: The index of the entity in the other archetype.
-        """
-        for i in range(self._component_count):
-            other.unsafe_set(
-                other_index,
-                self._ids[i],
-                self._get_component_ptr(idx, self._ids[i]),
-            )
+        return self._data[id] + idx * self._item_sizes[id]
 
     @always_inline
     fn get_component_ptr[
-        T: Indexer, /, assert_has_component: Bool = True
-    ](self, idx: T, id: Self.Id) raises -> UnsafePointer[UInt8]:
+        IndexType: Indexer, //,
+        T: ComponentType,
+        assert_has_component: Bool = True,
+    ](ref self, idx: IndexType) raises -> Pointer[T, __origin_of(self._data)]:
         """Returns the component with the given id at the given index.
 
         Args:
             idx:    The index of the entity.
-            id:     The id of the component.
 
         Parameters:
-            T: The type of the index.
+            IndexType: The type of the index.
+            T: The type of the component.
             assert_has_component: Whether to assert that the archetype
                     contains the component.
 
         Raises:
             Error:  If assert_has_component and the archetype does not contain the component.
         """
+        return Pointer[T, __origin_of(self._data)].address_of(
+            self.get_component[T=T, assert_has_component=assert_has_component](
+                idx
+            )
+        )
+
+    @always_inline
+    fn get_component[
+        IndexType: Indexer, //,
+        T: ComponentType,
+        assert_has_component: Bool = True,
+    ](ref self, idx: IndexType) raises -> ref [self._data] T:
+        """Returns the component with the given id at the given index.
+
+        Args:
+            idx:    The index of the entity.
+
+        Parameters:
+            IndexType: The type of the index.
+            T: The type of the component.
+            assert_has_component: Whether to assert that the archetype
+                    contains the component.
+
+        Raises:
+            Error:  If assert_has_component and the archetype does not contain the component.
+        """
+        alias id = component_manager.get_id[T]()
+        alias component_size = component_manager.component_sizes[id]
 
         @parameter
         if assert_has_component:
             self.assert_has_component(id)
-        return self._get_component_ptr(index(idx), id)
+
+        return (self._data[id] + index(idx) * component_size).bitcast[T]()[]
 
     @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id."""
         return bool(self._data[id])
+
+    @always_inline
+    fn has_component[T: ComponentType](self) -> Bool:
+        """Returns whether the archetype contains the given component id."""
+        return bool(self._data[component_manager.get_id[T]()])
 
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:

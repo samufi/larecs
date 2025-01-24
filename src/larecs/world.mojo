@@ -267,8 +267,9 @@ struct World[*component_types: ComponentType]:
 
         alias size = components.__len__()
 
-        component_ids = Self.component_manager.get_id_arr[*Ts]()
-        archetype_index = self._get_archetype_index(component_ids)
+        archetype_index = self._get_archetype_index(
+            Self.component_manager.get_id_arr[*Ts]()
+        )
         entity = self._create_entity(archetype_index)
         index_in_archetype = self._entities[entity.get_id()].index
 
@@ -276,11 +277,9 @@ struct World[*component_types: ComponentType]:
 
         @parameter
         for i in range(size):
-            archetype[].unsafe_set(
-                index_in_archetype,
-                component_ids[i],
-                UnsafePointer.address_of(components[i]).bitcast[UInt8](),
-            )
+            archetype[].get_component[
+                T = Ts[i.value], assert_has_component=False
+            ](index_in_archetype) = components[i]
 
         # TODO
         # if self._listener != nil:
@@ -315,7 +314,6 @@ struct World[*component_types: ComponentType]:
             Error: If the world is [.World.is_locked locked].
         """
         iterator = _EntityIterator(
-            Self.component_manager,
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             BitMask(),
@@ -346,7 +344,6 @@ struct World[*component_types: ComponentType]:
             Error: If the world is [.World.is_locked locked].
         """
         iterator = _EntityIterator(
-            Self.component_manager,
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),
@@ -370,10 +367,9 @@ struct World[*component_types: ComponentType]:
         """
         self._assert_alive(entity)
         entity_index = self._entities[entity.get_id()]
-        self._archetypes[entity_index.archetype_index].set(
-            entity_index.index,
-            Self.component_manager.get_ref(component),
-        )
+        self._archetypes[entity_index.archetype_index].get_component[T=T](
+            entity_index.index
+        ) = (component^)
 
     fn set[
         *Ts: ComponentType
@@ -399,14 +395,13 @@ struct World[*component_types: ComponentType]:
 
         @parameter
         for i in range(components.__len__()):
-            archetype[].set(
-                entity_index.index,
-                Self.component_manager.get_ref(components[i]),
-            )
+            archetype[].get_component[T = Ts[i.value]](
+                entity_index.index
+            ) = components[i]
 
     fn get[
         T: ComponentType
-    ](mut self, entity: Entity) raises -> ref [self._archetypes[0]] T:
+    ](mut self, entity: Entity) raises -> ref [self._archetypes[0]._data] T:
         """Returns a reference to the given component of an [..entity.Entity].
 
         Raises:
@@ -415,20 +410,15 @@ struct World[*component_types: ComponentType]:
         entity_index = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        return (
-            self._archetypes[entity_index.archetype_index]
-            .get_component_ptr(
-                entity_index.index,
-                Self.component_manager.get_id[T](),
-            )
-            .bitcast[T]()[0]
-        )
+        return self._archetypes[entity_index.archetype_index].get_component[
+            T=T
+        ](entity_index.index)
 
     @always_inline
     fn get_ptr[
         T: ComponentType
     ](mut self, entity: Entity) raises -> Pointer[
-        T, __origin_of(self._archetypes[0])
+        T, __origin_of(self._archetypes[0]._data)
     ]:
         """Returns a pointer to the given component of the [..entity.Entity].
 
@@ -437,14 +427,9 @@ struct World[*component_types: ComponentType]:
         """
         entity_index = self._entities[entity.get_id()]
         self._assert_alive(entity)
-        return Pointer[origin = __origin_of(self._archetypes[0])].address_of(
-            self._archetypes[entity_index.archetype_index]
-            .get_component_ptr(
-                entity_index.index,
-                Self.component_manager.get_id[T](),
-            )
-            .bitcast[T]()[0]
-        )
+        return self._archetypes[entity_index.archetype_index].get_component_ptr[
+            T=T
+        ](entity_index.index)
 
     @always_inline
     fn _assert_unlocked(self) raises:
@@ -774,13 +759,6 @@ struct World[*component_types: ComponentType]:
             if not compare_mask.contains(archetype[].get_mask()):
                 raise Error(remove_error_msg)
 
-        # This code would be nicer, but does not work due to arguemnt exclusivity.
-        # Uncomment this if there is a workaround.
-        # old_archetype[].unsafe_copy_to(
-        #     archetype[],
-        #     index_in_old_archetype,
-        #     index,
-        # )
         for i in range(old_archetype[]._component_count):
             id = old_archetype[]._ids[i]
 

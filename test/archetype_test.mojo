@@ -4,7 +4,7 @@
 
 # from larecs.archetype import Archetype
 # from larecs.bitmask import BitMask
-# from larecs.component import ComponentReference, ComponentManager
+# from larecs.component import ComponentManager
 # from larecs.entity import Entity
 # from larecs.pool import EntityPool
 

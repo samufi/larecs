@@ -19,7 +19,7 @@ trait IdentifiableType:
         ...
 
 
-trait ComponentType(Movable):
+trait ComponentType(Movable, Copyable):
     pass
 
 
@@ -53,47 +53,6 @@ fn get_sizes[
         sizes[i] = sizeof[Ts[i]]()
 
     return sizes
-
-
-struct ComponentReference[is_mutable: Bool, //, origin: Origin[is_mutable]]:
-    """ComponentReference is an agnostic reference to ECS components.
-
-    The ID is used to identify the component type. However, the
-    ID is never checked for validity. Use the ComponentManager to
-    create component references safely.
-    """
-
-    alias Id = BitMask.IndexType
-
-    var _id: Self.Id
-    var _data: UnsafePointer[UInt8]
-
-    fn __init__[T: ComponentType](mut self, id: Self.Id, ref [origin]value: T):
-        self._id = id
-        self._data = UnsafePointer.address_of(value).bitcast[UInt8]()
-
-    fn __moveinit__(mut self, owned existing: Self):
-        self._id = existing._id
-        self._data = existing._data
-
-    fn __copyinit__(mut self, existing: Self):
-        self._id = existing._id
-        self._data = existing._data
-
-    @always_inline
-    fn unsafe_get_value[T: ComponentType](self) -> ref [__origin_of(self)] T:
-        """Get the value of the component."""
-        return self._data.bitcast[T]()[0]
-
-    @always_inline
-    fn get_unsafe_ptr(self) -> UnsafePointer[UInt8]:
-        """Get the unsafe pointer to the data of the component."""
-        return self._data
-
-    @always_inline
-    fn get_id(self) -> Self.Id:
-        """Get the ID of the component."""
-        return self._id
 
 
 @always_inline
@@ -203,27 +162,6 @@ struct ComponentManager[*component_types: ComponentType]():
         @parameter
         for i in range(size):
             ids[i] = Self.get_id[Ts[i]]()
-
-    @staticmethod
-    @always_inline
-    fn get_ref[
-        is_mutable: Bool, //,
-        T: ComponentType,
-        origin: Origin[is_mutable],
-    ](ref [origin]value: T) -> ComponentReference[origin]:
-        """Get a type-agnostic reference to a component.
-
-        If the component does not yet have an ID, register the component.
-
-        Parameters:
-            is_mutable: Infer-only. Whether the reference is mutable.
-            T: The component type.
-            origin: The origin of the reference.
-
-        Args:
-            value: The value of the component to be passed around.
-        """
-        return ComponentReference(Self.get_id[T](), value)
 
     @staticmethod
     @always_inline
