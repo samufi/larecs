@@ -10,6 +10,15 @@ from larecs.pool import EntityPool
 from larecs.test_utils import *
 
 
+# ToDo: Remove this when the benchmark tools
+# are updated
+@value
+struct LargerComponent(ComponentType):
+    var x: Float64
+    var y: Float64
+    var z: Float64
+
+
 alias Archetype = _Archetype[
     FlexibleComponent[0],
     LargerComponent,

@@ -115,6 +115,7 @@ struct Archetype[
             capacity:        The initial capacity of the archetype.
         """
         mask_ = BitMask()
+
         @parameter
         for i in range(component_count):
             mask_.set[True](component_ids[i])
