@@ -71,7 +71,7 @@ struct Archetype[
 
     fn __init__[
         *, used_internally: Bool
-    ](out self, node_index: UInt, mask: BitMask, capacity: UInt,):
+    ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -115,6 +115,7 @@ struct Archetype[
             capacity:        The initial capacity of the archetype.
         """
         mask_ = BitMask()
+        @parameter
         for i in range(component_count):
             mask_.set[True](component_ids[i])
         self = Self(node_index, mask_, component_ids, capacity)
