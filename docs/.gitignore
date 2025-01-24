@@ -1,3 +1,5 @@
 /public/
+/doctest/
 /content/larecs/
+/larecs.json
 /*.lock

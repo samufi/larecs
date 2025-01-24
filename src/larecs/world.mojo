@@ -230,6 +230,17 @@ struct World[*component_types: ComponentType]:
 
         Do not use during [.World.query] iteration!
 
+        Example:
+
+        ```mojo {doctest="add_entity" global=true hide=true}
+        from larecs import World
+        ```
+
+        ```mojo {doctest="add_entity"}
+        world = World()
+        e = world.add_entity()
+        ```
+
         Returns:
             The new or recycled entity.
 
@@ -249,6 +260,30 @@ struct World[*component_types: ComponentType]:
 
         ⚠️ Important:
         Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity].
+
+        Example:
+
+        ```mojo {doctest="add_entity_comps" global=true hide=true}
+        from larecs import World
+
+        @value
+        struct Position:
+            var x: Float64
+            var y: Float64
+
+        @value
+        struct Velocity:
+            var x: Float64
+            var y: Float64
+        ```
+
+        ```mojo {doctest="add_entity_comps"}
+        world = World[Position, Velocity]()
+        e = world.add_entity(
+            Position(0, 0),
+            Velocity(0.5, -0.5),
+        )
+        ```
 
         Parameters:
             Ts: The components to add to the entity.
