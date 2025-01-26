@@ -18,6 +18,7 @@ struct EntityPool:
     var _next: EntityId
     var _available: Int
 
+    @always_inline
     fn __init__(mut self):
         self._entities = List[Entity]()
         self._entities.append(Entity(0, MAX_UINT16))
@@ -37,6 +38,7 @@ struct EntityPool:
         self._available -= 1
         return self._entities[curr]
 
+    @always_inline
     fn _get_new(mut self, out entity: Entity):
         """Allocates and returns a new entity. For internal use."""
         entity = Entity(EntityId(len(self._entities)))
@@ -54,25 +56,30 @@ struct EntityPool:
         )
         self._available += 1
 
+    @always_inline
     fn reset(mut self):
         """Recycles all entities. Does NOT free the reserved memory."""
         self._entities.resize(1)
         self._next = 0
         self._available = 0
 
+    @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
         """Returns whether an entity is still alive, based on the entity's generations.
         """
         return entity._gen == self._entities[entity.get_id()]._gen
 
+    @always_inline
     fn __len__(self) -> Int:
         """Returns the current number of used entities."""
         return len(self._entities) - 1 - self._available
 
+    @always_inline
     fn capacity(self) -> Int:
         """Returns the current capacity (used and recycled entities)."""
         return len(self._entities) - 1
 
+    @always_inline
     fn available(self) -> Int:
         """Returns the current number of available/recycled entities."""
         return self._available
@@ -95,6 +102,7 @@ struct BitPool:
     # data type.
     var _length: UInt16
 
+    @always_inline
     fn __init__(mut self):
         self._bits = SIMD[DType.uint8, Self.capacity]()
         self._next = 0
@@ -136,11 +144,13 @@ struct BitPool:
         self._length += 1
         return bit
 
+    @always_inline
     fn recycle(mut self, bit: UInt8):
         """Hands a bit back for recycling."""
         self._next, self._bits[index(bit)] = bit, self._next
         self._available += 1
 
+    @always_inline
     fn reset(mut self):
         """Recycles all bits."""
         self._next = 0
@@ -158,6 +168,7 @@ struct IntPool[ElementType: IndexingCollectionElement = Int]:
     var _next: ElementType
     var _available: UInt32
 
+    @always_inline
     fn __init__(mut self):
         """Creates a new, initialized entity pool."""
         self._pool = List[ElementType, True]()
@@ -177,17 +188,20 @@ struct IntPool[ElementType: IndexingCollectionElement = Int]:
         self._available -= 1
         return self._pool[curr]
 
+    @always_inline
     fn _get_new(mut self) -> ElementType:
         """Allocates and returns a new entity. For internal use."""
         element = ElementType(len(self._pool))
         self._pool.append(element)
         return element
 
+    @always_inline
     fn recycle(mut self, element: ElementType):
         """Hands an entity back for recycling."""
         self._next, self._pool[element] = element, self._next
         self._available += 1
 
+    @always_inline
     fn reset(mut self):
         """Recycles all _entities. Does NOT free the reserved memory."""
         self._pool.clear()

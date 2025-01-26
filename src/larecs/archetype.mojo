@@ -2,7 +2,6 @@ from sys.intrinsics import _type_is_eq
 from collections import InlineArray, InlineList, Optional
 from memory import memcpy, UnsafePointer
 from .component import (
-    ComponentReference,
     ComponentManager,
 )
 from .entity import Entity
@@ -14,8 +13,17 @@ from .types import get_max_uint_size, TrivialIntable
 alias DEFAULT_CAPACITY = 32
 
 
-struct Archetype(CollectionElement, CollectionElementNew):
-    """Archetype represents an ECS archetype."""
+struct Archetype[
+    *Ts: ComponentType,
+    component_manager: ComponentManager[*Ts],
+](CollectionElement, CollectionElementNew):
+    """
+    Archetype represents an ECS archetype.
+
+    Parameters:
+        Ts: The component types of the archetype.
+        component_manager: The component manager.
+    """
 
     alias dType = BitMask.IndexDType
 
@@ -58,15 +66,12 @@ struct Archetype(CollectionElement, CollectionElementNew):
     fn __init__(
         out self,
     ):
-        """Initializes the 0 archetype without any component."""
-        self = Self(0, BitMask(), 0)
+        """Initializes the zero archetype without any component."""
+        self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
-    fn __init__(
-        out self,
-        node_index: UInt,
-        mask: BitMask,
-        capacity: UInt,
-    ):
+    fn __init__[
+        *, used_internally: Bool
+    ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -100,23 +105,21 @@ struct Archetype(CollectionElement, CollectionElementNew):
         component_ids: InlineArray[Self.Id, component_count] = InlineArray[
             Self.Id, component_count
         ](),
-        component_sizes: InlineArray[UInt32, component_count] = InlineArray[
-            UInt32, component_count
-        ](),
         capacity: UInt = DEFAULT_CAPACITY,
     ):
-        """Initializes the archetype with a given capacity and components.
+        """Initializes the archetype with given components.
 
         Args:
             node_index:      The index of the archetype's node in the archetype graph.
             component_ids:   The IDs of the components of the archetype.
-            component_sizes: The sizes of the components of the archetype.
             capacity:        The initial capacity of the archetype.
         """
         mask_ = BitMask()
+
+        @parameter
         for i in range(component_count):
             mask_.set[True](component_ids[i])
-        self = Self(node_index, mask_, component_ids, component_sizes, capacity)
+        self = Self(node_index, mask_, component_ids, capacity)
 
     fn __init__[
         component_count: Int
@@ -124,22 +127,20 @@ struct Archetype(CollectionElement, CollectionElementNew):
         out self,
         node_index: UInt,
         mask: BitMask,
-        component_ids: InlineArray[Self.Id, component_count] = InlineArray[
-            Self.Id, component_count
-        ](),
-        component_sizes: InlineArray[UInt32, component_count] = InlineArray[
-            UInt32, component_count
-        ](),
+        component_ids: InlineArray[Self.Id, component_count],
         capacity: UInt = DEFAULT_CAPACITY,
     ):
-        """Initializes the archetype with a given capacity, components, and BitMask.
+        """Initializes the archetype with given components and BitMask.
+
+        The components in the archetyoe are determined by the component_ids.
+        The mask is not checked for consistency with the component IDs.
 
         Args:
             node_index: The index of the archetype's node in the archetype graph.
-            mask: The mask of the archetype's node in the archetype graph.
-            component_ids:   The IDs of the components of the archetype.
-            component_sizes: The sizes of the components of the archetype.
-            capacity:        The initial capacity of the archetype.
+            mask: The mask of the archetype's node in the archetype graph
+                  (not used in initializer; not checked for consistency with component_ids).
+            component_ids: The IDs of the components of the archetype.
+            capacity: The initial capacity of the archetype.
         """
         constrained[
             Self.dType.is_integral(),
@@ -153,22 +154,22 @@ struct Archetype(CollectionElement, CollectionElementNew):
             + ".",
         ]()
 
-        self = Self(node_index, mask, capacity)
+        self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = component_count
 
         @parameter
         for i in range(component_count):
-            self._item_sizes[component_ids[i]] = component_sizes[i]
-            self._ids[i] = component_ids[i]
-            self._data[component_ids[i]] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_sizes[i])
+            id = component_ids[i]
+            self._item_sizes[id] = component_manager.component_sizes[id]
+            self._ids[i] = id
+            self._data[id] = UnsafePointer[UInt8].alloc(
+                self._capacity * index(component_manager.component_sizes[id])
             )
 
     fn __init__(
         out self,
         node_index: UInt,
         mask: BitMask,
-        component_manager: ComponentManager,
         capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype based on a given mask.
@@ -176,16 +177,15 @@ struct Archetype(CollectionElement, CollectionElementNew):
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
-            component_manager: The component manager.
             capacity: The initial capacity of the archetype.
         """
-        self = Self(node_index, mask, capacity)
+        self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = 0
 
         @parameter
         for i in range(component_manager.component_count):
             if mask.get(i):
-                self._item_sizes[i] = component_manager.get_size[i]()
+                self._item_sizes[i] = component_manager.component_sizes[i]
                 self._ids[self._component_count] = i
                 self._data[i] = UnsafePointer[UInt8].alloc(
                     self._capacity * index(self._item_sizes[i])
@@ -306,81 +306,74 @@ struct Archetype(CollectionElement, CollectionElementNew):
         )
 
     @always_inline
-    fn set[
-        T: Indexer, /, assert_has_component: Bool = True
-    ](mut self, index: T, value: ComponentReference) raises:
-        """Sets the component with the given id at the given index.
-
-        Parameters:
-            T: Thetype of the index.
-            assert_has_component: Whether to assert that the archetype
-                contains the component.
-
-        Raises:
-            Error: If assert_has_component and the archetype does not contain the component.
-        """
-
-        @parameter
-        if assert_has_component:
-            self.assert_has_component(value.get_id())
-
-        self.unsafe_set(index, value.get_id(), value.get_unsafe_ptr())
-
-    # fn get(mut self, index: UInt, id: Self.Id) -> ComponentReference[__origin_of(self)]:
-    #     """Returns the component with the given id at the given index."""
-    #     return ComponentReference[__origin_of(self)](id, self._get_component_ptr(index, id))
-
-    @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index."""
-        return self._data[id] + idx * index(self._item_sizes[id])
-
-    fn unsafe_copy_to(self, mut other: Self, idx: UInt, other_index: UInt):
-        """Copies all components of the entity at the given index to another archetype.
-
-        Caution: This function does not check whether the other archetype
-                 contains the component.
-
-        Args:
-            other: The archetype to copy the components to.
-            idx: The index of the entity.
-            other_index: The index of the entity in the other archetype.
-        """
-        for i in range(self._component_count):
-            other.unsafe_set(
-                other_index,
-                self._ids[i],
-                self._get_component_ptr(idx, self._ids[i]),
-            )
+        return self._data[id] + idx * self._item_sizes[id]
 
     @always_inline
     fn get_component_ptr[
-        T: Indexer, /, assert_has_component: Bool = True
-    ](self, idx: T, id: Self.Id) raises -> UnsafePointer[UInt8]:
+        IndexType: Indexer, //,
+        T: ComponentType,
+        assert_has_component: Bool = True,
+    ](ref self, idx: IndexType) raises -> Pointer[T, __origin_of(self._data)]:
         """Returns the component with the given id at the given index.
 
         Args:
             idx:    The index of the entity.
-            id:     The id of the component.
 
         Parameters:
-            T: The type of the index.
+            IndexType: The type of the index.
+            T: The type of the component.
             assert_has_component: Whether to assert that the archetype
                     contains the component.
 
         Raises:
             Error:  If assert_has_component and the archetype does not contain the component.
         """
+        return Pointer[T, __origin_of(self._data)].address_of(
+            self.get_component[T=T, assert_has_component=assert_has_component](
+                idx
+            )
+        )
+
+    @always_inline
+    fn get_component[
+        IndexType: Indexer, //,
+        T: ComponentType,
+        assert_has_component: Bool = True,
+    ](ref self, idx: IndexType) raises -> ref [self._data] T:
+        """Returns the component with the given id at the given index.
+
+        Args:
+            idx:    The index of the entity.
+
+        Parameters:
+            IndexType: The type of the index.
+            T: The type of the component.
+            assert_has_component: Whether to assert that the archetype
+                    contains the component.
+
+        Raises:
+            Error:  If assert_has_component and the archetype does not contain the component.
+        """
+        alias id = component_manager.get_id[T]()
+        alias component_size = component_manager.component_sizes[id]
 
         @parameter
         if assert_has_component:
             self.assert_has_component(id)
-        return self._get_component_ptr(index(idx), id)
+
+        return (self._data[id] + index(idx) * component_size).bitcast[T]()[]
 
     @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id."""
         return bool(self._data[id])
+
+    @always_inline
+    fn has_component[T: ComponentType](self) -> Bool:
+        """Returns whether the archetype contains the given component id."""
+        return bool(self._data[component_manager.get_id[T]()])
 
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:
@@ -390,6 +383,7 @@ struct Archetype(CollectionElement, CollectionElementNew):
                 "Archetype does not contain component with id " + str(id) + "."
             )
 
+    @always_inline
     fn remove[T: Indexer](mut self, idx: T) -> Bool:
         """Removes an entity and its components from the archetype.
 

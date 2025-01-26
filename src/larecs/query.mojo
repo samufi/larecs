@@ -4,7 +4,7 @@ from .entity import Entity
 from .bitmask import BitMask
 from .component import ComponentType, ComponentManager
 from .chained_array_list import ChainedArrayList
-from .archetype import Archetype
+from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
 from .debug_utils import debug_warn
@@ -14,6 +14,7 @@ struct _EntityAccessor[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
     *component_types: ComponentType,
+    component_manager: ComponentManager[*component_types],
 ]:
     """Accessor for an Entity.
 
@@ -24,61 +25,53 @@ struct _EntityAccessor[
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List
         component_types: The types of the components.
+        component_manager: The component manager.
     """
 
-    var _component_manager: ComponentManager[*component_types]
-    var _archetype: Pointer[Archetype, archetype_origin]
+    alias Archetype = _Archetype[
+        *component_types, component_manager=component_manager
+    ]
+    var _archetype: Pointer[Self.Archetype, archetype_origin]
     var _index_in_archetype: Int
 
     @always_inline
     fn __init__(
         out self,
-        component_manager: ComponentManager[*component_types],
-        archetype: Pointer[Archetype, archetype_origin],
+        archetype: Pointer[Self.Archetype, archetype_origin],
         index_in_archetype: Int,
     ):
         """
-        Parameters:
-            component_manager: The component manager.
+        Args:
             archetype: The archetype of the entity.
             index_in_archetype: The index of the entity in the archetype.
         """
-        self._component_manager = component_manager
         self._archetype = archetype
         self._index_in_archetype = index_in_archetype
 
     @always_inline
-    fn get[T: ComponentType](mut self) raises -> ref [self._archetype] T:
+    fn get[
+        T: ComponentType
+    ](ref self) raises -> ref [self._archetype[]._data] T:
         """Returns a reference to the given component of the Entity.
 
         Raises:
             Error: If the entity does not have the component.
         """
-        return (
-            self._archetype[]
-            .get_component_ptr(
-                self._index_in_archetype,
-                self._component_manager.get_id[T](),
-            )
-            .bitcast[T]()[0]
+        return self._archetype[].get_component[T=T](
+            self._index_in_archetype,
         )
 
     @always_inline
     fn get_ptr[
         T: ComponentType
-    ](mut self) raises -> Pointer[T, __origin_of(self._archetype)]:
+    ](mut self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
         """Returns a reference to the given component of the Entity.
 
         Raises:
             Error: If the entity does not have the component.
         """
-        return Pointer[origin = __origin_of(self._archetype)].address_of(
-            self._archetype[]
-            .get_component_ptr(
-                self._index_in_archetype,
-                self._component_manager.get_id[T](),
-            )
-            .bitcast[T]()[0]
+        return self._archetype[].get_component_ptr[T=T](
+            self._index_in_archetype,
         )
 
     @always_inline
@@ -86,9 +79,7 @@ struct _EntityAccessor[
         """
         Returns whether an [Entity] has a given component.
         """
-        return self._archetype[].has_component(
-            self._component_manager.get_id[T]()
-        )
+        return self._archetype[].has_component[T]()
 
 
 @value
@@ -97,6 +88,7 @@ struct _EntityIterator[
     archetype_origin: Origin[archetype_mutability],
     lock_origin: MutableOrigin,
     *component_types: ComponentType,
+    component_manager: ComponentManager[*component_types],
 ]:
     """Iterator over all entities corresponding to a mask.
 
@@ -107,13 +99,16 @@ struct _EntityIterator[
         archetype_origin: The lifetime of the List
         lock_origin: The lifetime of the LockMask
         component_types: The types of the components.
+        component_manager: The component manager.
     """
 
     alias buffer_size = 8
-    var _component_manager: ComponentManager[*component_types]
-    var _archetypes: Pointer[ChainedArrayList[Archetype], archetype_origin]
+    alias Archetype = _Archetype[
+        *component_types, component_manager=component_manager
+    ]
+    var _archetypes: Pointer[ChainedArrayList[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.uint32, Self.buffer_size]
-    var _current_archetype: Pointer[Archetype, archetype_origin]
+    var _current_archetype: Pointer[Self.Archetype, archetype_origin]
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
     var _mask: BitMask
@@ -126,9 +121,8 @@ struct _EntityIterator[
 
     fn __init__(
         out self,
-        component_manager: ComponentManager[*component_types],
         owned archetypes: Pointer[
-            ChainedArrayList[Archetype], archetype_origin
+            ChainedArrayList[Self.Archetype], archetype_origin
         ],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
@@ -140,7 +134,6 @@ struct _EntityIterator[
             mask: The mask of the components to iterate over.
 
         Args:
-            component_manager: The component manager.
             archetypes: a pointer to the world's archetypes.
             lock_ptr: a pointer to the world's locks.
             mask: The mask of the components to iterate over.
@@ -148,7 +141,6 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        self._component_manager = component_manager
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
         self._lock = self._lock_ptr[].lock()
@@ -179,7 +171,6 @@ struct _EntityIterator[
         out self,
         owned other: Self,
     ):
-        self._component_manager = other._component_manager
         self._archetypes = other._archetypes
         self._archetype_index_buffer = other._archetype_index_buffer
         self._mask = other._mask^
@@ -257,14 +248,15 @@ struct _EntityIterator[
     fn __next__(
         mut self,
         out accessor: _EntityAccessor[
-            __origin_of(self._current_archetype[]), *component_types
+            __origin_of(self._current_archetype[]),
+            *component_types,
+            component_manager=component_manager,
         ],
     ):
         self._entity_index += 1
         if self._entity_index >= self._archetype_size:
             self._next_archetype()
         accessor = _EntityAccessor(
-            self._component_manager,
             self._current_archetype,
             self._entity_index,
         )
