@@ -8,7 +8,7 @@ testing purposes.
 
 Example:
 
-```mojo {doctest="readme" global=true}
+```python {doctest="readme" global=true}
 # Import the package
 from larecs import World
 

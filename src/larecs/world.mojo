@@ -232,11 +232,11 @@ struct World[*component_types: ComponentType]:
 
         Example:
 
-        ```mojo {doctest="add_entity" global=true hide=true}
+        ```python {doctest="add_entity" global=true hide=true}
         from larecs import World
         ```
 
-        ```mojo {doctest="add_entity"}
+        ```python {doctest="add_entity"}
         world = World()
         e = world.add_entity()
         ```
@@ -263,7 +263,7 @@ struct World[*component_types: ComponentType]:
 
         Example:
 
-        ```mojo {doctest="add_entity_comps" global=true hide=true}
+        ```python {doctest="add_entity_comps" global=true hide=true}
         from larecs import World
 
         @value
@@ -277,7 +277,7 @@ struct World[*component_types: ComponentType]:
             var y: Float64
         ```
 
-        ```mojo {doctest="add_entity_comps"}
+        ```python {doctest="add_entity_comps"}
         world = World[Position, Velocity]()
         e = world.add_entity(
             Position(0, 0),
