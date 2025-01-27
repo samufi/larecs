@@ -4,7 +4,7 @@
 ```
 
 {{`{{<html>}}`}}<details>
-<summary>{{`{{</html>}}`}}{{template "summary" . -}}{{`{{<html>}}`}}</summary>{{`{{</html>}}`}}
+<summary>{{`{{</html>}}`}}{{if .Summary}}{{.Summary}}{{else}}Details{{end}}{{`{{<html>}}`}}</summary>{{`{{</html>}}`}}
 {{template "description" . -}}
 {{template "func_parameters" . -}}
 {{template "func_args" . -}}
