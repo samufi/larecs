@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  MODO_VERSION: 0.9.0
+  MODO_VERSION: f6d9203 # 0.9.0
   HUGO_VERSION: mojo-lexer # 0.140.2
 
 jobs:
@@ -33,22 +33,22 @@ jobs:
           go-version: '1.23.x'
 
       # Install Modo from commit hash
-      #- name: Clone Modo
-      #  run: |
-      #    git clone https://github.com/mlange-42/modo.git
-      #    cd modo
-      #    git checkout ${{env.MODO_VERSION}}
-      #- name: Build Modo
-      #  run: |
-      #    cd modo
-      #    go get .
-      #    go build .
+      - name: Clone Modo
+        run: |
+          git clone https://github.com/mlange-42/modo.git
+          cd modo
+          git checkout ${{env.MODO_VERSION}}
+      - name: Build Modo
+        run: |
+          cd modo
+          go get .
+          go build .
       
       # Download Modo release
-      - name: Download Modo
-        run: |
-          mkdir modo/
-          curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
+      #- name: Download Modo
+      #  run: |
+      #    mkdir modo/
+      #    curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
 
       #- name: Setup Hugo
       #  uses: peaceiris/actions-hugo@v3
