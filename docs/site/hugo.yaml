@@ -5,7 +5,7 @@ disablePathToLower: true
 
 markup:
   highlight:
-    style: onedark
+    noClasses: false
 
 module:
   imports:
