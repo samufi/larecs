@@ -407,12 +407,11 @@ fn benchmark_replace_1_comp_1_000_000_extra(
 fn prevent_inlining_replace() raises:
     world = FullWorld()
     entity = world.add_entity(FlexibleComponent[0](1.0, 2.0))
+
     @parameter
     for i in range(20):
         component = FlexibleComponent[i + 1](i, 2.0)
-        world.replace[FlexibleComponent[i]]().by(
-            entity, component
-        )
+        world.replace[FlexibleComponent[i]]().by(entity, component)
 
 
 fn run_all_world_benchmarks() raises:
