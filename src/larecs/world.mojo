@@ -20,9 +20,7 @@ from .lock import LockMask
 
 
 @value
-struct _Replacer[
-    mut: MutableOrigin, size: Int, *component_types: ComponentType
-]:
+struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
     """
     Replacer is a helper struct for removing and adding components to an [Entity].
 
@@ -230,6 +228,9 @@ struct World[*component_types: ComponentType]:
 
         Do not use during [.World.query] iteration!
 
+        ⚠️ Important:
+        Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity].
+
         Example:
 
         ```mojo {doctest="add_entity" global=true hide=true}
@@ -330,59 +331,148 @@ struct World[*component_types: ComponentType]:
         return
 
     @always_inline
-    fn query(
-        mut self,
-        out iterator: _EntityIterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
-        ],
-    ) raises:
+    fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
-
-        Returns:
-            An iterator with accessors to all entities with the given components.
-
-        Raises:
-            Error: If the world is [.World.is_locked locked].
+        Creates an Entity and adds it to the given archetype.
         """
-        iterator = _EntityIterator(
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
-            BitMask(),
-        )
+        entity = self._entity_pool.get()
+        idx = self._archetypes[archetype_index].add(entity)
+        if entity.get_id() == len(self._entities):
+            self._entities.append(EntityIndex(idx, archetype_index))
+        else:
+            self._entities[entity.get_id()] = EntityIndex(idx, archetype_index)
 
     @always_inline
-    fn query[
-        *Ts: ComponentType
-    ](
-        mut self,
-        out iterator: _EntityIterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
-        ],
-    ) raises:
+    fn _create_entities[
+        element_origin: MutableOrigin
+    ](mut self, archetype_index: Int, count: Int):
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
+        Creates multiple Entities and adds them to the given archetype.
+        """
+        archetype = self._archetypes[archetype_index]
+        arch_start_idx = archetype.extend(count, self._entity_pool)
+        last_entity_id = archetype.get_entity(arch_start_idx + count).get_id()
+        if last_entity_id > len(self._entities):
+            self._entities.resize(
+                index(last_entity_id), EntityIndex(0, archetype_index)
+            )
+        for i in range(arch_start_idx, arch_start_idx + count):
+            entity_id = archetype.get_entity(i).get_id()
+            self._entities[entity_id].archetype_index = archetype_index
+            self._entities[entity_id].index = arch_start_idx + i
 
-        Parameters:
-            Ts: The types of the components.
+    fn remove_entity(mut self, entity: Entity) raises:
+        """
+        Removes an [..entity.Entity], making it eligible for recycling.
 
-        Returns:
-            An iterator with accessors to all entities with the given components.
+        Do not use during [.World.query] iteration!
+
+        Args:
+            entity: The entity to remove.
 
         Raises:
-            Error: If the world is [.World.is_locked locked].
+            Error: If the world is locked or the entity does not exist.
         """
-        iterator = _EntityIterator(
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
-        )
+        self._assert_unlocked()
+        self._assert_alive(entity)
+
+        idx = self._entities[entity.get_id()]
+        old_archetype_index = idx.archetype_index
+        old_archetype = self._archetypes.get_ptr(old_archetype_index)
+
+        # if self._listener != nil:
+        #     var oldRel *Id
+        #     if old_archetype.HasRelationComponent:
+        #         oldRel = &old_archetype.RelationComponent
+
+        #     var oldIds []Id
+        #     if len(old_archetype.node.Ids) > 0:
+        #         oldIds = old_archetype.node.Ids
+
+        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+        #     var trigger = self._listener.Subscriptions() & bits
+        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
+        #         var lock = self.lock()
+        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
+        #         self.unlock(lock)
+
+        swapped = old_archetype[].remove(idx.index)
+
+        self._entity_pool.recycle(entity)
+
+        if swapped:
+            swap_entity = old_archetype[].get_entity(idx.index)
+            self._entities[swap_entity.get_id()].index = idx.index
+
+    @always_inline
+    fn is_alive(self, entity: Entity) -> Bool:
+        """
+        Reports whether an [..entity.Entity] is still alive.
+
+        Args:
+            entity: The entity to check.
+        """
+        return self._entity_pool.is_alive(entity)
+
+    @always_inline
+    fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
+        """
+        Returns whether an [..entity.Entity] has a given component.
+
+        Parameters:
+            T: The type of the component.
+
+        Args:
+            entity: The entity to check.
+
+        Raises:
+            Error: If the entity does not exist.
+        """
+        self._assert_alive(entity)
+        return self._archetypes[
+            self._entities[entity.get_id()].archetype_index
+        ].has_component(Self.component_manager.get_id[T]())
+
+    fn get[
+        T: ComponentType
+    ](mut self, entity: Entity) raises -> ref [self._archetypes[0]._data] T:
+        """Returns a reference to the given component of an [..entity.Entity].
+
+        Parameters:
+            T: The type of the component.
+
+        Raises:
+            Error: If the entity is not alive or does not have the component.
+        """
+        entity_index = self._entities[entity.get_id()]
+        self._assert_alive(entity)
+
+        return self._archetypes[entity_index.archetype_index].get_component[
+            T=T
+        ](entity_index.index)
+
+    @always_inline
+    fn get_ptr[
+        T: ComponentType
+    ](mut self, entity: Entity) raises -> Pointer[
+        T, __origin_of(self._archetypes[0]._data)
+    ]:
+        """Returns a pointer to the given component of the [..entity.Entity].
+
+        Parameters:
+            T: The type of the component.
+
+        Args:
+            entity: The entity to get the component from.
+
+        Raises:
+            Error: If the entity is not alive or does not have the component.
+        """
+        entity_index = self._entities[entity.get_id()]
+        self._assert_alive(entity)
+        return self._archetypes[entity_index.archetype_index].get_component_ptr[
+            T=T
+        ](entity_index.index)
 
     fn set[
         T: ComponentType
@@ -433,168 +523,6 @@ struct World[*component_types: ComponentType]:
             archetype[].get_component[T = Ts[i.value]](
                 entity_index.index
             ) = components[i]
-
-    fn get[
-        T: ComponentType
-    ](mut self, entity: Entity) raises -> ref [self._archetypes[0]._data] T:
-        """Returns a reference to the given component of an [..entity.Entity].
-
-        Raises:
-            Error: If the entity is not alive or does not have the component.
-        """
-        entity_index = self._entities[entity.get_id()]
-        self._assert_alive(entity)
-
-        return self._archetypes[entity_index.archetype_index].get_component[
-            T=T
-        ](entity_index.index)
-
-    @always_inline
-    fn get_ptr[
-        T: ComponentType
-    ](mut self, entity: Entity) raises -> Pointer[
-        T, __origin_of(self._archetypes[0]._data)
-    ]:
-        """Returns a pointer to the given component of the [..entity.Entity].
-
-        Raises:
-            Error: If the entity is not alive or does not have the component.
-        """
-        entity_index = self._entities[entity.get_id()]
-        self._assert_alive(entity)
-        return self._archetypes[entity_index.archetype_index].get_component_ptr[
-            T=T
-        ](entity_index.index)
-
-    @always_inline
-    fn _assert_unlocked(self) raises:
-        """
-        Checks if the world is locked, and raises if so.
-        """
-        if self.is_locked():
-            raise Error("Attempt to modify a locked world.")
-
-    @always_inline
-    fn _assert_alive(self, entity: Entity) raises:
-        """
-        Checks if the entity is alive, and raises if not.
-
-        Args:
-            entity: The entity to check.
-        """
-        if not self._entity_pool.is_alive(entity):
-            raise Error("The considered entity does not exist anymore.")
-
-    fn remove_entity(mut self, entity: Entity) raises:
-        """
-        RemoveEntity removes an [..entity.Entity], making it eligible for recycling.
-
-        Do not use during [.World.query] iteration!
-
-        Args:
-            entity: The entity to remove.
-
-        Raises:
-            Error: If the world is locked or the entity does not exist.
-        """
-        self._assert_unlocked()
-        self._assert_alive(entity)
-
-        idx = self._entities[entity.get_id()]
-        old_archetype_index = idx.archetype_index
-        old_archetype = self._archetypes.get_ptr(old_archetype_index)
-
-        # if self._listener != nil:
-        #     var oldRel *Id
-        #     if old_archetype.HasRelationComponent:
-        #         oldRel = &old_archetype.RelationComponent
-
-        #     var oldIds []Id
-        #     if len(old_archetype.node.Ids) > 0:
-        #         oldIds = old_archetype.node.Ids
-
-        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
-        #     var trigger = self._listener.Subscriptions() & bits
-        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
-        #         var lock = self.lock()
-        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
-        #         self.unlock(lock)
-
-        swapped = old_archetype[].remove(idx.index)
-
-        self._entity_pool.recycle(entity)
-
-        if swapped:
-            swap_entity = old_archetype[].get_entity(idx.index)
-            self._entities[swap_entity.get_id()].index = idx.index
-
-    @always_inline
-    fn is_alive(self, entity: Entity) -> Bool:
-        """
-        Alive reports whether an [..entity.Entity] is still alive.
-
-        Args:
-            entity: The entity to check.
-        """
-        return self._entity_pool.is_alive(entity)
-
-    # fn get(self, entity: Entity, comp: Id) -> unsafe:
-    #     """
-    #     get returns a pointer to the given component of an [Entity].
-    #     Returns nil if the entity has no such component.
-
-    #     Panics when called for a removed (and potentially recycled) entity.
-
-    #     See [World.GetUnchecked] for an optimized version for static _entities.
-    #     See also [github.com/mlange-42/arche/generic.Map.get] for a generic variant.
-    #     """
-    #     if !self._entity_pool.Alive(entity):
-    #         panic("can't get component of a dead entity")
-
-    #     var index = &self._entities[entity.id]
-    #     return index.arch.get(index.index, comp)
-
-    # fn GetUnchecked(self, entity: Entity, comp: Id) -> unsafe:
-    #     """
-    #     GetUnchecked returns a pointer to the given component of an [Entity].
-    #     Returns nil if the entity has no such component.
-
-    #     GetUnchecked is an optimized version of [World.get],
-    #     for cases where _entities are static or checked with [World.Alive] in user code.
-    #     It can also be used after getting another component of the same entity with [World.get].
-
-    #     Panics when called for a removed entity, but not for a recycled entity.
-
-    #     See also [github.com/mlange-42/arche/generic.Map.get] for a generic variant.
-    #     """
-    #     var index = &self._entities[entity.id]
-    #     return index.arch.get(index.index, comp)
-
-    @always_inline
-    fn has[T: ComponentType](self, entity: Entity) raises -> Bool:
-        """
-        Returns whether an [..entity.Entity] has a given component.
-
-        Raises:
-            Error: If the entity does not exist.
-        """
-        self._assert_alive(entity)
-        return self._archetypes[
-            self._entities[entity.get_id()].archetype_index
-        ].has_component(Self.component_manager.get_id[T]())
-
-    # fn HasUnchecked(self, entity: Entity, comp: Id) -> bool:
-    #     """
-    #     HasUnchecked returns whether an [Entity] has a given component.
-
-    #     HasUnchecked is an optimized version of [World.Has],
-    #     for cases where _entities are static or checked with [World.Alive] in user code.
-
-    #     Panics when called for a removed entity, but not for a recycled entity.
-
-    #     See also [github.com/mlange-42/arche/generic.Map.Has] for a generic variant.
-    #     """
-    #     return self._entities[entity.id].arch.HasComponent(comp)
 
     fn add[
         *Ts: ComponentType
@@ -664,7 +592,7 @@ struct World[*component_types: ComponentType]:
         *component_types,
     ]:
         """
-        Returns a struct for removing and adding components to an Entity in one go.
+        Returns a [.Replacer] for removing and adding components to an Entity in one go.
 
         Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, comp5, entity=entity)`.
 
@@ -827,6 +755,31 @@ struct World[*component_types: ComponentType]:
             index_in_archetype, archetype_index
         )
 
+    @always_inline
+    fn _assert_unlocked(self) raises:
+        """
+        Checks if the world is locked, and raises if so.
+
+        Raises:
+            Error: If the world is locked.
+        """
+        if self.is_locked():
+            raise Error("Attempt to modify a locked world.")
+
+    @always_inline
+    fn _assert_alive(self, entity: Entity) raises:
+        """
+        Checks if the entity is alive, and raises if not.
+
+        Args:
+            entity: The entity to check.
+
+        Raises:
+            Error: If the entity does not exist.
+        """
+        if not self._entity_pool.is_alive(entity):
+            raise Error("The considered entity does not exist anymore.")
+
     # fn Reset(self):
     #     """
     #     Reset removes all _entities and _resources from the world.
@@ -899,11 +852,53 @@ struct World[*component_types: ComponentType]:
     #     return &Batchw
 
     @always_inline
+    fn query[
+        *Ts: ComponentType
+    ](
+        mut self,
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+        ],
+    ) raises:
+        """
+        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
+
+        Parameters:
+            Ts: The types of the components.
+
+        Returns:
+            An iterator with accessors to all entities with the given components.
+
+        Raises:
+            Error: If the world is [.World.is_locked locked].
+        """
+        iterator = _EntityIterator(
+            Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
+            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+        )
+
+    @always_inline
     fn is_locked(self) -> Bool:
         """
         Returns whether the world is locked by any [.World.query queries].
         """
         return self._locks.is_locked()
+
+    fn _lock(mut self) raises -> UInt8:
+        """
+        Locks the world and gets the lock bit for later unlocking.
+        """
+        return self._locks.lock()
+
+    fn _unlock(mut self, lock: UInt8) raises:
+        """
+        Unlocks the given lock bit.
+        """
+        self._locks.unlock(lock)
 
     # fn Mask(self, entity: Entity) -> Mask:
     #     """
@@ -1194,37 +1189,6 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    @always_inline
-    fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
-        """
-        Creates an Entity and adds it to the given archetype.
-        """
-        entity = self._entity_pool.get()
-        idx = self._archetypes[archetype_index].add(entity)
-        if entity.get_id() == len(self._entities):
-            self._entities.append(EntityIndex(idx, archetype_index))
-        else:
-            self._entities[entity.get_id()] = EntityIndex(idx, archetype_index)
-
-    @always_inline
-    fn _create_entities[
-        element_origin: MutableOrigin
-    ](mut self, archetype_index: Int, count: Int):
-        """
-        Creates multiple Entities and adds them to the given archetype.
-        """
-        archetype = self._archetypes[archetype_index]
-        arch_start_idx = archetype.extend(count, self._entity_pool)
-        last_entity_id = archetype.get_entity(arch_start_idx + count).get_id()
-        if last_entity_id > len(self._entities):
-            self._entities.resize(
-                index(last_entity_id), EntityIndex(0, archetype_index)
-            )
-        for i in range(arch_start_idx, arch_start_idx + count):
-            entity_id = archetype.get_entity(i).get_id()
-            self._entities[entity_id].archetype_index = archetype_index
-            self._entities[entity_id].index = arch_start_idx + i
-
     # fn removeEntities(self, filter: Filter) -> int:
     #     """
     #     RemoveEntities removes and recycles all _entities matching a filter.
@@ -1430,18 +1394,6 @@ struct World[*component_types: ComponentType]:
     #     self._cleanup_archetype(old_archetype)
 
     #     return arch, startIdx
-
-    fn _lock(mut self) raises -> UInt8:
-        """
-        Locks the world and gets the lock bit for later unlocking.
-        """
-        return self._locks.lock()
-
-    fn _unlock(mut self, lock: UInt8) raises:
-        """
-        Unlocks the given lock bit.
-        """
-        self._locks.unlock(lock)
 
     # fn copyTo(self, entity: Entity, id: ID, comp: interface) -> unsafe:
     #     """

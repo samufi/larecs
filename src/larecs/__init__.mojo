@@ -66,6 +66,7 @@ main()
 
 Exports:
  - world.World
+ - world.Replacer
  - component.ComponentType
  - entity.Entity
 """
