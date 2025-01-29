@@ -586,7 +586,7 @@ struct World[*component_types: ComponentType]:
     @always_inline
     fn replace[
         *Ts: ComponentType
-    ](mut self) -> _Replacer[
+    ](mut self) -> Replacer[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
@@ -601,7 +601,7 @@ struct World[*component_types: ComponentType]:
         Parameters:
             Ts: The types of the components to remove.
         """
-        return _Replacer[
+        return Replacer[
             __origin_of(self),
             VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
             *component_types,
