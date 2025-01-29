@@ -7,6 +7,14 @@ alias EntityId = UInt32
 alias Id = UInt8
 
 
+fn get_max_size[dType: DType]() -> UInt:
+    """Returns how many different numbers could be expressed with a UInt with the same size as dType.
+
+    Parameters:
+        dType: The type to get the size of.
+    """
+    return index(Scalar[dType].MAX) + 1
+
 
 
 # # ResID is the resource identifier type.
