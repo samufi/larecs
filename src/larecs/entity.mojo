@@ -2,7 +2,6 @@ from bit import bit_reverse
 
 from .types import EntityId
 from .archetype import Archetype
-from .types import TrivialIntable
 
 # # Reflection type of an [Entity].
 # var entityType = reflect.TypeOf(Entity{})
@@ -39,23 +38,41 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     @always_inline
     fn __eq__(self, other: Entity) -> Bool:
+        """
+        Compares two entities for equality.
+
+        Args:
+            other: The other entity to compare to.
+        """
         return self._id == other._id and self._gen == other._gen
 
     @always_inline
     fn __ne__(self, other: Entity) -> Bool:
+        """
+        Compares two entities for inequality.
+
+        Args:
+            other: The other entity to compare to.
+        """
         return not (self == other)
 
     @always_inline
     fn __bool__(self) -> Bool:
+        """
+        Returns whether this entity is not the zero entity.
+        """
         return self._id != 0
 
     @always_inline
     fn __str__(self) -> String:
+        """
+        Returns a string representation of the entity.
+        """
         return "Entity(" + str(self._id) + ", " + str(self._gen) + ")"
 
     @always_inline
     fn __hash__(self, out output: UInt):
-        """Returns a unique hash."""
+        """Returns a unique hash of the entity."""
         output = Int(self._id)
         output |= bit_reverse(Int(self._gen))
 
@@ -66,7 +83,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     @always_inline
     fn get_gen(self) -> UInt32:
-        """Returns the entity's Generation."""
+        """Returns the entity's generation."""
         return self._gen
 
     @always_inline
