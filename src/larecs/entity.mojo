@@ -2,7 +2,6 @@ from bit import bit_reverse
 
 from .types import EntityId
 from .archetype import Archetype
-from .types import TrivialIntable
 
 # # Reflection type of an [Entity].
 # var entityType = reflect.TypeOf(Entity{})

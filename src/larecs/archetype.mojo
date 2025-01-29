@@ -7,7 +7,7 @@ from .component import (
 from .entity import Entity
 from .bitmask import BitMask
 from .pool import EntityPool
-from .types import get_max_uint_size, TrivialIntable
+from .types import get_max_size
 
 # Default capacity of an archetype.
 alias DEFAULT_CAPACITY = 32
@@ -34,7 +34,7 @@ struct Archetype[
     alias Index = UInt32
     """The type of the index of entities."""
 
-    alias max_size = get_max_uint_size[Self.Id]()
+    alias max_size = get_max_size[Self.dType]()
     """The maximal number of components in the archetype."""
 
     # Pointers to the component data.

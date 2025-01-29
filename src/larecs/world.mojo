@@ -6,7 +6,6 @@ from .entity import Entity, EntityIndex
 from .archetype import Archetype as _Archetype
 from .graph import BitMaskGraph
 from .bitmask import BitMask
-from .types import TrivialIntable
 from .chained_array_list import ChainedArrayList
 from .debug_utils import debug_warn
 from .component import (

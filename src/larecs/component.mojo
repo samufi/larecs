@@ -6,7 +6,7 @@ from collections import (
 from memory import UnsafePointer
 
 from .stupid_dict import SimdDict, StupidDict as Dict
-from .types import get_max_uint_size, TrivialIntable
+from .types import get_max_size
 from .bitmask import BitMask
 
 
@@ -94,7 +94,7 @@ struct ComponentManager[*component_types: ComponentType]():
 
     alias dType = BitMask.IndexDType
     alias Id = SIMD[Self.dType, 1]
-    alias max_size = get_max_uint_size[Self.Id]()
+    alias max_size = get_max_size[Self.dType]()
     alias component_count = len(VariadicList(component_types))
     alias component_sizes = get_sizes[*component_types]()
 
