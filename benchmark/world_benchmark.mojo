@@ -302,6 +302,7 @@ fn benchmark_add_remove_1_comp_1_000_000(
                 component = FlexibleComponent[i + 1](i, 2.0)
                 for entity in entities:
                     world.add(entity[], component)
+                for entity in entities:
                     world.remove[FlexibleComponent[i]](entity[])
 
     bencher.iter[bench_fn]()
