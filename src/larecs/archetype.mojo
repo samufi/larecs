@@ -70,7 +70,7 @@ struct Archetype[
         out self,
     ):
         """Initializes the zero archetype without any component.
-        
+
         Returns:
             The zero archetype.
         """
@@ -213,15 +213,15 @@ struct Archetype[
 
     fn copy(self, out other: Self):
         """Returns a copy of the archetype.
-        
+
         Returns:
             A copy of the current archetype.
         """
         other = self
-    
+
     fn __moveinit__(mut self, owned existing: Self):
         """Moves the data from an existing archetype to a new one.
-        
+
         Args:
             existing: The archetype to move from.
         """
@@ -237,7 +237,7 @@ struct Archetype[
 
     fn __copyinit__(mut self, existing: Self):
         """Copies the data from an existing archetype to a new one.
-        
+
         Args:
             existing: The archetype to copy from.
         """
@@ -275,7 +275,7 @@ struct Archetype[
     @always_inline
     fn __len__(self) -> Int:
         """Returns the number of entities in the archetype.
-        
+
         Returns:
             The number of entities in the archetype.
         """
@@ -284,7 +284,7 @@ struct Archetype[
     @always_inline
     fn __bool__(self) -> Bool:
         """Returns whether the archetype contains entities.
-        
+
         Returns:
             Whether the archetype contains entities.
         """
@@ -293,7 +293,7 @@ struct Archetype[
     @always_inline
     fn get_node_index(self) -> UInt:
         """Returns the index of the archetype's node in the archetype graph.
-        
+
         Returns:
             The index of the archetype's node in the archetype graph.
         """
@@ -302,7 +302,7 @@ struct Archetype[
     @always_inline
     fn get_mask(self) -> ref [self._mask] BitMask:
         """Returns the mask of the archetype's node in the archetype graph.
-        
+
         Returns:
             The mask of the archetype's node in the archetype graph.
         """
@@ -342,7 +342,7 @@ struct Archetype[
     @always_inline
     fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
         """Returns the entity at the given index.
-        
+
         Parameters:
             T: The type of the index.
 
@@ -359,7 +359,7 @@ struct Archetype[
         T: Indexer
     ](mut self, idx: T, id: Self.Id, value: UnsafePointer[UInt8]):
         """Sets the component with the given id at the given index.
-        
+
         Parameters:
             T: The type of the index.
 
@@ -379,7 +379,7 @@ struct Archetype[
         """Returns the component with the given id at the given index.
 
         Does not check if the archetype contains the component.
-        
+
         Args:
             idx: The index of the entity.
             id: The id of the component.
@@ -453,7 +453,7 @@ struct Archetype[
     @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id.
-        
+
         Args:
             id: The id of the component.
 
@@ -465,7 +465,7 @@ struct Archetype[
     @always_inline
     fn has_component[T: ComponentType](self) -> Bool:
         """Returns whether the archetype contains the given component id.
-        
+
         Parameters:
             T: The type of the component.
 
@@ -477,7 +477,7 @@ struct Archetype[
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:
         """Raises if the archetype does not contain the given component id.
-        
+
         Args:
             id: The id of the component.
 
