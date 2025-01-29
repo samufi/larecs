@@ -1,5 +1,5 @@
 {{define "overload" -}}
-{{template "signature" .}}
+{{template "signature_func" .}}
 
 {{`{{<html>}}`}}<details>
 <summary>{{`{{</html>}}`}}{{if .Summary}}{{.Summary}}{{else}}Details{{end}}{{`{{<html>}}`}}</summary>{{`{{</html>}}`}}
