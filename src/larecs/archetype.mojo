@@ -9,7 +9,7 @@ from .bitmask import BitMask
 from .pool import EntityPool
 from .types import get_max_uint_size, TrivialIntable
 
-
+# Default capacity of an archetype.
 alias DEFAULT_CAPACITY = 32
 
 
@@ -26,13 +26,16 @@ struct Archetype[
     """
 
     alias dType = BitMask.IndexDType
+    """The DType of the component ids."""
 
     alias Id = SIMD[Self.dType, 1]
+    """The type of the component ids."""
 
     alias Index = UInt32
+    """The type of the index of entities."""
 
-    # The maximal number of components in the archetype.
     alias max_size = get_max_uint_size[Self.Id]()
+    """The maximal number of components in the archetype."""
 
     # Pointers to the component data.
     var _data: InlineArray[
@@ -66,7 +69,11 @@ struct Archetype[
     fn __init__(
         out self,
     ):
-        """Initializes the zero archetype without any component."""
+        """Initializes the zero archetype without any component.
+        
+        Returns:
+            The zero archetype.
+        """
         self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
     fn __init__[
@@ -81,6 +88,9 @@ struct Archetype[
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
             capacity:   The initial capacity of the archetype.
+
+        Returns:
+            An archetype wihtout allocated memory.
         """
         self._size = 0
         self._mask = mask
@@ -113,6 +123,9 @@ struct Archetype[
             node_index:      The index of the archetype's node in the archetype graph.
             component_ids:   The IDs of the components of the archetype.
             capacity:        The initial capacity of the archetype.
+
+        Returns:
+            The archetype with the given components.
         """
         mask_ = BitMask()
 
@@ -141,6 +154,9 @@ struct Archetype[
                   (not used in initializer; not checked for consistency with component_ids).
             component_ids: The IDs of the components of the archetype.
             capacity: The initial capacity of the archetype.
+
+        Returns:
+            The archetype with the given components and BitMask.
         """
         constrained[
             Self.dType.is_integral(),
@@ -178,6 +194,9 @@ struct Archetype[
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
             capacity: The initial capacity of the archetype.
+
+        Returns:
+            The archetype based on the given mask.
         """
         self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = 0
@@ -193,10 +212,19 @@ struct Archetype[
                 self._component_count += 1
 
     fn copy(self, out other: Self):
-        """Initializes the archetype as a copy of another archetype."""
+        """Returns a copy of the archetype.
+        
+        Returns:
+            A copy of the current archetype.
+        """
         other = self
-
+    
     fn __moveinit__(mut self, owned existing: Self):
+        """Moves the data from an existing archetype to a new one.
+        
+        Args:
+            existing: The archetype to move from.
+        """
         self._data = existing._data^
         self._size = existing._size
         self._capacity = existing._capacity
@@ -208,6 +236,11 @@ struct Archetype[
         self._mask = existing._mask
 
     fn __copyinit__(mut self, existing: Self):
+        """Copies the data from an existing archetype to a new one.
+        
+        Args:
+            existing: The archetype to copy from.
+        """
         # Copy the attributes that can be trivially
         # copied via a simple assignment
         self._size = existing._size
@@ -235,27 +268,44 @@ struct Archetype[
             )
 
     fn __del__(owned self):
+        """Frees the memory of the archetype."""
         for i in range(self._component_count):
             self._data[self._ids[i]].free()
 
     @always_inline
     fn __len__(self) -> Int:
-        """Returns the number of entities in the archetype."""
+        """Returns the number of entities in the archetype.
+        
+        Returns:
+            The number of entities in the archetype.
+        """
         return self._size
 
     @always_inline
     fn __bool__(self) -> Bool:
-        """Returns whether the archetype contains entities."""
+        """Returns whether the archetype contains entities.
+        
+        Returns:
+            Whether the archetype contains entities.
+        """
         return bool(self._size)
 
     @always_inline
     fn get_node_index(self) -> UInt:
-        """Returns the index of the archetype's node in the archetype graph."""
+        """Returns the index of the archetype's node in the archetype graph.
+        
+        Returns:
+            The index of the archetype's node in the archetype graph.
+        """
         return self._node_index
 
     @always_inline
     fn get_mask(self) -> ref [self._mask] BitMask:
-        """Returns the mask of the archetype's node in the archetype graph."""
+        """Returns the mask of the archetype's node in the archetype graph.
+        
+        Returns:
+            The mask of the archetype's node in the archetype graph.
+        """
         return self._mask
 
     @always_inline
@@ -291,14 +341,33 @@ struct Archetype[
 
     @always_inline
     fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
-        """Returns the entity at the given index."""
+        """Returns the entity at the given index.
+        
+        Parameters:
+            T: The type of the index.
+
+        Args:
+            idx: The index of the entity.
+
+        Returns:
+            A reference to the entity at the given index.
+        """
         return self._entities[idx]
 
     @always_inline
     fn unsafe_set[
         T: Indexer
     ](mut self, idx: T, id: Self.Id, value: UnsafePointer[UInt8]):
-        """Sets the component with the given id at the given index."""
+        """Sets the component with the given id at the given index.
+        
+        Parameters:
+            T: The type of the index.
+
+        Args:
+            idx: The index of the entity.
+            id: The id of the component.
+            value: A pointer to the value being set.
+        """
         memcpy(
             self._get_component_ptr(index(idx), id),
             value,
@@ -307,7 +376,17 @@ struct Archetype[
 
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
-        """Returns the component with the given id at the given index."""
+        """Returns the component with the given id at the given index.
+
+        Does not check if the archetype contains the component.
+        
+        Args:
+            idx: The index of the entity.
+            id: The id of the component.
+
+        Returns:
+            A pointer to the component.
+        """
         return self._data[id] + idx * self._item_sizes[id]
 
     @always_inline
@@ -329,6 +408,9 @@ struct Archetype[
 
         Raises:
             Error:  If assert_has_component and the archetype does not contain the component.
+
+        Returns:
+            A pointer to the component.
         """
         return Pointer[T, __origin_of(self._data)].address_of(
             self.get_component[T=T, assert_has_component=assert_has_component](
@@ -355,6 +437,9 @@ struct Archetype[
 
         Raises:
             Error:  If assert_has_component and the archetype does not contain the component.
+
+        Returns:
+            A reference to the component.
         """
         alias id = component_manager.get_id[T]()
         alias component_size = component_manager.component_sizes[id]
@@ -367,17 +452,38 @@ struct Archetype[
 
     @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
-        """Returns whether the archetype contains the given component id."""
+        """Returns whether the archetype contains the given component id.
+        
+        Args:
+            id: The id of the component.
+
+        Returns:
+            Whether the archetype contains the component.
+        """
         return bool(self._data[id])
 
     @always_inline
     fn has_component[T: ComponentType](self) -> Bool:
-        """Returns whether the archetype contains the given component id."""
+        """Returns whether the archetype contains the given component id.
+        
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            Whether the archetype contains the component.
+        """
         return bool(self._data[component_manager.get_id[T]()])
 
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:
-        """Raises if the archetype does not contain the given component id."""
+        """Raises if the archetype does not contain the given component id.
+        
+        Args:
+            id: The id of the component.
+
+        Raises:
+            Error: If the archetype does not contain the component.
+        """
         if not self.has_component(id):
             raise Error(
                 "Archetype does not contain component with id " + str(id) + "."
@@ -390,8 +496,14 @@ struct Archetype[
         Performs a swap-remove and reports whether a swap was necessary
         (i.e. not the last entity that was removed).
 
+        Parameters:
+            T: The type of the index.
+
         Args:
             idx: The index of the entity to remove.
+
+        Returns:
+            Whether a swap was necessary.
         """
 
         self._size -= 1
