@@ -852,6 +852,31 @@ struct World[*component_types: ComponentType]:
     #     return &Batchw
 
     @always_inline
+    fn query(
+        mut self,
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+        ],
+    ) raises:
+        """
+        Returns an iterator with accessors to all [..entity.Entity Entities] without components.
+
+        Returns:
+            An iterator with accessors to all entities without components.
+
+        Raises:
+            Error: If the world is [.World.is_locked locked].
+        """
+        iterator = _EntityIterator(
+            Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
+            BitMask(),
+        )
+
+    @always_inline
     fn query[
         *Ts: ComponentType
     ](
