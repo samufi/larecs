@@ -16,7 +16,6 @@ fn get_max_size[dType: DType]() -> UInt:
     return index(Scalar[dType].MAX) + 1
 
 
-
 # # ResID is the resource identifier type.
 # type ResID = uint8
 
