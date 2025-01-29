@@ -69,32 +69,32 @@ jobs:
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
           source /home/runner/.bash_profile
-          ./modo/modo build docs/
+          ./modo/modo build
       - name: Run Hugo
         run: |
-          hugo -s docs
+          hugo -s docs/site
 
       - name: Archive Doc-tests
         uses: actions/upload-artifact@v4
         with:
           name: doctest
-          path: docs/doctest
+          path: docs/test
       - name: Archive Markdown artifacts
         uses: actions/upload-artifact@v4
         with:
           name: markdown
-          path: docs/content
+          path: docs/site/content
       - name: Archive HTML artifacts
         uses: actions/upload-artifact@v4
         with:
           name: public
-          path: docs/public
+          path: docs/site/public
 
       - name: Deploy to GitHub Pages
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: crazy-max/ghaction-github-pages@v4
         with:
           target_branch: gh-pages
-          build_dir: docs/public
+          build_dir: docs/site/public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
