@@ -10,7 +10,7 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity().get_id())
 
@@ -25,7 +25,7 @@ fn benchmark_add_entity_1_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity(pos).get_id())
 
@@ -34,7 +34,7 @@ fn benchmark_add_entity_1_comp_1_000_000(
 
 fn prevent_inlining_add_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     _ = world.add_entity(pos)
 
 
@@ -50,13 +50,7 @@ fn benchmark_add_entity_5_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[
-            FlexibleComponent[1],
-            FlexibleComponent[2],
-            FlexibleComponent[3],
-            FlexibleComponent[4],
-            FlexibleComponent[5],
-        ]()
+        world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity(c1, c2, c3, c4, c5).get_id())
 
@@ -69,13 +63,7 @@ fn prevent_inlining_add_entity_5_comp() raises:
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
-    world = World[
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-    ]()
+    world = SmallWorld()
     _ = world.add_entity(c1, c2, c3, c4, c5)
 
 
@@ -86,7 +74,7 @@ fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.get[Position](entity).x)
@@ -97,7 +85,7 @@ fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
 fn prevent_inlining_get() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     entity = world.add_entity(pos, vel)
     keep(world.get[Position](entity).x)
 
@@ -109,7 +97,7 @@ fn benchmark_get_ptr_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.get_ptr[Position](entity)[].x)
@@ -120,7 +108,7 @@ fn benchmark_get_ptr_1_000_000(mut bencher: Bencher) raises capturing:
 fn prevent_inlining_get_ptr() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     entity = world.add_entity(pos, vel)
     keep(world.get_ptr[Position](entity)[].x)
 
@@ -133,7 +121,7 @@ fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(500_000):
             world.set(entity, pos2)
@@ -146,7 +134,7 @@ fn prevent_inlining_set_1_comp() raises:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     entity = world.add_entity(pos, vel)
     world.set(entity, pos2)
     world.set(entity, pos)
@@ -170,13 +158,7 @@ fn benchmark_set_5_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[
-            FlexibleComponent[1],
-            FlexibleComponent[2],
-            FlexibleComponent[3],
-            FlexibleComponent[4],
-            FlexibleComponent[5],
-        ]()
+        world = SmallWorld()
         entity = world.add_entity(c1, c2, c3, c4, c5)
         for _ in range(500_000):
             world.set(entity, c1_2, c2_2, c3_2, c4_2, c5_2)
@@ -198,13 +180,7 @@ fn prevent_inlining_set_5_comp() raises:
     c4_2 = FlexibleComponent[4](2.0, 4.0)
     c5_2 = FlexibleComponent[5](2.0, 4.0)
 
-    world = World[
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-    ]()
+    world = SmallWorld()
     entity = world.add_entity(c1, c2, c3, c4, c5)
     world.set(entity, c1_2, c2_2, c3_2, c4_2, c5_2)
     world.set(entity, c1, c2, c3, c4, c5)
@@ -232,7 +208,7 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
 
 fn prevent_inlining_add_remove_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     entity = world.add_entity(pos)
     world.remove_entity(entity)
 
@@ -240,7 +216,7 @@ fn prevent_inlining_add_remove_entity_1_comp() raises:
 fn benchmark_add_remove_entity_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
-    c1 = FlexibleComponent[1](1.0, 2.0)
+    c1 = LargerComponent(1.0, 2.0, 3.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
@@ -249,20 +225,18 @@ fn benchmark_add_remove_entity_5_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[
-            FlexibleComponent[1],
-            FlexibleComponent[2],
-            FlexibleComponent[3],
-            FlexibleComponent[4],
-            FlexibleComponent[5],
-        ]()
+        world = SmallWorld()
+        _ = world.add_entity(c3, c5)
+        # world = FullWorld()
 
         entities = List[Entity]()
         for _ in range(1000):
             for _ in range(1000):
                 entities.append(world.add_entity(c1, c2, c3, c4, c5))
+            e = world.add_entity(c3, c5)
             for entity in entities:
                 world.remove_entity(entity[])
+            world.remove_entity(e)
             entities.clear()
 
     bencher.iter[bench_fn]()
@@ -275,13 +249,7 @@ fn prevent_inlining_add_remove_entity_5_comp() raises:
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
 
-    world = World[
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-    ]()
+    world = SmallWorld()
     entity = world.add_entity(c1, c2, c3, c4, c5)
     world.remove_entity(entity)
 
@@ -293,7 +261,7 @@ fn benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.has[Position](entity))
@@ -308,7 +276,7 @@ fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
             keep(world.is_alive(entity))
@@ -319,17 +287,22 @@ fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
 fn benchmark_add_remove_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
-        entity = world.add_entity(pos)
-        for _ in range(1_000_000):
-            world.add(entity, vel)
-            world.remove[Velocity](entity)
+        for _ in range(50):
+            world = FullWorld()
+            entities = List[Entity]()
+            component0 = FlexibleComponent[0](1.0, 2.0)
+            for _ in range(1000):
+                entities.append(world.add_entity(component0))
+
+            @parameter
+            for i in range(20):
+                component = FlexibleComponent[i + 1](i, 2.0)
+                for entity in entities:
+                    world.add(entity[], component)
+                    world.remove[FlexibleComponent[i]](entity[])
 
     bencher.iter[bench_fn]()
 
@@ -337,7 +310,7 @@ fn benchmark_add_remove_1_comp_1_000_000(
 fn prevent_inlining_add_remove_1_comp() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     entity = world.add_entity(pos)
     world.add(entity, vel)
     world.remove[Velocity](entity)
@@ -356,14 +329,7 @@ fn benchmark_add_remove_5_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[
-            Position,
-            FlexibleComponent[1],
-            FlexibleComponent[2],
-            FlexibleComponent[3],
-            FlexibleComponent[4],
-            FlexibleComponent[5],
-        ]()
+        world = SmallWorld()
         entity = world.add_entity(pos)
         for _ in range(1_000_000):
             world.add(entity, c1, c2, c3, c4, c5)
@@ -386,14 +352,7 @@ fn prevent_inlining_add_remove_5_comp() raises:
     c5 = FlexibleComponent[5](1.0, 2.0)
     pos = Position(1.0, 2.0)
 
-    world = World[
-        Position,
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-    ]()
+    world = SmallWorld()
     entity = world.add_entity(pos)
     world.add(entity, c1, c2, c3, c4, c5)
     world.remove[
@@ -420,7 +379,7 @@ fn benchmark_replace_1_comp_1_000_000(
 
             @parameter
             for i in range(20):
-                component = FlexibleComponent[i + 1](1.0, 2.0)
+                component = FlexibleComponent[i + 1](i, 2.0)
                 for entity in entities:
                     world.replace[FlexibleComponent[i]]().by(
                         entity[], component
@@ -437,7 +396,7 @@ fn benchmark_replace_1_comp_1_000_000_extra(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entities = List[Entity]()
         for _ in range(1000):
             entities.append(world.add_entity(pos))
@@ -446,12 +405,14 @@ fn benchmark_replace_1_comp_1_000_000_extra(
 
 
 fn prevent_inlining_replace() raises:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-    world = World[Position, Velocity]()
-    entity = world.add_entity(vel)
-    world.replace[Velocity]().by(entity, pos)
-    world.replace[Position]().by(entity, vel)
+    world = FullWorld()
+    entity = world.add_entity(FlexibleComponent[0](1.0, 2.0))
+    @parameter
+    for i in range(20):
+        component = FlexibleComponent[i + 1](i, 2.0)
+        world.replace[FlexibleComponent[i]]().by(
+            entity, component
+        )
 
 
 fn run_all_world_benchmarks() raises:
