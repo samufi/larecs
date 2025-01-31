@@ -87,7 +87,7 @@ def test_entity_pool_stochastic():
                 isAlive,
                 p.is_alive(e),
                 "Wrong alive state of entity "
-                + str(e)
+                + String(e)
                 + " after initialization",
             )
             if random_float64() > 0.75:
@@ -102,9 +102,9 @@ def test_entity_pool_stochastic():
                 isAlive,
                 p.is_alive(e),
                 "Wrong alive state of entity "
-                + str(e)
+                + String(e)
                 + " after 1st removal. Entity is "
-                + str(p._entities[e.get_id()]),
+                + String(p._entities[e.get_id()]),
             )
 
         for _ in range(10):
@@ -117,9 +117,9 @@ def test_entity_pool_stochastic():
                 isAlive,
                 p.is_alive(e),
                 "Wrong alive state of entity "
-                + str(e)
+                + String(e)
                 + " after 1st recycling. Entity is "
-                + str(p._entities[e.get_id()]),
+                + String(p._entities[e.get_id()]),
             )
 
         assert_equal(0, p._available, "No more _entities should be available")
@@ -138,9 +138,9 @@ def test_entity_pool_stochastic():
                 a,
                 p.is_alive(e),
                 "Wrong alive state of entity "
-                + str(e)
+                + String(e)
                 + " after 2nd removal. Entity is "
-                + str(p._entities[e.get_id()]),
+                + String(p._entities[e.get_id()]),
             )
 
 

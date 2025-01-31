@@ -22,7 +22,7 @@ struct DummyComponentType(EqualityComparable, Stringable):
         return self.x != other.x
 
     fn __str__(self) -> String:
-        return "DummyComponentType(x: " + str(self.x) + ")"
+        return "DummyComponentType(x: " + String(self.x) + ")"
 
     fn __copyinit__(mut self, existing: Self):
         self.x = existing.x
@@ -47,7 +47,7 @@ struct FlexibleDummyComponentType[type_hash: Int = 12345](
         return self.x != other.x
 
     fn __str__(self) -> String:
-        return "FlexibleDummyComponentType(x: " + str(self.x) + ")"
+        return "FlexibleDummyComponentType(x: " + String(self.x) + ")"
 
 
 def main():

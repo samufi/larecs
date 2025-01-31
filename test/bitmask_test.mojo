@@ -71,7 +71,7 @@ fn test_bit_mask() raises:
     assert_true(mask.get(27))
 
     assert_equal(
-        str(mask),
+        String(mask),
         "[0110000000000100000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000]",
     )
 
@@ -204,7 +204,7 @@ def test_bitmask_get_indices():
             if value[] == idx:
                 found = True
                 break
-        assert_true(found, str(value[]) + " not found.")
+        assert_true(found, String(value[]) + " not found.")
         size += 1
 
     assert_equal(len(unique_indices), size)

@@ -1064,7 +1064,7 @@ struct World[*component_types: ComponentType]:
 
     # ----------------- from world_internal.go -----------------
 
-    # fn newEntities(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...ID):
+    # fn newEntities(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
     #     """
     #     Creates new _entities without returning a query over them.
     #     Used via [World.Batch].
@@ -1088,7 +1088,7 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    # fn newEntitiesQuery(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...ID) -> Query:
+    # fn newEntitiesQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID) -> Query:
     #     """
     #     Creates new _entities and returns a query over them.
     #     Used via [World.Batch].
@@ -1103,7 +1103,7 @@ struct World[*component_types: ComponentType]:
     #     batches.Add(arch, nil, startIdx, arch.Len())
     #     return newBatchQuery(self, lock, &batches)
 
-    # fn newEntitiesWith(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...Component):
+    # fn newEntitiesWith(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component):
     #     """
     #     Creates new _entities with component values without returning a query over them.
     #     Used via [World.Batch].
@@ -1131,7 +1131,7 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    # fn newEntitiesWithQuery(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...Component) -> Query:
+    # fn newEntitiesWithQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component) -> Query:
     #     """
     #     Creates new _entities with component values and returns a query over them.
     #     Used via [World.Batch].
@@ -1149,7 +1149,7 @@ struct World[*component_types: ComponentType]:
     #     batches.Add(arch, nil, startIdx, arch.Len())
     #     return newBatchQuery(self, lock, &batches)
 
-    # fn newEntitiesNoNotify(self, count: int, targetID: ID, hasTarget: bool, target: Entity, comps: ...ID):
+    # fn newEntitiesNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
     #     """
     #     Internal method to create new _entities.
     #     """
@@ -1175,7 +1175,7 @@ struct World[*component_types: ComponentType]:
 
     #     return arch, startIdx
 
-    # fn newEntitiesWithNoNotify(self, count: int, targetID: ID, hasTarget: bool, target: Entity, ids: []ID, comps: ...Component):
+    # fn newEntitiesWithNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, ids: []ID, comps: ...Component):
     #     """
     #     Internal method to create new _entities with component values.
     #     """
@@ -1227,7 +1227,7 @@ struct World[*component_types: ComponentType]:
     #     var lock = self.lock()
 
     #     var bits: event.Subscription
-    #     var listen: bool
+    #     var listen: Bool
 
     #     var count: uint32
 
@@ -1304,7 +1304,7 @@ struct World[*component_types: ComponentType]:
     #                     OldTarget: oldTarget, EventTypes: bits,
     #             )
 
-    # fn exchangeBatch(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity) -> int:
+    # fn exchangeBatch(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> int:
     #     """
     #     ExchangeBatch exchanges components for many _entities, matching a filter.
 
@@ -1328,7 +1328,7 @@ struct World[*component_types: ComponentType]:
 
     #     return count
 
-    # fn exchangeBatchQuery(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity) -> Query:
+    # fn exchangeBatchQuery(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> Query:
     #     var batches = batchArchetypes
     #         Added:   add,
     #         Removed: rem,
@@ -1338,7 +1338,7 @@ struct World[*component_types: ComponentType]:
     #     var lock = self.lock()
     #     return newBatchQuery(self, lock, &batches)
 
-    # fn exchangeBatchNoNotify(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity, batches: *batchArchetypes) -> int:
+    # fn exchangeBatchNoNotify(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity, batches: *batchArchetypes) -> int:
     #     self.checkLocked()
 
     #     if len(add) == 0 && len(rem) == 0:
@@ -1365,7 +1365,7 @@ struct World[*component_types: ComponentType]:
 
     #     return int(totalEntities)
 
-    # fn exchangeArch(self, old_archetype: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: bool, target: Entity):
+    # fn exchangeArch(self, old_archetype: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity):
     #     var mask = self._get_exchange_mask(old_archetype.Mask, add, rem)
     #     var oldIDs = old_archetype.Components()
 

@@ -68,7 +68,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         """
         Returns a string representation of the entity.
         """
-        return "Entity(" + str(self._id) + ", " + str(self._gen) + ")"
+        return "Entity(" + String(self._id) + ", " + String(self._gen) + ")"
 
     @always_inline
     fn __hash__(self, out output: UInt):

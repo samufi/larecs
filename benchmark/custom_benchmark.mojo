@@ -218,7 +218,7 @@ struct Bench:
             print(
                 bench_id.func_name + ":",
                 mean_time,
-                "ns per iteration (" + str(bencher._iters),
+                "ns per iteration (" + String(bencher._iters),
                 "iterations in",
                 bencher._time_ns * 1e-9,
                 "seconds)",
