@@ -124,7 +124,7 @@ def test_query_result_ids():
         assert_equal(
             entity.get[FlexibleComponent[0]]().y,
             world.get[FlexibleComponent[0]](entities[i]).y,
-            "Entity " + str(i) + " is incorrect.",
+            "Entity " + String(i) + " is incorrect.",
         )
         i += 1
 

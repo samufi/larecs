@@ -213,7 +213,7 @@ struct BitMask(Stringable, KeyElement):
         result = _BitMaskIndexIter(self._bytes)
 
     fn __str__(self) -> String:
-        """Implements str(...)."""
+        """Implements String(...)."""
         var result: String = "["
         for i in range(len(self._bytes) * 8):
             if self.get(i):
@@ -226,4 +226,4 @@ struct BitMask(Stringable, KeyElement):
     @always_inline
     fn __repr__(self) -> String:
         """Representation string of the Mask."""
-        return "BitMask(" + str(self._bytes) + ")"
+        return "BitMask(" + String(self._bytes) + ")"

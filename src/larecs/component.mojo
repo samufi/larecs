@@ -105,7 +105,9 @@ struct ComponentManager[*component_types: ComponentType]():
         ]()
         constrained[
             len(VariadicList(component_types)) <= Self.max_size,
-            "At most " + str(Self.max_size) + " component types are allowed.",
+            "At most "
+            + String(Self.max_size)
+            + " component types are allowed.",
         ]()
 
     @staticmethod

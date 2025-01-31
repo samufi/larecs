@@ -25,7 +25,7 @@ struct TestElement(CollectionElementNew):
 def test_chained_array_list_init():
     list = ChainedArrayList[Int]()
     assert_equal(len(list), 0)
-    assert_false(bool(list))
+    assert_false(Bool(list))
 
 
 def test_chained_array_list_add():
@@ -34,7 +34,7 @@ def test_chained_array_list_add():
     assert_equal(list.add(2), 1)
     assert_equal(list.add(3), 2)
     assert_equal(len(list), 3)
-    assert_true(bool(list))
+    assert_true(Bool(list))
     assert_equal(list[0], 1)
     assert_equal(list[1], 2)
     assert_equal(list[2], 3)

@@ -166,7 +166,7 @@ struct Archetype[
         constrained[
             Self.max_size >= component_count,
             "An archetype cannot have more components than "
-            + str(Self.max_size)
+            + String(Self.max_size)
             + ".",
         ]()
 
@@ -288,7 +288,7 @@ struct Archetype[
         Returns:
             Whether the archetype contains entities.
         """
-        return bool(self._size)
+        return Bool(self._size)
 
     @always_inline
     fn get_node_index(self) -> UInt:
@@ -460,7 +460,7 @@ struct Archetype[
         Returns:
             Whether the archetype contains the component.
         """
-        return bool(self._data[id])
+        return Bool(self._data[id])
 
     @always_inline
     fn has_component[T: ComponentType](self) -> Bool:
@@ -472,7 +472,7 @@ struct Archetype[
         Returns:
             Whether the archetype contains the component.
         """
-        return bool(self._data[component_manager.get_id[T]()])
+        return Bool(self._data[component_manager.get_id[T]()])
 
     @always_inline
     fn assert_has_component(self, id: Self.Id) raises:
@@ -486,7 +486,9 @@ struct Archetype[
         """
         if not self.has_component(id):
             raise Error(
-                "Archetype does not contain component with id " + str(id) + "."
+                "Archetype does not contain component with id "
+                + String(id)
+                + "."
             )
 
     @always_inline
