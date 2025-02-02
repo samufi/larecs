@@ -55,18 +55,26 @@ struct Position(ComponentType):
 
 
 @value
+struct LargerComponent(ComponentType):
+    var x: Float64
+    var y: Float64
+    var z: Float64
+
+
+@value
 struct Velocity(ComponentType):
     var dx: Float64
     var dy: Float64
 
 
 @value
-struct FlexibleComponent[i: Int](ComponentType):
+struct FlexibleComponent[i: UInt](ComponentType):
     var x: Float64
-    var y: Float64
+    var y: Float32
 
 
 alias SmallWorld = World[
+    LargerComponent,
     Position,
     Velocity,
     FlexibleComponent[0],
@@ -83,6 +91,7 @@ alias SmallWorld = World[
 ]
 
 alias FullWorld = World[
+    LargerComponent,
     Position,
     Velocity,
     FlexibleComponent[0],
@@ -338,5 +347,4 @@ alias FullWorld = World[
     FlexibleComponent[250],
     FlexibleComponent[251],
     FlexibleComponent[252],
-    FlexibleComponent[253],
 ]
