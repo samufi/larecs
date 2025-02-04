@@ -21,7 +21,7 @@ from .lock import LockMask
 @value
 struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
     """
-    Replacer is a helper struct for removing and adding components to an [Entity].
+    Replacer is a helper struct for removing and adding components to an [..entity.Entity].
 
     It stores the components to remove and allows adding new components
     in one go.
@@ -39,7 +39,7 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         *AddTs: ComponentType
     ](self, entity: Entity, *components: *AddTs) raises:
         """
-        Removes and adds the components to an [Entity].
+        Removes and adds the components to an [..entity.Entity].
 
         Parameters:
             AddTs: The types of the components to add.
@@ -64,7 +64,7 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         *AddTs: ComponentType
     ](self, *components: *AddTs, entity: Entity) raises:
         """
-        Removes and adds the components to an [Entity].
+        Removes and adds the components to an [..entity.Entity].
 
         Parameters:
             AddTs: The types of the components to add.
