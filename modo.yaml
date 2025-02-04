@@ -3,6 +3,14 @@
 input:
   - docs/src
 
+# Source directories to monitor when running in watch mode.
+source:
+  - src/larecs
+
+# Full URLs of package sources. Used to create source links.
+source-url:
+  larecs: https://github.com/samufi/larecs/blob/main/src/larecs
+
 # Output directory.
 output: docs/site/content
 
