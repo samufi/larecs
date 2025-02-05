@@ -1,34 +1,12 @@
-# Larecs🌲 - lucid archetype-based ECS
+# Larecs🌲 - Lucid archetype-based ECS
 
-This is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
+This is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. It features a clean API and compile-time component identification, so it is fast and convenient to work with. 
 
-Larecs🌲 is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
-
-The Larecs🌲 package is still under construction, so the API might change in future versions.
-It can, however, already be used for testing purposes.
+Larecs🌲 is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language. The package is still under construction, so be aware that the API might change in future versions.
 
 ## Installation
 
-### Prerequisites
-
-This package is written in and for [Mojo](https://docs.modular.com/mojo/manual/get-started)🔥, which needs to be installed in order to compile, test, or use the software.
-If Mojo🔥 and the command line interface [Magic](https://docs.modular.com/magic/) are available, dependencies can be installed by navigating to the project directory and executing the following command: 
-
-```
-magic install
-```
-
-If parts of the program should be executed afterwards, execute the following command in the project folder, making `mojo` available on the command line:
-
-```
-magic shell
-```
-
-This includes `magic install`, so it is okay to omit the former step.
-
-### Build the package
-
-You can build Larecs🌲 as a package as follows:
+This package is written in and for [Mojo](https://docs.modular.com/mojo/manual/get-started)🔥, which needs to be installed in order to compile, test, or use the software. You can build Larecs🌲 as a package as follows:
 
 1. Clone the repository / download the files.
 2. Navigate to the `src/` subfolder.
@@ -37,8 +15,9 @@ You can build Larecs🌲 as a package as follows:
 
 ### Include source directly for compiler and language server
 
-To access the source while debugging and adjust the Larecs🌲 
-source code, you can include it into the run command as follows:
+To access the source while debugging and to adjust the Larecs🌲 
+source code, you can include it into run commands of your own
+projects as follows:
 
 ```
 mojo run -I "path/to/larecs/src" example.mojo
