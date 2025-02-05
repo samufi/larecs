@@ -299,7 +299,7 @@ struct World[
         Example:
 
         ```mojo {doctest="add_entity_comps" global=true hide=true}
-        from larecs import World
+        from larecs import World, Resources
 
         @value
         struct Position:
@@ -313,7 +313,7 @@ struct World[
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity]()
+        world = World[Position, Velocity](Resources())
         e = world.add_entity(
             Position(0, 0),
             Velocity(0.5, -0.5),

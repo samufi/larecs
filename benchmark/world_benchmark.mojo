@@ -194,7 +194,7 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         entities = List[Entity]()
         for _ in range(1000):
             for _ in range(1000):

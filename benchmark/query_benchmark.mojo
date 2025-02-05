@@ -10,7 +10,7 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity().get_id())
 
@@ -25,7 +25,7 @@ fn benchmark_query_1_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entity(pos)
         for _ in range(1000):
@@ -44,7 +44,7 @@ fn benchmark_query_2_comp_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entity(pos, vel)
         for _ in range(1000):
@@ -64,7 +64,7 @@ fn benchmark_query_2_comp_ptr_1_000_000(
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
-        world = World[Position, Velocity]()
+        world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entity(pos, vel)
         for _ in range(1000):
