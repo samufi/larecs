@@ -32,11 +32,24 @@ fn get_dtype[size: Int]() -> DType:
 
 @value
 struct Resources[*Ts: ResourceType](ResourceManaging):
-    """Manages resources."""
+    """Manages resources.
+
+    Some code was taken from Mojo's `Tuple` implementation.
+    See [here](https://github.com/modular/mojo/blob/main/stdlib/src/builtin/tuple.mojo).
+
+    Parameters:
+        Ts: The types of resources to manage. All types must be different
+            from each other.
+    """
 
     alias size = len(VariadicList(Ts))
+    """The number of resources managed."""
+
     alias dType = get_dtype[Self.size]()
+    """The data type to use as index."""
+
     alias resource_manager = ResourceManager[*Ts, dType = Self.dType]()
+    """The resource manager that maps types to resource IDs."""
 
     alias _mlir_type = __mlir_type[
         `!kgen.pack<:!kgen.variadic<`,
@@ -45,12 +58,13 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         Ts,
         `>`,
     ]
+    """The type of the internal storage."""
 
     var _storage: Self._mlir_type
 
     @always_inline("nodebug")
     fn __init__(out self, owned *args: *Ts):
-        """Construct the tuple.
+        """Constructs the tuple.
 
         Args:
             args: Initial values.
@@ -63,7 +77,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         *,
         owned storage: VariadicPack[_, CollectionElement, *Ts],
     ):
-        """Construct the tuple from a low-level internal representation.
+        """Constructs the tuple from a low-level internal representation.
 
         Args:
             storage: The variadic pack storage to construct from.
@@ -85,7 +99,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         __disable_del storage
 
     fn __del__(owned self):
-        """Destructor that destroys all of the elements."""
+        """Destructor that destroys all of the stored resources."""
 
         # Run the destructor on each member, the destructor of !kgen.pack is
         # trivial and won't do anything.
@@ -95,7 +109,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline("nodebug")
     fn __copyinit__(out self, existing: Self):
-        """Copy construct the tuple.
+        """Copy constructs the resources.
 
         Args:
             existing: The value to copy from.
@@ -113,7 +127,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline
     fn copy(self) -> Self:
-        """Explicitly construct a copy of self.
+        """Explicitly constructs a copy of self.
 
         Returns:
             A copy of this value.
@@ -122,7 +136,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline
     fn __moveinit__(out self, owned existing: Self):
-        """Move construct the tuple.
+        """Move constructs the resources.
 
         Args:
             existing: The value to move from.
@@ -142,7 +156,7 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline("nodebug")
     fn __len__(self) -> Int:
-        """Get the number of elements in the tuple.
+        """Gets the number of stored resources.
 
         Returns:
             The number of stored resources.
@@ -151,7 +165,14 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline
     fn _unsafe_get_ptr[idx: Int](ref self) -> UnsafePointer[Ts[idx.value]]:
-        """Gets an unsafe pointer to an element."""
+        """Gets an unsafe pointer to a resource.
+
+        Paramters:
+            idx: The index of the resource to get.
+
+        Returns:
+
+        """
         var storage_kgen_ptr = UnsafePointer.address_of(self._storage).address
 
         # KGenPointer to the element.
@@ -162,13 +183,26 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
 
     @always_inline
     fn get[T: ResourceType](ref self) -> ref [self] T:
-        """Gets a resource."""
+        """Gets a resource.
 
+        Parameters:
+            T: The type of the resource to get.
+
+        Returns:
+            A reference to the resource.
+        """
         return rebind[T](
             self._unsafe_get_ptr[index(Self.resource_manager.get_id[T]())]()[]
         )
 
     @always_inline
     fn get_ptr[T: ResourceType](ref self) -> Pointer[T, __origin_of(self)]:
-        """Gets a pointer to a resource."""
+        """Gets a pointer to a resource.
+
+        Parameters:
+            T: The type of the resource to get.
+
+        Returns:
+            A pointer to the resource.
+        """
         return Pointer.address_of(self.get[T]())
