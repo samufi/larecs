@@ -1,7 +1,9 @@
 from collections import Optional, InlineArray
 
 
-struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
+struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement](
+    Copyable, Movable
+):
     """A trivial dict implementation.
 
     This will be deleted once the Dict type is fixed.
@@ -11,6 +13,15 @@ struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement]:
 
     fn __init__(mut self):
         self._data = List[Tuple[KeyType, ValueType]]()
+
+    fn __moveinit__(mut self, owned other: Self):
+        self._data = other._data^
+
+    fn __copyinit__(mut self, other: Self):
+        self._data = other._data
+
+    fn copy(mut self, other: Self):
+        self._data = other._data.copy()
 
     @always_inline
     fn __getitem__(self, key: KeyType) raises -> ValueType:

@@ -48,7 +48,7 @@ struct BitMaskGraph[
     DataType: KeyElement, //,
     null_value: DataType,
     hint_trivial_type: Bool = False,
-]:
+](Copyable, Movable):
     """A graph where each node is identified by a BitMask.
 
     The graph is intended to be used for fast lookup of data
@@ -87,6 +87,14 @@ struct BitMaskGraph[
         ]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value)
+
+    fn __copyinit__(out self, other: Self):
+        self._nodes = other._nodes
+        self._map = other._map
+
+    fn __moveinit__(out self, owned other: Self):
+        self._nodes = other._nodes^
+        self._map = other._map^
 
     @always_inline
     fn add_node(
