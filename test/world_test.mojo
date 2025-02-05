@@ -3,6 +3,7 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
+from larecs.resources import Resources
 
 from larecs.test_utils import *
 
@@ -212,6 +213,19 @@ def test_remove_and_add():
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
+@value 
+struct Resource1:
+    var value: Int
+
+@value
+struct Resource2:
+    var value: Int
+
+def test_world_reseource_access():
+    resources = Resources(Resource1(2), Resource2(4))
+    world = World[Position, Velocity](resources)
+    assert_equal(world.resources.get[Resource1]().value, 2)
+    assert_equal(world.resources.get[Resource2]().value, 4)
 
 def main():
     print("Running additional tests...")

@@ -16,6 +16,7 @@ from .component import (
 from .bitmask import BitMask
 from .query import _EntityIterator
 from .lock import LockMask
+from .reseources import ResourceType, ResourceManaging, Resources
 
 
 @value
@@ -86,7 +87,7 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         )
 
 
-struct World[*component_types: ComponentType]:
+struct World[*component_types: ComponentType, ResourceManager: ResourceManaging]:
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -123,7 +124,9 @@ struct World[*component_types: ComponentType]:
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    fn __init__(mut self) raises:
+    var resources: ResourceManager # The resources of the world.
+
+    fn __init__(mut self, owned resources: ResourceManager = Resources()) raises:
         """
         Creates a new [.World].
         """
@@ -134,6 +137,7 @@ struct World[*component_types: ComponentType]:
         )
         self._entity_pool = EntityPool()
         self._locks = LockMask()
+        self.resources = resources^
 
         # TODO
         # var _tarquery = bitSet
