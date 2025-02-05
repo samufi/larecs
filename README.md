@@ -1,18 +1,18 @@
-# Larecs - lucid archetype-based ECS
+# Larecs🌲 - lucid archetype-based ECS
 
-This is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo). 
+This is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
 
-Larecs is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
+Larecs🌲 is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
 
-The Larecs package is still under construction, so the API might change in future versions.
+The Larecs🌲 package is still under construction, so the API might change in future versions.
 It can, however, already be used for testing purposes.
 
 ## Installation
 
 ### Prerequisites
 
-This package is written in and for [Mojo](https://docs.modular.com/mojo/manual/get-started), which needs to be installed in order to compile, test, or use the software.
-If Mojo and the command line interface [Magic](https://docs.modular.com/magic/) are available, dependencies can be installed by navigating to the project directory and executing the following command: 
+This package is written in and for [Mojo](https://docs.modular.com/mojo/manual/get-started)🔥, which needs to be installed in order to compile, test, or use the software.
+If Mojo🔥 and the command line interface [Magic](https://docs.modular.com/magic/) are available, dependencies can be installed by navigating to the project directory and executing the following command: 
 
 ```
 magic install
@@ -28,7 +28,7 @@ This includes `magic install`, so it is okay to omit the former step.
 
 ### Build the package
 
-You can build Larecs as a package as follows:
+You can build Larecs🌲 as a package as follows:
 
 1. Clone the repository / download the files.
 2. Navigate to the `src/` subfolder.
@@ -37,14 +37,14 @@ You can build Larecs as a package as follows:
 
 ### Include source directly for compiler and language server
 
-To access the source while debugging and adjust the Larecs 
+To access the source while debugging and adjust the Larecs🌲 
 source code, you can include it into the run command as follows:
 
 ```
 mojo run -I "path/to/larecs/src" example.mojo
 ```
 
-To let VSCode and the language server know of Larecs, include it as follows:
+To let VSCode and the language server know of Larecs🌲, include it as follows:
 
 1. Go to VSCode's `File -> Preferences -> Settings` page.
 2. Go to the `Extensions -> Mojo` section.
@@ -54,7 +54,7 @@ To let VSCode and the language server know of Larecs, include it as follows:
 ## Usage
 
 Refer to the [API docs](https://samufi.github.io/larecs/) for details
-on how to use Larecs. 
+on how to use Larecs🌲. 
 
 Below there is a simple example covering the most important functionality.
 Have a look at the `examples` subdirectory for more elaborate examples. 
@@ -116,7 +116,7 @@ fn main() raises:
 
 ### Only trivial types can be components
 
-Larecs currently only supports trivial types as components, i.e., structs 
+Larecs🌲 currently only supports trivial types as components, i.e., structs 
 that have a fixed size in memory. Using types with heap-allocated memory will
 result in memory leaks and / or undefined behaviour, and as of now there is no
 good way to enforce that only compatible types are used. 
@@ -127,21 +127,20 @@ ECS and should be avoided anyway.
 
 ### Inefficient dictionary for first-time archetype lookup
 
-Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo, Larecs uses a very 
+Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo🔥, Larecs🌲 uses a very 
 inefficient dict implementation for first-time archetype lookup. 
 As long as the number of component combinations (archetypes) is limited,
 this issue is insignificant. The problem will be fixed as soon as possible.
 
 ## Next steps
 
-The goal of Larecs is to provide a user-friendly ECS with maximal efficiency. 
-In the near future, Larecs will take the following steps:
+The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
+In the near future, Larecs🌲 will take the following steps:
 - Add built-in support for [resources](https://mlange-42.github.io/arche/guide/resources/) 
   and [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
 - Add further options to filter entities (e.g. "does not have component").
-- Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo.
-- Improve performance by locking in to components as parameters.
+- Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
 - Add possibilities to exploit the benefits of SIMD (discussion needed).
 - Fix the dictionary issue mentioned above.
 - Add a versioning scheme.
