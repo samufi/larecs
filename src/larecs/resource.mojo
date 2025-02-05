@@ -14,27 +14,89 @@ alias ResourceManager = ComponentManager
 
 trait ResourceManaging(CollectionElement, ExplicitlyCopyable, Sized):
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+        """Adds resources.
+
+        Parameters:
+            Ts: The Types of the resources to add.
+
+        Args:
+            resources: The resources to add.
+
+        Raises:
+            Error: If the resource already exists.
+        """
         ...
 
     fn remove[*Ts: ResourceType](mut self) raises:
+        """Removes resources.
+
+        Parameters:
+            Ts: The types of the resources to remove.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
         ...
 
     fn set[
         *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self, owned *resources: *Ts) raises:
+        """Sets the values of resources.
+
+        Parameters:
+            Ts: The types of the resources to set.
+            add_if_not_found: If true, adds resources that do not exist.
+
+        Args:
+            resources: The resources to set.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
         ...
 
     fn get[T: ResourceType](ref self) raises -> ref [self] T:
+        """Gets a resource.
+
+        Parameters:
+            T: The type of the resource to get.
+
+        Returns:
+            A reference to the resource.
+        """
         ...
 
     fn get_ptr[
         T: ResourceType
     ](ref self) raises -> Pointer[T, __origin_of(self)]:
+        """Gets a pointer to a resource.
+
+        Parameters:
+            T: The type of the resource to get.
+
+        Returns:
+            A pointer to the resource.
+        """
+        ...
+
+    fn has[T: ResourceType](self) -> Bool:
+        """Checks if the resource is present.
+
+        Parameters:
+            T: The type of the resource to check.
+
+        Returns:
+            True if the resource is present, otherwise False.
+        """
         ...
 
 
 fn get_dtype[size: Int]() -> DType:
-    """Gets the data type for the given size."""
+    """Gets the data type for the given size.
+
+    Parameters:
+        size: The size of the data type.
+    """
 
     @parameter
     if size <= get_max_size[DType.uint8]():
@@ -85,10 +147,16 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
 
     @always_inline
     fn __init__[*Ts: ResourceType](out self, owned *args: *Ts):
-        """Constructs the tuple.
+        """Constructs the resource manager and initializes given values.
+
+        Parameters:
+            Ts: The types of the resources to add.
 
         Args:
-            args: Initial values.
+            args: The provided initial values.
+
+        Returns:
+            The constructed resource manager.
         """
         # Mark 'self.storage' as being initialized so we can work on it.
         __mlir_op.`lit.ownership.mark_initialized`(
@@ -103,7 +171,9 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
 
     @always_inline
     fn __init__(out self, owned *args: *resource_types):
-        """Constructs the tuple.
+        """Constructs the resource manager initializing all values.
+
+        The types of the resources may be inferred from the provided values.
 
         Args:
             args: Initial values.
@@ -213,11 +283,34 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         return UnsafePointer(elt_kgen_ptr)
 
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+        """Adds resources.
+
+        Parameters:
+            Ts: The Types of the resources to add.
+
+        Args:
+            resources: The resources to add.
+
+        Raises:
+            Error: If the resource already exists.
+        """
         self._add_or_set[raise_if_found=True](resources^)
 
     fn set[
         *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self, owned *resources: *Ts) raises:
+        """Sets the values of resources.
+
+        Parameters:
+            Ts: The types of the resources to set.
+            add_if_not_found: If true, adds resources that do not exist.
+
+        Args:
+            resources: The resources to set.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
         self._add_or_set[raise_if_not_found = not add_if_not_found](resources^)
 
     @always_inline
@@ -230,8 +323,13 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
     ) raises:
         """Sets the resources.
 
+        Parameters:
+            Ts: The types of the resources to set.
+            raise_if_found: If true, raises an error if a resource already exists.
+            raise_if_not_found: If true, raises an error if a resource does not exist.
+
         Args:
-            values: The values to set.
+            resources: The values to set.
         """
 
         constrain_components_unique[*Ts]()
@@ -266,10 +364,13 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         __disable_del resources
 
     fn remove[*Ts: ResourceType](mut self) raises:
-        """Removes the resources.
+        """Removes resources.
 
-        Args:
-            types: The types of the resources to remove.
+        Parameters:
+            Ts: The types of the resources to remove.
+
+        Raises:
+            Error: If one of the resources does not exist.
         """
 
         @parameter
@@ -312,7 +413,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         return Pointer.address_of(self.get[T]())
 
     @always_inline
-    fn has[T: ResourceType](ref self) -> Bool:
+    fn has[T: ResourceType](self) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -324,7 +425,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         return self._initialized_flags[Self.resource_manager.get_id[T]()]
 
     @always_inline
-    fn _assert_has[T: ResourceType](ref self) raises:
+    fn _assert_has[T: ResourceType](self) raises:
         """Asserts that the resource is present.
 
         Parameters:
