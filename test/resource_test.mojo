@@ -1,4 +1,4 @@
-from larecs.resource import Resources
+from larecs.resource import Resources, ResourceManaging, ResourceType
 from testing import *
 
 
@@ -10,15 +10,6 @@ struct Resource1:
 @value
 struct Resource2:
     var value: Int
-
-
-def test_resources_initialization():
-    resource1 = Resource1(value=10)
-    resource2 = Resource2(value=20)
-    resources = Resources(resource1, resource2)
-
-    assert_equal(resources._resources[0].value, 10)
-    assert_equal(resources._resources[1].value, 20)
 
 
 def test_resources_get():
@@ -47,18 +38,26 @@ def test_resources_get_ptr():
     ptr[].value = 30
     assert_equal(resources.get[Resource1]().value, 30)
 
-struct S[*Ts: AnyType]():
-    var r: Resources[*_]
+struct S[*Ts: AnyType, R: ResourceManaging]():
+    var r: R
 
-    fn __init__(out self, r: Resources[*_]):
-        self.r = Resources(1, 2.2)
+    fn __init__(out self, r: R):
+        self.r = r
+
+    fn get[T: ResourceType](self) -> T:
+        return self.r.get[T]()
+
+def test_resources_usage():
+    s = S[UInt32, Float32](Resources(5, 2.2))
+    assert_equal(s.get[Int](), 5)
+
 
 def main():
 
     r = Resources(1, 2.1)
 
-
-
-    test_resources_initialization()
     test_resources_get()
     test_resources_get_ptr()
+    test_resources_usage()
+
+    print("All tests passed!")
