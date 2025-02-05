@@ -3,7 +3,6 @@ from collections import InlineArray
 from .entity import Entity
 from .bitmask import BitMask
 from .component import ComponentType, ComponentManager
-from .chained_array_list import ChainedArrayList
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask

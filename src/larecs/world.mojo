@@ -6,7 +6,6 @@ from .entity import Entity, EntityIndex
 from .archetype import Archetype as _Archetype
 from .graph import BitMaskGraph
 from .bitmask import BitMask
-from .chained_array_list import ChainedArrayList
 from .debug_utils import debug_warn
 from .component import (
     ComponentManager,
@@ -95,6 +94,7 @@ struct Replacer[
             components,
             self._remove_ids,
         )
+
 
 struct World[
     *component_types: ComponentType, resources_type: ResourceContaining
