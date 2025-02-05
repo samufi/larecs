@@ -1,6 +1,6 @@
 # Larecs🌲 - Lucid archetype-based ECS
 
-This is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. It features a clean API and compile-time component identification, so it is fast and convenient to work with. 
+Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. It features a clean API and uses Mojo's compile-time programming for an additional performance boost. 
 
 Larecs🌲 is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language. The package is still under construction, so be aware that the API might change in future versions.
 
