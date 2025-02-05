@@ -268,11 +268,11 @@ struct World[
         Example:
 
         ```mojo {doctest="add_entity" global=true hide=true}
-        from larecs import World
+        from larecs import World, Resources
         ```
 
         ```mojo {doctest="add_entity"}
-        world = World()
+        world = World(Resources())
         e = world.add_entity()
         ```
 
