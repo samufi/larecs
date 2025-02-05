@@ -1,18 +1,35 @@
 from memory import UnsafePointer
+from collections import InlineArray
 
-from .component import ComponentType, ComponentManager, get_max_size
+from .component import (
+    ComponentType,
+    ComponentManager,
+    get_max_size,
+    constrain_components_unique,
+)
 
 alias ResourceType = ComponentType
 alias ResourceManager = ComponentManager
 
 
-trait ResourceManaging(CollectionElement):
-    fn get[T: ResourceType](ref self) -> ref [self] T:
-        """Gets a resource."""
+trait ResourceManaging(CollectionElement, ExplicitlyCopyable, Sized):
+    fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
         ...
 
-    fn get_ptr[T: ResourceType](ref self) -> Pointer[T, __origin_of(self)]:
-        """Gets a resource."""
+    fn remove[*Ts: ResourceType](mut self) raises:
+        ...
+
+    fn set[
+        *Ts: ResourceType, add_if_not_found: Bool = False
+    ](mut self, owned *resources: *Ts) raises:
+        ...
+
+    fn get[T: ResourceType](ref self) raises -> ref [self] T:
+        ...
+
+    fn get_ptr[
+        T: ResourceType
+    ](ref self) raises -> Pointer[T, __origin_of(self)]:
         ...
 
 
@@ -31,72 +48,76 @@ fn get_dtype[size: Int]() -> DType:
 
 
 @value
-struct Resources[*Ts: ResourceType](ResourceManaging):
+struct Resources[*resource_types: ResourceType](ResourceManaging):
     """Manages resources.
 
     Some code was taken from Mojo's `Tuple` implementation.
     See [here](https://github.com/modular/mojo/blob/main/stdlib/src/builtin/tuple.mojo).
 
     Parameters:
-        Ts: The types of resources to manage. All types must be different
-            from each other.
+        resource_types: The types of resources to manage. All types must be different
+                       from each other.
     """
 
-    alias size = len(VariadicList(Ts))
+    alias size = len(VariadicList(resource_types))
     """The number of resources managed."""
 
     alias dType = get_dtype[Self.size]()
     """The data type to use as index."""
 
-    alias resource_manager = ResourceManager[*Ts, dType = Self.dType]()
+    alias resource_manager = ResourceManager[
+        *resource_types, dType = Self.dType
+    ]()
     """The resource manager that maps types to resource IDs."""
 
     alias _mlir_type = __mlir_type[
         `!kgen.pack<:!kgen.variadic<`,
         CollectionElement,
         `> `,
-        Ts,
+        resource_types,
         `>`,
     ]
     """The type of the internal storage."""
 
     var _storage: Self._mlir_type
 
-    @always_inline("nodebug")
-    fn __init__(out self, owned *args: *Ts):
+    var _initialized_flags: InlineArray[Bool, Self.size]
+
+    @always_inline
+    fn __init__[*Ts: ResourceType](out self, owned *args: *Ts):
         """Constructs the tuple.
 
         Args:
             args: Initial values.
         """
-        self = Self(storage=args^)
-
-    @always_inline("nodebug")
-    fn __init__(
-        mut self,
-        *,
-        owned storage: VariadicPack[_, CollectionElement, *Ts],
-    ):
-        """Constructs the tuple from a low-level internal representation.
-
-        Args:
-            storage: The variadic pack storage to construct from.
-        """
-
         # Mark 'self.storage' as being initialized so we can work on it.
         __mlir_op.`lit.ownership.mark_initialized`(
             __get_mvalue_as_litref(self._storage)
         )
+        self._initialized_flags = InlineArray[Bool, Self.size](False)
 
-        # Move each element into the tuple storage.
-        @parameter
-        for i in range(Self.size):
-            UnsafePointer.address_of(storage[i]).move_pointee_into(
-                self._unsafe_get_ptr[i]()
-            )
+        try:
+            self._add_or_set(args^)
+        except:
+            pass
 
-        # Do not destroy the elements when 'storage' goes away.
-        __disable_del storage
+    @always_inline
+    fn __init__(out self, owned *args: *resource_types):
+        """Constructs the tuple.
+
+        Args:
+            args: Initial values.
+        """
+        # Mark 'self.storage' as being initialized so we can work on it.
+        __mlir_op.`lit.ownership.mark_initialized`(
+            __get_mvalue_as_litref(self._storage)
+        )
+        self._initialized_flags = InlineArray[Bool, Self.size](False)
+
+        try:
+            self._add_or_set(args^)
+        except:
+            pass
 
     fn __del__(owned self):
         """Destructor that destroys all of the stored resources."""
@@ -105,7 +126,8 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         # trivial and won't do anything.
         @parameter
         for i in range(Self.size):
-            self._unsafe_get_ptr[i]().destroy_pointee()
+            if self._initialized_flags[i]:
+                self._unsafe_get_ptr[i]().destroy_pointee()
 
     @always_inline("nodebug")
     fn __copyinit__(out self, existing: Self):
@@ -114,16 +136,20 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         Args:
             existing: The value to copy from.
         """
+
         # Mark 'storage' as being initialized so we can work on it.
         __mlir_op.`lit.ownership.mark_initialized`(
             __get_mvalue_as_litref(self._storage)
         )
 
+        self._initialized_flags = existing._initialized_flags
+
         @parameter
         for i in range(Self.size):
-            self._unsafe_get_ptr[i]().init_pointee_copy(
-                existing._unsafe_get_ptr[i]()[]
-            )
+            if self._initialized_flags[i]:
+                self._unsafe_get_ptr[i]().init_pointee_copy(
+                    existing._unsafe_get_ptr[i]()[]
+                )
 
     @always_inline
     fn copy(self) -> Self:
@@ -147,11 +173,14 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
             __get_mvalue_as_litref(self._storage)
         )
 
+        self._initialized_flags = existing._initialized_flags
+
         @parameter
         for i in range(Self.size):
-            existing._unsafe_get_ptr[i]().move_pointee_into(
-                self._unsafe_get_ptr[i]()
-            )
+            if existing._initialized_flags[i]:
+                existing._unsafe_get_ptr[i]().move_pointee_into(
+                    self._unsafe_get_ptr[i]()
+                )
         # Note: The destructor on `existing` is auto-disabled in a moveinit.
 
     @always_inline("nodebug")
@@ -164,14 +193,16 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         return Self.size
 
     @always_inline
-    fn _unsafe_get_ptr[idx: Int](ref self) -> UnsafePointer[Ts[idx.value]]:
+    fn _unsafe_get_ptr[
+        idx: Int
+    ](ref self) -> UnsafePointer[resource_types[idx.value]]:
         """Gets an unsafe pointer to a resource.
 
         Paramters:
             idx: The index of the resource to get.
 
         Returns:
-
+            An unsafe pointer to the resource.
         """
         var storage_kgen_ptr = UnsafePointer.address_of(self._storage).address
 
@@ -181,8 +212,78 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         )
         return UnsafePointer(elt_kgen_ptr)
 
+    fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+        self._add_or_set[raise_if_found=True](resources^)
+
+    fn set[
+        *Ts: ResourceType, add_if_not_found: Bool = False
+    ](mut self, owned *resources: *Ts) raises:
+        self._add_or_set[raise_if_not_found = not add_if_not_found](resources^)
+
     @always_inline
-    fn get[T: ResourceType](ref self) -> ref [self] T:
+    fn _add_or_set[
+        *Ts: ResourceType,
+        raise_if_found: Bool = False,
+        raise_if_not_found: Bool = False,
+    ](
+        mut self, owned resources: VariadicPack[_, CollectionElement, *Ts]
+    ) raises:
+        """Sets the resources.
+
+        Args:
+            values: The values to set.
+        """
+
+        constrain_components_unique[*Ts]()
+
+        @parameter
+        for i in range(resources.__len__()):
+            alias idx = Self.resource_manager.get_id[Ts[i]]()
+
+            if self._initialized_flags[idx]:
+
+                @parameter
+                if raise_if_found:
+                    raise Error(
+                        "The resource already exists. Use `set` to update it."
+                    )
+                else:
+                    self._unsafe_get_ptr[Int(idx)]().destroy_pointee()
+            else:
+
+                @parameter
+                if raise_if_not_found:
+                    raise Error(
+                        "The resource does not exist. Use `add` to add it."
+                    )
+                else:
+                    self._initialized_flags[idx] = True
+
+            UnsafePointer.address_of(
+                rebind[resource_types[Int(idx).value]](resources[i])
+            ).move_pointee_into(self._unsafe_get_ptr[Int(idx)]())
+
+        __disable_del resources
+
+    fn remove[*Ts: ResourceType](mut self) raises:
+        """Removes the resources.
+
+        Args:
+            types: The types of the resources to remove.
+        """
+
+        @parameter
+        for i in range(len(VariadicList(Ts))):
+            self._assert_has[Ts[i]]()
+            self._unsafe_get_ptr[
+                index(Self.resource_manager.get_id[Ts[i]]())
+            ]().destroy_pointee()
+            self._initialized_flags[
+                Self.resource_manager.get_id[Ts[i]]()
+            ] = False
+
+    @always_inline
+    fn get[T: ResourceType](ref self) raises -> ref [self] T:
         """Gets a resource.
 
         Parameters:
@@ -191,12 +292,15 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
         Returns:
             A reference to the resource.
         """
+        self._assert_has[T]()
         return rebind[T](
             self._unsafe_get_ptr[index(Self.resource_manager.get_id[T]())]()[]
         )
 
     @always_inline
-    fn get_ptr[T: ResourceType](ref self) -> Pointer[T, __origin_of(self)]:
+    fn get_ptr[
+        T: ResourceType
+    ](ref self) raises -> Pointer[T, __origin_of(self)]:
         """Gets a pointer to a resource.
 
         Parameters:
@@ -206,3 +310,27 @@ struct Resources[*Ts: ResourceType](ResourceManaging):
             A pointer to the resource.
         """
         return Pointer.address_of(self.get[T]())
+
+    @always_inline
+    fn has[T: ResourceType](ref self) -> Bool:
+        """Checks if the resource is present.
+
+        Parameters:
+            T: The type of the resource to check.
+
+        Returns:
+            True if the resource is present, otherwise False.
+        """
+        return self._initialized_flags[Self.resource_manager.get_id[T]()]
+
+    @always_inline
+    fn _assert_has[T: ResourceType](ref self) raises:
+        """Asserts that the resource is present.
+
+        Parameters:
+            T: The type of the resource to check.
+        """
+        if not self._initialized_flags[Self.resource_manager.get_id[T]()]:
+            raise Error(
+                "The requested resource does not exist. Use `add` to add it."
+            )

@@ -87,7 +87,9 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         )
 
 
-struct World[*component_types: ComponentType, ResourceManager: ResourceManaging]:
+struct World[
+    *component_types: ComponentType, ResourceManager: ResourceManaging
+]:
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -124,9 +126,11 @@ struct World[*component_types: ComponentType, ResourceManager: ResourceManaging]
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    var resources: ResourceManager # The resources of the world.
+    var resources: ResourceManager  # The resources of the world.
 
-    fn __init__(mut self, owned resources: ResourceManager = Resources()) raises:
+    fn __init__(
+        mut self, owned resources: ResourceManager = Resources()
+    ) raises:
         """
         Creates a new [.World].
         """
