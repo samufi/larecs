@@ -13,6 +13,10 @@ alias ResourceManager = ComponentManager
 
 
 trait ResourceManaging(CollectionElement, ExplicitlyCopyable, Sized):
+    fn __init__(out self):
+        """Constructs the resource manager."""
+        ...
+
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
         """Adds resources.
 
@@ -143,9 +147,18 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
 
     var _storage: Self._mlir_type
 
-    var _initialized_flags: InlineArray[Bool, Self.size]
+    var _initialized_flags: InlineArray[Bool, max(Self.size, 1)]
 
     @always_inline
+    fn __init__(out self):
+        """Constructs an empty resource manager."""
+
+        # Mark 'self.storage' as being initialized so we can work on it.
+        __mlir_op.`lit.ownership.mark_initialized`(
+            __get_mvalue_as_litref(self._storage)
+        )
+        self._initialized_flags = InlineArray[Bool, max(Self.size, 1)](False)
+
     fn __init__[*Ts: ResourceType](out self, owned *args: *Ts):
         """Constructs the resource manager and initializes given values.
 
@@ -158,12 +171,8 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         Returns:
             The constructed resource manager.
         """
-        # Mark 'self.storage' as being initialized so we can work on it.
-        __mlir_op.`lit.ownership.mark_initialized`(
-            __get_mvalue_as_litref(self._storage)
-        )
-        self._initialized_flags = InlineArray[Bool, Self.size](False)
 
+        self = Self()
         try:
             self._add_or_set(args^)
         except:
@@ -178,11 +187,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         Args:
             args: Initial values.
         """
-        # Mark 'self.storage' as being initialized so we can work on it.
-        __mlir_op.`lit.ownership.mark_initialized`(
-            __get_mvalue_as_litref(self._storage)
-        )
-        self._initialized_flags = InlineArray[Bool, Self.size](False)
+        self = Self()
 
         try:
             self._add_or_set(args^)
