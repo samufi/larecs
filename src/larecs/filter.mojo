@@ -17,7 +17,7 @@ from .bitmask import BitMask
 struct MaskFilter:
     """MaskFilter is a filter for including and excluding certain components.
 
-    See [.BitMask.without] and [.BitMask.exclusive].
+    See [..bitmask.BitMask.without] and [..bitmask.BitMask.exclusive].
     """
 
     var include: BitMask  # Components to include.

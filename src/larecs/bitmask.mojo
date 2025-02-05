@@ -121,7 +121,7 @@ struct BitMask(Stringable, KeyElement):
 
     @always_inline
     fn without(self, *comps: Self.IndexType) -> MaskFilter:
-        """Creates a [.MaskFilter] which filters for including the mask's components
+        """Creates a [..filter.MaskFilter] which filters for including the mask's components
         and excludes the components given as arguments.
         """
         return MaskFilter(
@@ -131,7 +131,7 @@ struct BitMask(Stringable, KeyElement):
 
     @always_inline
     fn exclusive(self) -> MaskFilter:
-        """Creates a [.MaskFilter] which filters for exactly the mask's components.
+        """Creates a [..filter.MaskFilter] which filters for exactly the mask's components.
         matches only entities that have exactly the given components, and no other.
         """
         return MaskFilter(
