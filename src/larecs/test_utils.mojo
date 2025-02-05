@@ -5,6 +5,7 @@ from memory import UnsafePointer
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
+from .resource import Resources
 
 
 trait TestableCollectionElement(CollectionElement, Testable):
@@ -88,6 +89,7 @@ alias SmallWorld = World[
     FlexibleComponent[8],
     FlexibleComponent[9],
     FlexibleComponent[10],
+    resources_type=Resources,
 ]
 
 alias FullWorld = World[
@@ -347,4 +349,5 @@ alias FullWorld = World[
     FlexibleComponent[250],
     FlexibleComponent[251],
     FlexibleComponent[252],
+    resources_type=Resources,
 ]

@@ -8,7 +8,7 @@ trait IndexingCollectionElement(Indexer):
         ...
 
 
-struct EntityPool:
+struct EntityPool(Movable, Copyable):
     """EntityPool is an implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
@@ -24,6 +24,16 @@ struct EntityPool:
         self._entities.append(Entity(0, MAX_UINT16))
         self._next = 0
         self._available = 0
+
+    fn __copyinit__(out self, other: Self):
+        self._entities = other._entities
+        self._next = other._next
+        self._available = other._available
+
+    fn __moveinit__(out self, owned other: Self):
+        self._entities = other._entities^
+        self._next = other._next
+        self._available = other._available
 
     fn get(mut self) -> Entity:
         """Returns a fresh or recycled entity."""

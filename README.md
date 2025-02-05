@@ -1,8 +1,19 @@
 # Larecs🌲 – Lucid archetype-based ECS
 
-Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. It features a clean API and uses Mojo's compile-time programming for an additional performance boost. 
+Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
+It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language. The package is still under construction, so be aware that the API might change in future versions.
 
-Larecs🌲 is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language. The package is still under construction, so be aware that the API might change in future versions.
+
+## Features
+
+- Clean and simple API
+- High performance due to Archetype-based architecture and extensive use of Mojo's compile-time programming tools
+- Compile-time checks thanks to usage of parameters
+- Native support for [resources](https://mlange-42.github.io/arche/guide/resources/)
+- Tested and benchmarked
+- No external dependencies
+- More features coming soon... 
+
 
 ## Installation
 
@@ -40,7 +51,7 @@ Have a look at the `examples` subdirectory for more elaborate examples.
 
 ```python
 # Import the package
-from larecs import World
+from larecs import World, Resources
 
 
 # Define components
@@ -64,7 +75,8 @@ struct Velocity:
 # Run the ECS
 fn main() raises:
     # Create a world, list all components that will / may be used
-    world = World[Position, Velocity, IsStatic]()
+    # Add resources (here, we do not need any)
+    world = World[Position, Velocity, IsStatic](Resources())
 
     for _ in range(100):
         # Add an entity. The returned value is the
@@ -115,8 +127,7 @@ this issue is insignificant. The problem will be fixed as soon as possible.
 
 The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
 In the near future, Larecs🌲 will take the following steps:
-- Add built-in support for [resources](https://mlange-42.github.io/arche/guide/resources/) 
-  and [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
+- Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
 - Add further options to filter entities (e.g. "does not have component").
 - Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.

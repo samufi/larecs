@@ -10,17 +10,7 @@ from .types import get_max_size
 from .bitmask import BitMask
 
 
-trait IdentifiableType:
-    """IdentifiableType is a trait for types that have a unique identifier."""
-
-    @staticmethod
-    @always_inline
-    fn get_type_identifier() -> Int:
-        ...
-
-
-trait ComponentType(Movable, Copyable):
-    pass
+alias ComponentType = CollectionElement
 
 
 fn constrain_valid_components[*Ts: ComponentType]() -> Bool:
@@ -82,7 +72,9 @@ fn constrain_components_unique[*Ts: ComponentType]():
 
 
 @register_passable("trivial")
-struct ComponentManager[*component_types: ComponentType]():
+struct ComponentManager[
+    *component_types: ComponentType, dType: DType = BitMask.IndexDType
+]():
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
@@ -92,15 +84,14 @@ struct ComponentManager[*component_types: ComponentType]():
         component_types: The component types that the manager should handle.
     """
 
-    alias dType = BitMask.IndexDType
-    alias Id = SIMD[Self.dType, 1]
-    alias max_size = get_max_size[Self.dType]()
+    alias Id = SIMD[dType, 1]
+    alias max_size = get_max_size[dType]()
     alias component_count = len(VariadicList(component_types))
     alias component_sizes = get_sizes[*component_types]()
 
     fn __init__(mut self):
         constrained[
-            Self.dType.is_integral(),
+            dType.is_integral(),
             "dType needs to be an integral type.",
         ]()
         constrained[

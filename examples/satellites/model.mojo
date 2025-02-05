@@ -1,4 +1,4 @@
-from larecs import World
+from larecs import World, Resources
 from parameters import Parameters
 from systems import move, accellerate, add_satellites, position_to_numpy
 from components import Position, Velocity
@@ -12,7 +12,7 @@ fn update(mut world: World, parameters: Parameters, step: Float64) raises:
 
 
 fn main() raises:
-    world = World[Position, Velocity]()
+    world = World[Position, Velocity](Resources())
 
     parameters = Parameters(dt=0.1, mass=5.972e24)
 

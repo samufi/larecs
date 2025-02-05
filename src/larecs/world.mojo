@@ -6,7 +6,6 @@ from .entity import Entity, EntityIndex
 from .archetype import Archetype as _Archetype
 from .graph import BitMaskGraph
 from .bitmask import BitMask
-from .chained_array_list import ChainedArrayList
 from .debug_utils import debug_warn
 from .component import (
     ComponentManager,
@@ -16,10 +15,16 @@ from .component import (
 from .bitmask import BitMask
 from .query import _EntityIterator
 from .lock import LockMask
+from .resource import ResourceType, ResourceContaining, Resources
 
 
 @value
-struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
+struct Replacer[
+    mut: MutableOrigin,
+    size: Int,
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
 
@@ -30,10 +35,15 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         mut: The mutability of the world.
         size: The number of components to remove.
         component_types: The types of the components.
+        resources_type: The type of the resource container.
     """
 
-    var _world: Pointer[World[*component_types], mut]
-    var _remove_ids: InlineArray[World[*component_types].Id, size]
+    var _world: Pointer[
+        World[*component_types, resources_type=resources_type], mut
+    ]
+    var _remove_ids: InlineArray[
+        World[*component_types, resources_type=resources_type].Id, size
+    ]
 
     fn by[
         *AddTs: ComponentType
@@ -86,7 +96,9 @@ struct Replacer[mut: MutableOrigin, size: Int, *component_types: ComponentType]:
         )
 
 
-struct World[*component_types: ComponentType]:
+struct World[
+    *component_types: ComponentType, resources_type: ResourceContaining
+](Movable):
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -107,6 +119,7 @@ struct World[*component_types: ComponentType]:
     # _nodes          pagedSlice[archNode]      # The archetype graph.
     # _archetype_data  pagedSlice[_archetype_data] # Storage for the actual archetype data (components).
     # _node_data       pagedSlice[_node_data]      # The archetype graph's data.
+    # _stats          _stats.World               # Cached world statistics.
     var _entity_pool: EntityPool  # Pool for entities.
     var _entities: List[
         EntityIndex, hint_trivial_type=True
@@ -114,42 +127,62 @@ struct World[*component_types: ComponentType]:
     var _archetype_map: BitMaskGraph[
         -1, hint_trivial_type=True
     ]  # Mapping from component masks to archetypes.
-    # _stats          _stats.World               # Cached world statistics.
-    # _resources      Resources                 # World _resources.
-    # _registry       componentRegistry         # Component _registry.
     var _locks: LockMask  # World _locks.
 
-    var _archetypes: ChainedArrayList[
+    var _archetypes: List[
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    fn __init__(mut self) raises:
+    var resources: resources_type  # The resources of the world.
+
+    fn __init__(
+        mut self,
+        owned resources: resources_type = resources_type(),
+    ) raises:
         """
         Creates a new [.World].
         """
         self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
-        self._archetypes = ChainedArrayList[Self.Archetype](Self.Archetype())
+        self._archetypes = List[Self.Archetype](Self.Archetype())
         self._entities = List[EntityIndex, hint_trivial_type=True](
             EntityIndex(0, 0)
         )
         self._entity_pool = EntityPool()
         self._locks = LockMask()
+        self.resources = resources^
 
         # TODO
         # var _tarquery = bitSet
         # _tarquery.ExtendTo(1)
         # self._tarquery = _tarquery
 
-        # self._registry:       newComponentRegistry(),
-        # self._archetype_data:  pagedSlice[_archetype_data],
-        # self._nodes:          pagedSlice[archNode],
-        # self._relation_nodes:  []*archNode,
         # self._listener:       nil,
         # self._resources:      newResources(),
         # self._filter_cache:    newCache(),
 
         # var node = self.createArchetypeNode(Mask, ID, false)
-        # self.createArchetype(node, Entity, false)
+
+    fn __moveinit__(mut self, owned other: Self):
+        """
+        Moves the contents of another [.World] into a new one.
+        """
+        self._archetype_map = other._archetype_map^
+        self._archetypes = other._archetypes^
+        self._entities = other._entities^
+        self._entity_pool = other._entity_pool^
+        self._locks = other._locks^
+        self.resources = other.resources^
+
+    fn copy(self, out other: Self):
+        """
+        Copies the contents of another [.World] into a new one.
+        """
+        other._archetype_map = self._archetype_map
+        other._archetypes = self._archetypes
+        other._entities = self._entities
+        other._entity_pool = self._entity_pool
+        other._locks = self._locks
+        other.resources = self.resources
 
     @always_inline
     fn _get_archetype_index[
@@ -171,7 +204,8 @@ struct World[*component_types: ComponentType]:
         if self._archetype_map.has_value(node_index):
             return self._archetype_map[node_index]
 
-        archetype_index = self._archetypes.add(
+        archetype_index = len(self._archetypes)
+        self._archetypes.append(
             Self.Archetype(
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
@@ -210,7 +244,8 @@ struct World[*component_types: ComponentType]:
         if self._archetype_map.has_value(node_index):
             return self._archetype_map[node_index]
 
-        archetype_index = self._archetypes.add(
+        archetype_index = len(self._archetypes)
+        self._archetypes.append(
             Self.Archetype(
                 node_index,
                 self._archetype_map.get_node_mask(node_index),
@@ -233,11 +268,11 @@ struct World[*component_types: ComponentType]:
         Example:
 
         ```mojo {doctest="add_entity" global=true hide=true}
-        from larecs import World
+        from larecs import World, Resources
         ```
 
         ```mojo {doctest="add_entity"}
-        world = World()
+        world = World(Resources())
         e = world.add_entity()
         ```
 
@@ -264,7 +299,7 @@ struct World[*component_types: ComponentType]:
         Example:
 
         ```mojo {doctest="add_entity_comps" global=true hide=true}
-        from larecs import World
+        from larecs import World, Resources
 
         @value
         struct Position:
@@ -278,7 +313,7 @@ struct World[*component_types: ComponentType]:
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity]()
+        world = World[Position, Velocity](Resources())
         e = world.add_entity(
             Position(0, 0),
             Velocity(0.5, -0.5),
@@ -308,7 +343,7 @@ struct World[*component_types: ComponentType]:
         entity = self._create_entity(archetype_index)
         index_in_archetype = self._entities[entity.get_id()].index
 
-        archetype = self._archetypes.get_ptr(archetype_index)
+        archetype = Pointer.address_of(self._archetypes[archetype_index])
 
         @parameter
         for i in range(size):
@@ -377,7 +412,9 @@ struct World[*component_types: ComponentType]:
 
         idx = self._entities[entity.get_id()]
         old_archetype_index = idx.archetype_index
-        old_archetype = self._archetypes.get_ptr(old_archetype_index)
+        old_archetype = Pointer.address_of(
+            self._archetypes[old_archetype_index]
+        )
 
         # if self._listener != nil:
         #     var oldRel *Id
@@ -515,7 +552,9 @@ struct World[*component_types: ComponentType]:
 
         self._assert_alive(entity)
         entity_index = self._entities[entity.get_id()]
-        archetype = self._archetypes.get_ptr(entity_index.archetype_index)
+        archetype = Pointer.address_of(
+            self._archetypes[entity_index.archetype_index]
+        )
 
         @parameter
         for i in range(components.__len__()):
@@ -589,6 +628,7 @@ struct World[*component_types: ComponentType]:
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
+        resources_type=resources_type,
     ]:
         """
         Returns a [.Replacer] for removing and adding components to an Entity in one go.
@@ -664,7 +704,10 @@ struct World[*component_types: ComponentType]:
         idx = self._entities[entity.get_id()]
 
         old_archetype_index = idx.archetype_index
-        old_archetype = self._archetypes.get_ptr(old_archetype_index)
+        old_archetype = Pointer.address_of(
+            self._archetypes[old_archetype_index]
+        )
+
         index_in_old_archetype = idx.index
 
         var component_ids: Optional[InlineArray[Self.Id, add_size]] = None
@@ -710,7 +753,7 @@ struct World[*component_types: ComponentType]:
                 component_ids.value(), start_node_index
             )
 
-        archetype = self._archetypes.get_ptr(archetype_index)
+        archetype = Pointer.address_of(self._archetypes[archetype_index])
         index_in_archetype = archetype[].add(entity)
 
         @parameter

@@ -1,16 +1,16 @@
 """
-Larecs is a performance-oriented archetype-based ECS for Mojo.
+Larecs🌲 is a performance-oriented archetype-based ECS for Mojo.
 
-Larecs is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
+It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language.
 
-Larecs is still under construction, so the API might change in future versions. It can, however, already be used for 
+Larecs🌲 is still under construction, so the API might change in future versions. It can, however, already be used for 
 testing purposes.
 
 Example:
 
 ```mojo {doctest="readme" global=true}
 # Import the package
-from larecs import World
+from larecs import World, Resources
 
 
 # Define components
@@ -34,7 +34,7 @@ struct Velocity:
 # Run the ECS
 fn main() raises:
     # Create a world, list all components that will / may be used
-    world = World[Position, Velocity, IsStatic]()
+    world = World[Position, Velocity, IsStatic](Resources())
 
     for _ in range(100):
         # Add an entity. The returned value is the
@@ -67,9 +67,10 @@ main()
 Exports:
  - world.World
  - world.Replacer
- - component.ComponentType
+ - resource.Resources
  - entity.Entity
 """
 from .world import World
 from .component import ComponentType
+from .resource import Resources
 from .entity import Entity

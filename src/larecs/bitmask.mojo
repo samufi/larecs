@@ -5,7 +5,7 @@ from .filter import MaskFilter
 
 @value
 struct _BitMaskIndexIter:
-    """Iterator for ChainedArrayList."""
+    """Iterator for BitMask indices."""
 
     alias DataContainorType = SIMD[DType.uint8, BitMask.total_bytes]
 
