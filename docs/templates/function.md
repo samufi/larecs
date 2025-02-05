@@ -1,4 +1,4 @@
-Mojo function
+Mojo function{{template "source_link" .}}
 
 # `{{.Name}}`
 

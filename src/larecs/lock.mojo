@@ -7,7 +7,7 @@ struct LockMask:
     """
     Manages locks by mask bits.
 
-    The number of simultaneous locks at a given time is limited to [.BitMask.total_bits].
+    The number of simultaneous locks at a given time is limited to [..bitmask.BitMask.total_bits].
     """
 
     var locks: BitMask  # The actual locks.
