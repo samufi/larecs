@@ -67,9 +67,10 @@ main()
 Exports:
  - world.World
  - world.Replacer
- - component.ComponentType
+ - resource.Resources
  - entity.Entity
 """
 from .world import World
 from .component import ComponentType
+from .resource import Resources
 from .entity import Entity
