@@ -106,7 +106,7 @@ struct _EntityIterator[
     alias Archetype = _Archetype[
         *component_types, component_manager=component_manager
     ]
-    var _archetypes: Pointer[ChainedArrayList[Self.Archetype], archetype_origin]
+    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.uint32, Self.buffer_size]
     var _current_archetype: Pointer[Self.Archetype, archetype_origin]
     var _lock_ptr: Pointer[LockMask, lock_origin]
@@ -121,9 +121,7 @@ struct _EntityIterator[
 
     fn __init__(
         out self,
-        owned archetypes: Pointer[
-            ChainedArrayList[Self.Archetype], archetype_origin
-        ],
+        archetypes: Pointer[List[Self.Archetype], archetype_origin],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
     ) raises:
@@ -153,7 +151,7 @@ struct _EntityIterator[
         self._last_entity_index = 0
         self._max_buffer_index = Self.buffer_size
 
-        self._current_archetype = self._archetypes[].get_ptr(0)
+        self._current_archetype = Pointer.address_of(self._archetypes[][0])
         self._archetype_index_buffer = SIMD[DType.uint32, Self.buffer_size](-1)
         self._fill_archetype_buffer()
 
@@ -230,8 +228,8 @@ struct _EntityIterator[
         """
         self._entity_index = 0
         self._buffer_index += 1
-        self._current_archetype = self._archetypes[].get_ptr(
-            self._archetype_index_buffer[self._buffer_index]
+        self._current_archetype = Pointer.address_of(
+            self._archetypes[][self._archetype_index_buffer[self._buffer_index]]
         )
         self._archetype_size = len(self._current_archetype[])
         if self._buffer_index >= Self.buffer_size - 1:

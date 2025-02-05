@@ -12,9 +12,9 @@ alias ResourceType = ComponentType
 alias ResourceManager = ComponentManager
 
 
-trait ResourceManaging(CollectionElement, ExplicitlyCopyable, Sized):
+trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
     fn __init__(out self):
-        """Constructs the resource manager."""
+        """Constructs the resource container."""
         ...
 
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
@@ -114,7 +114,7 @@ fn get_dtype[size: Int]() -> DType:
 
 
 @value
-struct Resources[*resource_types: ResourceType](ResourceManaging):
+struct Resources[*resource_types: ResourceType](ResourceContaining):
     """Manages resources.
 
     Some code was taken from Mojo's `Tuple` implementation.
@@ -151,7 +151,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
 
     @always_inline
     fn __init__(out self):
-        """Constructs an empty resource manager."""
+        """Constructs an empty resource container."""
 
         # Mark 'self.storage' as being initialized so we can work on it.
         __mlir_op.`lit.ownership.mark_initialized`(
@@ -160,7 +160,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
         self._initialized_flags = InlineArray[Bool, max(Self.size, 1)](False)
 
     fn __init__[*Ts: ResourceType](out self, owned *args: *Ts):
-        """Constructs the resource manager and initializes given values.
+        """Constructs the resource container and initializes given values.
 
         Parameters:
             Ts: The types of the resources to add.
@@ -169,7 +169,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
             args: The provided initial values.
 
         Returns:
-            The constructed resource manager.
+            The constructed resource container.
         """
 
         self = Self()
@@ -180,7 +180,7 @@ struct Resources[*resource_types: ResourceType](ResourceManaging):
 
     @always_inline
     fn __init__(out self, owned *args: *resource_types):
-        """Constructs the resource manager initializing all values.
+        """Constructs the resource container initializing all values.
 
         The types of the resources may be inferred from the provided values.
 
