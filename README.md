@@ -1,4 +1,4 @@
-# Larecs🌲 - Lucid archetype-based ECS
+# Larecs🌲 – Lucid archetype-based ECS
 
 Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. It features a clean API and uses Mojo's compile-time programming for an additional performance boost. 
 
