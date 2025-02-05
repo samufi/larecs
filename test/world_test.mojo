@@ -3,20 +3,20 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
-from larecs.resources import Resources
+from larecs.resource import Resources
 
 from larecs.test_utils import *
 
 
 def test_add_entity():
-    world = World[Position]()
+    world = SmallWorld()
     entity = world.add_entity()
     assert_true(entity.get_id() == 1)
     assert_false(entity.is_zero())
 
 
 def test_add_entity_with_components():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
@@ -29,7 +29,7 @@ def test_add_entity_with_components():
 
 
 def test_entity_get():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
@@ -39,7 +39,7 @@ def test_entity_get():
 
 
 def test_entity_get_ptr():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
@@ -50,36 +50,36 @@ def test_entity_get_ptr():
 
 
 def test_get_archetype_index():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(12, 654)
     vel = Velocity(0.1, 0.2)
     _ = world.add_entity(pos)
     _ = world.add_entity(vel)
     _ = world.add_entity(pos, vel)
 
-    fn get_index[T: ComponentType]() capturing raises -> Int:
+    fn get_index[T: ComponentType](mut world: World) raises -> Int:
         return world._get_archetype_index(
             world.component_manager.get_id_arr[T]()
         )
 
     fn get_index[
         T1: ComponentType, T2: ComponentType
-    ](start: Int = 0) capturing raises -> Int:
+    ](mut world: World, start: Int = 0) raises -> Int:
         return world._get_archetype_index(
             world.component_manager.get_id_arr[T1, T2](),
             start_node_index=start,
         )
 
-    assert_equal(get_index[Position](), 1)
-    assert_equal(get_index[Velocity](), 2)
-    assert_equal(get_index[Velocity, Position](), 3)
-    assert_equal(get_index[Position, Velocity](), 3)
-    assert_equal(get_index[Velocity, Position](1), 2)
-    assert_equal(get_index[Velocity, Position](2), 1)
+    assert_equal(get_index[Position](world), 1)
+    assert_equal(get_index[Velocity](world), 2)
+    assert_equal(get_index[Velocity, Position](world), 3)
+    assert_equal(get_index[Position, Velocity](world), 3)
+    assert_equal(get_index[Velocity, Position](world, 1), 2)
+    assert_equal(get_index[Velocity, Position](world, 2), 1)
 
 
 def test_set_component():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(3.0, 4.0)
     entity = world.add_entity(pos)
     pos = Position(2.0, 7.0)
@@ -99,7 +99,7 @@ def test_set_component():
 
 
 def test_remove_entity():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
@@ -114,7 +114,7 @@ def test_remove_entity():
 
 
 def test_remove_archetype():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity1 = world.add_entity(pos, vel)
@@ -136,7 +136,7 @@ def test_remove_archetype():
 
 
 def test_world_has_component():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     entity = world.add_entity(pos)
     assert_true(world.has[Position](entity))
@@ -144,7 +144,7 @@ def test_world_has_component():
 
 
 def test_world_add():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     entity = world.add_entity(pos)
     assert_true(world.has[Position](entity))
@@ -159,7 +159,7 @@ def test_world_add():
 
 
 def test_world_remove():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
@@ -192,7 +192,7 @@ def test_world_remove():
 
 
 def test_remove_and_add():
-    world = World[Position, Velocity]()
+    world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos)
@@ -213,19 +213,33 @@ def test_remove_and_add():
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
-@value 
+
+@value
 struct Resource1:
     var value: Int
+
 
 @value
 struct Resource2:
     var value: Int
+
 
 def test_world_reseource_access():
     resources = Resources(Resource1(2), Resource2(4))
     world = World[Position, Velocity](resources)
     assert_equal(world.resources.get[Resource1]().value, 2)
     assert_equal(world.resources.get[Resource2]().value, 4)
+    assert_equal(world.resources.has[Resource1](), True)
+
+    world.resources.set[Resource1](Resource1(10))
+    assert_equal(world.resources.get[Resource1]().value, 10)
+
+    world.resources.remove[Resource1]()
+    assert_equal(world.resources.has[Resource1](), False)
+
+    world.resources.add[Resource1](Resource1(30))
+    assert_equal(world.resources.get[Resource1]().value, 30)
+
 
 def main():
     print("Running additional tests...")

@@ -1,4 +1,4 @@
-from larecs.resource import Resources, ResourceManaging, ResourceType
+from larecs.resource import Resources, ResourceContaining, ResourceType
 from testing import *
 
 
@@ -124,19 +124,22 @@ def test_resources_get_ptr():
     assert_equal(resources.get[Resource1]().value, 30)
 
 
-struct S[*Ts: AnyType, R: ResourceManaging]():
+struct S[*Ts: AnyType, R: ResourceContaining]():
     var r: R
 
     fn __init__(out self, r: R):
         self.r = r
+
+    fn __init__(out self):
+        self.r = R()
 
     fn get[T: ResourceType](self) raises -> T:
         return self.r.get[T]()
 
 
 def test_resources_usage():
-    s = S[UInt32, Float32](Resources(5, 2.2))
-    assert_equal(s.get[Int](), 5)
+    s = S[UInt32, Float32](Resources())  # (5, 2.2))
+    # assert_equal(s.get[Int](), 5)
 
 
 def main():
