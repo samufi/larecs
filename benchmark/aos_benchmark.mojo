@@ -1,4 +1,5 @@
 from collections import InlineArray
+from python import Python
 from time import perf_counter_ns
 
 import larecs as lx
@@ -13,17 +14,7 @@ struct BenchResult:
 
 
 fn main() raises:
-    target_iters = 10**8
-    results = List[BenchResult]()
-
-    for entExp in range(1, 7, 1):
-        entities = 10**entExp
-        rounds = target_iters // entities
-
-        @parameter
-        for compExp in range(1, 6, 1):
-            result = benchmark[compExp](rounds, entities)
-            results.append(result)
+    results = run_benchmarks(6)
 
     for result in results:
         print(
@@ -32,6 +23,31 @@ fn main() raises:
             result[].nanos_ecs,
             result[].nanos_aos,
         )
+
+    results = List[BenchResult]()
+    plot(results)
+
+
+def plot(results: List[BenchResult]):
+    pd = Python.import_module("pandas")
+    plt = Python.import_module("matplotlib.pyplot")
+    figure = Python.import_module("matplotlib.figure")
+
+
+fn run_benchmarks(maxEntityExp: Int) raises -> List[BenchResult]:
+    results = List[BenchResult]()
+
+    for entExp in range(1, maxEntityExp, 1):
+        target_iters = 10**8
+        entities = 10**entExp
+        rounds = target_iters // entities
+
+        @parameter
+        for compExp in range(1, 6, 1):
+            result = benchmark[compExp](rounds, entities)
+            results.append(result)
+
+    return results
 
 
 fn benchmark[Exp: Int](rounds: Int, entities: Int) raises -> BenchResult:

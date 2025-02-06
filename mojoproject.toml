@@ -10,3 +10,5 @@ version = "0.1.0"
 
 [dependencies]
 max = ">=25.1.0.dev2025011105"
+matplotlib = ">=3.0"
+pandas = ">=2.2"
