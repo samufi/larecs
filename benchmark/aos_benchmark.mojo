@@ -7,20 +7,27 @@ import larecs as lx
 @value
 struct BenchResult:
     var components: Int
+    var entities: Int
     var nanos_ecs: Float64
     var nanos_aos: Float64
 
 
 fn main() raises:
+    target_iters = 10**8
     results = List[BenchResult]()
 
-    @parameter
-    for exp in range(1, 6, 1):
-        result = benchmark[exp](10, 1_000_000)
-        results.append(result)
+    for entExp in range(1, 7, 1):
+        entities = 10**entExp
+        rounds = target_iters // entities
+
+        @parameter
+        for compExp in range(1, 6, 1):
+            result = benchmark[compExp](rounds, entities)
+            results.append(result)
 
     for result in results:
         print(
+            result[].entities,
             result[].components,
             result[].nanos_ecs,
             result[].nanos_aos,
@@ -45,7 +52,10 @@ fn benchmark[Exp: Int](rounds: Int, entities: Int) raises -> BenchResult:
     dur_aos = (perf_counter_ns() - start_aos) / (entities * rounds)
 
     return BenchResult(
-        components=2**Exp, nanos_ecs=dur_ecs, nanos_aos=dur_aos
+        entities=entities,
+        components=2**Exp,
+        nanos_ecs=dur_ecs,
+        nanos_aos=dur_aos,
     )
 
 
