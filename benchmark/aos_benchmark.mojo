@@ -1,19 +1,40 @@
 from collections import InlineArray
+from time import perf_counter_ns
+
 import larecs as lx
 
 
+@value
+struct BenchResult:
+    var nanos_ecs: Int
+    var nanos_aos: Int
+
+
 fn main() raises:
-    w1 = createEcsWorld[3](10)
+    @parameter
+    for exp in range(1, 6, 1):
+        result = benchmark[exp, 1_000_000](100)
+        print(2**exp, result.nanos_ecs / 1000, result.nanos_aos / 1000)
 
-    w2 = AosWorld[3, 10]()
 
-    for entity in w1.query[Position, Velocity]():
-        position = entity.get_ptr[Position]()
-        velocity = entity.get[Velocity]()
-        position[].x += velocity.x
-        position[].y += velocity.y
+fn benchmark[Exp: Int, Entities: Int](rounds: Int) raises -> BenchResult:
+    w1 = createEcsWorld[Exp](Entities)
+    start_ecs = perf_counter_ns()
+    for _ in range(rounds):
+        for entity in w1.query[Position, Velocity]():
+            position = entity.get_ptr[Position]()
+            velocity = entity.get[Velocity]()
+            position[].x += velocity.x
+            position[].y += velocity.y
+    dur_ecs = perf_counter_ns() - start_ecs
 
-    w2.update()
+    w2 = AosWorld[Exp, Entities]()
+    start_aos = perf_counter_ns()
+    for _ in range(rounds):
+        w2.update()
+    dur_aos = perf_counter_ns() - start_aos
+
+    return BenchResult(nanos_ecs=dur_ecs, nanos_aos=dur_aos)
 
 
 fn createEcsWorld[Exp: Int](entities: Int) raises -> World:
@@ -25,7 +46,7 @@ fn createEcsWorld[Exp: Int](entities: Int) raises -> World:
 
 
 fn createEcsEntity[Exp: Int](mut w: World) raises -> lx.Entity:
-    e = w.add_entity(Position(1, 2), Velocity(3, 4))
+    e = w.add_entity(Position(1, 2), Velocity(1, 2))
 
     @parameter
     for i in range(2**Exp):
@@ -40,8 +61,9 @@ struct AosWorld[Exp: Int, Entities: Int]:
     fn __init__(out self):
         self.entities = List[AosEntity[Exp]]()
         for _ in range(Entities):
-            self.entities.append(AosEntity[Exp](1, 2, 3, 4))
+            self.entities.append(AosEntity[Exp]())
 
+    @always_inline
     fn update(mut self):
         for entity in self.entities:
             entity[].update()
@@ -49,20 +71,15 @@ struct AosWorld[Exp: Int, Entities: Int]:
 
 @value
 struct AosEntity[Exp: Int]:
-    var position: Position
-    var velocity: Velocity
-    var other: InlineArray[PayloadComponent[0], 2**Exp - 2]
+    var comps: InlineArray[Position, 2**Exp]
 
-    fn __init__(out self, x: Float64, y: Float64, dx: Float64, dy: Float64):
-        self.position = Position(x, y)
-        self.velocity = Velocity(dx, dy)
-        self.other = InlineArray[PayloadComponent[0], 2**Exp - 2](
-            PayloadComponent[0](1.0, 2.0)
-        )
+    fn __init__(out self):
+        self.comps = InlineArray[Position, 2**Exp](Position(1.0, 2.0))
 
+    @always_inline
     fn update(mut self):
-        self.position.x += self.velocity.x
-        self.position.y += self.velocity.y
+        self.comps[0].x += self.comps[1].x
+        self.comps[0].y += self.comps[1].y
 
 
 @value
@@ -116,5 +133,7 @@ alias World = lx.World[
     PayloadComponent[27],
     PayloadComponent[28],
     PayloadComponent[29],
+    PayloadComponent[30],
+    PayloadComponent[31],
     resources_type = lx.Resources,
 ]
