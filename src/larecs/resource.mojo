@@ -288,34 +288,13 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         return UnsafePointer(elt_kgen_ptr)
 
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
-        """Adds resources.
-
-        Parameters:
-            Ts: The Types of the resources to add.
-
-        Args:
-            resources: The resources to add.
-
-        Raises:
-            Error: If the resource already exists.
-        """
+        """See [[.ResourceContaining]]."""
         self._add_or_set[raise_if_found=True](resources^)
 
     fn set[
         *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self, owned *resources: *Ts) raises:
-        """Sets the values of resources.
-
-        Parameters:
-            Ts: The types of the resources to set.
-            add_if_not_found: If true, adds resources that do not exist.
-
-        Args:
-            resources: The resources to set.
-
-        Raises:
-            Error: If one of the resources does not exist.
-        """
+        """See [[.ResourceContaining]]."""
         self._add_or_set[raise_if_not_found = not add_if_not_found](resources^)
 
     @always_inline
@@ -369,14 +348,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         __disable_del resources
 
     fn remove[*Ts: ResourceType](mut self) raises:
-        """Removes resources.
-
-        Parameters:
-            Ts: The types of the resources to remove.
-
-        Raises:
-            Error: If one of the resources does not exist.
-        """
+        """See [[.ResourceContaining]]."""
 
         @parameter
         for i in range(len(VariadicList(Ts))):
@@ -390,14 +362,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
 
     @always_inline
     fn get[T: ResourceType](ref self) raises -> ref [self] T:
-        """Gets a resource.
-
-        Parameters:
-            T: The type of the resource to get.
-
-        Returns:
-            A reference to the resource.
-        """
+        """See [[.ResourceContaining]]."""
         self._assert_has[T]()
         return rebind[T](
             self._unsafe_get_ptr[index(Self.resource_manager.get_id[T]())]()[]
@@ -407,26 +372,12 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
     fn get_ptr[
         T: ResourceType
     ](ref self) raises -> Pointer[T, __origin_of(self)]:
-        """Gets a pointer to a resource.
-
-        Parameters:
-            T: The type of the resource to get.
-
-        Returns:
-            A pointer to the resource.
-        """
+        """See [[.ResourceContaining]]."""
         return Pointer.address_of(self.get[T]())
 
     @always_inline
     fn has[T: ResourceType](self) -> Bool:
-        """Checks if the resource is present.
-
-        Parameters:
-            T: The type of the resource to check.
-
-        Returns:
-            True if the resource is present, otherwise False.
-        """
+        """See [[.ResourceContaining]]."""
         return self._initialized_flags[Self.resource_manager.get_id[T]()]
 
     @always_inline
