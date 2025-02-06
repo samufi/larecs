@@ -3,62 +3,62 @@ import larecs as lx
 
 
 fn main() raises:
-    print("Hello, Mojo!")
-    w = createEcsWorld[8](1000)
+    w1 = createEcsWorld[3](10)
 
-    for entity in w.query[Position, Velocity]():
+    w2 = AosWorld[3, 10]()
+
+    for entity in w1.query[Position, Velocity]():
         position = entity.get_ptr[Position]()
         velocity = entity.get[Velocity]()
         position[].x += velocity.x
         position[].y += velocity.y
 
+    w2.update()
 
-fn createEcsWorld[NumComps: Int](entities: Int) raises -> World:
+
+fn createEcsWorld[Exp: Int](entities: Int) raises -> World:
     w = World()
     for _ in range(entities):
-        _ = createEcsEntity[NumComps](w)
+        _ = createEcsEntity[Exp](w)
 
     return w^
 
 
-fn createEcsEntity[NumComps: Int](mut w: World) raises -> lx.Entity:
+fn createEcsEntity[Exp: Int](mut w: World) raises -> lx.Entity:
     e = w.add_entity(Position(1, 2), Velocity(3, 4))
 
     @parameter
-    for i in range(NumComps):
+    for i in range(2**Exp):
         w.add(e, PayloadComponent[i](1.0, 2.0))
 
     return e
 
 
-trait HasPosVel:
+struct AosWorld[Exp: Int, Entities: Int]:
+    var entities: List[AosEntity[Exp]]
+
+    fn __init__(out self):
+        self.entities = List[AosEntity[Exp]]()
+        for _ in range(Entities):
+            self.entities.append(AosEntity[Exp](1, 2, 3, 4))
+
     fn update(mut self):
-        ...
+        for entity in self.entities:
+            entity[].update()
 
 
 @value
-struct AosEntity[Exp: Int](lx.ComponentType, HasPosVel):
+struct AosEntity[Exp: Int]:
     var position: Position
     var velocity: Velocity
+    var other: InlineArray[PayloadComponent[0], 2**Exp - 2]
 
-    @parameter
-    if Exp >= 2:
-        var payload0: PayloadComponent[0]
-        var payload1: PayloadComponent[1]
-    if Exp >= 3:
-        var payload2: PayloadComponent[2]
-        var payload3: PayloadComponent[3]
-        var payload4: PayloadComponent[4]
-        var payload5: PayloadComponent[5]
-    if Exp >= 4:
-        var payload6: PayloadComponent[6]
-        var payload7: PayloadComponent[7]
-        var payload8: PayloadComponent[8]
-        var payload9: PayloadComponent[9]
-        var payload10: PayloadComponent[10]
-        var payload11: PayloadComponent[11]
-        var payload12: PayloadComponent[12]
-        var payload13: PayloadComponent[13]
+    fn __init__(out self, x: Float64, y: Float64, dx: Float64, dy: Float64):
+        self.position = Position(x, y)
+        self.velocity = Velocity(dx, dy)
+        self.other = InlineArray[PayloadComponent[0], 2**Exp - 2](
+            PayloadComponent[0](1.0, 2.0)
+        )
 
     fn update(mut self):
         self.position.x += self.velocity.x
@@ -80,7 +80,7 @@ struct Velocity(lx.ComponentType):
 @value
 struct PayloadComponent[i: UInt](lx.ComponentType):
     var x: Float64
-    var y: Float32
+    var y: Float64
 
 
 alias World = lx.World[
