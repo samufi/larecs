@@ -6,35 +6,47 @@ import larecs as lx
 
 @value
 struct BenchResult:
-    var nanos_ecs: Int
-    var nanos_aos: Int
+    var components: Int
+    var nanos_ecs: Float64
+    var nanos_aos: Float64
 
 
 fn main() raises:
+    results = List[BenchResult]()
+
     @parameter
     for exp in range(1, 6, 1):
-        result = benchmark[exp, 1_000_000](100)
-        print(2**exp, result.nanos_ecs / 1000, result.nanos_aos / 1000)
+        result = benchmark[exp, 1_000_000](10)
+        results.append(result)
+
+    for result in results:
+        print(
+            result[].components,
+            result[].nanos_ecs,
+            result[].nanos_aos,
+        )
 
 
 fn benchmark[Exp: Int, Entities: Int](rounds: Int) raises -> BenchResult:
     w1 = createEcsWorld[Exp](Entities)
-    start_ecs = perf_counter_ns()
+    var start_ecs: Float64 = perf_counter_ns()
     for _ in range(rounds):
         for entity in w1.query[Position, Velocity]():
             position = entity.get_ptr[Position]()
             velocity = entity.get[Velocity]()
             position[].x += velocity.x
             position[].y += velocity.y
-    dur_ecs = perf_counter_ns() - start_ecs
+    dur_ecs = (perf_counter_ns() - start_ecs) / (Entities * rounds)
 
     w2 = AosWorld[Exp, Entities]()
-    start_aos = perf_counter_ns()
+    var start_aos: Float64 = perf_counter_ns()
     for _ in range(rounds):
         w2.update()
-    dur_aos = perf_counter_ns() - start_aos
+    dur_aos = (perf_counter_ns() - start_aos) / (Entities * rounds)
 
-    return BenchResult(nanos_ecs=dur_ecs, nanos_aos=dur_aos)
+    return BenchResult(
+        components=2**Exp, nanos_ecs=dur_ecs, nanos_aos=dur_aos
+    )
 
 
 fn createEcsWorld[Exp: Int](entities: Int) raises -> World:
