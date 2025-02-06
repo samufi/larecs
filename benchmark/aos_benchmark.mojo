@@ -1,9 +1,10 @@
+from collections import InlineArray
 import larecs as lx
 
 
 fn main() raises:
     print("Hello, Mojo!")
-    w = createWorld[8](1000)
+    w = createEcsWorld[8](1000)
 
     for entity in w.query[Position, Velocity]():
         position = entity.get_ptr[Position]()
@@ -12,15 +13,15 @@ fn main() raises:
         position[].y += velocity.y
 
 
-fn createWorld[NumComps: Int](entities: Int) raises -> World:
+fn createEcsWorld[NumComps: Int](entities: Int) raises -> World:
     w = World()
     for _ in range(entities):
-        _ = createEntity[NumComps](w)
+        _ = createEcsEntity[NumComps](w)
 
     return w^
 
 
-fn createEntity[NumComps: Int](mut w: World) raises -> lx.Entity:
+fn createEcsEntity[NumComps: Int](mut w: World) raises -> lx.Entity:
     e = w.add_entity(Position(1, 2), Velocity(3, 4))
 
     @parameter
@@ -28,6 +29,40 @@ fn createEntity[NumComps: Int](mut w: World) raises -> lx.Entity:
         w.add(e, PayloadComponent[i](1.0, 2.0))
 
     return e
+
+
+trait HasPosVel:
+    fn update(mut self):
+        ...
+
+
+@value
+struct AosEntity[Exp: Int](lx.ComponentType, HasPosVel):
+    var position: Position
+    var velocity: Velocity
+
+    @parameter
+    if Exp >= 2:
+        var payload0: PayloadComponent[0]
+        var payload1: PayloadComponent[1]
+    if Exp >= 3:
+        var payload2: PayloadComponent[2]
+        var payload3: PayloadComponent[3]
+        var payload4: PayloadComponent[4]
+        var payload5: PayloadComponent[5]
+    if Exp >= 4:
+        var payload6: PayloadComponent[6]
+        var payload7: PayloadComponent[7]
+        var payload8: PayloadComponent[8]
+        var payload9: PayloadComponent[9]
+        var payload10: PayloadComponent[10]
+        var payload11: PayloadComponent[11]
+        var payload12: PayloadComponent[12]
+        var payload13: PayloadComponent[13]
+
+    fn update(mut self):
+        self.position.x += self.velocity.x
+        self.position.y += self.velocity.y
 
 
 @value
