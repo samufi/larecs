@@ -8,7 +8,7 @@ import larecs as lx
 alias results_dir = "results"
 """Output directory for benchmark results."""
 
-alias target_iterations = 5 * 10**8
+alias target_iterations = 10**9
 """Target number of total entity iterations for each benchmark."""
 
 
@@ -122,6 +122,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
     ax2.set_xticks(componentTicks)
+    ax2.set_xtickslabels(componentTicks)
     ax2.legend(loc="upper left", fontsize="small")
 
     fig.tight_layout()
