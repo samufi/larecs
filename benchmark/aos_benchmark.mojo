@@ -19,14 +19,6 @@ struct BenchResult:
 fn main() raises:
     results = run_benchmarks(2)
 
-    for result in results:
-        print(
-            result[].entities,
-            result[].components,
-            result[].nanos_ecs,
-            result[].nanos_aos,
-        )
-
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
 
@@ -42,6 +34,52 @@ def plot(results: List[BenchResult]):
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
     print(df)
+
+    fig_and_ax = plt.subplots(ncols=2, figsize=(10, 4))
+    fig = fig_and_ax[0]
+    ax = fig_and_ax[1]
+
+    ax1 = ax[0]
+    ax2 = ax[1]
+
+    entities = df["entities"].unique()
+    components = df["components"].unique()
+
+    for comp in components:
+        query = "components == {0}".format(String(comp))
+        print(query)
+        # df_comp = df.query(query)
+        """
+        ax1.plot(
+            df_comp["entities"],
+            df_comp["nanos_ecs"],
+            label="{0} components ECS".format(String(comp)),
+        )
+        ax1.plot(
+            df_comp["entities"],
+            df_comp["nanos_aos"],
+            label="{0} components AoS".format(String(comp)),
+        )
+        """
+
+    """
+    for entity in entities:
+        df_entity = df.query("entities == {0}".format(String(entity)))
+        ax2.plot(
+            df_entity["components"],
+            df_entity["nanos_ecs"],
+            label="{0} entities ECS".format(String(entity)),
+        )
+        ax2.plot(
+            df_entity["components"],
+            df_entity["nanos_aos"],
+            label="{0} entities AoS".format(String(entity)),
+        )
+    """
+
+    fig.tight_layout()
+    fig.savefig(os.path.join(results_dir, "aos.svg"))
+    fig.savefig(os.path.join(results_dir, "aos.png"))
 
 
 def to_dataframe(results: List[BenchResult]) -> PythonObject:
