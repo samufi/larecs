@@ -122,7 +122,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
     ax2.set_xticks(componentTicks)
-    ax2.set_xtickslabels(componentTicks)
+    ax2.set_xticklabels(componentTicks)
     ax2.legend(loc="upper left", fontsize="small")
 
     fig.tight_layout()
@@ -157,6 +157,7 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
     for entExp in range(2, config.max_entity_exp, 1):
         entities = 10**entExp
         rounds = config.target_iters // entities
+        print(String(entities) + " entities")
 
         @parameter
         for compExp in range(1, config.max_comp_exp, 1):
