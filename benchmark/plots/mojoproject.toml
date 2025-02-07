@@ -1,5 +1,5 @@
 [project]
-authors = ["samufi <samufi@web.de>"]
+authors = ["samufi <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
 channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 description = "Benchmarking plots for Larecs🌲"
 name = "plots"

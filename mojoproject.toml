@@ -1,5 +1,5 @@
 [project]
-authors = ["samufi <samufi@web.de>"]
+authors = ["samufi <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
 channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
