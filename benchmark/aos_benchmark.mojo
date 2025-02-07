@@ -42,6 +42,8 @@ fn main() raises:
 def plot(config: BenchConfig, results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
 
+    var componentTicks: PythonObject = [2, 4, 8, 16, 32]
+
     csv_file = os.path.join(results_dir, "aos.csv")
 
     df = to_dataframe(results)
@@ -83,9 +85,10 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             lw=lw,
             label="{0} comp. AoS".format(String(comp)),
         )
+    ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
     ax1.set_ylabel("Time per entity [ns]")
-    ax1.legend(loc="upper right", fontsize="small")
+    ax1.legend(loc="upper left", fontsize="small")
 
     for entExp in range(2, config.max_entity_exp, 1):
         ent = 10**entExp
@@ -117,7 +120,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         )
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
-    ax2.legend(loc="upper right", fontsize="small")
+    ax2.set_xticks(componentTicks)
+    ax2.legend(loc="upper left", fontsize="small")
 
     fig.tight_layout()
     fig.savefig(os.path.join(results_dir, "aos.svg"))
