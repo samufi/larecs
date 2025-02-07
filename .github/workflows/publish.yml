@@ -22,10 +22,6 @@ jobs:
         run: |
           curl -ssL https://magic.modular.com | bash
           source /home/runner/.bash_profile
-      - name: Install mojo and dependencies
-        run: |
-          source /home/runner/.bash_profile
-          magic install --locked
         
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -66,10 +62,30 @@ jobs:
           cd hugo
           go install .
 
+      - name: Run AoS benchmarks
+        run: |
+          source /home/runner/.bash_profile
+          cd benchmark/plots
+          magic install --locked
+          magic run mojo -I ../../src/ src/aos.mojo
+        
+      - name: Archive benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: aos-benchmark
+          path: benchmark/plots/results
+      
+      - name: Copy benchmark results to docs
+        run: |
+          mkdir -p docs/src/guide/images
+          cp benchmark/plots/results/aos_benchmark.svg docs/src/guide/images/
+        
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
           source /home/runner/.bash_profile
+          magic install --locked
           ./modo/modo build
+      
       - name: Run Hugo
         run: |
           hugo -s docs/site
