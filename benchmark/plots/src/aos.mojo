@@ -173,7 +173,7 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
     for ent_exp in range(2, config.max_entity_exp + 1):
         entities = 10**ent_exp
         rounds = config.target_iters // entities
-        print(String(entities) + " entities")
+        print(entities, "entities")
 
         @parameter
         for compExp in range(1, config.max_comp_exp + 1):
@@ -186,7 +186,7 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
 fn benchmark[
     components_exp: Int
 ](rounds: Int, entities: Int) raises -> BenchResult:
-    w1 = createEcsWorld[components_exp](entities)
+    w1 = create_ecs_world[components_exp](entities)
     var start_ecs: Float64 = perf_counter_ns()
     for _ in range(rounds):
         for entity in w1.query[Position, Velocity]():
@@ -210,13 +210,15 @@ fn benchmark[
     )
 
 
-fn createEcsWorld[components_exp: Int](entities: Int, out w: World) raises:
+fn create_ecs_world[components_exp: Int](entities: Int, out w: World) raises:
     w = World()
     for _ in range(entities):
-        _ = createEcsEntity[components_exp](w)
+        _ = create_ecs_entity[components_exp](w)
 
 
-fn createEcsEntity[components_exp: Int](mut w: World, out e: lx.Entity) raises:
+fn create_ecs_entity[
+    components_exp: Int
+](mut w: World, out e: lx.Entity) raises:
     e = w.add_entity(Position(1, 2), Velocity(1, 2))
 
     @parameter
