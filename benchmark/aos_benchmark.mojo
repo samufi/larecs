@@ -48,7 +48,6 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
-    # print(df)
 
     fig_and_ax = plt.subplots(ncols=2, figsize=(10, 4))
     fig = fig_and_ax[0]
@@ -57,6 +56,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     ax1 = ax[0]
     ax2 = ax[1]
 
+    var handles: PythonObject = []
+    var labels: PythonObject = []
     for compExp in range(1, config.max_comp_exp, 1):
         comp = 2**compExp
         var entities: PythonObject = []
@@ -75,7 +76,6 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             "-",
             c="k",
             lw=lw,
-            label="{0} comp. ECS".format(String(comp)),
         )
         ax1.plot(
             entities,
@@ -83,13 +83,29 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             "--",
             c="b",
             lw=lw,
-            label="{0} comp. AoS".format(String(comp)),
         )
+        if compExp == 1:
+            labels.append("Larecs")
+            handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
+            labels.append("Array of Structs")
+            handles.append(
+                plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
+            )
+        labels.append("{0} components".format(String(comp)))
+        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="--"))
+
     ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
     ax1.set_ylabel("Time per entity [ns]")
-    ax1.legend(loc="upper left", fontsize="small")
+    ax1.legend(
+        loc="upper left",
+        fontsize="small",
+        handles=handles,
+        labels=labels,
+    )
 
+    handles = []
+    labels = []
     for entExp in range(2, config.max_entity_exp, 1):
         ent = 10**entExp
         var components: PythonObject = []
@@ -108,7 +124,6 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             "-",
             c="k",
             lw=lw,
-            label="10^{0} ent. ECS".format(String(entExp)),
         )
         ax2.plot(
             components,
@@ -116,14 +131,28 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             "--",
             c="b",
             lw=lw,
-            label="10^{0} ent. AoS".format(String(entExp)),
         )
+        if entExp == 2:
+            labels.append("Larecs")
+            handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
+            labels.append("Array of Structs")
+            handles.append(
+                plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
+            )
+        labels.append("10^{0} entities".format(String(entExp)))
+        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="--"))
+
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
     ax2.set_xticks(componentTicks)
     ax2.set_xticklabels(componentTicks)
-    ax2.legend(loc="upper left", fontsize="small")
+    ax2.legend(
+        loc="upper left",
+        fontsize="small",
+        handles=handles,
+        labels=labels,
+    )
 
     fig.tight_layout()
     fig.savefig(os.path.join(results_dir, "aos.svg"))
