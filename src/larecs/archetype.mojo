@@ -392,6 +392,7 @@ struct Archetype[
     @always_inline
     fn get_component_ptr[
         IndexType: Indexer, //,
+        *,
         T: ComponentType,
         assert_has_component: Bool = True,
     ](ref self, idx: IndexType) raises -> Pointer[T, __origin_of(self._data)]:
@@ -421,6 +422,7 @@ struct Archetype[
     @always_inline
     fn get_component[
         IndexType: Indexer, //,
+        *,
         T: ComponentType,
         assert_has_component: Bool = True,
     ](ref self, idx: IndexType) raises -> ref [self._data] T:
