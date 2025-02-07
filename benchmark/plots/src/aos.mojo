@@ -8,6 +8,9 @@ import larecs as lx
 alias RESULTS_DIR = "results"
 """Output directory for benchmark results."""
 
+alias FILE_NAME = "aos_benchmark"
+"""Base name of benchmark output file."""
+
 alias TARGET_ITERATIONS = 10**9
 """Target number of total entity iterations for each benchmark."""
 
@@ -31,7 +34,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     var component_ticks: PythonObject = [2, 4, 8, 16, 32]
 
-    csv_file = os.path.join(RESULTS_DIR, "aos.csv")
+    csv_file = os.path.join(RESULTS_DIR, FILE_NAME + ".csv")
 
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
@@ -142,8 +145,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     )
 
     fig.tight_layout()
-    fig.savefig(os.path.join(RESULTS_DIR, "aos.svg"))
-    fig.savefig(os.path.join(RESULTS_DIR, "aos.png"))
+    fig.savefig(os.path.join(RESULTS_DIR, FILE_NAME + ".svg"))
+    fig.savefig(os.path.join(RESULTS_DIR, FILE_NAME + ".png"))
 
 
 def to_dataframe(results: List[BenchResult]) -> PythonObject:
