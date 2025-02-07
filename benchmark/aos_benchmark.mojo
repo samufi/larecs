@@ -92,7 +92,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
                 plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
             )
         labels.append("{0} components".format(String(comp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="--"))
+        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
 
     ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
@@ -140,7 +140,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
                 plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
             )
         labels.append("10^{0} entities".format(String(entity_exp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="--"))
+        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
