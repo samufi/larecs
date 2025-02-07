@@ -26,19 +26,6 @@ struct BenchConfig[max_comp_exp: Int]:
     var target_iters: Int
 
 
-fn main() raises:
-    config = BenchConfig[max_comp_exp=6](
-        max_entity_exp=7, target_iters=target_iterations
-    )
-
-    results = run_benchmarks(config)
-
-    if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
-
-    plot(config, results)
-
-
 def plot(config: BenchConfig, results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
 
@@ -321,3 +308,16 @@ alias World = lx.World[
     PayloadComponent[31],
     resources_type = lx.Resources,
 ]
+
+
+fn main() raises:
+    config = BenchConfig[max_comp_exp=6](
+        max_entity_exp=7, target_iters=target_iterations
+    )
+
+    results = run_benchmarks(config)
+
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+
+    plot(config, results)
