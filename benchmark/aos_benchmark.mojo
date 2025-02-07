@@ -6,6 +6,10 @@ from time import perf_counter_ns
 import larecs as lx
 
 alias results_dir = "results"
+"""Output directory for benchmark results."""
+
+alias target_iterations = 5 * 10**8
+"""Target number of total entity iterations for each benchmark."""
 
 
 @value
@@ -16,24 +20,33 @@ struct BenchResult:
     var nanos_aos: Float64
 
 
+@value
+struct BenchConfig[max_comp_exp: Int]:
+    var max_entity_exp: Int
+    var target_iters: Int
+
+
 fn main() raises:
-    results = run_benchmarks(2)
+    config = BenchConfig[max_comp_exp=6](
+        max_entity_exp=7, target_iters=target_iterations
+    )
+
+    results = run_benchmarks(config)
 
     if not os.path.exists(results_dir):
         os.mkdir(results_dir)
 
-    plot(results)
+    plot(config, results)
 
 
-def plot(results: List[BenchResult]):
+def plot(config: BenchConfig, results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
-    figure = Python.import_module("matplotlib.figure")
 
     csv_file = os.path.join(results_dir, "aos.csv")
 
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
-    print(df)
+    # print(df)
 
     fig_and_ax = plt.subplots(ncols=2, figsize=(10, 4))
     fig = fig_and_ax[0]
@@ -42,40 +55,69 @@ def plot(results: List[BenchResult]):
     ax1 = ax[0]
     ax2 = ax[1]
 
-    entities = df["entities"].unique()
-    components = df["components"].unique()
+    for compExp in range(1, config.max_comp_exp, 1):
+        comp = 2**compExp
+        var entities: PythonObject = []
+        var nanos_ecs: PythonObject = []
+        var nanos_aos: PythonObject = []
+        for row in results:
+            if row[].components == comp:
+                entities.append(row[].entities)
+                nanos_ecs.append(row[].nanos_ecs)
+                nanos_aos.append(row[].nanos_aos)
 
-    for comp in components:
-        query = "components == {0}".format(String(comp))
-        print(query)
-        # df_comp = df.query(query)
-        """
+        lw = 0.5 + compExp / 4
         ax1.plot(
-            df_comp["entities"],
-            df_comp["nanos_ecs"],
-            label="{0} components ECS".format(String(comp)),
+            entities,
+            nanos_ecs,
+            "-",
+            c="k",
+            lw=lw,
+            label="{0} comp. ECS".format(String(comp)),
         )
         ax1.plot(
-            df_comp["entities"],
-            df_comp["nanos_aos"],
-            label="{0} components AoS".format(String(comp)),
+            entities,
+            nanos_aos,
+            "--",
+            c="b",
+            lw=lw,
+            label="{0} comp. AoS".format(String(comp)),
         )
-        """
+    ax1.set_xlabel("Entities")
+    ax1.set_ylabel("Time per entity [ns]")
+    ax1.legend(loc="upper right", fontsize="small")
 
-    """
-    for entity in entities:
-        df_entity = df.query("entities == {0}".format(String(entity)))
+    for entExp in range(2, config.max_entity_exp, 1):
+        ent = 10**entExp
+        var components: PythonObject = []
+        var nanos_ecs: PythonObject = []
+        var nanos_aos: PythonObject = []
+        for row in results:
+            if row[].entities == ent:
+                components.append(row[].components)
+                nanos_ecs.append(row[].nanos_ecs)
+                nanos_aos.append(row[].nanos_aos)
+
+        lw = 0.5 + entExp / 4
         ax2.plot(
-            df_entity["components"],
-            df_entity["nanos_ecs"],
-            label="{0} entities ECS".format(String(entity)),
+            components,
+            nanos_ecs,
+            "-",
+            c="k",
+            lw=lw,
+            label="10^{0} ent. ECS".format(String(entExp)),
         )
         ax2.plot(
-            df_entity["components"],
-            df_entity["nanos_aos"],
-            label="{0} entities AoS".format(String(entity)),
+            components,
+            nanos_aos,
+            "--",
+            c="b",
+            lw=lw,
+            label="10^{0} ent. AoS".format(String(entExp)),
         )
-    """
+    ax2.set_xlabel("Components")
+    ax2.set_ylabel("Time per entity [ns]")
+    ax2.legend(loc="upper right", fontsize="small")
 
     fig.tight_layout()
     fig.savefig(os.path.join(results_dir, "aos.svg"))
@@ -103,16 +145,15 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
     return pd.DataFrame(data)
 
 
-fn run_benchmarks(maxEntityExp: Int) raises -> List[BenchResult]:
+fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
     results = List[BenchResult]()
 
-    for entExp in range(1, maxEntityExp, 1):
-        target_iters = 10**8
+    for entExp in range(2, config.max_entity_exp, 1):
         entities = 10**entExp
-        rounds = target_iters // entities
+        rounds = config.target_iters // entities
 
         @parameter
-        for compExp in range(1, 6, 1):
+        for compExp in range(1, config.max_comp_exp, 1):
             result = benchmark[compExp](rounds, entities)
             results.append(result)
 
