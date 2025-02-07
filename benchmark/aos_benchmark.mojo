@@ -1,8 +1,11 @@
 from collections import InlineArray
+from os import os
 from python import Python, PythonObject
 from time import perf_counter_ns
 
 import larecs as lx
+
+alias results_dir = "results"
 
 
 @value
@@ -14,7 +17,7 @@ struct BenchResult:
 
 
 fn main() raises:
-    results = run_benchmarks(4)
+    results = run_benchmarks(2)
 
     for result in results:
         print(
@@ -24,6 +27,9 @@ fn main() raises:
             result[].nanos_aos,
         )
 
+    if not os.path.exists(results_dir):
+        os.mkdir(results_dir)
+
     plot(results)
 
 
@@ -31,7 +37,10 @@ def plot(results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
     figure = Python.import_module("matplotlib.figure")
 
+    csv_file = os.path.join(results_dir, "aos.csv")
+
     df = to_dataframe(results)
+    df.to_csv(csv_file, index=False)
     print(df)
 
 
