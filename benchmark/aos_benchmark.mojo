@@ -1,5 +1,5 @@
 from collections import InlineArray
-from python import Python
+from python import Python, PythonObject
 from time import perf_counter_ns
 
 import larecs as lx
@@ -14,7 +14,7 @@ struct BenchResult:
 
 
 fn main() raises:
-    results = run_benchmarks(6)
+    results = run_benchmarks(4)
 
     for result in results:
         print(
@@ -24,14 +24,36 @@ fn main() raises:
             result[].nanos_aos,
         )
 
-    results = List[BenchResult]()
     plot(results)
 
 
 def plot(results: List[BenchResult]):
-    pd = Python.import_module("pandas")
     plt = Python.import_module("matplotlib.pyplot")
     figure = Python.import_module("matplotlib.figure")
+
+    df = to_dataframe(results)
+    print(df)
+
+
+def to_dataframe(results: List[BenchResult]) -> PythonObject:
+    pd = Python.import_module("pandas")
+    var entities: PythonObject = []
+    var components: PythonObject = []
+    var nanos_ecs: PythonObject = []
+    var nanos_aos: PythonObject = []
+    for result in results:
+        entities.append(result[].entities)
+        components.append(result[].components)
+        nanos_ecs.append(result[].nanos_ecs)
+        nanos_aos.append(result[].nanos_aos)
+
+    var data = Python.dict()
+    data["entities"] = entities
+    data["components"] = components
+    data["nanos_ecs"] = nanos_ecs
+    data["nanos_aos"] = nanos_aos
+
+    return pd.DataFrame(data)
 
 
 fn run_benchmarks(maxEntityExp: Int) raises -> List[BenchResult]:
