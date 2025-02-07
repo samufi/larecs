@@ -118,6 +118,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             lw=lw,
             label="10^{0} ent. AoS".format(String(entExp)),
         )
+    ax2.set_xscale("log")
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
     ax2.set_xticks(componentTicks)
