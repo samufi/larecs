@@ -1,12 +1,15 @@
 [project]
 authors = ["samufi <samufi@web.de>"]
 channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
-description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
-name = "larecs"
+description = "Benchmarking plots for Larecs🌲"
+name = "plots"
 platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
 
 [dependencies]
-max = ">=25.1.0.dev2025011105"
+max = "*"
+python = "==3.12"
+matplotlib = ">=3.10.0,<4"
+pandas = ">=2.2"

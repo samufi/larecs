@@ -166,6 +166,3 @@ cython_debug/
 .magic
 # **.go
 hello_world.mojo
-
-# benchmarks
-/results/
