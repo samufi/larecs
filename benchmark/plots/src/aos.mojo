@@ -5,10 +5,10 @@ from time import perf_counter_ns
 
 import larecs as lx
 
-alias results_dir = "results"
+alias RESULTS_DIR = "results"
 """Output directory for benchmark results."""
 
-alias target_iterations = 10**9
+alias TARGET_ITERATIONS = 10**9
 """Target number of total entity iterations for each benchmark."""
 
 
@@ -31,7 +31,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     var component_ticks: PythonObject = [2, 4, 8, 16, 32]
 
-    csv_file = os.path.join(results_dir, "aos.csv")
+    csv_file = os.path.join(RESULTS_DIR, "aos.csv")
 
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
@@ -45,7 +45,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     var handles: PythonObject = []
     var labels: PythonObject = []
-    for comp_exp in range(1, config.max_comp_exp, 1):
+    for comp_exp in range(1, config.max_comp_exp + 1):
         comp = 2**comp_exp
         var entities: PythonObject = []
         var nanos_ecs: PythonObject = []
@@ -93,7 +93,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     handles = []
     labels = []
-    for entity_exp in range(2, config.max_entity_exp, 1):
+    for entity_exp in range(2, config.max_entity_exp + 1):
         num_entities = 10**entity_exp
         var components: PythonObject = []
         var nanos_ecs: PythonObject = []
@@ -142,8 +142,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     )
 
     fig.tight_layout()
-    fig.savefig(os.path.join(results_dir, "aos.svg"))
-    fig.savefig(os.path.join(results_dir, "aos.png"))
+    fig.savefig(os.path.join(RESULTS_DIR, "aos.svg"))
+    fig.savefig(os.path.join(RESULTS_DIR, "aos.png"))
 
 
 def to_dataframe(results: List[BenchResult]) -> PythonObject:
@@ -170,13 +170,13 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
 fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
     results = List[BenchResult]()
 
-    for entExp in range(2, config.max_entity_exp, 1):
-        entities = 10**entExp
+    for ent_exp in range(2, config.max_entity_exp + 1):
+        entities = 10**ent_exp
         rounds = config.target_iters // entities
         print(String(entities) + " entities")
 
         @parameter
-        for compExp in range(1, config.max_comp_exp, 1):
+        for compExp in range(1, config.max_comp_exp + 1):
             result = benchmark[compExp](rounds, entities)
             results.append(result)
 
@@ -311,13 +311,13 @@ alias World = lx.World[
 
 
 fn main() raises:
-    config = BenchConfig[max_comp_exp=6](
-        max_entity_exp=7, target_iters=target_iterations
+    config = BenchConfig[max_comp_exp=5](
+        max_entity_exp=6, target_iters=TARGET_ITERATIONS
     )
 
     results = run_benchmarks(config)
 
-    if not os.path.exists(results_dir):
-        os.mkdir(results_dir)
+    if not os.path.exists(RESULTS_DIR):
+        os.mkdir(RESULTS_DIR)
 
     plot(config, results)
