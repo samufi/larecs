@@ -42,7 +42,7 @@ fn main() raises:
 def plot(config: BenchConfig, results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
 
-    var componentTicks: PythonObject = [2, 4, 8, 16, 32]
+    var component_ticks: PythonObject = [2, 4, 8, 16, 32]
 
     csv_file = os.path.join(results_dir, "aos.csv")
 
@@ -58,8 +58,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     var handles: PythonObject = []
     var labels: PythonObject = []
-    for compExp in range(1, config.max_comp_exp, 1):
-        comp = 2**compExp
+    for comp_exp in range(1, config.max_comp_exp, 1):
+        comp = 2**comp_exp
         var entities: PythonObject = []
         var nanos_ecs: PythonObject = []
         var nanos_aos: PythonObject = []
@@ -69,7 +69,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
                 nanos_ecs.append(row[].nanos_ecs)
                 nanos_aos.append(row[].nanos_aos)
 
-        lw = 0.5 + compExp / 4
+        lw = 0.5 + comp_exp / 4
         ax1.plot(
             entities,
             nanos_ecs,
@@ -84,7 +84,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             c="b",
             lw=lw,
         )
-        if compExp == 1:
+        if comp_exp == 1:
             labels.append("Larecs")
             handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
             labels.append("Array of Structs")
@@ -106,18 +106,18 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
     handles = []
     labels = []
-    for entExp in range(2, config.max_entity_exp, 1):
-        ent = 10**entExp
+    for entity_exp in range(2, config.max_entity_exp, 1):
+        num_entities = 10**entity_exp
         var components: PythonObject = []
         var nanos_ecs: PythonObject = []
         var nanos_aos: PythonObject = []
         for row in results:
-            if row[].entities == ent:
+            if row[].entities == num_entities:
                 components.append(row[].components)
                 nanos_ecs.append(row[].nanos_ecs)
                 nanos_aos.append(row[].nanos_aos)
 
-        lw = 0.5 + entExp / 4
+        lw = 0.5 + entity_exp / 4
         ax2.plot(
             components,
             nanos_ecs,
@@ -132,21 +132,21 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             c="b",
             lw=lw,
         )
-        if entExp == 2:
+        if entity_exp == 2:
             labels.append("Larecs")
             handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
             labels.append("Array of Structs")
             handles.append(
                 plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
             )
-        labels.append("10^{0} entities".format(String(entExp)))
+        labels.append("10^{0} entities".format(String(entity_exp)))
         handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="--"))
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
     ax2.set_ylabel("Time per entity [ns]")
-    ax2.set_xticks(componentTicks)
-    ax2.set_xticklabels(componentTicks)
+    ax2.set_xticks(component_ticks)
+    ax2.set_xticklabels(component_ticks)
     ax2.legend(
         loc="upper left",
         fontsize="small",
@@ -196,8 +196,10 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
     return results
 
 
-fn benchmark[Exp: Int](rounds: Int, entities: Int) raises -> BenchResult:
-    w1 = createEcsWorld[Exp](entities)
+fn benchmark[
+    components_exp: Int
+](rounds: Int, entities: Int) raises -> BenchResult:
+    w1 = createEcsWorld[components_exp](entities)
     var start_ecs: Float64 = perf_counter_ns()
     for _ in range(rounds):
         for entity in w1.query[Position, Velocity]():
@@ -207,7 +209,7 @@ fn benchmark[Exp: Int](rounds: Int, entities: Int) raises -> BenchResult:
             position[].y += velocity.y
     dur_ecs = (perf_counter_ns() - start_ecs) / (entities * rounds)
 
-    w2 = AosWorld[Exp](entities)
+    w2 = AosWorld[components_exp](entities)
     var start_aos: Float64 = perf_counter_ns()
     for _ in range(rounds):
         w2.update()
@@ -215,37 +217,37 @@ fn benchmark[Exp: Int](rounds: Int, entities: Int) raises -> BenchResult:
 
     return BenchResult(
         entities=entities,
-        components=2**Exp,
+        components=2**components_exp,
         nanos_ecs=dur_ecs,
         nanos_aos=dur_aos,
     )
 
 
-fn createEcsWorld[Exp: Int](entities: Int) raises -> World:
+fn createEcsWorld[components_exp: Int](entities: Int) raises -> World:
     w = World()
     for _ in range(entities):
-        _ = createEcsEntity[Exp](w)
+        _ = createEcsEntity[components_exp](w)
 
     return w^
 
 
-fn createEcsEntity[Exp: Int](mut w: World) raises -> lx.Entity:
+fn createEcsEntity[components_exp: Int](mut w: World) raises -> lx.Entity:
     e = w.add_entity(Position(1, 2), Velocity(1, 2))
 
     @parameter
-    for i in range(2**Exp):
+    for i in range(2**components_exp):
         w.add(e, PayloadComponent[i](1.0, 2.0))
 
     return e
 
 
-struct AosWorld[Exp: Int]:
-    var entities: List[AosEntity[Exp]]
+struct AosWorld[components_exp: Int]:
+    var entities: List[AosEntity[components_exp]]
 
     fn __init__(out self, entities: Int):
-        self.entities = List[AosEntity[Exp]]()
+        self.entities = List[AosEntity[components_exp]]()
         for _ in range(entities):
-            self.entities.append(AosEntity[Exp]())
+            self.entities.append(AosEntity[components_exp]())
 
     @always_inline
     fn update(mut self):
@@ -254,11 +256,13 @@ struct AosWorld[Exp: Int]:
 
 
 @value
-struct AosEntity[Exp: Int]:
-    var comps: InlineArray[Position, 2**Exp]
+struct AosEntity[components_exp: Int]:
+    var comps: InlineArray[Position, 2**components_exp]
 
     fn __init__(out self):
-        self.comps = InlineArray[Position, 2**Exp](Position(1.0, 2.0))
+        self.comps = InlineArray[Position, 2**components_exp](
+            Position(1.0, 2.0)
+        )
 
     @always_inline
     fn update(mut self):
