@@ -223,22 +223,18 @@ fn benchmark[
     )
 
 
-fn createEcsWorld[components_exp: Int](entities: Int) raises -> World:
+fn createEcsWorld[components_exp: Int](entities: Int, out w: World) raises:
     w = World()
     for _ in range(entities):
         _ = createEcsEntity[components_exp](w)
 
-    return w^
 
-
-fn createEcsEntity[components_exp: Int](mut w: World) raises -> lx.Entity:
+fn createEcsEntity[components_exp: Int](mut w: World, out e: lx.Entity) raises:
     e = w.add_entity(Position(1, 2), Velocity(1, 2))
 
     @parameter
     for i in range(2**components_exp):
         w.add(e, PayloadComponent[i](1.0, 2.0))
-
-    return e
 
 
 struct AosWorld[components_exp: Int]:
