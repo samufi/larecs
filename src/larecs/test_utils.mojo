@@ -2,6 +2,7 @@ from testing import assert_true, assert_false, assert_equal
 from testing.testing import Testable
 from random import random
 from memory import UnsafePointer
+from sys.info import sizeof
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
@@ -54,18 +55,42 @@ struct Position(ComponentType):
     var x: Float64
     var y: Float64
 
+    fn load_x[simd_width: Int](self, out x: SIMD[DType.float64, simd_width]):
+        x = UnsafePointer.address_of(self.x).strided_load[width=simd_width](2)
 
-@value
-struct LargerComponent(ComponentType):
-    var x: Float64
-    var y: Float64
-    var z: Float64
+    fn store_x[simd_width: Int](mut self, x: SIMD[DType.float64, simd_width]):
+        UnsafePointer.address_of(self.x).strided_store[width=simd_width](x, 2)
+
+    fn load_y[simd_width: Int](self, out y: SIMD[DType.float64, simd_width]):
+        y = UnsafePointer.address_of(self.y).strided_load[width=simd_width](2)
+
+    fn store_y[simd_width: Int](mut self, y: SIMD[DType.float64, simd_width]):
+        UnsafePointer.address_of(self.y).strided_store[width=simd_width](y, 2)
 
 
 @value
 struct Velocity(ComponentType):
     var dx: Float64
     var dy: Float64
+
+    fn load_dx[simd_width: Int](self, out dx: SIMD[DType.float64, simd_width]):
+        dx = UnsafePointer.address_of(self.dx).strided_load[width=simd_width](2)
+
+    fn store_dx[simd_width: Int](mut self, dx: SIMD[DType.float64, simd_width]):
+        UnsafePointer.address_of(self.dx).strided_store[width=simd_width](dx, 2)
+
+    fn load_dy[simd_width: Int](self, out dy: SIMD[DType.float64, simd_width]):
+        dy = UnsafePointer.address_of(self.dy).strided_load[width=simd_width](2)
+
+    fn store_dy[simd_width: Int](mut self, dy: SIMD[DType.float64, simd_width]):
+        UnsafePointer.address_of(self.dy).strided_store[width=simd_width](dy, 2)
+
+
+@value
+struct LargerComponent(ComponentType):
+    var x: Float64
+    var y: Float64
+    var z: Float64
 
 
 @value
