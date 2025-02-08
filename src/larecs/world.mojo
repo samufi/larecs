@@ -4,7 +4,7 @@ from algorithm import vectorize
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
-from .archetype import Archetype as _Archetype, EntityAccessor
+from .archetype import Archetype as _Archetype, MutableEntityAccessor
 from .graph import BitMaskGraph
 from .bitmask import BitMask
 from .debug_utils import debug_warn
@@ -823,12 +823,59 @@ struct World[
         if not self._entity_pool.is_alive(entity):
             raise Error("The considered entity does not exist anymore.")
 
-    fn vectorize[
-        operation: fn (accessor: EntityAccessor) -> None,
+    @always_inline
+    fn apply[
+        operation: fn (accessor: MutableEntityAccessor) capturing -> None,
+        *Ts: ComponentType,
+        unroll_factor: Int = 1,
+    ](mut self) raises:
+        """
+        Applies an operation to all entities with the given components.
+
+        Parameters:
+            operation: The operation to apply.
+            Ts:        The types of the components.
+            unroll_factor: The unroll factor for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+        """
+
+        @always_inline
+        @parameter
+        fn operation_wrapper[simd_width: Int](accessor: MutableEntityAccessor):
+            operation(accessor)
+
+        self.apply[operation_wrapper, *Ts, unroll_factor=unroll_factor]()
+
+    fn apply[
+        operation: fn[simd_width: Int] (
+            accessor: MutableEntityAccessor
+        ) capturing -> None,
         *Ts: ComponentType,
         simd_width: Int = 1,
+        unroll_factor: Int = 1,
     ](mut self) raises:
+        """
+        Applies an operation to all entities with the given components.
 
+        The operation is applied to chungs of `simd_width` entities,
+        unless not enough are available anymore. Then the chunk size is reduced.
+        The respecively used SIMD width is passed to the operation.
+
+        Caution! If `simd_width` is greater than 1, the operation **must**
+        apply to the `simd_width` elements after the element passed to
+        `operation`, assuming that the components are stored in contiguous
+        memory, respectively. This may require knowledge of the memory layout
+        of the components!
+
+        Parameters:
+            operation: The operation to apply.
+            Ts:        The types of the components.
+            simd_width: The SIMD width for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+            unroll_factor: The unroll factor for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+
+        """
         self._assert_unlocked()
 
         mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
@@ -839,9 +886,12 @@ struct World[
                 @always_inline
                 @parameter
                 fn closure[simd_width: Int](i: Int) capturing:
-                    operation(archetype[].get_entity_accessor(i))
+                    accessor = archetype[].get_entity_accessor(i)
+                    operation[simd_width](accessor)
 
-                vectorize[closure, simd_width](len(archetype[]))
+                vectorize[closure, simd_width, unroll_factor=unroll_factor](
+                    len(archetype[])
+                )
 
     # fn Reset(self):
     #     """
