@@ -4,6 +4,7 @@ from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import Resources
+from larecs.archetype import EntityAccessor
 
 from larecs.test_utils import *
 
@@ -241,18 +242,51 @@ def test_world_reseource_access():
     assert_equal(world.resources.get[Resource1]().value, 30)
 
 
+def test_world_vectorize():
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    new_pos = pos.copy()
+    new_pos.x += vel.dx
+    new_pos.y += vel.dy
+
+    for _ in range(100):
+        _ = world.add_entity(pos, vel)
+
+    fn operation(accessor: EntityAccessor):
+        
+        try:
+            pos2 = accessor.get_ptr[Position]()
+            vel2 = accessor.get_ptr[Velocity]()
+            print(accessor.archetype_mutability)
+            # pos2[].x += vel2[].dx
+            # pos2[].y += vel2[].dy
+        except:
+            pass
+
+    world.vectorize[operation, Position, Velocity]()
+
+    for entity in world.query[Position, Velocity]():
+        assert_equal(entity.get[Position]().x, new_pos.x)
+        assert_equal(entity.get[Position]().y, new_pos.y)
+
+
+
 def main():
     print("Running additional tests...")
-    test_add_entity()
-    test_add_entity_with_components()
-    test_set_component()
-    test_get_archetype_index()
-    test_entity_get()
-    test_entity_get_ptr()
-    test_remove_entity()
-    test_remove_archetype()
-    test_world_has_component()
-    test_world_add()
-    test_world_remove()
-    test_remove_and_add()
+    # test_add_entity()
+    # test_add_entity_with_components()
+    # test_set_component()
+    # test_get_archetype_index()
+    # test_entity_get()
+    # test_entity_get_ptr()
+    # test_remove_entity()
+    # test_remove_archetype()
+    # test_world_has_component()
+    # test_world_add()
+    # test_world_remove()
+    # test_remove_and_add()
+    # test_world_reseource_access()
+    test_world_vectorize()
     print("All additional tests passed.")

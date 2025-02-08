@@ -13,6 +13,79 @@ from .types import get_max_size
 alias DEFAULT_CAPACITY = 32
 
 
+struct EntityAccessor[
+    archetype_mutability: Bool, //,
+    archetype_origin: Origin[archetype_mutability],
+    *component_types: ComponentType,
+    component_manager: ComponentManager[*component_types],
+]:
+    """Accessor for an Entity.
+
+    Caution: use this only in the context it was created in.
+    In particular, do not store it anywhere.
+
+    Parameters:
+        archetype_mutability: Whether the reference to the list is mutable.
+        archetype_origin: The lifetime of the List
+        component_types: The types of the components.
+        component_manager: The component manager.
+    """
+
+    alias Archetype = Archetype[
+        *component_types, component_manager=component_manager
+    ]
+
+    var _archetype: Pointer[Self.Archetype, archetype_origin]
+    var _index_in_archetype: Int
+
+    @always_inline
+    fn __init__(
+        out self,
+        archetype: Pointer[Self.Archetype, archetype_origin],
+        index_in_archetype: Int,
+    ):
+        """
+        Args:
+            archetype: The archetype of the entity.
+            index_in_archetype: The index of the entity in the archetype.
+        """
+        self._archetype = archetype
+        self._index_in_archetype = index_in_archetype
+
+    @always_inline
+    fn get[
+        T: ComponentType
+    ](ref self) raises -> ref [self._archetype[]._data] T:
+        """Returns a reference to the given component of the Entity.
+
+        Raises:
+            Error: If the entity does not have the component.
+        """
+        return self._archetype[].get_component[T=T](
+            self._index_in_archetype,
+        )
+
+    @always_inline
+    fn get_ptr[
+        T: ComponentType
+    ](ref self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
+        """Returns a reference to the given component of the Entity.
+
+        Raises:
+            Error: If the entity does not have the component.
+        """
+        return self._archetype[].get_component_ptr[T=T](
+            self._index_in_archetype,
+        )
+
+    @always_inline
+    fn has[T: ComponentType](self) -> Bool:
+        """
+        Returns whether an [Entity] has a given component.
+        """
+        return self._archetype[].has_component[T]()
+
+
 struct Archetype[
     *Ts: ComponentType,
     component_manager: ComponentManager[*Ts],
@@ -36,6 +109,10 @@ struct Archetype[
 
     alias max_size = get_max_size[Self.dType]()
     """The maximal number of components in the archetype."""
+
+    alias EntityAccessor = EntityAccessor[
+        _, *Ts, component_manager=component_manager
+    ]
 
     # Pointers to the component data.
     var _data: InlineArray[
@@ -353,6 +430,26 @@ struct Archetype[
             A reference to the entity at the given index.
         """
         return self._entities[idx]
+
+    @always_inline
+    fn get_entity_accessor[
+        T: Indexer
+    ](ref self, idx: T) -> Self.EntityAccessor[__origin_of(self)]:
+        """Returns an accessor for the entity at the given index.
+
+        Parameters:
+            T: The type of the index.
+
+        Args:
+            idx: The index of the entity.
+
+        Returns:
+            An accessor for the entity at the given index.
+        """
+        return Self.EntityAccessor[__origin_of(self)](
+            Pointer.address_of(self),
+            index(idx),
+        )
 
     @always_inline
     fn unsafe_set[

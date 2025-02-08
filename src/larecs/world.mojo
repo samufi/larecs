@@ -1,9 +1,10 @@
 from memory import UnsafePointer
 from collections import Optional, InlineArray
+from algorithm import vectorize
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
-from .archetype import Archetype as _Archetype
+from .archetype import Archetype as _Archetype, EntityAccessor
 from .graph import BitMaskGraph
 from .bitmask import BitMask
 from .debug_utils import debug_warn
@@ -821,6 +822,26 @@ struct World[
         """
         if not self._entity_pool.is_alive(entity):
             raise Error("The considered entity does not exist anymore.")
+
+    fn vectorize[
+        operation: fn (accessor: EntityAccessor) -> None,
+        *Ts: ComponentType,
+        simd_width: Int = 1,
+    ](mut self) raises:
+
+        self._assert_unlocked()
+
+        mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+
+        for archetype in self._archetypes:
+            if archetype[].get_mask().contains(mask):
+
+                @always_inline
+                @parameter
+                fn closure[simd_width: Int](i: Int) capturing:
+                    operation(archetype[].get_entity_accessor(i))
+
+                vectorize[closure, simd_width](len(archetype[]))
 
     # fn Reset(self):
     #     """

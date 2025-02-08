@@ -9,78 +9,6 @@ from .lock import LockMask
 from .debug_utils import debug_warn
 
 
-struct _EntityAccessor[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
-    *component_types: ComponentType,
-    component_manager: ComponentManager[*component_types],
-]:
-    """Accessor for an Entity.
-
-    Caution: use this only in the context it was created in.
-    In particular, do not store it anywhere.
-
-    Parameters:
-        archetype_mutability: Whether the reference to the list is mutable.
-        archetype_origin: The lifetime of the List
-        component_types: The types of the components.
-        component_manager: The component manager.
-    """
-
-    alias Archetype = _Archetype[
-        *component_types, component_manager=component_manager
-    ]
-    var _archetype: Pointer[Self.Archetype, archetype_origin]
-    var _index_in_archetype: Int
-
-    @always_inline
-    fn __init__(
-        out self,
-        archetype: Pointer[Self.Archetype, archetype_origin],
-        index_in_archetype: Int,
-    ):
-        """
-        Args:
-            archetype: The archetype of the entity.
-            index_in_archetype: The index of the entity in the archetype.
-        """
-        self._archetype = archetype
-        self._index_in_archetype = index_in_archetype
-
-    @always_inline
-    fn get[
-        T: ComponentType
-    ](ref self) raises -> ref [self._archetype[]._data] T:
-        """Returns a reference to the given component of the Entity.
-
-        Raises:
-            Error: If the entity does not have the component.
-        """
-        return self._archetype[].get_component[T=T](
-            self._index_in_archetype,
-        )
-
-    @always_inline
-    fn get_ptr[
-        T: ComponentType
-    ](mut self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
-        """Returns a reference to the given component of the Entity.
-
-        Raises:
-            Error: If the entity does not have the component.
-        """
-        return self._archetype[].get_component_ptr[T=T](
-            self._index_in_archetype,
-        )
-
-    @always_inline
-    fn has[T: ComponentType](self) -> Bool:
-        """
-        Returns whether an [Entity] has a given component.
-        """
-        return self._archetype[].has_component[T]()
-
-
 @value
 struct _EntityIterator[
     archetype_mutability: Bool, //,
@@ -244,17 +172,14 @@ struct _EntityIterator[
     @always_inline
     fn __next__(
         mut self,
-        out accessor: _EntityAccessor[
+        out accessor: Self.Archetype.EntityAccessor[
             __origin_of(self._current_archetype[]),
-            *component_types,
-            component_manager=component_manager,
         ],
     ):
         self._entity_index += 1
         if self._entity_index >= self._archetype_size:
             self._next_archetype()
-        accessor = _EntityAccessor(
-            self._current_archetype,
+        accessor = self._current_archetype[].get_entity_accessor(
             self._entity_index,
         )
 
