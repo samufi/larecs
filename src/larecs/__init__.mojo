@@ -67,10 +67,16 @@ main()
 Exports:
  - world.World
  - world.Replacer
+ - world.ComponentType
+ - archetype.MutableEntityAccessor
+ - archetype.EntityAccessor
  - resource.Resources
+ - resource.NoResource
  - entity.Entity
 """
 from .world import World
 from .component import ComponentType
+from .archetype import MutableEntityAccessor
 from .resource import Resources
+from .resource import NoResource
 from .entity import Entity
