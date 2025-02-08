@@ -13,6 +13,17 @@ from .resource import Resources
 fn load[
     dType: DType, //, simd_width: Int, stride: Int = 1
 ](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width]):
+    """
+    Load multiple values from a SIMD.
+
+    Parameters:
+        dType: The data type of the SIMD.
+        simd_width: The number of values to load.
+        stride: The stride between the values.
+
+    Args:
+        val: The SIMD to load from.
+    """
     return UnsafePointer.address_of(val).strided_load[width=simd_width](stride)
 
 
@@ -20,6 +31,18 @@ fn load[
 fn store[
     dType: DType, //, simd_width: Int, stride: Int = 1
 ](ref val: SIMD[dType, 1], simd: SIMD[dType, simd_width]):
+    """
+    Store the values of a SIMD into memory with a given start SIMD value.
+
+    Parameters:
+        dType: The data type of the SIMD.
+        simd_width: The number of values to load.
+        stride: The stride between the values.
+
+    Args:
+        val: The SIMD at the first entry where the data should be stored.
+        simd: The SIMD to store.
+    """
     return UnsafePointer.address_of(val).strided_store[width=simd_width](
         simd, stride
     )

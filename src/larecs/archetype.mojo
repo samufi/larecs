@@ -29,7 +29,7 @@ struct EntityAccessor[
 
     Parameters:
         archetype_mutability: Whether the reference to the list is mutable.
-        archetype_origin: The lifetime of the List
+        archetype_origin: The lifetime of the List.
         component_types: The types of the components.
         component_manager: The component manager.
     """
@@ -450,7 +450,9 @@ struct Archetype[
         """Returns an accessor for the entity at the given index.
 
         Parameters:
+            mutability: Whether the reference to the list is mutable.
             T: The type of the index.
+            origin: The lifetime of the list.
 
         Args:
             idx: The index of the entity.

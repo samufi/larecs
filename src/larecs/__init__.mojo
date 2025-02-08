@@ -67,7 +67,7 @@ main()
 Exports:
  - world.World
  - world.Replacer
- - world.ComponentType
+ - component.ComponentType
  - archetype.MutableEntityAccessor
  - archetype.EntityAccessor
  - resource.Resources

@@ -82,6 +82,7 @@ struct ComponentManager[
 
     Parameters:
         component_types: The component types that the manager should handle.
+        dType: The data type to use for the component IDs.
     """
 
     alias Id = SIMD[dType, 1]
