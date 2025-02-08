@@ -520,10 +520,10 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
         BenchId("10^6 * set 5 components")
     )
     bench.bench_function[benchmark_apply_expexp_1_comp_100_000](
-        BenchId("10^5 * get + set via apply 1 component")
+        BenchId("10^5 * get and set exp(exp) via apply 1 component")
     )
     bench.bench_function[benchmark_apply_simd_expexp_1_comp_100_000](
-        BenchId("10^5 * get + set via apply simd 1 component")
+        BenchId("10^5 * get and set exp(exp) via apply simd 1 component")
     )
     bench.bench_function[benchmark_has_1_000_000](BenchId("10^6 * has"))
     bench.bench_function[benchmark_is_alive_1_000_000](
