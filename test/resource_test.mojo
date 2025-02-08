@@ -1,4 +1,4 @@
-from larecs.resource import Resources, ResourceContaining, ResourceType
+from larecs.resource import Resources, ResourceContaining
 from testing import *
 
 
@@ -133,7 +133,7 @@ struct S[*Ts: AnyType, R: ResourceContaining]():
     fn __init__(out self):
         self.r = R()
 
-    fn get[T: ResourceType](self) raises -> T:
+    fn get[T: CollectionElement](self) raises -> T:
         return self.r.get[T]()
 
 

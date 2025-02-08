@@ -16,7 +16,7 @@ from .component import (
 from .bitmask import BitMask
 from .query import _EntityIterator
 from .lock import LockMask
-from .resource import ResourceType, ResourceContaining, Resources
+from .resource import ResourceContaining, Resources
 
 
 @value
