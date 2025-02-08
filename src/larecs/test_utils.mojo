@@ -9,6 +9,26 @@ from .world import World
 from .resource import Resources
 
 
+@always_inline
+fn load[
+    dType: DType, //, simd_width: Int, stride: Int = 1
+](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width]):
+    return UnsafePointer.address_of(val).strided_load[width=simd_width](stride)
+
+
+@always_inline
+fn store[
+    dType: DType, //, simd_width: Int, stride: Int = 1
+](ref val: SIMD[dType, 1], simd: SIMD[dType, simd_width]):
+    return UnsafePointer.address_of(val).strided_store[width=simd_width](
+        simd, stride
+    )
+
+
+alias load2 = load[_, 2]
+alias store2 = store[_, 2]
+
+
 trait TestableCollectionElement(CollectionElement, Testable):
     pass
 
@@ -55,35 +75,11 @@ struct Position(ComponentType):
     var x: Float64
     var y: Float64
 
-    fn load_x[simd_width: Int](self, out x: SIMD[DType.float64, simd_width]):
-        x = UnsafePointer.address_of(self.x).strided_load[width=simd_width](2)
-
-    fn store_x[simd_width: Int](mut self, x: SIMD[DType.float64, simd_width]):
-        UnsafePointer.address_of(self.x).strided_store[width=simd_width](x, 2)
-
-    fn load_y[simd_width: Int](self, out y: SIMD[DType.float64, simd_width]):
-        y = UnsafePointer.address_of(self.y).strided_load[width=simd_width](2)
-
-    fn store_y[simd_width: Int](mut self, y: SIMD[DType.float64, simd_width]):
-        UnsafePointer.address_of(self.y).strided_store[width=simd_width](y, 2)
-
 
 @value
 struct Velocity(ComponentType):
     var dx: Float64
     var dy: Float64
-
-    fn load_dx[simd_width: Int](self, out dx: SIMD[DType.float64, simd_width]):
-        dx = UnsafePointer.address_of(self.dx).strided_load[width=simd_width](2)
-
-    fn store_dx[simd_width: Int](mut self, dx: SIMD[DType.float64, simd_width]):
-        UnsafePointer.address_of(self.dx).strided_store[width=simd_width](dx, 2)
-
-    fn load_dy[simd_width: Int](self, out dy: SIMD[DType.float64, simd_width]):
-        dy = UnsafePointer.address_of(self.dy).strided_load[width=simd_width](2)
-
-    fn store_dy[simd_width: Int](mut self, dy: SIMD[DType.float64, simd_width]):
-        UnsafePointer.address_of(self.dy).strided_store[width=simd_width](dy, 2)
 
 
 @value

@@ -237,10 +237,14 @@ fn benchmark_apply_simd_expexp_1_comp_100_000(
         fn operation_plus[
             simd_width: Int
         ](accessor: MutableEntityAccessor) capturing:
+            alias _load = load2[simd_width]
+            alias _store = store2[simd_width]
+
             try:
                 pos2 = accessor.get_ptr[Position]()
-                pos2[].store_x(exp(1 - exp(pos2[].load_x[simd_width]())))
-                pos2[].store_y(exp(1 - exp(pos2[].load_y[simd_width]())))
+
+                _store(pos2[].x, exp(1 - exp(_load(pos2[].x))))
+                _store(pos2[].y, exp(1 - exp(_load(pos2[].y))))
             except:
                 pass
 

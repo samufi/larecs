@@ -290,14 +290,17 @@ def test_world_apply_SIMD():
             pos2 = accessor.get_ptr[Position]()
             vel2 = accessor.get_ptr[Velocity]()
 
-            x = pos2[].load_x[simd_width]()
-            y = pos2[].load_y[simd_width]()
+            alias _load = load2[simd_width]
+            alias _store = store2[simd_width]
 
-            x += vel2[].load_dx[simd_width]()
-            y += vel2[].load_dy[simd_width]()
+            x = _load(pos2[].x)
+            y = _load(pos2[].y)
 
-            pos2[].store_x(x)
-            pos2[].store_y(y)
+            x += _load(vel2[].dx)
+            y += _load(vel2[].dy)
+
+            _store(pos2[].x, x)
+            _store(pos2[].y, y)
         except:
             pass
 
