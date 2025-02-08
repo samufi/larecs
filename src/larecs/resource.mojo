@@ -8,8 +8,19 @@ from .component import (
     constrain_components_unique,
 )
 
-alias ResourceType = ComponentType
 alias ResourceManager = ComponentManager
+"""The mapper of resource types to resource IDs."""
+
+
+@value
+struct _Nothing:
+    """A type that represents nothing."""
+
+    pass
+
+
+alias NoResource = Resources[_Nothing]
+"""A resource container that does not contain any resources."""
 
 
 trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
@@ -17,7 +28,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         """Constructs the resource container."""
         ...
 
-    fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+    fn add[*Ts: CollectionElement](mut self, owned *resources: *Ts) raises:
         """Adds resources.
 
         Parameters:
@@ -31,7 +42,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         """
         ...
 
-    fn remove[*Ts: ResourceType](mut self) raises:
+    fn remove[*Ts: CollectionElement](mut self) raises:
         """Removes resources.
 
         Parameters:
@@ -43,7 +54,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         ...
 
     fn set[
-        *Ts: ResourceType, add_if_not_found: Bool = False
+        *Ts: CollectionElement, add_if_not_found: Bool = False
     ](mut self, owned *resources: *Ts) raises:
         """Sets the values of resources.
 
@@ -59,7 +70,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         """
         ...
 
-    fn get[T: ResourceType](ref self) raises -> ref [self] T:
+    fn get[T: CollectionElement](ref self) raises -> ref [self] T:
         """Gets a resource.
 
         Parameters:
@@ -71,7 +82,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         ...
 
     fn get_ptr[
-        T: ResourceType
+        T: CollectionElement
     ](ref self) raises -> Pointer[T, __origin_of(self)]:
         """Gets a pointer to a resource.
 
@@ -83,7 +94,7 @@ trait ResourceContaining(CollectionElement, ExplicitlyCopyable, Sized):
         """
         ...
 
-    fn has[T: ResourceType](self) -> Bool:
+    fn has[T: CollectionElement](self) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -114,7 +125,7 @@ fn get_dtype[size: Int]() -> DType:
 
 
 @value
-struct Resources[*resource_types: ResourceType](ResourceContaining):
+struct Resources[*resource_types: CollectionElement](ResourceContaining):
     """Manages resources.
 
     Some code was taken from Mojo's `Tuple` implementation.
@@ -159,7 +170,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         )
         self._initialized_flags = InlineArray[Bool, max(Self.size, 1)](False)
 
-    fn __init__[*Ts: ResourceType](out self, owned *args: *Ts):
+    fn __init__[*Ts: CollectionElement](out self, owned *args: *Ts):
         """Constructs the resource container and initializes given values.
 
         Parameters:
@@ -287,7 +298,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         )
         return UnsafePointer(elt_kgen_ptr)
 
-    fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+    fn add[*Ts: CollectionElement](mut self, owned *resources: *Ts) raises:
         """Adds resources.
 
         Parameters:
@@ -302,7 +313,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         self._add_or_set[raise_if_found=True](resources^)
 
     fn set[
-        *Ts: ResourceType, add_if_not_found: Bool = False
+        *Ts: CollectionElement, add_if_not_found: Bool = False
     ](mut self, owned *resources: *Ts) raises:
         """Sets the values of resources.
 
@@ -320,7 +331,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
 
     @always_inline
     fn _add_or_set[
-        *Ts: ResourceType,
+        *Ts: CollectionElement,
         raise_if_found: Bool = False,
         raise_if_not_found: Bool = False,
     ](
@@ -368,7 +379,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
 
         __disable_del resources
 
-    fn remove[*Ts: ResourceType](mut self) raises:
+    fn remove[*Ts: CollectionElement](mut self) raises:
         """Removes resources.
 
         Parameters:
@@ -389,7 +400,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
             ] = False
 
     @always_inline
-    fn get[T: ResourceType](ref self) raises -> ref [self] T:
+    fn get[T: CollectionElement](ref self) raises -> ref [self] T:
         """Gets a resource.
 
         Parameters:
@@ -405,7 +416,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
 
     @always_inline
     fn get_ptr[
-        T: ResourceType
+        T: CollectionElement
     ](ref self) raises -> Pointer[T, __origin_of(self)]:
         """Gets a pointer to a resource.
 
@@ -418,7 +429,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         return Pointer.address_of(self.get[T]())
 
     @always_inline
-    fn has[T: ResourceType](self) -> Bool:
+    fn has[T: CollectionElement](self) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -430,7 +441,7 @@ struct Resources[*resource_types: ResourceType](ResourceContaining):
         return self._initialized_flags[Self.resource_manager.get_id[T]()]
 
     @always_inline
-    fn _assert_has[T: ResourceType](self) raises:
+    fn _assert_has[T: CollectionElement](self) raises:
         """Asserts that the resource is present.
 
         Parameters:
