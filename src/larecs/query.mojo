@@ -173,7 +173,8 @@ struct _EntityIterator[
     fn __next__(
         mut self,
         out accessor: Self.Archetype.EntityAccessor[
-            archetype_mutability, __origin_of(self._current_archetype[]),
+            archetype_mutability,
+            __origin_of(self._current_archetype[]),
         ],
     ):
         self._entity_index += 1
