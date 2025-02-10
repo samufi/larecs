@@ -897,14 +897,14 @@ struct World[
             # or may cause a segmentation fault.
 
             # Get the component
-            component = accessor.get_ptr[Float64]
+            try:
+                component = accessor.get_ptr[Float64]()
+            except:
+                return
 
             # Load a SIMD of size `simd_width`
             # Note that a strided load is needed if the component as more than one field.
-            try:
-                val = UnsafePointer.address_of(component[]).load[width=simd_width]()
-            except:
-                pass
+            val = UnsafePointer.address_of(component[]).load[width=simd_width]()
 
             # Do an operation on the SIMD
             val += 1
