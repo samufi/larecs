@@ -887,7 +887,7 @@ struct World[
         world = World[Float64](Resources())
         e = world.add_entity()
 
-        fn operation[simd_width: Int](accessor: MutableEntityAccessor):
+        fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
             # Define the operation to apply here.
             # Note that due to the immature
             # capturing system of Mojo, the world may be
@@ -903,15 +903,19 @@ struct World[
             except:
                 return
 
+            # Get an unsafe pointer to the memory
+            # location of the component
+            ptr = UnsafePointer.address_of(component[])
+
             # Load a SIMD of size `simd_width`
             # Note that a strided load is needed if the component as more than one field.
-            val = UnsafePointer.address_of(component[]).load[width=simd_width]()
+            val = ptr.load[width=simd_width]()
 
             # Do an operation on the SIMD
             val += 1
 
             # Store the SIMD at the same address
-            UnsafePointer.address_of(val).store(val)
+            ptr.store(val)
 
         world.apply[operation, Float64, simd_width=simdwidthof[Float64]()]()
         ```
