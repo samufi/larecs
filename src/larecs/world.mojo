@@ -882,6 +882,7 @@ struct World[
 
         ```mojo {doctest="apply"}
         from sys.info import simdwidthof
+        from memory import UnsafePointer
 
         world = World[Float64](Resources())
         e = world.add_entity()
@@ -912,7 +913,7 @@ struct World[
             # Store the SIMD at the same address
             UnsafePointer.address_of(val).store(val)
 
-        world.apply[operation, Float64, simd_width=simdwidthof[Float64]]()
+        world.apply[operation, Float64, simd_width=simdwidthof[Float64]()]()
         ```
 
         Parameters:
