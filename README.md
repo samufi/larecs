@@ -8,6 +8,7 @@ It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented 
 
 - Clean and simple API
 - High performance due to Archetype-based architecture and extensive use of Mojo's compile-time programming tools
+- Support for SIMD computing via a [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/)-like syntax
 - Compile-time checks thanks to usage of parameters
 - Native support for [resources](https://mlange-42.github.io/arche/guide/resources/)
 - Tested and benchmarked
@@ -127,11 +128,13 @@ this issue is insignificant. The problem will be fixed as soon as possible.
 
 The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
 In the near future, Larecs🌲 will take the following steps:
-- Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
+- Improve the documentation
+- Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - Add further options to filter entities (e.g. "does not have component").
+- Add possibilities for parallel execution
+- Add GPU support 
 - Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
-- Add possibilities to exploit the benefits of SIMD (discussion needed).
 - Fix the dictionary issue mentioned above.
 - Add a versioning scheme.
 
