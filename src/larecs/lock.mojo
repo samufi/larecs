@@ -61,3 +61,57 @@ struct LockMask:
         """
         self.locks = BitMask()
         self.bit_pool.reset()
+
+    @always_inline
+    fn locked(mut self) -> LockedContext[__origin_of(self)]:
+        """
+        Returns a locked context.
+        """
+        return LockedContext(Pointer.address_of(self))
+
+
+@value
+struct LockedContext[origin: MutableOrigin]:
+    """
+    A context manager for locking and unlocking the world.
+
+    Parameters:
+        origin: The origin of the LockMask to handle.
+    """
+    var _locks: Pointer[LockMask, origin]
+    var _lock: UInt8
+
+    @always_inline
+    fn __init__(out self, locks: Pointer[LockMask, origin]):
+        """
+        Initializes the LockedContext.
+
+        Args:
+            locks: The LockMask to handle.
+        """
+        self._locks = locks
+        self._lock = 0
+
+    @always_inline
+    fn __enter__(mut self) raises -> Self:
+        """
+        Locks the world.
+
+        Returns:
+            The LockedContext.
+
+        Raises:
+            Error: If the number of locks exceeds 256.
+        """
+        self._lock = self._locks[].lock()
+        return self
+
+    @always_inline
+    fn __exit__(mut self) raises:
+        """
+        Unlocks the world.
+
+        Raises:
+            Error: If the number of locks exceeds 256.
+        """
+        self._locks[].unlock(self._lock)

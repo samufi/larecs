@@ -270,6 +270,23 @@ def test_world_apply():
         assert_equal(entity.get[Position]().y, new_pos.y)
 
 
+def test_world_apply_lock():
+    world = SmallWorld()
+    _ = world.add_entity(Position(1.0, 2.0))
+
+    did_raise = False
+
+    fn operation(accessor: MutableEntityAccessor) capturing:
+        try:
+            _ = world.add_entity(Position(1.0, 2.0))
+        except:
+            did_raise = True
+
+    world.apply[operation, Position]()
+
+    assert_true(did_raise)
+
+
 def test_world_apply_SIMD():
     world = SmallWorld()
     pos = Position(0.0, 2.0)
@@ -315,7 +332,7 @@ def test_world_apply_SIMD():
 
 
 def main():
-    print("Running additional tests...")
+    print("Running tests...")
     test_add_entity()
     test_add_entity_with_components()
     test_set_component()
@@ -331,4 +348,4 @@ def main():
     test_world_reseource_access()
     test_world_apply()
     test_world_apply_SIMD()
-    print("All additional tests passed.")
+    print("All tests passed.")
