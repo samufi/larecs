@@ -887,6 +887,14 @@ struct World[
         e = world.add_entity()
 
         fn operation[simd_width: Int](accessor: MutableEntityAccessor):
+            # Define the operation to apply here.
+            # Note that due to the immature
+            # capturing system of Mojo, the world may be
+            # accessible by copy capturing here, even
+            # though it is not copyable.
+            # Do NOT change `world` from inside the operation,
+            # as it will not be reflected in the world
+            # or may cause a segmentation fault.
 
             # Get the component
             component = accessor.get_ptr[Float64]

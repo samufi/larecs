@@ -78,6 +78,7 @@ struct LockedContext[origin: MutableOrigin]:
     Parameters:
         origin: The origin of the LockMask to handle.
     """
+
     var _locks: Pointer[LockMask, origin]
     var _lock: UInt8
 
