@@ -4,6 +4,7 @@ from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import Resources
+from larecs.archetype import MutableEntityAccessor
 
 from larecs.test_utils import *
 
@@ -241,8 +242,95 @@ def test_world_reseource_access():
     assert_equal(world.resources.get[Resource1]().value, 30)
 
 
+def test_world_apply():
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    new_pos = pos.copy()
+    new_pos.x += vel.dx
+    new_pos.y += vel.dy
+
+    for _ in range(100):
+        _ = world.add_entity(pos, vel)
+
+    fn operation(accessor: MutableEntityAccessor) capturing:
+        try:
+            pos2 = accessor.get_ptr[Position]()
+            vel2 = accessor.get_ptr[Velocity]()
+            pos2[].x += vel2[].dx
+            pos2[].y += vel2[].dy
+        except:
+            pass
+
+    world.apply[operation, Position, Velocity, unroll_factor=3]()
+
+    for entity in world.query[Position, Velocity]():
+        assert_equal(entity.get[Position]().x, new_pos.x)
+        assert_equal(entity.get[Position]().y, new_pos.y)
+
+
+def test_world_lock():
+    world = SmallWorld()
+    _ = world.add_entity(Position(1.0, 2.0))
+    assert_false(world.is_locked())
+
+    try:
+        with world._locked():
+            assert_true(world.is_locked())
+            raise Error("Test")
+    except Error:
+        pass
+
+    assert_false(world.is_locked())
+
+
+def test_world_apply_SIMD():
+    world = SmallWorld()
+    pos = Position(0.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    comparison = List[Position](capacity=100)
+
+    for _ in range(100):
+        pos.x += 1
+        _ = world.add_entity(pos, vel)
+        new_pos = pos.copy()
+        new_pos.x += vel.dx
+        new_pos.y += vel.dy
+        comparison.append(new_pos)
+
+    fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+        try:
+            pos2 = accessor.get_ptr[Position]()
+            vel2 = accessor.get_ptr[Velocity]()
+
+            alias _load = load2[simd_width]
+            alias _store = store2[simd_width]
+
+            x = _load(pos2[].x)
+            y = _load(pos2[].y)
+
+            x += _load(vel2[].dx)
+            y += _load(vel2[].dy)
+
+            _store(pos2[].x, x)
+            _store(pos2[].y, y)
+        except:
+            pass
+
+    world.apply[operation, Position, Velocity, simd_width=4, unroll_factor=3]()
+
+    i = 0
+    for entity in world.query[Position, Velocity]():
+        new_pos = comparison[i]
+        assert_equal(entity.get[Position]().x, new_pos.x)
+        assert_equal(entity.get[Position]().y, new_pos.y)
+        i += 1
+
+
 def main():
-    print("Running additional tests...")
+    print("Running tests...")
     test_add_entity()
     test_add_entity_with_components()
     test_set_component()
@@ -255,4 +343,8 @@ def main():
     test_world_add()
     test_world_remove()
     test_remove_and_add()
-    print("All additional tests passed.")
+    test_world_reseource_access()
+    test_world_apply()
+    test_world_apply_SIMD()
+    test_world_lock()
+    print("All tests passed.")

@@ -2,10 +2,54 @@ from testing import assert_true, assert_false, assert_equal
 from testing.testing import Testable
 from random import random
 from memory import UnsafePointer
+from sys.info import sizeof
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
 from .resource import Resources
+
+
+@always_inline
+fn load[
+    dType: DType, //, simd_width: Int, stride: Int = 1
+](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width]):
+    """
+    Load multiple values from a SIMD.
+
+    Parameters:
+        dType: The data type of the SIMD.
+        simd_width: The number of values to load.
+        stride: The stride between the values.
+
+    Args:
+        val: The SIMD to load from.
+    """
+    return UnsafePointer.address_of(val).strided_load[width=simd_width](stride)
+
+
+@always_inline
+fn store[
+    dType: DType, //, simd_width: Int, stride: Int = 1
+](ref val: SIMD[dType, 1], simd: SIMD[dType, simd_width]):
+    """
+    Store the values of a SIMD into memory with a given start SIMD value.
+
+    Parameters:
+        dType: The data type of the SIMD.
+        simd_width: The number of values to load.
+        stride: The stride between the values.
+
+    Args:
+        val: The SIMD at the first entry where the data should be stored.
+        simd: The SIMD to store.
+    """
+    return UnsafePointer.address_of(val).strided_store[width=simd_width](
+        simd, stride
+    )
+
+
+alias load2 = load[_, 2]
+alias store2 = store[_, 2]
 
 
 trait TestableCollectionElement(CollectionElement, Testable):
@@ -56,16 +100,16 @@ struct Position(ComponentType):
 
 
 @value
+struct Velocity(ComponentType):
+    var dx: Float64
+    var dy: Float64
+
+
+@value
 struct LargerComponent(ComponentType):
     var x: Float64
     var y: Float64
     var z: Float64
-
-
-@value
-struct Velocity(ComponentType):
-    var dx: Float64
-    var dy: Float64
 
 
 @value

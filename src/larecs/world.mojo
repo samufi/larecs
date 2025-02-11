@@ -1,9 +1,10 @@
 from memory import UnsafePointer
 from collections import Optional, InlineArray
+from algorithm import vectorize
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
-from .archetype import Archetype as _Archetype
+from .archetype import Archetype as _Archetype, MutableEntityAccessor
 from .graph import BitMaskGraph
 from .bitmask import BitMask
 from .debug_utils import debug_warn
@@ -14,8 +15,8 @@ from .component import (
 )
 from .bitmask import BitMask
 from .query import _EntityIterator
-from .lock import LockMask
-from .resource import ResourceType, ResourceContaining, Resources
+from .lock import LockMask, LockedContext
+from .resource import ResourceContaining, Resources
 
 
 @value
@@ -822,6 +823,135 @@ struct World[
         if not self._entity_pool.is_alive(entity):
             raise Error("The considered entity does not exist anymore.")
 
+    @always_inline
+    fn apply[
+        operation: fn (accessor: MutableEntityAccessor) capturing -> None,
+        *Ts: ComponentType,
+        unroll_factor: Int = 1,
+    ](mut self) raises:
+        """
+        Applies an operation to all entities with the given components.
+
+        Parameters:
+            operation: The operation to apply.
+            Ts:        The types of the components.
+            unroll_factor: The unroll factor for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+
+        Raises:
+            Error: If the world is locked.
+        """
+
+        @always_inline
+        @parameter
+        fn operation_wrapper[simd_width: Int](accessor: MutableEntityAccessor):
+            operation(accessor)
+
+        self.apply[operation_wrapper, *Ts, unroll_factor=unroll_factor]()
+
+    fn apply[
+        operation: fn[simd_width: Int] (
+            accessor: MutableEntityAccessor
+        ) capturing -> None,
+        *Ts: ComponentType,
+        simd_width: Int = 1,
+        unroll_factor: Int = 1,
+    ](mut self) raises:
+        """
+        Applies an operation to all entities with the given components.
+
+        The operation is applied to chunks of `simd_width` entities,
+        unless not enough are available anymore. Then the chunk size
+        `simd_width` is reduced.
+
+        Uses [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/) internally.
+        Have a look there to see a more detailed explanation of the parameters
+        `simd_width` and `unroll_factor`.
+
+        Caution! If `simd_width` is greater than 1, the operation **must**
+        apply to the `simd_width` elements after the element passed to
+        `operation`, assuming that each component is stored in contiguous
+        memory. This may require knowledge of the memory layout
+        of the components!
+
+
+        Example:
+        ```mojo {doctest="apply" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        ```
+
+        ```mojo {doctest="apply"}
+        from sys.info import simdwidthof
+        from memory import UnsafePointer
+
+        world = World[Float64](Resources())
+        e = world.add_entity()
+
+        fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+            # Define the operation to apply here.
+            # Note that due to the immature
+            # capturing system of Mojo, the world may be
+            # accessible by copy capturing here, even
+            # though it is not copyable.
+            # Do NOT change `world` from inside the operation,
+            # as it will not be reflected in the world
+            # or may cause a segmentation fault.
+
+            # Get the component
+            try:
+                component = accessor.get_ptr[Float64]()
+            except:
+                return
+
+            # Get an unsafe pointer to the memory
+            # location of the component
+            ptr = UnsafePointer.address_of(component[])
+
+            # Load a SIMD of size `simd_width`
+            # Note that a strided load is needed if the component as more than one field.
+            val = ptr.load[width=simd_width]()
+
+            # Do an operation on the SIMD
+            val += 1
+
+            # Store the SIMD at the same address
+            ptr.store(val)
+
+        world.apply[operation, Float64, simd_width=simdwidthof[Float64]()]()
+        ```
+
+        Parameters:
+            operation: The operation to apply.
+            Ts:        The types of the components.
+            simd_width: The SIMD width for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+            unroll_factor: The unroll factor for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+
+        Constraints:
+            The simd_width must be a power of 2.
+
+        Raises:
+            Error: If the world is locked.
+        """
+        self._assert_unlocked()
+
+        with self._locked():
+            mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+
+            for archetype in self._archetypes:
+                if archetype[].get_mask().contains(mask):
+
+                    @always_inline
+                    @parameter
+                    fn closure[simd_width: Int](i: Int) capturing:
+                        accessor = archetype[].get_entity_accessor(i)
+                        operation[simd_width](accessor)
+
+                    vectorize[closure, simd_width, unroll_factor=unroll_factor](
+                        len(archetype[])
+                    )
+
     # fn Reset(self):
     #     """
     #     Reset removes all _entities and _resources from the world.
@@ -955,17 +1085,29 @@ struct World[
         """
         return self._locks.is_locked()
 
+    @always_inline
     fn _lock(mut self) raises -> UInt8:
         """
         Locks the world and gets the lock bit for later unlocking.
         """
         return self._locks.lock()
 
+    @always_inline
     fn _unlock(mut self, lock: UInt8) raises:
         """
         Unlocks the given lock bit.
         """
         self._locks.unlock(lock)
+
+    @always_inline
+    fn _locked(mut self) -> LockedContext[__origin_of(self._locks)]:
+        """
+        Returns a context manager that unlocks the world when it goes out of scope.
+
+        Returns:
+            A context manager that unlocks the world when it goes out of scope.
+        """
+        return self._locks.locked()
 
     # fn Mask(self, entity: Entity) -> Mask:
     #     """
