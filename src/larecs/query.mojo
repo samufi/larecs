@@ -286,9 +286,10 @@ struct _EntityIterator[
                     .contains_any(self._without_mask)
             else:
                 has_excluded = False
+            
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
-                and not has_excluded
+                and (not has_excluded)
                 and self._archetypes[][i]
             ):
                 self._archetype_index_buffer[buffer_index] = i
@@ -320,6 +321,10 @@ struct _EntityIterator[
         # stops at the last entity of the last archetype.
         if self._buffer_index >= self._max_buffer_index:
             self._last_entity_index = self._archetype_size - 1
+
+    @always_inline
+    fn __iter__(owned self, out iterator: Self):
+        iterator = self^
 
     @always_inline
     fn __next__(
@@ -372,8 +377,18 @@ struct _EntityIterator[
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
+        
+            @parameter
+            if has_without_mask:
+                has_excluded = self._archetypes[][i]
+                    .get_mask()
+                    .contains_any(self._without_mask)
+            else:
+                has_excluded = False
+            
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
+                and (not has_excluded)
                 and self._archetypes[][i]
             ):
                 size += len(self._archetypes[][i])
