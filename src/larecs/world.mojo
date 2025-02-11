@@ -14,7 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .query import _EntityIterator
+from .query import Query
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
 
@@ -1026,7 +1026,7 @@ struct World[
     @always_inline
     fn query(
         mut self,
-        out iterator: _EntityIterator[
+        out iterator: Query[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,
@@ -1042,7 +1042,7 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = _EntityIterator(
+        iterator = Query(
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             BitMask(),
@@ -1053,7 +1053,7 @@ struct World[
         *Ts: ComponentType
     ](
         mut self,
-        out iterator: _EntityIterator[
+        out iterator: Query[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,
@@ -1072,7 +1072,7 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = _EntityIterator(
+        iterator = Query(
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),

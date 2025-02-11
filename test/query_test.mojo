@@ -20,33 +20,45 @@ def test_query_length():
         _ = world.add_entity(c1, c2, c3)
         _ = world.add_entity(c0, c1, c2, c3)
 
-    assert_equal(len(world.query[FlexibleComponent[0]]()), 4 * n)
-    assert_equal(len(world.query[FlexibleComponent[1]]()), 4 * n)
-    assert_equal(len(world.query[FlexibleComponent[2]]()), 4 * n)
-    assert_equal(len(world.query[FlexibleComponent[3]]()), 4 * n)
+    assert_equal(len(world.query[FlexibleComponent[0]]().__iter__()), 4 * n)
+    assert_equal(len(world.query[FlexibleComponent[1]]().__iter__()), 4 * n)
+    assert_equal(len(world.query[FlexibleComponent[2]]().__iter__()), 4 * n)
+    assert_equal(len(world.query[FlexibleComponent[3]]().__iter__()), 4 * n)
 
     assert_equal(
-        len(world.query[FlexibleComponent[0], FlexibleComponent[1]]()),
+        len(
+            world.query[FlexibleComponent[0], FlexibleComponent[1]]().__iter__()
+        ),
         3 * n,
     )
     assert_equal(
-        len(world.query[FlexibleComponent[0], FlexibleComponent[2]]()),
+        len(
+            world.query[FlexibleComponent[0], FlexibleComponent[2]]().__iter__()
+        ),
         3 * n,
     )
     assert_equal(
-        len(world.query[FlexibleComponent[0], FlexibleComponent[3]]()),
+        len(
+            world.query[FlexibleComponent[0], FlexibleComponent[3]]().__iter__()
+        ),
         3 * n,
     )
     assert_equal(
-        len(world.query[FlexibleComponent[1], FlexibleComponent[2]]()),
+        len(
+            world.query[FlexibleComponent[1], FlexibleComponent[2]]().__iter__()
+        ),
         3 * n,
     )
     assert_equal(
-        len(world.query[FlexibleComponent[1], FlexibleComponent[3]]()),
+        len(
+            world.query[FlexibleComponent[1], FlexibleComponent[3]]().__iter__()
+        ),
         3 * n,
     )
     assert_equal(
-        len(world.query[FlexibleComponent[2], FlexibleComponent[3]]()),
+        len(
+            world.query[FlexibleComponent[2], FlexibleComponent[3]]().__iter__()
+        ),
         3 * n,
     )
 
@@ -54,7 +66,7 @@ def test_query_length():
         len(
             world.query[
                 FlexibleComponent[0], FlexibleComponent[1], FlexibleComponent[2]
-            ]()
+            ]().__iter__()
         ),
         2 * n,
     )
@@ -62,7 +74,7 @@ def test_query_length():
         len(
             world.query[
                 FlexibleComponent[0], FlexibleComponent[1], FlexibleComponent[3]
-            ]()
+            ]().__iter__()
         ),
         2 * n,
     )
@@ -70,7 +82,7 @@ def test_query_length():
         len(
             world.query[
                 FlexibleComponent[0], FlexibleComponent[2], FlexibleComponent[3]
-            ]()
+            ]().__iter__()
         ),
         2 * n,
     )
@@ -78,7 +90,7 @@ def test_query_length():
         len(
             world.query[
                 FlexibleComponent[1], FlexibleComponent[2], FlexibleComponent[3]
-            ]()
+            ]().__iter__()
         ),
         2 * n,
     )
@@ -90,18 +102,19 @@ def test_query_length():
                 FlexibleComponent[1],
                 FlexibleComponent[2],
                 FlexibleComponent[3],
-            ]()
+            ]().__iter__()
         ),
         n,
     )
-    assert_equal(len(world.query()), 5 * n)
+    assert_equal(len(world.query().__iter__()), 5 * n)
 
     iterator = world.query[FlexibleComponent[0]]()
-    size = len(iterator)
-    while iterator.__has_next__():
-        _ = iterator.__next__()
+    iter = iterator.__iter__()
+    size = len(iter)
+    while iter.__has_next__():
+        _ = iter.__next__()
         size -= 1
-        assert_equal(size, len(iterator))
+        assert_equal(size, len(iter))
 
 
 def test_query_result_ids():

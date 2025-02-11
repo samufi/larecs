@@ -10,6 +10,114 @@ from .debug_utils import debug_warn
 
 
 @value
+struct Query[
+    archetype_mutability: Bool, //,
+    archetype_origin: Origin[archetype_mutability],
+    lock_origin: MutableOrigin,
+    *component_types: ComponentType,
+    component_manager: ComponentManager[*component_types],
+]:
+    """Query builder for entities with and without specific components."""
+
+    alias Archetype = _Archetype[
+        *component_types, component_manager=component_manager
+    ]
+
+    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
+    var _lock_ptr: Pointer[LockMask, lock_origin]
+    var _mask: BitMask
+    var _without_mask: Optional[BitMask]
+
+    fn __init__(
+        out self,
+        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        lock_ptr: Pointer[LockMask, lock_origin],
+        owned mask: BitMask,
+    ) raises:
+        """
+        Creates a new query.
+
+        This should not be used directly, but through the [..world.World.query] method:
+
+        ```mojo {doctest="query_init" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        ```
+
+        ```mojo {doctest="query_init"}
+        world = World[Float64, Float32, Int](Resources())
+        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
+        _ = world.add_entity(Float64(1.0), 3)
+
+        for entity in world.query[Float64, Int]():
+            f = entity.get_ptr[Float64]()
+            f[] += 1
+        ```
+
+        Args:
+            archetypes: A pointer to the world's archetypes.
+            lock_ptr: A pointer to the world's locks.
+            mask: The mask of the components to iterate over.
+        """
+        self._archetypes = archetypes
+        self._lock_ptr = lock_ptr
+        self._mask = mask^
+        self._without_mask = None
+
+    @always_inline
+    fn __iter__(
+        owned self,
+        out iterator: _EntityIterator[
+            archetype_origin,
+            lock_origin,
+            *component_types,
+            component_manager = Self.component_manager,
+        ],
+    ) raises:
+        """
+        Creates an iterator over all entities that match the query.
+
+        Returns:
+            An iterator over all entities that match the query.
+
+        Raises:
+            Error: If the lock cannot be acquired (more than 256 locks exist).
+        """
+        iterator = _EntityIterator(
+            self._archetypes, self._lock_ptr, self._mask, self._without_mask
+        )
+
+    @always_inline
+    fn without[*Ts: ComponentType](owned self, out result: Self):
+        """
+        Excludes the given components from the query.
+
+        ```mojo {doctest="query_without" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        ```
+
+        ```mojo {doctest="query_without"}
+        world = World[Float64, Float32, Int](Resources())
+        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
+        _ = world.add_entity(Float64(1.0), 3)
+
+        for entity in world.query[Float64, Int]().without[Float32]():
+            f = entity.get_ptr[Float64]()
+            f[] += 1
+        ```
+
+        Parameters:
+            Ts: The types of the components to exclude.
+
+        Returns:
+            The query, exclusing the given components.
+        """
+        self._without_mask = Optional(
+            BitMask(Self.component_manager.get_id_arr[*Ts]())
+        )
+        result = self^
+
+
+@value
 struct _EntityIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
@@ -52,17 +160,14 @@ struct _EntityIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
+        owned without_mask: Optional[BitMask],
     ) raises:
         """
-        Parameters:
-            component_manager: The component manager.
-            archetypes: The archetypes to iterate over.
-            mask: The mask of the components to iterate over.
-
         Args:
             archetypes: a pointer to the world's archetypes.
             lock_ptr: a pointer to the world's locks.
             mask: The mask of the components to iterate over.
+            without_mask: The mask for components to exclude.
 
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
@@ -72,7 +177,7 @@ struct _EntityIterator[
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = None
+        self._without_mask = without_mask
 
         self._entity_index = 0
         self._archetype_size = 0
@@ -82,6 +187,17 @@ struct _EntityIterator[
 
         self._current_archetype = Pointer.address_of(self._archetypes[][0])
         self._archetype_index_buffer = SIMD[DType.uint32, Self.buffer_size](-1)
+
+        self._fill_archetype_buffer()
+        # If the iterator is not empty
+        if self._archetype_index_buffer[0] >= 0:
+            self._last_entity_index = Int.MAX
+            self._buffer_index = -1
+            self._next_archetype()
+
+            # We need to reset the index to -1, because the
+            # first call to __next__ will increment it.
+            self._entity_index = -1
 
     fn __moveinit__(
         out self,
@@ -110,21 +226,6 @@ struct _EntityIterator[
             self._lock_ptr[].unlock(self._lock)
         except Error:
             debug_warn("Failed to unlock the lock. This should not happen.")
-
-    @always_inline
-    fn __iter__(owned self, out iterator: Self):
-        self._fill_archetype_buffer()
-        # If the iterator is not empty
-        if self._archetype_index_buffer[0] >= 0:
-            self._last_entity_index = Int.MAX
-            self._buffer_index = -1
-            self._next_archetype()
-
-            # We need to reset the index to -1, because the
-            # first call to __next__ will increment it.
-            self._entity_index = -1
-
-        iterator = self^
 
     fn _fill_archetype_buffer(mut self):
         """
@@ -243,10 +344,3 @@ struct _EntityIterator[
     @always_inline
     fn __bool__(self) -> Bool:
         return self.__has_next__()
-
-    @always_inline
-    fn without[*Ts: ComponentType](owned self, out result: Self):
-        self._without_mask = Optional(
-            BitMask(Self.component_manager.get_id_arr[*Ts]())
-        )
-        result = self^
