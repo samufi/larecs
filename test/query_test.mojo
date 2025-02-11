@@ -1,6 +1,7 @@
 from testing import *
 from larecs.test_utils import *
-from larecs.entity import Entity
+from larecs import Entity
+from larecs import Query
 
 
 def test_query_length():
@@ -228,18 +229,31 @@ def test_query_without():
         _ = world.add_entity(c0)
         _ = world.add_entity(c0, c1)
         _ = world.add_entity(c0, c1, c2)
-        _ = world.add_entity(c0, c2)
         _ = world.add_entity(c2)
 
+    query = world.query[FlexibleComponent[0]]().without[FlexibleComponent[1]]()
+
     cnt = 0
-    for entity in world.query[FlexibleComponent[0]]().without[
-        FlexibleComponent[1]
-    ]():
+    for entity in query:
         assert_true(entity.has[FlexibleComponent[0]]())
         assert_false(entity.has[FlexibleComponent[1]]())
+        assert_true(world.is_locked())
         cnt += 1
+    assert_equal(cnt, n)
+    assert_false(world.is_locked())
 
+    for _ in range(n):
+        _ = world.add_entity(c0, c2)
+
+    cnt = 0
+    for entity in query:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        assert_true(world.is_locked())
+        cnt += 1
     assert_equal(cnt, 2 * n)
+
+    assert_false(world.is_locked())
 
 
 def test_query_lock():
