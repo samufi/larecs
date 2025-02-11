@@ -177,7 +177,7 @@ struct _EntityIterator[
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask
+        self._without_mask = without_mask^
 
         self._entity_index = 0
         self._archetype_size = 0
@@ -239,12 +239,13 @@ struct _EntityIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            mask = self._archetypes[][i].get_mask()
             if (
-                mask.contains(self._mask)
+                self._archetypes[][i].get_mask().contains(self._mask)
                 and (
                     not self._without_mask
-                    or not mask.contains_any(self._without_mask.value())
+                    or not self._archetypes[][i]
+                    .get_mask()
+                    .contains_any(self._without_mask.value())
                 )
                 and self._archetypes[][i]
             ):
