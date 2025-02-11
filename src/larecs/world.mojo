@@ -1090,8 +1090,8 @@ struct World[
         has_without_mask: Bool
     ](
         mut self,
-        mask: BitMask,
-        without_mask: Optional[BitMask],
+        owned mask: BitMask,
+        owned without_mask: Optional[BitMask],
         out iterator: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -1101,9 +1101,6 @@ struct World[
         ],
     ) raises:
         iterator = _EntityIterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            *component_types,
             component_manager = Self.component_manager,
             has_without_mask=has_without_mask,
         ](
