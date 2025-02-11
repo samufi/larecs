@@ -16,6 +16,7 @@ struct Query[
     lock_origin: MutableOrigin,
     *component_types: ComponentType,
     component_manager: ComponentManager[*component_types],
+    has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components."""
 
@@ -65,12 +66,13 @@ struct Query[
 
     @always_inline
     fn __iter__(
-        owned self,
+        self,
         out iterator: _EntityIterator[
             archetype_origin,
             lock_origin,
             *component_types,
             component_manager = Self.component_manager,
+            has_without_mask = Self.has_without_mask,
         ],
     ) raises:
         """
@@ -82,12 +84,23 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = _EntityIterator(
+        iterator = _EntityIterator[has_without_mask = Self.has_without_mask](
             self._archetypes, self._lock_ptr, self._mask, self._without_mask
         )
 
     @always_inline
-    fn without[*Ts: ComponentType](owned self, out result: Self):
+    fn without[
+        *Ts: ComponentType
+    ](
+        owned self,
+        out result: Query[
+            archetype_origin,
+            lock_origin,
+            *component_types,
+            component_manager = Self.component_manager,
+            has_without_mask=True,
+        ],
+    ):
         """
         Excludes the given components from the query.
 
@@ -111,10 +124,13 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        self._without_mask = Optional(
-            BitMask(Self.component_manager.get_id_arr[*Ts]())
+        result = Query[has_without_mask=True](
+            self._archetypes,
+            self._lock_ptr,
+            self._mask,
+            BitMask(Self.component_manager.get_id_arr[*Ts]()),
         )
-        result = self^
+        result._without_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
 
 @value
@@ -124,6 +140,7 @@ struct _EntityIterator[
     lock_origin: MutableOrigin,
     *component_types: ComponentType,
     component_manager: ComponentManager[*component_types],
+    has_without_mask: Bool,
 ]:
     """Iterator over all entities corresponding to a mask.
 
@@ -135,6 +152,7 @@ struct _EntityIterator[
         lock_origin: The lifetime of the LockMask
         component_types: The types of the components.
         component_manager: The component manager.
+        has_without_mask: Whether the iterator has excluded components.
     """
 
     alias buffer_size = 8
@@ -147,7 +165,7 @@ struct _EntityIterator[
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
     var _mask: BitMask
-    var _without_mask: Optional[BitMask]
+    var _without_mask: BitMask
     var _entity_index: Int
     var _last_entity_index: Int
     var _archetype_size: Int
@@ -172,12 +190,34 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
+
+        if Self.has_without_mask == (without_mask is None):
+            raise Error(
+                "has_without_mask and without_mask do not match.",
+                Self.has_without_mask,
+                without_mask is None,
+            )
+
+        # TODO: replace above check by constraint.
+        # Can't use dynamic `without_mask` i constraint,
+        # so no idea how that was intendend to work.
+        # if without_mask == None:
+        #    constrained[
+        #        Self.has_without_mask,
+        #        "has_without_mask is True, but no without_mask was provided.",
+        #    ]()
+        # else:
+        #    constrained[
+        #        not Self.has_without_mask,
+        #        "has_without_mask is False, but a without_mask was provided.",
+        #    ]()
+
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask^
+        self._without_mask = without_mask^.or_else(BitMask())
 
         self._entity_index = 0
         self._archetype_size = 0
@@ -239,14 +279,16 @@ struct _EntityIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
+            @parameter
+            if has_without_mask:
+                has_excluded = self._archetypes[][i]
+                    .get_mask()
+                    .contains_any(self._without_mask)
+            else:
+                has_excluded = False
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
-                and (
-                    not self._without_mask
-                    or not self._archetypes[][i]
-                    .get_mask()
-                    .contains_any(self._without_mask.value())
-                )
+                and not has_excluded
                 and self._archetypes[][i]
             ):
                 self._archetype_index_buffer[buffer_index] = i
