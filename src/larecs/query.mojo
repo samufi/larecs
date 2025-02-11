@@ -300,6 +300,10 @@ struct _EntityIterator[
         self._max_buffer_index = buffer_index - 1
 
     @always_inline
+    fn __iter__(owned self, out iterator: Self):
+        iterator = self^
+
+    @always_inline
     fn _next_archetype(mut self):
         """
         Moves to the next archetype.
@@ -321,10 +325,6 @@ struct _EntityIterator[
         if self._buffer_index >= self._max_buffer_index:
             self._last_entity_index = self._archetype_size - 1
 
-    @always_inline
-    fn __iter__(owned self, out iterator: Self):
-        iterator = self^
-    
     @always_inline
     fn __next__(
         mut self,
