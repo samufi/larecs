@@ -1,4 +1,4 @@
-from collections import InlineArray
+from collections import InlineArray, Optional
 
 from .entity import Entity
 from .bitmask import BitMask
@@ -39,6 +39,7 @@ struct _EntityIterator[
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
     var _mask: BitMask
+    var _without_mask: Optional[BitMask]
     var _entity_index: Int
     var _last_entity_index: Int
     var _archetype_size: Int
@@ -71,6 +72,7 @@ struct _EntityIterator[
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
+        self._without_mask = None
 
         self._entity_index = 0
         self._archetype_size = 0
@@ -80,17 +82,6 @@ struct _EntityIterator[
 
         self._current_archetype = Pointer.address_of(self._archetypes[][0])
         self._archetype_index_buffer = SIMD[DType.uint32, Self.buffer_size](-1)
-        self._fill_archetype_buffer()
-
-        # If the iterator is not empty
-        if self._archetype_index_buffer[0] >= 0:
-            self._last_entity_index = Int.MAX
-            self._buffer_index = -1
-            self._next_archetype()
-
-            # We need to reset the index to -1, because the
-            # first call to __next__ will increment it.
-            self._entity_index = -1
 
     fn __moveinit__(
         out self,
@@ -99,6 +90,7 @@ struct _EntityIterator[
         self._archetypes = other._archetypes
         self._archetype_index_buffer = other._archetype_index_buffer
         self._mask = other._mask^
+        self._without_mask = other._without_mask^
         self._lock_ptr = other._lock_ptr
         self._lock = other._lock
         self._current_archetype = other._current_archetype
@@ -121,6 +113,17 @@ struct _EntityIterator[
 
     @always_inline
     fn __iter__(owned self, out iterator: Self):
+        self._fill_archetype_buffer()
+        # If the iterator is not empty
+        if self._archetype_index_buffer[0] >= 0:
+            self._last_entity_index = Int.MAX
+            self._buffer_index = -1
+            self._next_archetype()
+
+            # We need to reset the index to -1, because the
+            # first call to __next__ will increment it.
+            self._entity_index = -1
+
         iterator = self^
 
     fn _fill_archetype_buffer(mut self):
@@ -135,8 +138,13 @@ struct _EntityIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
+            mask = self._archetypes[][i].get_mask()
             if (
-                self._archetypes[][i].get_mask().contains(self._mask)
+                mask.contains(self._mask)
+                and (
+                    not self._without_mask
+                    or not mask.contains_any(self._without_mask.value())
+                )
                 and self._archetypes[][i]
             ):
                 self._archetype_index_buffer[buffer_index] = i
@@ -235,3 +243,10 @@ struct _EntityIterator[
     @always_inline
     fn __bool__(self) -> Bool:
         return self.__has_next__()
+
+    @always_inline
+    fn without[*Ts: ComponentType](owned self, out result: Self):
+        self._without_mask = Optional(
+            BitMask(Self.component_manager.get_id_arr[*Ts]())
+        )
+        result = self^

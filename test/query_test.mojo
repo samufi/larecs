@@ -203,6 +203,32 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
+def test_query_without():
+    world = SmallWorld()
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    n = 10
+
+    for _ in range(n):
+        _ = world.add_entity(c0)
+        _ = world.add_entity(c0, c1)
+        _ = world.add_entity(c0, c1, c2)
+        _ = world.add_entity(c0, c2)
+        _ = world.add_entity(c2)
+
+    cnt = 0
+    for entity in world.query[FlexibleComponent[0]]().without[
+        FlexibleComponent[1]
+    ]():
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        cnt += 1
+
+    assert_equal(cnt, 2 * n)
+
+
 def test_query_lock():
     world = SmallWorld()
 
