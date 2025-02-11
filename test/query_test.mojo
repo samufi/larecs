@@ -1,7 +1,6 @@
 from testing import *
 from larecs.test_utils import *
-from larecs import Entity
-from larecs import Query
+from larecs import Entity, Query
 
 
 def test_query_length():
@@ -217,6 +216,15 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
+"""
+struct QueryOwner:
+    var _query: Query[__origin_of(), _, Float64]
+
+    fn __init__(mut world: World, out self) raises:
+        self._query = world.query[Float64]()
+"""
+
+
 def test_query_without():
     world = SmallWorld()
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -232,6 +240,7 @@ def test_query_without():
         _ = world.add_entity(c2)
 
     query = world.query[FlexibleComponent[0]]().without[FlexibleComponent[1]]()
+    query2 = world.query[FlexibleComponent[0]]()
 
     cnt = 0
     for entity in query:
@@ -241,6 +250,10 @@ def test_query_without():
         cnt += 1
     assert_equal(cnt, n)
     assert_false(world.is_locked())
+
+    for entity in query2:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_true(world.is_locked())
 
     for _ in range(n):
         _ = world.add_entity(c0, c2)

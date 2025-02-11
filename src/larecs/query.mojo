@@ -6,33 +6,28 @@ from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
+from .resource import ResourceContaining
 from .debug_utils import debug_warn
 
 
-@value
 struct Query[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
-    lock_origin: MutableOrigin,
+    mut: MutableOrigin,
     *component_types: ComponentType,
+    resources_type: ResourceContaining,
     component_manager: ComponentManager[*component_types],
     has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components."""
 
-    alias Archetype = _Archetype[
-        *component_types, component_manager=component_manager
+    var _world: Pointer[
+        World[*component_types, resources_type=resources_type], mut
     ]
-
-    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _lock_ptr: Pointer[LockMask, lock_origin]
     var _mask: BitMask
     var _without_mask: Optional[BitMask]
 
     fn __init__(
         out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        lock_ptr: Pointer[LockMask, lock_origin],
+        world: Pointer[World[*component_types, resources_type=resources_type], mut],
         owned mask: BitMask,
     ) raises:
         """
@@ -55,12 +50,10 @@ struct Query[
         ```
 
         Args:
-            archetypes: A pointer to the world's archetypes.
-            lock_ptr: A pointer to the world's locks.
+            world: A pointer to the world.
             mask: The mask of the components to iterate over.
         """
-        self._archetypes = archetypes
-        self._lock_ptr = lock_ptr
+        self._world = world
         self._mask = mask^
         self._without_mask = None
 
@@ -68,10 +61,10 @@ struct Query[
     fn __iter__(
         self,
         out iterator: _EntityIterator[
-            archetype_origin,
-            lock_origin,
+            __origin_of(self._world[]._archetypes),
+            __origin_of(self._world[]._locks),
             *component_types,
-            component_manager = Self.component_manager,
+            component_manager = ComponentManager[*component_types](),
             has_without_mask = Self.has_without_mask,
         ],
     ) raises:
@@ -84,8 +77,9 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = _EntityIterator[has_without_mask = Self.has_without_mask](
-            self._archetypes, self._lock_ptr, self._mask, self._without_mask
+        iterator = self._world[]._get_iterator[has_without_mask](
+            self._mask,
+            self._without_mask
         )
 
     @always_inline
@@ -94,13 +88,13 @@ struct Query[
     ](
         owned self,
         out result: Query[
-            archetype_origin,
-            lock_origin,
+            mut,
             *component_types,
-            component_manager = Self.component_manager,
+            resources_type=resources_type,
+            component_manager = component_manager,
             has_without_mask=True,
         ],
-    ):
+    ) raises:
         """
         Excludes the given components from the query.
 
@@ -124,10 +118,14 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Query[has_without_mask=True](
-            self._archetypes,
-            self._lock_ptr,
-            self._mask,
+        result = Query[
+            self.mut,
+            *self.component_types,
+            resources_type=resources_type,
+            component_manager = component_manager,
+            has_without_mask=True,
+            ](
+            self._world,
             BitMask(Self.component_manager.get_id_arr[*Ts]()),
         )
         result._without_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())

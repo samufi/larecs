@@ -14,7 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .query import Query
+from .query import Query, _EntityIterator
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
 
@@ -1027,9 +1027,9 @@ struct World[
     fn query(
         mut self,
         out iterator: Query[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
+            __origin_of(self),
             *component_types,
+            resources_type=resources_type,
             component_manager = Self.component_manager,
         ],
     ) raises:
@@ -1042,9 +1042,13 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query(
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
+        iterator = Query[
+            __origin_of(self),
+            *component_types,
+            resources_type=resources_type,
+            component_manager = Self.component_manager,
+        ](
+            Pointer.address_of(self),
             BitMask(),
         )
 
@@ -1054,9 +1058,9 @@ struct World[
     ](
         mut self,
         out iterator: Query[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
+            __origin_of(self),
             *component_types,
+            resources_type=resources_type,
             component_manager = Self.component_manager,
         ],
     ) raises:
@@ -1072,10 +1076,41 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query(
+        iterator = Query[
+            __origin_of(self),
+            *component_types,
+            resources_type=resources_type,
+            component_manager = Self.component_manager,
+        ](
+            Pointer.address_of(self),
+            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+        )
+
+    fn _get_iterator[
+        has_without_mask: Bool
+    ](
+        mut self,
+        mask: BitMask,
+        without_mask: Optional[BitMask],
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+            has_without_mask=has_without_mask,
+        ],
+    ) raises:
+        iterator = _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+            has_without_mask=has_without_mask,
+        ](
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+            mask,
+            without_mask,
         )
 
     @always_inline
