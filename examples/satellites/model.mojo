@@ -17,7 +17,7 @@ fn main() raises:
 
     parameters = Parameters(dt=0.1, mass=5.972e24)
 
-    add_satellites(world, 300)
+    add_satellites(world, 50)
     plt = Python.import_module("matplotlib.pyplot")
     fig = plt.figure()
     ax = plt.gca()
@@ -38,7 +38,4 @@ fn main() raises:
 
     print("Done")
 
-    # Show the plot if not in the CI
-    args = argv()
-    if len(args) < 2 or args[1] != "CI":
-        plt.show(block=True)
+    plt.show(block=True)
