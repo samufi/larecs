@@ -18,6 +18,13 @@ struct Query[
 ]:
     """Query builder for entities with and without specific components."""
 
+    alias Query = Query[
+        world_origin,
+        *component_types,
+        resources_type=resources_type,
+        has_without_mask=True,
+    ]
+
     var _world: Pointer[
         World[*component_types, resources_type=resources_type], world_origin
     ]
@@ -62,7 +69,7 @@ struct Query[
         """
         Returns the number of entities remaining in the iterator.
 
-        Note that this requires the creation of an iterator ftom the query.
+        Note that this requires the creation of an iterator from the query.
         If you intend to iterate anyway, get the iterator with [.Query.__iter__],
         and call `len` on it, instead.
         """
@@ -93,17 +100,7 @@ struct Query[
         )
 
     @always_inline
-    fn without[
-        *Ts: ComponentType
-    ](
-        owned self,
-        out result: Query[
-            world_origin,
-            *component_types,
-            resources_type=resources_type,
-            has_without_mask=True,
-        ],
-    ) raises:
+    fn without[*Ts: ComponentType](owned self, out result: Self.Query) raises:
         """
         Excludes the given components from the query.
 
