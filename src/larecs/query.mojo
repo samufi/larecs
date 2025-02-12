@@ -18,6 +18,8 @@ struct Query[
 ]:
     """Query builder for entities with and without specific components."""
 
+    alias World = World[*component_types, resources_type=resources_type]
+
     alias Query = Query[
         world_origin,
         *component_types,
@@ -28,20 +30,16 @@ struct Query[
         _,
         _,
         *component_types,
-        component_manager = ComponentManager[*component_types](),
+        component_manager = Self.World.component_manager,
     ]
 
-    var _world: Pointer[
-        World[*component_types, resources_type=resources_type], world_origin
-    ]
+    var _world: Pointer[Self.World, world_origin]
     var _mask: BitMask
     var _without_mask: BitMask
 
     fn __init__(
         out self,
-        world: Pointer[
-            World[*component_types, resources_type=resources_type], world_origin
-        ],
+        world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
     ) raises:
         """
@@ -77,9 +75,7 @@ struct Query[
 
     fn __init__(
         out self,
-        world: Pointer[
-            World[*component_types, resources_type=resources_type], world_origin
-        ],
+        world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
         owned without_mask: BitMask,
     ) raises:
@@ -184,7 +180,7 @@ struct Query[
         result = Self.Query[has_without_mask=True](
             self._world,
             self._mask,
-            BitMask(self._world[].component_manager.get_id_arr[*Ts]()),
+            BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
         )
 
 
