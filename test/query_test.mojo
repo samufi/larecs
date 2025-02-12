@@ -265,17 +265,19 @@ struct QueryOwner[
     *component_types: ComponentType,
     resources_type: ResourceContaining,
 ]:
-    var _query: Query[
+    alias WorldPointer = Pointer[
+        World[*component_types, resources_type=resources_type], world_origin
+    ]
+    alias Query = Query[
         world_origin,
         *component_types,
         resources_type=resources_type,
-        has_without_mask=True,
     ]
 
+    var _query: Self.Query[has_without_mask=True]
+
     fn __init__(
-        world: Pointer[
-            World[*component_types, resources_type=resources_type], world_origin
-        ],
+        world: Self.WorldPointer,
         out self,
     ) raises:
         self._query = (
@@ -288,11 +290,6 @@ struct QueryOwner[
         for entity in self._query:
             f = entity.get_ptr[FlexibleComponent[0]]()
             f[].x += 1
-
-
-trait System(CollectionElement):
-    fn update(self) raises:
-        ...
 
 
 fn test_query_in_system() raises:
