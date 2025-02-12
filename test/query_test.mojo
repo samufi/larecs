@@ -1,6 +1,7 @@
 from testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
+from larecs.resource import ResourceContaining
 
 
 def test_query_length():
@@ -227,15 +228,6 @@ fn test_query_empty() raises:
     assert_equal(cnt, 0)
 
 
-"""
-struct QueryOwner:
-    var _query: Query[__origin_of(), _, Float64]
-
-    fn __init__(mut world: World, out self) raises:
-        self._query = world.query[Float64]()
-"""
-
-
 def test_query_without():
     world = SmallWorld()
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -278,6 +270,39 @@ def test_query_without():
     assert_equal(cnt, 2 * n)
 
     assert_false(world.is_locked())
+
+
+struct QueryOwner[
+    mut: MutableOrigin,
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+]:
+    var _query: Query[mut, *component_types, resources_type=resources_type]
+
+    fn __init__(
+        world: Pointer[
+            World[*component_types, resources_type=resources_type], mut
+        ],
+        out self,
+    ) raises:
+        self._query = world[].query[FlexibleComponent[0]]()
+
+    fn update(
+        self,
+    ) raises:
+        for entity in self._query:
+            f = entity.get_ptr[FlexibleComponent[0]]()
+            f[].x += 1
+
+
+fn test_query_in_system() raises:
+    world = SmallWorld()
+    sys1 = QueryOwner(Pointer.address_of(world))
+    sys2 = QueryOwner(Pointer.address_of(world))
+
+    for _ in range(10):
+        sys1.update()
+        sys2.update()
 
 
 def test_query_lock():

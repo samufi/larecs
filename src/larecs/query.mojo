@@ -11,7 +11,7 @@ from .debug_utils import debug_warn
 
 
 struct Query[
-    mut: MutableOrigin,
+    world_origin: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
     has_without_mask: Bool = False,
@@ -19,14 +19,14 @@ struct Query[
     """Query builder for entities with and without specific components."""
 
     var _world: Pointer[
-        World[*component_types, resources_type=resources_type], mut
+        World[*component_types, resources_type=resources_type], world_origin
     ]
     var _mask: BitMask
     var _without_mask: Optional[BitMask]
 
     fn __init__(
         out self,
-        world: Pointer[World[*component_types, resources_type=resources_type], mut],
+        world: Pointer[World[*component_types, resources_type=resources_type], world_origin],
         owned mask: BitMask,
     ) raises:
         """
@@ -87,7 +87,7 @@ struct Query[
     ](
         owned self,
         out result: Query[
-            mut,
+            world_origin,
             *component_types,
             resources_type=resources_type,
             has_without_mask=True,
@@ -117,7 +117,7 @@ struct Query[
             The query, exclusing the given components.
         """
         result = Query[
-            self.mut,
+            self.world_origin,
             *self.component_types,
             resources_type=resources_type,
             has_without_mask=True,
