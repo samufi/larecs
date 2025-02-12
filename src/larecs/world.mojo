@@ -1030,7 +1030,6 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
-            component_manager = Self.component_manager,
         ],
     ) raises:
         """
@@ -1046,7 +1045,6 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
-            component_manager = Self.component_manager,
         ](
             Pointer.address_of(self),
             BitMask(),
@@ -1061,7 +1059,6 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
-            component_manager = Self.component_manager,
         ],
     ) raises:
         """
@@ -1080,7 +1077,6 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
-            component_manager = Self.component_manager,
         ](
             Pointer.address_of(self),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),

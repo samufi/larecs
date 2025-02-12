@@ -14,7 +14,6 @@ struct Query[
     mut: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
-    component_manager: ComponentManager[*component_types],
     has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components."""
@@ -91,7 +90,6 @@ struct Query[
             mut,
             *component_types,
             resources_type=resources_type,
-            component_manager = component_manager,
             has_without_mask=True,
         ],
     ) raises:
@@ -122,13 +120,12 @@ struct Query[
             self.mut,
             *self.component_types,
             resources_type=resources_type,
-            component_manager = component_manager,
             has_without_mask=True,
             ](
             self._world,
             self._mask,
         )
-        result._without_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+        result._without_mask = BitMask(self._world[].component_manager.get_id_arr[*Ts]())
 
 
 @value
