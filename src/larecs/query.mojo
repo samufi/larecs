@@ -56,6 +56,16 @@ struct Query[
         self._mask = mask^
         self._without_mask = None
 
+    fn __len__(self) raises -> Int:
+        """
+        Returns the number of entities remaining in the iterator.
+
+        Note that this requires the creation of an iterator ftom the query.
+        If you intend to iterate anyway, get the iterator with [.Query.__iter__],
+        and call `len` on it, instead.
+        """
+        return len(self.__iter__())
+
     @always_inline
     fn __iter__(
         self,
