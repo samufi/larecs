@@ -41,7 +41,7 @@ struct Query[
         out self,
         world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
-    ) raises:
+    ):
         """
         Creates a new query.
 
@@ -78,7 +78,7 @@ struct Query[
         world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
         owned without_mask: BitMask,
-    ) raises:
+    ):
         """
         Creates a new query.
 
@@ -253,7 +253,7 @@ struct _EntityIterator[
         )
 
     fn __init__[
-        has_without_mask: Bool
+        has_without_mask: Bool = True
     ](
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],

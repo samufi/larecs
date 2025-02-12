@@ -112,6 +112,12 @@ struct World[
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
+    alias Query = Query[
+        _,
+        *component_types,
+        resources_type=resources_type,
+        has_without_mask=False,
+    ]
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
     # _tarquery bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
@@ -1026,12 +1032,7 @@ struct World[
     @always_inline
     fn query(
         mut self,
-        out iterator: Query[
-            __origin_of(self),
-            *component_types,
-            resources_type=resources_type,
-            has_without_mask=False,
-        ],
+        out iterator: Self.Query[__origin_of(self)],
     ) raises:
         """
         Returns an iterator with accessors to all [..entity.Entity Entities] without components.
@@ -1050,15 +1051,7 @@ struct World[
     @always_inline
     fn query[
         *Ts: ComponentType
-    ](
-        mut self,
-        out iterator: Query[
-            __origin_of(self),
-            *component_types,
-            resources_type=resources_type,
-            has_without_mask=False,
-        ],
-    ) raises:
+    ](mut self, out iterator: Self.Query[__origin_of(self)],) raises:
         """
         Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
 
