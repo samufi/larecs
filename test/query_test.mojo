@@ -233,13 +233,13 @@ def test_query_without():
     query = world.query[FlexibleComponent[0]]().without[FlexibleComponent[1]]()
     query2 = world.query[FlexibleComponent[0]]()
 
-    cnt = 0
+    count = 0
     for entity in query:
         assert_true(entity.has[FlexibleComponent[0]]())
         assert_false(entity.has[FlexibleComponent[1]]())
         assert_true(world.is_locked())
-        cnt += 1
-    assert_equal(cnt, n)
+        count += 1
+    assert_equal(count, n)
     assert_false(world.is_locked())
 
     for entity in query2:
@@ -249,13 +249,13 @@ def test_query_without():
     for _ in range(n):
         _ = world.add_entity(c0, c2)
 
-    cnt = 0
+    count = 0
     for entity in query:
         assert_true(entity.has[FlexibleComponent[0]]())
         assert_false(entity.has[FlexibleComponent[1]]())
         assert_true(world.is_locked())
-        cnt += 1
-    assert_equal(cnt, 2 * n)
+        count += 1
+    assert_equal(count, 2 * n)
 
     assert_false(world.is_locked())
 
