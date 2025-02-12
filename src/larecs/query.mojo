@@ -22,7 +22,6 @@ struct Query[
         world_origin,
         *component_types,
         resources_type=resources_type,
-        has_without_mask=_,
     ]
 
     alias Iterator = _EntityIterator[
@@ -30,7 +29,6 @@ struct Query[
         _,
         *component_types,
         component_manager = ComponentManager[*component_types](),
-        has_without_mask=_,
     ]
 
     var _world: Pointer[
