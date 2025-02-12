@@ -360,10 +360,12 @@ struct _EntityIterator[
 
             @parameter
             if has_without_mask:
-                is_valid &= not self._archetypes[]
+                is_valid &= (
+                    not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
                     .contains_any(self._without_mask)
+                )
 
             if is_valid:
                 self._archetype_index_buffer[buffer_index] = i
@@ -457,10 +459,12 @@ struct _EntityIterator[
 
             @parameter
             if has_without_mask:
-                is_valid &= not self._archetypes[]
+                is_valid &= (
+                    not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
                     .contains_any(self._without_mask)
+                )
 
             if is_valid:
                 size += len(self._archetypes[][i])
