@@ -1099,11 +1099,11 @@ struct World[
         iterator = _EntityIterator[
             component_manager = Self.component_manager,
             has_without_mask=has_without_mask,
-        ](
+        ].__init__[has_without_mask](
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
-            without_mask,
+            without_mask.or_else(BitMask()),
         )
 
     @always_inline

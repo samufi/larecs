@@ -300,8 +300,6 @@ fn test_query_in_system() raises:
     sys1 = QueryOwner(Pointer.address_of(world))
     sys2 = QueryOwner(Pointer.address_of(world))
 
-    sys = Systems(sys1, sys2)
-
     c0 = FlexibleComponent[0](1.0, 2.0)
 
     n = 10

@@ -186,9 +186,42 @@ struct _EntityIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
-        owned without_mask: Optional[BitMask],
     ) raises:
         """
+        Creates an entity iterator without excluded components.
+
+        Args:
+            archetypes: a pointer to the world's archetypes.
+            lock_ptr: a pointer to the world's locks.
+            mask: The mask of the components to iterate over.
+
+        Raises:
+            Error: If the lock cannot be acquired (more than 256 locks exist).
+        """
+
+        constrained[
+            not Self.has_without_mask,
+            "No without_mask provided",
+        ]()
+        self = Self.__init__[False](
+            archetypes,
+            lock_ptr,
+            mask^,
+            BitMask(),
+        )
+
+    fn __init__[
+        check_has_without_mask: Bool
+    ](
+        out self,
+        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        lock_ptr: Pointer[LockMask, lock_origin],
+        owned mask: BitMask,
+        owned without_mask: BitMask,
+    ) raises:
+        """
+        Creates an entity iterator with or without excluded components.
+
         Args:
             archetypes: a pointer to the world's archetypes.
             lock_ptr: a pointer to the world's locks.
@@ -199,33 +232,24 @@ struct _EntityIterator[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
 
-        if Self.has_without_mask == (without_mask is None):
-            raise Error(
-                "has_without_mask and without_mask do not match.",
+        @parameter
+        if check_has_without_mask:
+            constrained[
                 Self.has_without_mask,
-                without_mask is None,
-            )
-
-        # TODO: replace above check by constraint.
-        # Can't use dynamic `without_mask` i constraint,
-        # so no idea how that was intendend to work.
-        # if without_mask == None:
-        #    constrained[
-        #        Self.has_without_mask,
-        #        "has_without_mask is True, but no without_mask was provided.",
-        #    ]()
-        # else:
-        #    constrained[
-        #        not Self.has_without_mask,
-        #        "has_without_mask is False, but a without_mask was provided.",
-        #    ]()
+                "has_without_mask is False, but a without_mask was provided.",
+            ]()
+        else:
+            constrained[
+                not Self.has_without_mask,
+                "has_without_mask is True, but no without_mask was provided.",
+            ]()
 
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask^.or_else(BitMask())
+        self._without_mask = without_mask
 
         self._entity_index = 0
         self._archetype_size = 0
