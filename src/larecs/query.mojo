@@ -254,7 +254,7 @@ struct _EntityIterator[
         )
 
     fn __init__[
-        has_without_mask: Bool = True
+        check_has_without_mask: Bool = True
     ](
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
@@ -276,7 +276,7 @@ struct _EntityIterator[
         """
 
         @parameter
-        if has_without_mask:
+        if check_has_without_mask:
             constrained[
                 Self.has_without_mask,
                 "has_without_mask is False, but a without_mask was provided.",
