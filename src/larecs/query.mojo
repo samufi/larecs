@@ -124,12 +124,7 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Query[
-            self.world_origin,
-            *self.component_types,
-            resources_type=resources_type,
-            has_without_mask=True,
-        ](
+        result = Self.Query(
             self._world,
             self._mask,
         )
@@ -208,7 +203,7 @@ struct _EntityIterator[
         )
 
     fn __init__[
-        check_has_without_mask: Bool
+        has_without_mask: Bool
     ](
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
@@ -228,18 +223,10 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-
-        @parameter
-        if check_has_without_mask:
-            constrained[
-                Self.has_without_mask,
-                "has_without_mask is False, but a without_mask was provided.",
-            ]()
-        else:
-            constrained[
-                not Self.has_without_mask,
-                "has_without_mask is True, but no without_mask was provided.",
-            ]()
+        constrained[
+            has_without_mask == Self.has_without_mask,
+            "has_without_mask and presence of without_mask don't match.",
+        ]()
 
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
