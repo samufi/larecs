@@ -20,7 +20,7 @@ struct Query[
 
     alias World = World[*component_types, resources_type=resources_type]
 
-    alias Query = Query[
+    alias QueryWithWithout = Query[
         world_origin,
         *component_types,
         resources_type=resources_type,
@@ -152,7 +152,9 @@ struct Query[
             )
 
     @always_inline
-    fn without[*Ts: ComponentType](owned self, out result: Self.Query) raises:
+    fn without[
+        *Ts: ComponentType
+    ](owned self, out result: Self.QueryWithWithout) raises:
         """
         Excludes the given components from the query.
 
@@ -176,7 +178,7 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Self.Query(
+        result = Self.QueryWithWithout(
             self._world,
             self._mask,
             BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
