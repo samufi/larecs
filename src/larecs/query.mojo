@@ -348,7 +348,6 @@ struct _EntityIterator[
         self._current_archetype = Pointer.address_of(
             self._archetypes[][self._archetype_index_buffer[self._buffer_index]]
         )
-        # TODO: crashes here
         self._archetype_size = len(self._current_archetype[])
         if self._buffer_index >= Self.buffer_size - 1:
             self._fill_archetype_buffer()
