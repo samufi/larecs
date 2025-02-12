@@ -126,7 +126,7 @@ struct Query[
             has_without_mask=True,
             ](
             self._world,
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+            self._mask,
         )
         result._without_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
@@ -216,7 +216,7 @@ struct _EntityIterator[
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
         self._without_mask = without_mask^.or_else(BitMask())
-
+        
         self._entity_index = 0
         self._archetype_size = 0
         self._buffer_index = 0
@@ -269,7 +269,7 @@ struct _EntityIterator[
         """
         Find the next archetypes that contain the mask.
 
-        Fills the _archetype_index_buffer witht the
+        Fills the _archetype_index_buffer with the
         archetypes' indices.
         """
         buffer_index = 0
@@ -284,7 +284,7 @@ struct _EntityIterator[
                     .contains_any(self._without_mask)
             else:
                 has_excluded = False
-            
+
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
                 and (not has_excluded)
