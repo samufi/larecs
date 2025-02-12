@@ -277,7 +277,12 @@ struct QueryOwner[
     *component_types: ComponentType,
     resources_type: ResourceContaining,
 ]:
-    var _query: Query[mut, *component_types, resources_type=resources_type]
+    var _query: Query[
+        mut,
+        *component_types,
+        resources_type=resources_type,
+        has_without_mask=True,
+    ]
 
     fn __init__(
         world: Pointer[
@@ -285,7 +290,11 @@ struct QueryOwner[
         ],
         out self,
     ) raises:
-        self._query = world[].query[FlexibleComponent[0]]()
+        self._query = (
+            world[]
+            .query[FlexibleComponent[0]]()
+            .without[FlexibleComponent[1]]()
+        )
 
     fn update(
         self,
@@ -299,6 +308,12 @@ fn test_query_in_system() raises:
     world = SmallWorld()
     sys1 = QueryOwner(Pointer.address_of(world))
     sys2 = QueryOwner(Pointer.address_of(world))
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+
+    n = 10
+    for _ in range(n):
+        _ = world.add_entity(c0)
 
     for _ in range(10):
         sys1.update()
