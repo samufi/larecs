@@ -1030,6 +1030,7 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
+            has_without_mask=False,
         ],
     ) raises:
         """
@@ -1041,7 +1042,7 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query(
+        iterator = Query[has_without_mask=False](
             Pointer.address_of(self),
             BitMask(),
         )
@@ -1055,6 +1056,7 @@ struct World[
             __origin_of(self),
             *component_types,
             resources_type=resources_type,
+            has_without_mask=False,
         ],
     ) raises:
         """
@@ -1069,9 +1071,28 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query(
+        iterator = Query[has_without_mask=False](
             Pointer.address_of(self),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),
+        )
+
+    fn _get_iterator[
+        has_without_mask: Bool
+    ](
+        mut self,
+        owned mask: BitMask,
+        out iterator: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+            has_without_mask=has_without_mask,
+        ],
+    ) raises:
+        iterator = _EntityIterator[has_without_mask=has_without_mask](
+            Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
+            mask,
         )
 
     fn _get_iterator[
@@ -1088,10 +1109,9 @@ struct World[
             has_without_mask=has_without_mask,
         ],
     ) raises:
-        iterator = _EntityIterator[
-            component_manager = Self.component_manager,
-            has_without_mask=has_without_mask,
-        ].__init__[has_without_mask](
+        iterator = _EntityIterator[has_without_mask=has_without_mask].__init__[
+            True
+        ](
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,

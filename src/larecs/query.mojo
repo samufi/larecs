@@ -14,7 +14,7 @@ struct Query[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
-    has_without_mask: Bool = False,
+    has_without_mask: Bool,
 ]:
     """Query builder for entities with and without specific components."""
 
@@ -22,14 +22,22 @@ struct Query[
         world_origin,
         *component_types,
         resources_type=resources_type,
-        has_without_mask=True,
+        has_without_mask=_,
+    ]
+
+    alias Iterator = _EntityIterator[
+        _,
+        _,
+        *component_types,
+        component_manager = ComponentManager[*component_types](),
+        has_without_mask=_,
     ]
 
     var _world: Pointer[
         World[*component_types, resources_type=resources_type], world_origin
     ]
     var _mask: BitMask
-    var _without_mask: Optional[BitMask]
+    var _without_mask: BitMask
 
     fn __init__(
         out self,
@@ -61,9 +69,53 @@ struct Query[
             world: A pointer to the world.
             mask: The mask of the components to iterate over.
         """
+        constrained[
+            not Self.has_without_mask,
+            "No without_mask provided",
+        ]()
         self._world = world
         self._mask = mask^
-        self._without_mask = None
+        self._without_mask = BitMask()
+
+    fn __init__(
+        out self,
+        world: Pointer[
+            World[*component_types, resources_type=resources_type], world_origin
+        ],
+        owned mask: BitMask,
+        owned without_mask: BitMask,
+    ) raises:
+        """
+        Creates a new query.
+
+        This should not be used directly, but through the [..world.World.query] method:
+
+        ```mojo {doctest="query_init" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        ```
+
+        ```mojo {doctest="query_init"}
+        world = World[Float64, Float32, Int](Resources())
+        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
+        _ = world.add_entity(Float64(1.0), 3)
+
+        for entity in world.query[Float64, Int]():
+            f = entity.get_ptr[Float64]()
+            f[] += 1
+        ```
+
+        Args:
+            world: A pointer to the world.
+            mask: The mask of the components to iterate over.
+            without_mask: The mask for components to exclude.
+        """
+        constrained[
+            Self.has_without_mask,
+            "without_mask provided",
+        ]()
+        self._world = world
+        self._mask = mask^
+        self._without_mask = without_mask
 
     fn __len__(self) raises -> Int:
         """
@@ -78,11 +130,9 @@ struct Query[
     @always_inline
     fn __iter__(
         self,
-        out iterator: _EntityIterator[
+        out iterator: self.Iterator[
             __origin_of(self._world[]._archetypes),
             __origin_of(self._world[]._locks),
-            *component_types,
-            component_manager = ComponentManager[*component_types](),
             has_without_mask = Self.has_without_mask,
         ],
     ) raises:
@@ -95,12 +145,21 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_iterator[has_without_mask](
-            self._mask, self._without_mask
-        )
+
+        @parameter
+        if Self.has_without_mask:
+            iterator = self._world[]._get_iterator[Self.has_without_mask](
+                self._mask, self._without_mask
+            )
+        else:
+            iterator = self._world[]._get_iterator[Self.has_without_mask](
+                self._mask
+            )
 
     @always_inline
-    fn without[*Ts: ComponentType](owned self, out result: Self.Query) raises:
+    fn without[
+        *Ts: ComponentType
+    ](owned self, out result: Self.Query[has_without_mask=True]) raises:
         """
         Excludes the given components from the query.
 
@@ -124,16 +183,13 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Self.Query(
+        result = Self.Query[has_without_mask=True](
             self._world,
             self._mask,
-        )
-        result._without_mask = BitMask(
-            self._world[].component_manager.get_id_arr[*Ts]()
+            BitMask(self._world[].component_manager.get_id_arr[*Ts]()),
         )
 
 
-@value
 struct _EntityIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
