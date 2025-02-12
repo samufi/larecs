@@ -223,10 +223,13 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        constrained[
-            has_without_mask == Self.has_without_mask,
-            "has_without_mask and presence of without_mask don't match.",
-        ]()
+
+        @parameter
+        if has_without_mask:
+            constrained[
+                Self.has_without_mask,
+                "has_without_mask is False, but a without_mask was provided.",
+            ]()
 
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
