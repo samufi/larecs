@@ -216,6 +216,17 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
+fn test_query_empty() raises:
+    world = SmallWorld()
+    query = world.query[FlexibleComponent[0]]()
+    cnt = 0
+    for entity in query:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_true(world.is_locked())
+        cnt += 1
+    assert_equal(cnt, 0)
+
+
 """
 struct QueryOwner:
     var _query: Query[__origin_of(), _, Float64]
