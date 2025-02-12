@@ -24,6 +24,7 @@ struct Query[
         world_origin,
         *component_types,
         resources_type=resources_type,
+        has_without_mask=True,
     ]
 
     alias Iterator = _EntityIterator[
@@ -151,9 +152,7 @@ struct Query[
             )
 
     @always_inline
-    fn without[
-        *Ts: ComponentType
-    ](owned self, out result: Self.Query[has_without_mask=True]) raises:
+    fn without[*Ts: ComponentType](owned self, out result: Self.Query) raises:
         """
         Excludes the given components from the query.
 
@@ -177,7 +176,7 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Self.Query[has_without_mask=True](
+        result = Self.Query(
             self._world,
             self._mask,
             BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
