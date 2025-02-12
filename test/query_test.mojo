@@ -333,6 +333,8 @@ def run_all_query_tests():
     test_query_length()
     test_query_get_set()
     test_query_has_component()
+    test_query_empty()
+    test_query_without()
 
 
 def main():

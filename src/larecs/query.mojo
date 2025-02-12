@@ -158,7 +158,7 @@ struct _EntityIterator[
         *component_types, component_manager=component_manager
     ]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _archetype_index_buffer: SIMD[DType.uint32, Self.buffer_size]
+    var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _current_archetype: Pointer[Self.Archetype, archetype_origin]
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
@@ -224,7 +224,7 @@ struct _EntityIterator[
         self._max_buffer_index = Self.buffer_size
 
         self._current_archetype = Pointer.address_of(self._archetypes[][0])
-        self._archetype_index_buffer = SIMD[DType.uint32, Self.buffer_size](-1)
+        self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
 
         self._fill_archetype_buffer()
         # If the iterator is not empty
