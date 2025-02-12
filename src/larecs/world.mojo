@@ -21,7 +21,7 @@ from .resource import ResourceContaining, Resources
 
 @value
 struct Replacer[
-    mut: MutableOrigin,
+    world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
@@ -33,14 +33,14 @@ struct Replacer[
     in one go.
 
     Parameters:
-        mut: The mutability of the world.
+        world_origin: The mutale origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
         resources_type: The type of the resource container.
     """
 
     var _world: Pointer[
-        World[*component_types, resources_type=resources_type], mut
+        World[*component_types, resources_type=resources_type], world_origin
     ]
     var _remove_ids: InlineArray[
         World[*component_types, resources_type=resources_type].Id, size

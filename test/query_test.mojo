@@ -261,12 +261,12 @@ def test_query_without():
 
 
 struct QueryOwner[
-    mut: MutableOrigin,
+    world_origin: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
 ]:
     var _query: Query[
-        mut,
+        world_origin,
         *component_types,
         resources_type=resources_type,
         has_without_mask=True,
@@ -274,7 +274,7 @@ struct QueryOwner[
 
     fn __init__(
         world: Pointer[
-            World[*component_types, resources_type=resources_type], mut
+            World[*component_types, resources_type=resources_type], world_origin
         ],
         out self,
     ) raises:
