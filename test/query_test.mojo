@@ -319,6 +319,10 @@ fn test_query_in_system() raises:
         sys1.update()
         sys2.update()
 
+    for entity in world.query[FlexibleComponent[0]]():
+        f = entity.get_ptr[FlexibleComponent[0]]()
+        assert_equal(f[].x, 21)
+
 
 def test_query_lock():
     world = SmallWorld()
