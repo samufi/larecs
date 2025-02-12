@@ -26,7 +26,9 @@ struct Query[
 
     fn __init__(
         out self,
-        world: Pointer[World[*component_types, resources_type=resources_type], world_origin],
+        world: Pointer[
+            World[*component_types, resources_type=resources_type], world_origin
+        ],
         owned mask: BitMask,
     ) raises:
         """
@@ -87,8 +89,7 @@ struct Query[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         iterator = self._world[]._get_iterator[has_without_mask](
-            self._mask,
-            self._without_mask
+            self._mask, self._without_mask
         )
 
     @always_inline
@@ -131,11 +132,13 @@ struct Query[
             *self.component_types,
             resources_type=resources_type,
             has_without_mask=True,
-            ](
+        ](
             self._world,
             self._mask,
         )
-        result._without_mask = BitMask(self._world[].component_manager.get_id_arr[*Ts]())
+        result._without_mask = BitMask(
+            self._world[].component_manager.get_id_arr[*Ts]()
+        )
 
 
 @value
@@ -223,7 +226,7 @@ struct _EntityIterator[
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
         self._without_mask = without_mask^.or_else(BitMask())
-        
+
         self._entity_index = 0
         self._archetype_size = 0
         self._buffer_index = 0
@@ -284,11 +287,15 @@ struct _EntityIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
+
             @parameter
             if has_without_mask:
-                has_excluded = self._archetypes[].unsafe_get(i)
+                has_excluded = (
+                    self._archetypes[]
+                    .unsafe_get(i)
                     .get_mask()
                     .contains_any(self._without_mask)
+                )
             else:
                 has_excluded = False
 
@@ -383,15 +390,17 @@ struct _EntityIterator[
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-        
+
             @parameter
             if has_without_mask:
-                has_excluded = self._archetypes[][i]
+                has_excluded = (
+                    self._archetypes[][i]
                     .get_mask()
                     .contains_any(self._without_mask)
+                )
             else:
                 has_excluded = False
-            
+
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
                 and (not has_excluded)
