@@ -295,27 +295,27 @@ struct _EntityIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
+            if self._archetypes[].unsafe_get(i).get_mask().contains(
+                self._mask
+            ) and self._archetypes[].unsafe_get(i):
 
-            @parameter
-            if has_without_mask:
-                has_excluded = (
-                    self._archetypes[]
-                    .unsafe_get(i)
-                    .get_mask()
-                    .contains_any(self._without_mask)
-                )
-            else:
-                has_excluded = False
-
-            if (
-                self._archetypes[].unsafe_get(i).get_mask().contains(self._mask)
-                and (not has_excluded)
-                and self._archetypes[].unsafe_get(i)
-            ):
-                self._archetype_index_buffer[buffer_index] = i
-                buffer_index += 1
-                if buffer_index >= Self.buffer_size:
-                    return
+                @parameter
+                if has_without_mask:
+                    if (
+                        not self._archetypes[]
+                        .unsafe_get(i)
+                        .get_mask()
+                        .contains_any(self._without_mask)
+                    ):
+                        self._archetype_index_buffer[buffer_index] = i
+                        buffer_index += 1
+                        if buffer_index >= Self.buffer_size:
+                            return
+                else:
+                    self._archetype_index_buffer[buffer_index] = i
+                    buffer_index += 1
+                    if buffer_index >= Self.buffer_size:
+                        return
 
         # If the buffer is not full, we
         # note the last index that is still valid.
@@ -397,23 +397,22 @@ struct _EntityIterator[
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-
-            @parameter
-            if has_without_mask:
-                has_excluded = (
-                    self._archetypes[][i]
-                    .get_mask()
-                    .contains_any(self._without_mask)
-                )
-            else:
-                has_excluded = False
-
             if (
                 self._archetypes[][i].get_mask().contains(self._mask)
-                and (not has_excluded)
                 and self._archetypes[][i]
             ):
-                size += len(self._archetypes[][i])
+
+                @parameter
+                if has_without_mask:
+                    if (
+                        not self._archetypes[]
+                        .unsafe_get(i)
+                        .get_mask()
+                        .contains_any(self._without_mask)
+                    ):
+                        size += len(self._archetypes[][i])
+                else:
+                    size += len(self._archetypes[][i])
 
         return size
 
