@@ -1069,11 +1069,7 @@ struct World[
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query[
-            __origin_of(self),
-            *component_types,
-            resources_type=resources_type,
-        ](
+        iterator = Query(
             Pointer.address_of(self),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),
         )
