@@ -284,18 +284,23 @@ struct QueryOwner[
             .without[FlexibleComponent[1]]()
         )
 
-    fn update(
-        self,
-    ) raises:
+    fn update(self) raises:
         for entity in self._query:
             f = entity.get_ptr[FlexibleComponent[0]]()
             f[].x += 1
+
+
+trait System(CollectionElement):
+    fn update(self) raises:
+        ...
 
 
 fn test_query_in_system() raises:
     world = SmallWorld()
     sys1 = QueryOwner(Pointer.address_of(world))
     sys2 = QueryOwner(Pointer.address_of(world))
+
+    sys = Systems(sys1, sys2)
 
     c0 = FlexibleComponent[0](1.0, 2.0)
 
