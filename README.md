@@ -128,15 +128,15 @@ this issue is insignificant. The problem will be fixed as soon as possible.
 
 The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
 In the near future, Larecs🌲 will take the following steps:
-- Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
-- Improve the documentation
-- Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
-- Add further options to filter entities (e.g. "does not have component").
-- Add possibilities for parallel execution
-- Add GPU support 
-- Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
-- Fix the dictionary issue mentioned above.
-- Add a versioning scheme.
+- [ ] Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
+- [ ] Improve the documentation
+- [ ] Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
+- [x] Add further options to filter entities (e.g. "does not have component").
+- [ ] Add possibilities for parallel execution
+- [ ] Add GPU support 
+- [ ] Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
+- [ ] Fix the dictionary issue mentioned above.
+- [ ] Add a versioning scheme.
 
 ## License
 

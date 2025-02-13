@@ -14,14 +14,14 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .query import _EntityIterator
+from .query import Query, _EntityIterator
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
 
 
 @value
 struct Replacer[
-    mut: MutableOrigin,
+    world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
@@ -33,14 +33,14 @@ struct Replacer[
     in one go.
 
     Parameters:
-        mut: The mutability of the world.
+        world_origin: The mutale origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
         resources_type: The type of the resource container.
     """
 
     var _world: Pointer[
-        World[*component_types, resources_type=resources_type], mut
+        World[*component_types, resources_type=resources_type], world_origin
     ]
     var _remove_ids: InlineArray[
         World[*component_types, resources_type=resources_type].Id, size
@@ -111,6 +111,19 @@ struct World[
     alias component_manager = ComponentManager[*component_types]()
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
+    ]
+    alias Query = Query[
+        _,
+        *component_types,
+        resources_type=resources_type,
+        has_without_mask=False,
+    ]
+
+    alias Iterator = _EntityIterator[
+        _,
+        _,
+        *component_types,
+        component_manager = Self.component_manager,
     ]
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
@@ -1026,56 +1039,73 @@ struct World[
     @always_inline
     fn query(
         mut self,
-        out iterator: _EntityIterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
-        ],
-    ) raises:
+        out iterator: Self.Query[__origin_of(self)],
+    ):
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] without components.
+        Returns an [..query.Query] for all [..entity.Entity Entities] without components.
 
         Returns:
-            An iterator with accessors to all entities without components.
-
-        Raises:
-            Error: If the world is [.World.is_locked locked].
+            A [..query.Query] for all entities without components.
         """
-        iterator = _EntityIterator(
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
+        iterator = Self.Query(
+            Pointer.address_of(self),
             BitMask(),
         )
 
     @always_inline
     fn query[
         *Ts: ComponentType
-    ](
-        mut self,
-        out iterator: _EntityIterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
-        ],
-    ) raises:
+    ](mut self, out iterator: Self.Query[__origin_of(self)],):
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
+        Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
 
         Parameters:
             Ts: The types of the components.
 
         Returns:
-            An iterator with accessors to all entities with the given components.
-
-        Raises:
-            Error: If the world is [.World.is_locked locked].
+            A [..query.Query] for all entities with the given components.
         """
-        iterator = _EntityIterator(
+        iterator = Self.Query(
+            Pointer.address_of(self),
+            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+        )
+
+    fn _get_iterator[
+        has_without_mask: Bool = False
+    ](
+        mut self,
+        owned mask: BitMask,
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            has_without_mask=has_without_mask,
+        ],
+    ) raises:
+        iterator = _EntityIterator[has_without_mask=has_without_mask](
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
+            mask,
+        )
+
+    fn _get_iterator[
+        has_without_mask: Bool = True
+    ](
+        mut self,
+        owned mask: BitMask,
+        owned without_mask: BitMask,
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            has_without_mask=has_without_mask,
+        ],
+    ) raises:
+        iterator = _EntityIterator[has_without_mask=has_without_mask].__init__[
+            True
+        ](
+            Pointer.address_of(self._archetypes),
+            Pointer.address_of(self._locks),
+            mask,
+            without_mask,
         )
 
     @always_inline

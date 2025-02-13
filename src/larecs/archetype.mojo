@@ -86,7 +86,7 @@ struct EntityAccessor[
     @always_inline
     fn has[T: ComponentType](self) -> Bool:
         """
-        Returns whether an [Entity] has a given component.
+        Returns whether an [..entity.Entity] has a given component.
         """
         return self._archetype[].has_component[T]()
 

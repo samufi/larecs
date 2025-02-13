@@ -73,6 +73,7 @@ Exports:
  - resource.Resources
  - resource.NoResource
  - entity.Entity
+ - query.Query
 """
 from .world import World
 from .component import ComponentType
@@ -80,3 +81,4 @@ from .archetype import MutableEntityAccessor
 from .resource import Resources
 from .resource import NoResource
 from .entity import Entity
+from .query import Query

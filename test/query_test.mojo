@@ -1,6 +1,7 @@
 from testing import *
 from larecs.test_utils import *
-from larecs.entity import Entity
+from larecs import Entity, Query
+from larecs.resource import ResourceContaining
 
 
 def test_query_length():
@@ -97,11 +98,12 @@ def test_query_length():
     assert_equal(len(world.query()), 5 * n)
 
     iterator = world.query[FlexibleComponent[0]]()
-    size = len(iterator)
-    while iterator.__has_next__():
-        _ = iterator.__next__()
+    iter = iterator.__iter__()
+    size = len(iter)
+    while iter.__has_next__():
+        _ = iter.__next__()
         size -= 1
-        assert_equal(size, len(iterator))
+        assert_equal(size, len(iter))
 
 
 def test_query_result_ids():
@@ -203,6 +205,113 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
+fn test_query_empty() raises:
+    world = SmallWorld()
+    query = world.query[FlexibleComponent[0]]()
+    cnt = 0
+    for entity in query:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_true(world.is_locked())
+        cnt += 1
+    assert_equal(cnt, 0)
+
+
+def test_query_without():
+    world = SmallWorld()
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    n = 10
+
+    for _ in range(n):
+        _ = world.add_entity(c0)
+        _ = world.add_entity(c0, c1)
+        _ = world.add_entity(c0, c1, c2)
+        _ = world.add_entity(c2)
+
+    query = world.query[FlexibleComponent[0]]().without[FlexibleComponent[1]]()
+    query2 = world.query[FlexibleComponent[0]]()
+
+    count = 0
+    for entity in query:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        assert_true(world.is_locked())
+        count += 1
+    assert_equal(count, n)
+    assert_false(world.is_locked())
+
+    for entity in query2:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_true(world.is_locked())
+
+    for _ in range(n):
+        _ = world.add_entity(c0, c2)
+
+    count = 0
+    for entity in query:
+        assert_true(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        assert_true(world.is_locked())
+        count += 1
+    assert_equal(count, 2 * n)
+
+    assert_false(world.is_locked())
+
+
+struct QueryOwner[
+    world_origin: MutableOrigin,
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+]:
+    alias WorldPointer = Pointer[
+        World[*component_types, resources_type=resources_type], world_origin
+    ]
+    alias Query = Query[
+        world_origin,
+        *component_types,
+        resources_type=resources_type,
+    ]
+
+    var _query: Self.Query[has_without_mask=True]
+
+    fn __init__(
+        world: Self.WorldPointer,
+        out self,
+    ) raises:
+        self._query = (
+            world[]
+            .query[FlexibleComponent[0]]()
+            .without[FlexibleComponent[1]]()
+        )
+
+    fn update(self) raises:
+        for entity in self._query:
+            f = entity.get_ptr[FlexibleComponent[0]]()
+            f[].x += 1
+
+
+fn test_query_in_system() raises:
+    world = SmallWorld()
+    sys1 = QueryOwner(Pointer.address_of(world))
+    sys2 = QueryOwner(Pointer.address_of(world))
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+
+    n = 10
+    for _ in range(n):
+        _ = world.add_entity(c0)
+
+    for _ in range(10):
+        sys1.update()
+        sys2.update()
+
+    for entity in world.query[FlexibleComponent[0]]():
+        f = entity.get_ptr[FlexibleComponent[0]]()
+        assert_equal(f[].x, 21)
+
+
 def test_query_lock():
     world = SmallWorld()
 
@@ -256,6 +365,8 @@ def run_all_query_tests():
     test_query_length()
     test_query_get_set()
     test_query_has_component()
+    test_query_empty()
+    test_query_without()
 
 
 def main():
