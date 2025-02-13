@@ -1040,15 +1040,12 @@ struct World[
     fn query(
         mut self,
         out iterator: Self.Query[__origin_of(self)],
-    ) raises:
+    ):
         """
         Returns an [..query.Query] for all [..entity.Entity Entities] without components.
 
         Returns:
             A [..query.Query] for all entities without components.
-
-        Raises:
-            Error: If the world is [.World.is_locked locked].
         """
         iterator = Self.Query(
             Pointer.address_of(self),
@@ -1058,7 +1055,7 @@ struct World[
     @always_inline
     fn query[
         *Ts: ComponentType
-    ](mut self, out iterator: Self.Query[__origin_of(self)],) raises:
+    ](mut self, out iterator: Self.Query[__origin_of(self)],):
         """
         Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
 
@@ -1067,9 +1064,6 @@ struct World[
 
         Returns:
             A [..query.Query] for all entities with the given components.
-
-        Raises:
-            Error: If the world is [.World.is_locked locked].
         """
         iterator = Self.Query(
             Pointer.address_of(self),

@@ -99,7 +99,7 @@ struct Query[
         """
         constrained[
             Self.has_without_mask,
-            "without_mask provided",
+            "has_without_mask is True, but no without_mask is provided.",
         ]()
         self._world = world
         self._mask = mask^
@@ -147,7 +147,7 @@ struct Query[
     @always_inline
     fn without[
         *Ts: ComponentType
-    ](owned self, out result: Self.QueryWithWithout) raises:
+    ](owned self, out result: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
