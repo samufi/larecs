@@ -177,6 +177,34 @@ struct Query[
             BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
         )
 
+    @always_inline
+    fn exclusive(owned self, out result: Self.QueryWithWithout) raises:
+        """
+        Makes the query only match entities with exactly the query's components.
+
+        ```mojo {doctest="query_without" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        ```
+
+        ```mojo {doctest="query_without"}
+        world = World[Float64, Float32, Int](Resources())
+        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
+        _ = world.add_entity(Float64(1.0), 3)
+
+        for entity in world.query[Float64, Int]().exclusive():
+            f = entity.get_ptr[Float64]()
+            f[] += 1
+        ```
+
+        Returns:
+            The query, made exclusive.
+        """
+        result = Self.QueryWithWithout(
+            self._world,
+            self._mask,
+            self._mask.invert(),
+        )
+
 
 struct _EntityIterator[
     archetype_mutability: Bool, //,
