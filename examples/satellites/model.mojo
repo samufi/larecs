@@ -32,13 +32,13 @@ fn main() raises:
     var movement = MovementSystem[
         __origin_of(world), Position, Velocity, resources_type=Resources
     ](Pointer.address_of(world))
-    # var acceleration = MovementSystem[
-    #    __origin_of(world), Position, Velocity, resources_type=Resources
-    # ](Pointer.address_of(world))
+    var acceleration = MovementSystem[
+        __origin_of(world), Position, Velocity, resources_type=Resources
+    ](Pointer.address_of(world))
 
     var systems = List[System[Position, Velocity, resources_type=Resources]](
         movement.as_system(),
-        #    acceleration.as_system(),
+        acceleration.as_system(),
     )
     for sys in systems:
         sys[].update()
@@ -65,6 +65,6 @@ fn main() raises:
     print("Done")
 
     _ = movement
-    # _ = acceleration
+    _ = acceleration
 
     plt.show(block=True)
