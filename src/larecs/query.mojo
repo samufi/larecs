@@ -178,7 +178,7 @@ struct Query[
         )
 
     @always_inline
-    fn exclusive(owned self, out result: Self.QueryWithWithout) raises:
+    fn exclusive(owned self, out result: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
