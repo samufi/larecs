@@ -29,10 +29,10 @@ fn main() raises:
     world = World(Resources())
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))
 
-    var systems = List[System[Position, Velocity, resources_type=Resources]]()
-
     var sys = MovementSystem[Position, Velocity, resources_type=Resources]()
-    systems.append(sys.as_system())
+    var systems = List[System[Position, Velocity, resources_type=Resources]](
+        sys.as_system()
+    )
 
     add_satellites(world, 50)
     plt = Python.import_module("matplotlib.pyplot")
@@ -54,5 +54,7 @@ fn main() raises:
         fig.canvas.flush_events()
 
     print("Done")
+
+    _ = sys
 
     plt.show(block=True)
