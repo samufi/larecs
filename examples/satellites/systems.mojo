@@ -33,14 +33,15 @@ struct System[
     ]
 
     var impl: OpaquePointer
-    var update_fn: fn (ptr: OpaquePointer, mut world: Self.World) raises -> None
+    var update_fn: fn (ptr: OpaquePointer) raises -> None
 
-    fn update(self, mut world: Self.World) raises:
-        self.update_fn(self.impl, world)
+    fn update(self) raises:
+        self.update_fn(self.impl)
 
 
 @value
 struct MovementSystem[
+    origin: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
 ]:
@@ -53,10 +54,12 @@ struct MovementSystem[
         resources_type=resources_type,
     ]
 
-    fn update(self, mut world: Self.World) raises:
-        parameters = world.resources.get_ptr[Parameters]()
+    var world: Pointer[Self.World, origin]
 
-        for entity in world.query[Position, Velocity]():
+    fn update(self) raises:
+        parameters = self.world[].resources.get_ptr[Parameters]()
+
+        for entity in self.world[].query[Position, Velocity]():
             position = entity.get_ptr[Position]()
             velocity = entity.get_ptr[Velocity]()
 
@@ -66,22 +69,37 @@ struct MovementSystem[
     fn as_system(
         self,
     ) -> Self.System:
-        fn _update(ptr: OpaquePointer, mut world: Self.World) raises:
-            ptr.bitcast[Self]()[].update(world)
+        fn _update(ptr: OpaquePointer) raises:
+            ptr.bitcast[Self]()[].update()
 
-        return System(
+        return Self.System(
             impl=UnsafePointer.address_of(self).bitcast[NoneType](),
             update_fn=_update,
         )
 
 
 @value
-struct AccelerationSystem:
-    fn update(self, mut world: World) raises:
-        parameters = world.resources.get_ptr[Parameters]()
+struct AccelerationSystem[
+    origin: MutableOrigin,
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+]:
+    alias World = World[
+        *component_types,
+        resources_type=resources_type,
+    ]
+    alias System = System[
+        *component_types,
+        resources_type=resources_type,
+    ]
+
+    var world: Pointer[Self.World, origin]
+
+    fn update(self) raises:
+        parameters = self.world[].resources.get_ptr[Parameters]()
         constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
 
-        for entity in world.query[Position, Velocity]():
+        for entity in self.world[].query[Position, Velocity]():
             position = entity.get[Position]()
             velocity = entity.get_ptr[Velocity]()
 
@@ -91,6 +109,17 @@ struct AccelerationSystem:
 
             velocity[].x += position.x * multiplier
             velocity[].y += position.y * multiplier
+
+    fn as_system(
+        self,
+    ) -> Self.System:
+        fn _update(ptr: OpaquePointer) raises:
+            ptr.bitcast[Self]()[].update()
+
+        return Self.System(
+            impl=UnsafePointer.address_of(self).bitcast[NoneType](),
+            update_fn=_update,
+        )
 
 
 fn get_random_position() -> Position:

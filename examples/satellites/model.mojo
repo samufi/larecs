@@ -29,10 +29,19 @@ fn main() raises:
     world = World(Resources())
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))
 
-    var sys = MovementSystem[Position, Velocity, resources_type=Resources]()
+    var movement = MovementSystem[
+        __origin_of(world), Position, Velocity, resources_type=Resources
+    ](Pointer.address_of(world))
+    # var acceleration = MovementSystem[
+    #    __origin_of(world), Position, Velocity, resources_type=Resources
+    # ](Pointer.address_of(world))
+
     var systems = List[System[Position, Velocity, resources_type=Resources]](
-        sys.as_system()
+        movement.as_system(),
+        #    acceleration.as_system(),
     )
+    for sys in systems:
+        sys[].update()
 
     add_satellites(world, 50)
     plt = Python.import_module("matplotlib.pyplot")
@@ -55,6 +64,7 @@ fn main() raises:
 
     print("Done")
 
-    _ = sys
+    _ = movement
+    # _ = acceleration
 
     plt.show(block=True)
