@@ -27,13 +27,6 @@ struct Query[
         has_without_mask=True,
     ]
 
-    alias Iterator = _EntityIterator[
-        _,
-        _,
-        *component_types,
-        component_manager = Self.World.component_manager,
-    ]
-
     var _world: Pointer[Self.World, world_origin]
     var _mask: BitMask
     var _without_mask: BitMask
@@ -68,7 +61,7 @@ struct Query[
         """
         constrained[
             not Self.has_without_mask,
-            "No without_mask provided",
+            "has_without_mask is True, but no without_mask is provided.",
         ]()
         self._world = world
         self._mask = mask^
@@ -125,7 +118,7 @@ struct Query[
     @always_inline
     fn __iter__(
         self,
-        out iterator: self.Iterator[
+        out iterator: self.World.Iterator[
             __origin_of(self._world[]._archetypes),
             __origin_of(self._world[]._locks),
             has_without_mask = Self.has_without_mask,
@@ -244,7 +237,7 @@ struct _EntityIterator[
 
         constrained[
             not Self.has_without_mask,
-            "No without_mask provided",
+            "has_without_mask is True, but no without_mask is provided.",
         ]()
         self = Self.__init__[False](
             archetypes,

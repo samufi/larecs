@@ -118,6 +118,13 @@ struct World[
         resources_type=resources_type,
         has_without_mask=False,
     ]
+
+    alias Iterator = _EntityIterator[
+        _,
+        _,
+        *component_types,
+        component_manager = Self.component_manager,
+    ]
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
     # _tarquery bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
@@ -1035,15 +1042,15 @@ struct World[
         out iterator: Self.Query[__origin_of(self)],
     ) raises:
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] without components.
+        Returns an [..query.Query] for all [..entity.Entity Entities] without components.
 
         Returns:
-            An iterator with accessors to all entities without components.
+            A [..query.Query] for all entities without components.
 
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query[has_without_mask=False](
+        iterator = Self.Query(
             Pointer.address_of(self),
             BitMask(),
         )
@@ -1053,32 +1060,30 @@ struct World[
         *Ts: ComponentType
     ](mut self, out iterator: Self.Query[__origin_of(self)],) raises:
         """
-        Returns an iterator with accessors to all [..entity.Entity Entities] with the given components.
+        Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
 
         Parameters:
             Ts: The types of the components.
 
         Returns:
-            An iterator with accessors to all entities with the given components.
+            A [..query.Query] for all entities with the given components.
 
         Raises:
             Error: If the world is [.World.is_locked locked].
         """
-        iterator = Query[has_without_mask=False](
+        iterator = Self.Query(
             Pointer.address_of(self),
             BitMask(Self.component_manager.get_id_arr[*Ts]()),
         )
 
     fn _get_iterator[
-        has_without_mask: Bool
+        has_without_mask: Bool = False
     ](
         mut self,
         owned mask: BitMask,
-        out iterator: _EntityIterator[
+        out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
             has_without_mask=has_without_mask,
         ],
     ) raises:
@@ -1089,16 +1094,14 @@ struct World[
         )
 
     fn _get_iterator[
-        has_without_mask: Bool
+        has_without_mask: Bool = True
     ](
         mut self,
         owned mask: BitMask,
-        owned without_mask: Optional[BitMask],
-        out iterator: _EntityIterator[
+        owned without_mask: BitMask,
+        out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            *component_types,
-            component_manager = Self.component_manager,
             has_without_mask=has_without_mask,
         ],
     ) raises:
@@ -1108,7 +1111,7 @@ struct World[
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
-            without_mask.or_else(BitMask()),
+            without_mask,
         )
 
     @always_inline
