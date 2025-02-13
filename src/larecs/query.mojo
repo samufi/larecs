@@ -18,7 +18,7 @@ struct Query[
 ]:
     """Query builder for entities with and without specific components.
 
-    This type not be used directly, but through the [..world.World.query] method:
+    This type should not be used directly, but through the [..world.World.query] method:
 
     ```mojo {doctest="query_init" global=true hide=true}
     from larecs import World, Resources, MutableEntityAccessor
