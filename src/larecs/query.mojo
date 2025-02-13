@@ -16,7 +16,24 @@ struct Query[
     resources_type: ResourceContaining,
     has_without_mask: Bool,
 ]:
-    """Query builder for entities with and without specific components."""
+    """Query builder for entities with and without specific components.
+
+    This type should not be used directly, but through the [..world.World.query] method:
+
+    ```mojo {doctest="query_init" global=true hide=true}
+    from larecs import World, Resources, MutableEntityAccessor
+    ```
+
+    ```mojo {doctest="query_init"}
+    world = World[Float64, Float32, Int](Resources())
+    _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
+    _ = world.add_entity(Float64(1.0), 3)
+
+    for entity in world.query[Float64, Int]():
+        f = entity.get_ptr[Float64]()
+        f[] += 1
+    ```
+    """
 
     alias World = World[*component_types, resources_type=resources_type]
 
@@ -39,21 +56,7 @@ struct Query[
         """
         Creates a new query.
 
-        This should not be used directly, but through the [..world.World.query] method:
-
-        ```mojo {doctest="query_init" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
-        ```
-
-        ```mojo {doctest="query_init"}
-        world = World[Float64, Float32, Int](Resources())
-        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
-        _ = world.add_entity(Float64(1.0), 3)
-
-        for entity in world.query[Float64, Int]():
-            f = entity.get_ptr[Float64]()
-            f[] += 1
-        ```
+        The constructors should not be used directly, but through the [..world.World.query] method.
 
         Args:
             world: A pointer to the world.
@@ -76,21 +79,7 @@ struct Query[
         """
         Creates a new query.
 
-        This should not be used directly, but through the [..world.World.query] method:
-
-        ```mojo {doctest="query_init" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
-        ```
-
-        ```mojo {doctest="query_init"}
-        world = World[Float64, Float32, Int](Resources())
-        _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
-        _ = world.add_entity(Float64(1.0), 3)
-
-        for entity in world.query[Float64, Int]():
-            f = entity.get_ptr[Float64]()
-            f[] += 1
-        ```
+        The constructors should not be used directly, but through the [..world.World.query] method.
 
         Args:
             world: A pointer to the world.
@@ -107,7 +96,7 @@ struct Query[
 
     fn __len__(self) raises -> Int:
         """
-        Returns the number of entities remaining in the iterator.
+        Returns the number of entities matching the query.
 
         Note that this requires the creation of an iterator from the query.
         If you intend to iterate anyway, get the iterator with [.Query.__iter__],
