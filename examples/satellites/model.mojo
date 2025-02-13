@@ -1,21 +1,38 @@
-from larecs import World, Resources
+from larecs import World as LxWorld, Resources as LxResources
+from larecs.resource import ResourceContaining
 from parameters import Parameters
-from systems import move, accellerate, add_satellites, position_to_numpy
+from systems import (
+    System,
+    MovementSystem,
+    AccelerationSystem,
+    add_satellites,
+    position_to_numpy,
+)
 from components import Position, Velocity
 from python import Python
-from sys import argv
+from collections import List
+from sys.ffi import OpaquePointer
 
 
-fn update(mut world: World, step: Float64) raises:
+fn update(mut world: LxWorld, step: Float64) raises:
     for _ in range(Int(step / world.resources.get_ptr[Parameters]()[].dt)):
-        move(world)
-        accellerate(world)
+        pass
+        # for s in sys:
+        #    s.update(World)
+
+
+alias Resources = LxResources[Parameters]
+alias World = LxWorld[Position, Velocity, resources_type=Resources]
 
 
 fn main() raises:
-    world = World[Position, Velocity](Resources[Parameters]())
-
+    world = World(Resources())
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))
+
+    var systems = List[System[Position, Velocity, resources_type=Resources]]()
+
+    var sys = MovementSystem[Position, Velocity, resources_type=Resources]()
+    systems.append(sys.as_system())
 
     add_satellites(world, 50)
     plt = Python.import_module("matplotlib.pyplot")

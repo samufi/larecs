@@ -1,11 +1,17 @@
 from random import random
-from larecs import World
+from larecs import World, ComponentType
+from larecs.resource import ResourceContaining
 from components import Position, Velocity
 from parameters import Parameters, GRAVITATIONAL_CONSTANT
 from python import PythonObject, Python
+from sys.ffi import OpaquePointer
+from memory import UnsafePointer
 
 
-fn move(mut world: World) raises:
+fn move[
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+](mut world: World[*component_types, resources_type=resources_type,]) raises:
     parameters = world.resources.get_ptr[Parameters]()
 
     for entity in world.query[Position, Velocity]():
@@ -16,18 +22,75 @@ fn move(mut world: World) raises:
         position[].y += velocity[].y * parameters[].dt
 
 
-fn accellerate(mut world: World) raises:
-    parameters = world.resources.get_ptr[Parameters]()
-    constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
+@value
+struct System[
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+](CollectionElement):
+    alias World = World[
+        *component_types,
+        resources_type=resources_type,
+    ]
 
-    for entity in world.query[Position, Velocity]():
-        position = entity.get[Position]()
-        velocity = entity.get_ptr[Velocity]()
+    var impl: OpaquePointer
+    var update_fn: fn (ptr: OpaquePointer, mut world: Self.World) raises -> None
 
-        multiplier = constant * (position.x**2 + position.y**2) ** (-1.5)
+    fn update(self, mut world: Self.World) raises:
+        self.update_fn(self.impl, world)
 
-        velocity[].x += position.x * multiplier
-        velocity[].y += position.y * multiplier
+
+@value
+struct MovementSystem[
+    *component_types: ComponentType,
+    resources_type: ResourceContaining,
+]:
+    alias World = World[
+        *component_types,
+        resources_type=resources_type,
+    ]
+    alias System = System[
+        *component_types,
+        resources_type=resources_type,
+    ]
+
+    fn update(self, mut world: Self.World) raises:
+        parameters = world.resources.get_ptr[Parameters]()
+
+        for entity in world.query[Position, Velocity]():
+            position = entity.get_ptr[Position]()
+            velocity = entity.get_ptr[Velocity]()
+
+            position[].x += velocity[].x * parameters[].dt
+            position[].y += velocity[].y * parameters[].dt
+
+    fn as_system(
+        self,
+    ) -> Self.System:
+        fn _update(ptr: OpaquePointer, mut world: Self.World) raises:
+            ptr.bitcast[Self]()[].update(world)
+
+        return System(
+            impl=UnsafePointer.address_of(self).bitcast[NoneType](),
+            update_fn=_update,
+        )
+
+
+@value
+struct AccelerationSystem:
+    fn update(self, mut world: World) raises:
+        parameters = world.resources.get_ptr[Parameters]()
+        constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
+
+        for entity in world.query[Position, Velocity]():
+            position = entity.get[Position]()
+            velocity = entity.get_ptr[Velocity]()
+
+            multiplier = constant * (position.x**2 + position.y**2) ** (
+                -1.5
+            )
+
+            velocity[].x += position.x * multiplier
+            velocity[].y += position.y * multiplier
 
 
 fn get_random_position() -> Position:
