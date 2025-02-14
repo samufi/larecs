@@ -48,6 +48,7 @@ struct Query[
     var _mask: BitMask
     var _without_mask: BitMask
 
+    @doc_private
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
@@ -70,6 +71,7 @@ struct Query[
         self._mask = mask^
         self._without_mask = BitMask()
 
+    @doc_private
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
@@ -136,7 +138,7 @@ struct Query[
     @always_inline
     fn without[
         *Ts: ComponentType
-    ](owned self, out result: Self.QueryWithWithout):
+    ](owned self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -160,14 +162,14 @@ struct Query[
         Returns:
             The query, exclusing the given components.
         """
-        result = Self.QueryWithWithout(
+        query = Self.QueryWithWithout(
             self._world,
             self._mask,
             BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
         )
 
     @always_inline
-    fn exclusive(owned self, out result: Self.QueryWithWithout):
+    fn exclusive(owned self, out query: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
@@ -188,7 +190,7 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
-        result = Self.QueryWithWithout(
+        query = Self.QueryWithWithout(
             self._world,
             self._mask,
             self._mask.invert(),
