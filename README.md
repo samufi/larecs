@@ -7,8 +7,8 @@ It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented 
 ## Features
 
 - Clean and simple API
-- High performance due to Archetype-based architecture and extensive use of Mojo's compile-time programming tools
-- Support for SIMD computing via a [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/)-like syntax
+- High performance due to archetypes and Mojo's compile-time programming
+- Support for SIMD via a [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/)-like syntax
 - Compile-time checks thanks to usage of parameters
 - Native support for [resources](https://mlange-42.github.io/arche/guide/resources/)
 - Tested and benchmarked
