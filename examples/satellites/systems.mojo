@@ -5,17 +5,20 @@ from parameters import Parameters, GRAVITATIONAL_CONSTANT
 from python import PythonObject, Python
 
 
-fn move(mut world: World, parameters: Parameters) raises:
+fn move(mut world: World) raises:
+    parameters = world.resources.get_ptr[Parameters]()
+
     for entity in world.query[Position, Velocity]():
         position = entity.get_ptr[Position]()
         velocity = entity.get_ptr[Velocity]()
 
-        position[].x += velocity[].x * parameters.dt
-        position[].y += velocity[].y * parameters.dt
+        position[].x += velocity[].x * parameters[].dt
+        position[].y += velocity[].y * parameters[].dt
 
 
-fn accellerate(mut world: World, parameters: Parameters) raises:
-    constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
+fn accellerate(mut world: World) raises:
+    parameters = world.resources.get_ptr[Parameters]()
+    constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
 
     for entity in world.query[Position, Velocity]():
         position = entity.get[Position]()
