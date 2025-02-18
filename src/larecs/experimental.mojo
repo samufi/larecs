@@ -1,5 +1,5 @@
 from collections import Dict, Optional, InlineArray
-from memory import memcpy, OwnedPointer, UnsafePointer
+from memory import memcpy, memset_zero, OwnedPointer, UnsafePointer
 from sys.info import sizeof
 
 from .bitmask import BitMask
@@ -85,15 +85,30 @@ struct Resources:
         # TODO: anything else?
 
     fn add[T: Resource](mut self, owned resource: T) raises:
+        self._set_or_add[True, T](resource^)
+
+    fn set[T: Resource](mut self, owned resource: T) raises:
+        self._set_or_add[False, T](resource^)
+
+    fn _set_or_add[
+        add_new: Bool, T: Resource
+    ](mut self, owned resource: T) raises:
         id_new = self._get_or_register_id[T]()
         id = id_new[0]
         is_new = id_new[1]
 
-        if not is_new:
-            raise Error(
-                "resource is already present. replacing resources is not yet"
-                " supported"
-            )
+        if add_new:
+            if not is_new:
+                raise Error(
+                    "can't add resource {}: resource is already registered"
+                    .format(id)
+                )
+        else:
+            if self._initialized_flags[id]:
+                raise Error(
+                    "can't set resource {}: already present, remove it first"
+                    .format(id)
+                )
 
         wrapper = _ResourceWrapper(resource^)
         unsafe_ptr = UnsafePointer[_ResourceWrapper[T]]().alloc(1)
@@ -136,6 +151,9 @@ struct Resources:
         self._destructors[id]()
         self._initialized_flags[id] = False
         self._get_ptr[T](id).__del__()
+
+        # TODO: should we zero the memory?
+        memset_zero(self._get_unsafe_ptr(id), Self.wrapper_size)
 
     fn _get_id[T: Resource](self) raises -> ResId:
         if T.ID in self._lookup:

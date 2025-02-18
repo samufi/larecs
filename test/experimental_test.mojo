@@ -47,8 +47,18 @@ fn test_resources() raises:
     r.remove[ListResource]()
     assert_false(r.has[ListResource]())
 
+    print("set")
+    r.set(ListResource(100))
+    assert_true(r.has[ListResource]())
+
+    print("remove")
+    r.remove[ListResource]()
+    assert_false(r.has[ListResource]())
+
     print("last access")
     assert_equal(len(r), 2)
 
     print("end")
-    raise Error()
+
+    # Raise an error to get print output.
+    # raise Error()
