@@ -393,7 +393,9 @@ struct _EntityIterator[
         self._entity_index = 0
         self._buffer_index += 1
         self._current_archetype = Pointer.address_of(
-            self._archetypes[][self._archetype_index_buffer[self._buffer_index]]
+            self._archetypes[].unsafe_get(
+                index(self._archetype_index_buffer[self._buffer_index])
+            )
         )
         self._archetype_size = len(self._current_archetype[])
         if self._buffer_index >= Self.buffer_size - 1:
@@ -444,7 +446,11 @@ struct _EntityIterator[
             self._buffer_index + 1 % Self.buffer_size,
             min(self._max_buffer_index + 1, Self.buffer_size),
         ):
-            size += len(self._archetypes[][self._archetype_index_buffer[i]])
+            size += len(
+                self._archetypes[].unsafe_get(
+                    index(self._archetype_index_buffer[i])
+                )
+            )
 
         # If all remaining archetypes were in the buffer, we
         # can return the size.
@@ -471,7 +477,7 @@ struct _EntityIterator[
                 )
 
             if is_valid:
-                size += len(self._archetypes[][i])
+                size += len(self._archetypes[].unsafe_get(i))
 
         return size
 

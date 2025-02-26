@@ -357,7 +357,9 @@ struct World[
         entity = self._create_entity(archetype_index)
         index_in_archetype = self._entities[entity.get_id()].index
 
-        archetype = Pointer.address_of(self._archetypes[archetype_index])
+        archetype = Pointer.address_of(
+            self._archetypes.unsafe_get(archetype_index)
+        )
 
         @parameter
         for i in range(size):
@@ -384,7 +386,7 @@ struct World[
         Creates an Entity and adds it to the given archetype.
         """
         entity = self._entity_pool.get()
-        idx = self._archetypes[archetype_index].add(entity)
+        idx = self._archetypes.unsafe_get(archetype_index).add(entity)
         if entity.get_id() == len(self._entities):
             self._entities.append(EntityIndex(idx, archetype_index))
         else:
@@ -397,7 +399,7 @@ struct World[
         """
         Creates multiple Entities and adds them to the given archetype.
         """
-        archetype = self._archetypes[archetype_index]
+        archetype = self._archetypes.unsafe_get(archetype_index)
         arch_start_idx = archetype.extend(count, self._entity_pool)
         last_entity_id = archetype.get_entity(arch_start_idx + count).get_id()
         if last_entity_id > len(self._entities):
@@ -427,7 +429,7 @@ struct World[
         idx = self._entities[entity.get_id()]
         old_archetype_index = idx.archetype_index
         old_archetype = Pointer.address_of(
-            self._archetypes[old_archetype_index]
+            self._archetypes.unsafe_get(index(old_archetype_index))
         )
 
         # if self._listener != nil:
@@ -479,9 +481,9 @@ struct World[
             Error: If the entity does not exist.
         """
         self._assert_alive(entity)
-        return self._archetypes[
-            self._entities[entity.get_id()].archetype_index
-        ].has_component(Self.component_manager.get_id[T]())
+        return self._archetypes.unsafe_get(
+            index(self._entities[entity.get_id()].archetype_index)
+        ).has_component(Self.component_manager.get_id[T]())
 
     fn get[
         T: ComponentType
@@ -497,9 +499,9 @@ struct World[
         entity_index = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        return self._archetypes[entity_index.archetype_index].get_component[
-            T=T
-        ](entity_index.index)
+        return self._archetypes.unsafe_get(
+            index(entity_index.archetype_index)
+        ).get_component[T=T](entity_index.index)
 
     @always_inline
     fn get_ptr[
@@ -520,9 +522,9 @@ struct World[
         """
         entity_index = self._entities[entity.get_id()]
         self._assert_alive(entity)
-        return self._archetypes[entity_index.archetype_index].get_component_ptr[
-            T=T
-        ](entity_index.index)
+        return self._archetypes.unsafe_get(
+            index(entity_index.archetype_index)
+        ).get_component_ptr[T=T](entity_index.index)
 
     fn set[
         T: ComponentType
@@ -542,9 +544,9 @@ struct World[
         """
         self._assert_alive(entity)
         entity_index = self._entities[entity.get_id()]
-        self._archetypes[entity_index.archetype_index].get_component[T=T](
-            entity_index.index
-        ) = (component^)
+        self._archetypes.unsafe_get(
+            index(entity_index.archetype_index)
+        ).get_component[T=T](entity_index.index) = (component^)
 
     fn set[
         *Ts: ComponentType
@@ -567,7 +569,7 @@ struct World[
         self._assert_alive(entity)
         entity_index = self._entities[entity.get_id()]
         archetype = Pointer.address_of(
-            self._archetypes[entity_index.archetype_index]
+            self._archetypes.unsafe_get(index(entity_index.archetype_index))
         )
 
         @parameter
@@ -719,7 +721,7 @@ struct World[
 
         old_archetype_index = idx.archetype_index
         old_archetype = Pointer.address_of(
-            self._archetypes[old_archetype_index]
+            self._archetypes.unsafe_get(index(old_archetype_index))
         )
 
         index_in_old_archetype = idx.index
@@ -767,7 +769,9 @@ struct World[
                 component_ids.value(), start_node_index
             )
 
-        archetype = Pointer.address_of(self._archetypes[archetype_index])
+        archetype = Pointer.address_of(
+            self._archetypes.unsafe_get(archetype_index)
+        )
         index_in_archetype = archetype[].add(entity)
 
         @parameter
