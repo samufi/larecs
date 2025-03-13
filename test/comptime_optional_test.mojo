@@ -19,6 +19,9 @@ def test_comptime_optional_copy():
     opt_copy = opt_with_value.copy()
     assert_true(opt_copy.has_value)
     assert_equal(opt_copy.value(), 42)
+    opt_without_value = ComptimeOptional[Int, False]()
+    opt_copy_without = opt_without_value.copy()
+    opt_copy_without = opt_without_value
 
 
 @value
