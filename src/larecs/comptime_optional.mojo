@@ -59,15 +59,19 @@ struct ComptimeOptional[
         Returns:
             A copy of the value.
         """
-        return Self(self.value())
+        @parameter
+        if has_value:
+            return Self(self.value())
+        else:
+            return Self()
 
+    @always_inline
     fn __copyinit__(out self, other: Self):
         """Copy construct the optional.
 
         Args:
             other: The optional to copy.
         """
-
         self = other.copy()
 
     fn __del__(owned self):
