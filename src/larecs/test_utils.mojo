@@ -426,10 +426,7 @@ struct MemTestStruct(CollectionElement):
 fn test_copy_move_del[
     Container: CopyAndMovable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
-](
-    init_moves: Int = 0,
-    copy_moves: Int = 0,
-) raises:
+](init_moves: Int = 0, copy_moves: Int = 0,) raises:
     var del_counter = 0
     var move_counter = 0
     var copy_counter = 0
