@@ -151,7 +151,7 @@ struct ComponentManager[
 
         constrain_components_unique[*Ts]()
 
-        ids = InlineArray[Self.Id, size](unsafe_uninitialized=True)
+        ids = InlineArray[Self.Id, size](uninitialized=True)
 
         @parameter
         for i in range(size):
