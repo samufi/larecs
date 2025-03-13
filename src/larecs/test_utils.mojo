@@ -9,6 +9,10 @@ from .world import World
 from .resource import Resources
 
 
+trait CopyAndMovable(Copyable, Movable):
+    pass
+
+
 @always_inline
 fn load[
     dType: DType, //, simd_width: Int, stride: Int = 1
@@ -395,3 +399,76 @@ alias FullWorld = World[
     FlexibleComponent[252],
     resources_type=Resources,
 ]
+
+
+@value
+struct MemTestStruct(CollectionElement):
+    var copy_counter: UnsafePointer[Int]
+    var move_counter: UnsafePointer[Int]
+    var del_conuter: UnsafePointer[Int]
+
+    fn __moveinit__(out self, owned other: Self):
+        self.move_counter = other.move_counter
+        self.del_conuter = other.del_conuter
+        self.copy_counter = other.copy_counter
+        self.move_counter[] += 1
+
+    fn __copyinit__(out self, other: Self):
+        self.move_counter = other.move_counter
+        self.del_conuter = other.del_conuter
+        self.copy_counter = other.copy_counter
+        self.copy_counter[] += 1
+
+    fn __del__(owned self):
+        self.del_conuter[] += 1
+
+
+fn test_copy_move_del[
+    Container: CopyAndMovable, //,
+    container_factory: fn (owned val: MemTestStruct) -> Container,
+](
+    init_moves: Int = 0,
+    copy_moves: Int = 0,
+) raises:
+    var del_counter = 0
+    var move_counter = 0
+    var copy_counter = 0
+    var test_del_counter = 0
+    var test_move_counter = init_moves
+    var test_copy_counter = 0
+
+    container = container_factory(
+        MemTestStruct(
+            UnsafePointer.address_of(copy_counter),
+            UnsafePointer.address_of(move_counter),
+            UnsafePointer.address_of(del_counter),
+        )
+    )
+
+    assert_equal(del_counter, test_del_counter)
+    assert_equal(move_counter, test_move_counter)
+    assert_equal(copy_counter, test_copy_counter)
+
+    container2 = container
+    test_copy_counter += 1
+    test_move_counter += copy_moves
+    assert_equal(del_counter, test_del_counter)
+    assert_equal(move_counter, test_move_counter)
+    assert_equal(copy_counter, test_copy_counter)
+
+    _ = container2^
+    test_del_counter += 1
+    assert_equal(del_counter, test_del_counter)
+    assert_equal(move_counter, test_move_counter)
+    assert_equal(copy_counter, test_copy_counter)
+
+    container2 = container^
+    assert_equal(del_counter, test_del_counter)
+    assert_equal(move_counter, test_move_counter)
+    assert_equal(copy_counter, test_copy_counter)
+
+    _ = container2^
+    test_del_counter += 1
+    assert_equal(del_counter, test_del_counter)
+    assert_equal(move_counter, test_move_counter)
+    assert_equal(copy_counter, test_copy_counter)
