@@ -662,7 +662,7 @@ struct Archetype[
 
     fn extend(
         mut self,
-        count: Int,
+        count: UInt,
         mut entity_pool: EntityPool,
     ) -> Int:
         """Extends the archetype by `count` entities from the provided pool.
@@ -677,7 +677,7 @@ struct Archetype[
             `count` indices.
         """
         if self._size + count >= self._capacity:
-            self.reserve(self._capacity + count)
+            self.reserve(max(self._size + count, UInt(2) * self._capacity))
 
         self._entities.reserve(len(self._entities) + count)
         start_index = self._size

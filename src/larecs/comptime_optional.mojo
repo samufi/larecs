@@ -89,7 +89,7 @@ struct ComptimeOptional[
 
     @always_inline
     fn value(ref self) -> ref [self] Self.ElementType:
-        """Get a reference to the value
+        """Get a reference to the value.
 
         Returns:
             A reference to the value.
