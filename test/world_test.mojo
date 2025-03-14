@@ -11,15 +11,13 @@ from larecs.test_utils import *
 
 def test_add_entity():
     world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
     entity = world.add_entity()
     assert_true(entity.get_id() == 1)
     assert_false(entity.is_zero())
 
-
-def test_add_entity_with_components():
-    world = SmallWorld()
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
     entity = world.add_entity(pos, vel)
     assert_equal(world.get[Position](entity).x, pos.x)
     assert_equal(world.get[Position](entity).y, pos.y)
@@ -27,6 +25,33 @@ def test_add_entity_with_components():
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
     for _ in range(10_000):
         _ = world.add_entity(pos, vel)
+
+
+def test_add_entities():
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    i = 0
+    for entity in world.add_entity(pos, vel, count=23):
+        assert_equal(entity.get[Position]().x, pos.x)
+        assert_equal(entity.get[Position]().y, pos.y)
+        assert_equal(entity.get[Velocity]().dx, vel.dx)
+        assert_equal(entity.get[Velocity]().dy, vel.dy)
+        assert_false(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        assert_false(entity.has[FlexibleComponent[2]]())
+        i += 1
+    assert_equal(i, 23)
+
+    i = 0
+    for entity in world.add_entity(count=25):
+        assert_false(entity.has[Velocity]())
+        assert_false(entity.has[Position]())
+        assert_false(entity.has[FlexibleComponent[0]]())
+        assert_false(entity.has[FlexibleComponent[1]]())
+        assert_false(entity.has[FlexibleComponent[2]]())
+        i += 1
+    assert_equal(i, 25)
 
 
 def test_entity_get():
@@ -332,7 +357,7 @@ def test_world_apply_SIMD():
 def main():
     print("Running tests...")
     test_add_entity()
-    test_add_entity_with_components()
+    test_add_entities()
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
