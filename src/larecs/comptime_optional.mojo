@@ -29,7 +29,8 @@ struct ComptimeOptional[
     # ===------------------------------------------------------------------===#
 
     @always_inline
-    fn __init__(out self):
+    @implicit
+    fn __init__(out self, none: None = None):
         """This constructor will always cause a compile time error if used.
         It is used to steer users away from uninitialized memory.
         """
@@ -38,7 +39,7 @@ struct ComptimeOptional[
             "Initialize with a value if `has_value` is `True`",
         ]()
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
-
+    
     @always_inline
     @implicit
     fn __init__(out self, owned value: Self.ElementType):
