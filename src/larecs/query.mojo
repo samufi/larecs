@@ -8,6 +8,7 @@ from .world import World
 from .lock import LockMask
 from .resource import ResourceContaining
 from .debug_utils import debug_warn
+from .comptime_optional import ComptimeOptional
 
 
 struct Query[
@@ -204,23 +205,29 @@ struct _EntityIterator[
     *component_types: ComponentType,
     component_manager: ComponentManager[*component_types],
     has_without_mask: Bool,
+    has_start_indices: Bool = False,
 ]:
     """Iterator over all entities corresponding to a mask.
 
     Locks the world while it exisist.
 
     Parameters:
-        archetype_mutability: Whether the reference to the list is mutable.
-        archetype_origin: The lifetime of the List
-        lock_origin: The lifetime of the LockMask
+        archetype_mutability: Whether the reference to the archetypes is mutable.
+        archetype_origin: The origin of the archetypes
+        lock_origin: The origin of the LockMask
         component_types: The types of the components.
         component_manager: The component manager.
         has_without_mask: Whether the iterator has excluded components.
+        has_start_indices: Whether the iterator starts iterating the
+                           archetypes at given indices.
     """
 
     alias buffer_size = 8
     alias Archetype = _Archetype[
         *component_types, component_manager=component_manager
+    ]
+    alias StartIndices = ComptimeOptional[
+        List[UInt, hint_trivial_type=True], has_start_indices
     ]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
@@ -235,6 +242,8 @@ struct _EntityIterator[
     var _archetype_count: Int
     var _buffer_index: Int
     var _max_buffer_index: Int
+    var _start_indices: Self.StartIndices
+    var _processed_archetypes_count: ComptimeOptional[Int, has_start_indices]
 
     fn __init__(
         out self,
@@ -273,6 +282,7 @@ struct _EntityIterator[
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
         owned without_mask: BitMask,
+        owned start_indices: Self.StartIndices = None,
     ) raises:
         """
         Creates an entity iterator with or without excluded components.
@@ -282,6 +292,10 @@ struct _EntityIterator[
             lock_ptr: a pointer to the world's locks.
             mask: The mask of the components to iterate over.
             without_mask: The mask for components to exclude.
+            start_indices: The indices where the iterator starts iterating the
+                           archetypes. Caution: the index order must
+                           match the order of the archetypes that
+                           are iterated.
 
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
@@ -296,13 +310,20 @@ struct _EntityIterator[
         self._lock = self._lock_ptr[].lock()
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask
+        self._without_mask = without_mask^
+        self._start_indices = start_indices^
 
         self._entity_index = 0
         self._archetype_size = 0
         self._buffer_index = 0
         self._last_entity_index = 0
         self._max_buffer_index = Self.buffer_size
+
+        @parameter
+        if has_start_indices:
+            self._processed_archetypes_count = 0
+        else:
+            self._processed_archetypes_count = None
 
         self._current_archetype = Pointer.address_of(self._archetypes[][0])
         self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
@@ -314,9 +335,9 @@ struct _EntityIterator[
             self._buffer_index = -1
             self._next_archetype()
 
-            # We need to reset the index to -1, because the
+            # We need to reduce the index by 1, because the
             # first call to __next__ will increment it.
-            self._entity_index = -1
+            self._entity_index -= 1
 
     fn __moveinit__(
         out self,
@@ -329,6 +350,8 @@ struct _EntityIterator[
         self._lock_ptr = other._lock_ptr
         self._lock = other._lock
         self._current_archetype = other._current_archetype
+        self._start_indices = other._start_indices^
+        self._processed_archetypes_count = other._processed_archetypes_count^
 
         self._last_entity_index = other._last_entity_index
         self._entity_index = other._entity_index
@@ -390,7 +413,16 @@ struct _EntityIterator[
         """
         Moves to the next archetype.
         """
-        self._entity_index = 0
+
+        @parameter
+        if has_start_indices:
+            self._entity_index = self._start_indices.value()[
+                self._processed_archetypes_count.value()
+            ]
+            self._processed_archetypes_count.value() += 1
+        else:
+            self._entity_index = 0
+
         self._buffer_index += 1
         self._current_archetype = Pointer.address_of(
             self._archetypes[].unsafe_get(
@@ -484,6 +516,105 @@ struct _EntityIterator[
     @always_inline
     fn __has_next__(self) -> Bool:
         return self._entity_index < self._last_entity_index
+
+    @always_inline
+    fn __bool__(self) -> Bool:
+        return self.__has_next__()
+
+
+struct _ArchetypeEntityIterator[
+    archetype_mutability: Bool, //,
+    archetype_origin: Origin[archetype_mutability],
+    lock_origin: MutableOrigin,
+    *component_types: ComponentType,
+    component_manager: ComponentManager[*component_types],
+]:
+    """Iterator over all entities corresponding to a mask.
+
+    Locks the world while it exisist.
+
+    Parameters:
+        archetype_mutability: Whether the reference to the archetype is mutable.
+        archetype_origin: The origin of the archetype
+        lock_origin: The origin of the LockMask
+        component_types: The types of the components.
+        component_manager: The component manager.
+    """
+
+    alias Archetype = _Archetype[
+        *component_types, component_manager=component_manager
+    ]
+    var _archetype: Pointer[Self.Archetype, archetype_origin]
+    var _lock_ptr: Pointer[LockMask, lock_origin]
+    var _lock: UInt8
+    var _next_entity_index: Int
+    var _archetype_size: Int
+
+    fn __init__(
+        out self,
+        archetype: Pointer[Self.Archetype, archetype_origin],
+        lock_ptr: Pointer[LockMask, lock_origin],
+        start_index: Int = 0,
+    ) raises:
+        self._lock_ptr = lock_ptr
+        self._lock = self._lock_ptr[].lock()
+
+        self._next_entity_index = start_index
+        self._archetype = archetype
+        self._archetype_size = len(self._archetype[])
+
+    fn __moveinit__(
+        out self,
+        owned other: Self,
+    ):
+        self._archetype = other._archetype
+        self._lock_ptr = other._lock_ptr
+        self._lock = other._lock
+        self._next_entity_index = other._next_entity_index
+        self._archetype_size = other._archetype_size
+
+    fn __del__(owned self):
+        """
+        Releases the lock.
+        """
+        try:
+            self._lock_ptr[].unlock(self._lock)
+        except Error:
+            debug_warn("Failed to unlock the lock. This should not happen.")
+
+    @always_inline
+    fn __iter__(owned self, out iterator: Self):
+        iterator = self^
+
+    @always_inline
+    fn __next__(
+        mut self,
+        out accessor: Self.Archetype.EntityAccessor[
+            archetype_mutability,
+            __origin_of(self._archetype[]),
+        ],
+    ):
+        accessor = self._archetype[].get_entity_accessor(
+            self._next_entity_index,
+        )
+        self._next_entity_index += 1
+
+    fn __len__(self) -> Int:
+        """
+        Returns the number of entities remaining in the iterator.
+
+        Note that this requires iterating over all archetypes
+        and may be a complex operation.
+        """
+        if not self.__has_next__():
+            return 0
+
+        # Elements in the current archetype
+        return len(self._archetype[]) - self._next_entity_index
+
+    @always_inline
+    fn __has_next__(self) -> Bool:
+        return self._next_entity_index < self._archetype_size
 
     @always_inline
     fn __bool__(self) -> Bool:
