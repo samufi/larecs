@@ -52,6 +52,19 @@ def test_comptime_optional_size():
     assert_equal(sizeof[ComptimeOptional[UInt16, False]](), 0)
 
 
+fn optional_argument_application[
+    has_value: Bool = False
+](
+    opt: ComptimeOptional[Int, has_value] = None
+) -> Bool:
+    return opt.has_value
+
+
+def test_optional_argument_application():
+    assert_false(optional_argument_application())
+    assert_true(optional_argument_application(123))
+
+
 def main():
     print("Running tests...")
     test_comptime_optional_size()
@@ -59,4 +72,5 @@ def main():
     test_comptime_optional_copy()
     test_comptime_optional_move_del()
     test_comptime_optional_value()
+    test_optional_argument_application()
     print("All tests passed.")
