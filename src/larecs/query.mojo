@@ -15,7 +15,7 @@ struct Query[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
     resources_type: ResourceContaining,
-    has_without_mask: Bool,
+    has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components.
 
@@ -47,37 +47,14 @@ struct Query[
 
     var _world: Pointer[Self.World, world_origin]
     var _mask: BitMask
-    var _without_mask: BitMask
+    var _without_mask: ComptimeOptional[BitMask, has_without_mask]
 
     @doc_private
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
-    ):
-        """
-        Creates a new query.
-
-        The constructors should not be used directly, but through the [..world.World.query] method.
-
-        Args:
-            world: A pointer to the world.
-            mask: The mask of the components to iterate over.
-        """
-        constrained[
-            not Self.has_without_mask,
-            "has_without_mask is True, but no without_mask is provided.",
-        ]()
-        self._world = world
-        self._mask = mask^
-        self._without_mask = BitMask()
-
-    @doc_private
-    fn __init__(
-        out self,
-        world: Pointer[Self.World, world_origin],
-        owned mask: BitMask,
-        owned without_mask: BitMask,
+        owned without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates a new query.
@@ -89,13 +66,9 @@ struct Query[
             mask: The mask of the components to iterate over.
             without_mask: The mask for components to exclude.
         """
-        constrained[
-            Self.has_without_mask,
-            "has_without_mask is True, but no without_mask is provided.",
-        ]()
         self._world = world
         self._mask = mask^
-        self._without_mask = without_mask
+        self._without_mask = without_mask^
 
     fn __len__(self) raises -> Int:
         """
@@ -125,16 +98,7 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-
-        @parameter
-        if Self.has_without_mask:
-            iterator = self._world[]._get_iterator[Self.has_without_mask](
-                self._mask, self._without_mask
-            )
-        else:
-            iterator = self._world[]._get_iterator[Self.has_without_mask](
-                self._mask
-            )
+        iterator = self._world[]._get_iterator(self._mask, self._without_mask)
 
     @always_inline
     fn without[
@@ -204,7 +168,7 @@ struct _EntityIterator[
     lock_origin: MutableOrigin,
     *component_types: ComponentType,
     component_manager: ComponentManager[*component_types],
-    has_without_mask: Bool,
+    has_without_mask: Bool = False,
     has_start_indices: Bool = False,
 ]:
     """Iterator over all entities corresponding to a mask.
@@ -235,7 +199,7 @@ struct _EntityIterator[
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
     var _mask: BitMask
-    var _without_mask: BitMask
+    var _without_mask: ComptimeOptional[BitMask, has_without_mask]
     var _entity_index: Int
     var _last_entity_index: Int
     var _archetype_size: Int
@@ -250,38 +214,7 @@ struct _EntityIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
-    ) raises:
-        """
-        Creates an entity iterator without excluded components.
-
-        Args:
-            archetypes: a pointer to the world's archetypes.
-            lock_ptr: a pointer to the world's locks.
-            mask: The mask of the components to iterate over.
-
-        Raises:
-            Error: If the lock cannot be acquired (more than 256 locks exist).
-        """
-
-        constrained[
-            not Self.has_without_mask,
-            "has_without_mask is True, but no without_mask is provided.",
-        ]()
-        self = Self.__init__[False](
-            archetypes,
-            lock_ptr,
-            mask^,
-            BitMask(),
-        )
-
-    fn __init__[
-        check_has_without_mask: Bool = True
-    ](
-        out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        lock_ptr: Pointer[LockMask, lock_origin],
-        owned mask: BitMask,
-        owned without_mask: BitMask,
+        owned without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
         owned start_indices: Self.StartIndices = None,
     ) raises:
         """
@@ -300,10 +233,6 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        constrained[
-            (not check_has_without_mask) or Self.has_without_mask,
-            "has_without_mask is False, but a without_mask was provided.",
-        ]()
 
         self._archetypes = archetypes
         self._lock_ptr = lock_ptr
@@ -391,7 +320,7 @@ struct _EntityIterator[
                     not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
-                    .contains_any(self._without_mask)
+                    .contains_any(self._without_mask.value())
                 )
 
             if is_valid:
@@ -505,7 +434,7 @@ struct _EntityIterator[
                     not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
-                    .contains_any(self._without_mask)
+                    .contains_any(self._without_mask.value())
                 )
 
             if is_valid:

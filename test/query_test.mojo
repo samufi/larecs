@@ -299,6 +299,7 @@ struct QueryOwner[
         world_origin,
         *component_types,
         resources_type=resources_type,
+        has_without_mask=_,
     ]
 
     var _query: Self.Query[has_without_mask=True]

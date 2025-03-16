@@ -14,6 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
+from .comptime_optional import ComptimeOptional
 from .query import Query, _EntityIterator, _ArchetypeEntityIterator
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
@@ -124,6 +125,7 @@ struct World[
         _,
         *component_types,
         component_manager = Self.component_manager,
+        has_without_mask=_,
         has_start_indices=_,
     ]
     # _listener       Listener                  # EntityEvent _listener.
@@ -1163,28 +1165,11 @@ struct World[
         )
 
     fn _get_iterator[
-        has_without_mask: Bool = False
+        has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
         owned mask: BitMask,
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            has_without_mask=has_without_mask,
-        ],
-    ) raises:
-        iterator = _EntityIterator[has_without_mask=has_without_mask](
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
-            mask,
-        )
-
-    fn _get_iterator[
-        has_without_mask: Bool = True, has_start_indices: Bool = False
-    ](
-        mut self,
-        owned mask: BitMask,
-        owned without_mask: BitMask,
+        owned without_mask: ComptimeOptional[BitMask, has_without_mask],
         owned start_indices: Self.Iterator[
             has_start_indices=has_start_indices
         ].StartIndices = None,
@@ -1195,10 +1180,7 @@ struct World[
             has_start_indices=has_start_indices,
         ],
     ) raises:
-        iterator = _EntityIterator[
-            has_without_mask=has_without_mask,
-            has_start_indices=has_start_indices,
-        ].__init__[True](
+        iterator = _EntityIterator(
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
