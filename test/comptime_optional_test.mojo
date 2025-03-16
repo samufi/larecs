@@ -63,6 +63,13 @@ def test_optional_argument_application():
     assert_true(optional_argument_application(123))
 
 
+def test_or_else():
+    opt = ComptimeOptional[Int, False]()
+    assert_equal(opt.or_else(42), 42)
+    opt2 = ComptimeOptional(10)
+    assert_equal(opt2.or_else(42), 10)
+
+
 def main():
     print("Running tests...")
     test_comptime_optional_size()
@@ -71,4 +78,5 @@ def main():
     test_comptime_optional_move_del()
     test_comptime_optional_value()
     test_optional_argument_application()
+    test_or_else()
     print("All tests passed.")
