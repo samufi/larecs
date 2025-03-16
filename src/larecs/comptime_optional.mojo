@@ -39,7 +39,7 @@ struct ComptimeOptional[
             "Initialize with a value if `has_value` is `True`",
         ]()
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
-    
+
     @always_inline
     @implicit
     fn __init__(out self, owned value: Self.ElementType):
@@ -60,6 +60,7 @@ struct ComptimeOptional[
         Returns:
             A copy of the value.
         """
+
         @parameter
         if has_value:
             return Self(self.value())
