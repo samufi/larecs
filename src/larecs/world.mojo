@@ -479,13 +479,19 @@ struct World[
             self._archetypes.unsafe_get(archetype_index)
         )
         arch_start_idx = archetype[].extend(count, self._entity_pool)
-        last_entity_id = (
+        last_entity_id = Int(
             archetype[].get_entity(arch_start_idx + count - 1).get_id()
         )
         if last_entity_id > len(self._entities):
+            if last_entity_id > self._entities.capacity:
+                self._entities.reserve(
+                    max(last_entity_id, 2 * self._entities.capacity)
+                )
+
             self._entities.resize(
-                index(last_entity_id), EntityIndex(0, archetype_index)
+                last_entity_id, EntityIndex(0, archetype_index)
             )
+
         for i in range(arch_start_idx, arch_start_idx + count):
             entity_id = archetype[].get_entity(i).get_id()
             self._entities[entity_id].archetype_index = archetype_index

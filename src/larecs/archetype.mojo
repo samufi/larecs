@@ -394,7 +394,7 @@ struct Archetype[
     @always_inline
     fn reserve(mut self):
         """Extends the capacity of the archetype by factor 2."""
-        self.reserve(self._capacity * 2)
+        self.reserve(max(self._capacity * 2, 8))
 
     fn reserve(mut self, new_capacity: UInt):
         """Extends the capacity of the archetype to a given number.
@@ -677,9 +677,10 @@ struct Archetype[
             `count` indices.
         """
         if self._size + count >= self._capacity:
-            self.reserve(max(self._size + count, UInt(2) * self._capacity))
+            new_capacity = max(self._size + count, UInt(2) * self._capacity)
+            self.reserve(new_capacity)
+            self._entities.reserve(new_capacity)
 
-        self._entities.reserve(len(self._entities) + count)
         start_index = self._size
         for _ in range(count):
             self._entities.append(entity_pool.get())
