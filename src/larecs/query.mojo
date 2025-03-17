@@ -12,6 +12,7 @@ from .comptime_optional import ComptimeOptional
 
 from benchmark import keep
 
+
 struct Query[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
@@ -510,7 +511,7 @@ struct _EntityIterator[
             # We need to reduce the index by 1, because the
             # first call to __next__ will increment it.
             self._entity_index -= 1
-        
+
     fn __moveinit__(
         out self,
         owned other: Self,
@@ -613,9 +614,13 @@ struct _EntityIterator[
             for archetype in self._archetype_iterator.copy():
                 size += len(archetype[])
 
-        # ToDo Fix.
-        # ToDo Consider start indices!!
-        print("ToDo Consider start indices!!")
+        @parameter
+        if has_start_indices:
+            for i in range(
+                self._processed_archetypes_count.value(),
+                len(self._start_indices.value()),
+            ):
+                size -= self._start_indices.value()[i]
 
         return size
 
