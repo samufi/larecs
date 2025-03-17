@@ -1,5 +1,5 @@
 from sys.intrinsics import _type_is_eq
-from collections import InlineArray, InlineList, Optional
+from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
 from .component import (
     ComponentManager,

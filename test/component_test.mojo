@@ -1,6 +1,5 @@
 from testing import *
 from sys.info import sizeof
-from collections import InlineList
 from larecs.component import *
 
 
