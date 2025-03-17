@@ -360,7 +360,7 @@ struct World[
 
         return
 
-    fn add_entity[
+    fn add_entities[
         *Ts: ComponentType
     ](
         mut self,
@@ -396,7 +396,7 @@ struct World[
 
         ```mojo {doctest="add_entity_comps"}
         world = World[Position, Velocity](Resources())
-        for entity in world.add_entity(
+        for entity in world.add_entities(
             Position(0, 0),
             Velocity(0.5, -0.5),
             count = 5

@@ -32,7 +32,7 @@ def test_add_entities():
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     i = 0
-    for entity in world.add_entity(pos, vel, count=23):
+    for entity in world.add_entities(pos, vel, count=23):
         assert_equal(entity.get[Position]().x, pos.x)
         assert_equal(entity.get[Position]().y, pos.y)
         assert_equal(entity.get[Velocity]().dx, vel.dx)
@@ -44,7 +44,7 @@ def test_add_entities():
     assert_equal(i, 23)
 
     i = 0
-    for entity in world.add_entity(count=25):
+    for entity in world.add_entities(count=25):
         assert_false(entity.has[Velocity]())
         assert_false(entity.has[Position]())
         assert_false(entity.has[FlexibleComponent[0]]())

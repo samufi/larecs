@@ -26,7 +26,7 @@ fn benchmark_add_entity_1_000_batch_1_000(
     fn bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
-            keep(Bool(world.add_entity(count=1000)))
+            keep(Bool(world.add_entities(count=1000)))
 
     bencher.iter[bench_fn]()
 
@@ -56,7 +56,7 @@ fn benchmark_add_entity_1_comp_1_000_batch_1_000(
     fn bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
-            keep(Bool(world.add_entity(pos, count=1000)))
+            keep(Bool(world.add_entities(pos, count=1000)))
 
     bencher.iter[bench_fn]()
 
@@ -65,7 +65,7 @@ fn prevent_inlining_add_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = SmallWorld()
     _ = world.add_entity(pos)
-    _ = world.add_entity(pos, count=1)
+    _ = world.add_entities(pos, count=1)
 
 
 fn benchmark_add_entity_5_comp_1_000_000(
@@ -101,7 +101,7 @@ fn benchmark_add_entity_5_comp_1_000_batch_1_000(
     fn bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
-            keep(Bool(world.add_entity(c1, c2, c3, c4, c5, count=1000)))
+            keep(Bool(world.add_entities(c1, c2, c3, c4, c5, count=1000)))
 
     bencher.iter[bench_fn]()
 
@@ -114,7 +114,7 @@ fn prevent_inlining_add_entity_5_comp() raises:
     c5 = FlexibleComponent[5](1.0, 2.0)
     world = SmallWorld()
     _ = world.add_entity(c1, c2, c3, c4, c5)
-    _ = world.add_entity(c1, c2, c3, c4, c5, count=1)
+    _ = world.add_entities(c1, c2, c3, c4, c5, count=1)
 
 
 fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
