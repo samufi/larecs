@@ -1,5 +1,5 @@
 from bit import pop_count, bit_not
-from collections import InlineList, InlineArray
+from collections import InlineArray
 from .filter import MaskFilter
 
 

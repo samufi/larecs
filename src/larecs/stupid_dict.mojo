@@ -69,7 +69,7 @@ struct SimdDict[keyDType: DType, ValueType: CollectionElement, size: Int]:
     var _size: Int
 
     fn __init__(mut self):
-        self._values = InlineArray[ValueType, size](unsafe_uninitialized=True)
+        self._values = InlineArray[ValueType, size](uninitialized=True)
         self._keys = SIMD[keyDType, size]()
         self._size = 0
 

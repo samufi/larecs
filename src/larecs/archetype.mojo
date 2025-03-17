@@ -1,5 +1,5 @@
 from sys.intrinsics import _type_is_eq
-from collections import InlineArray, InlineList, Optional
+from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
 from .component import (
     ComponentManager,
@@ -394,7 +394,7 @@ struct Archetype[
     @always_inline
     fn reserve(mut self):
         """Extends the capacity of the archetype by factor 2."""
-        self.reserve(self._capacity * 2)
+        self.reserve(max(self._capacity * 2, 8))
 
     fn reserve(mut self, new_capacity: UInt):
         """Extends the capacity of the archetype to a given number.
@@ -662,7 +662,7 @@ struct Archetype[
 
     fn extend(
         mut self,
-        count: Int,
+        count: UInt,
         mut entity_pool: EntityPool,
     ) -> Int:
         """Extends the archetype by `count` entities from the provided pool.
@@ -677,9 +677,10 @@ struct Archetype[
             `count` indices.
         """
         if self._size + count >= self._capacity:
-            self.reserve(self._capacity + count)
+            new_capacity = max(self._size + count, UInt(2) * self._capacity)
+            self.reserve(new_capacity)
+            self._entities.reserve(new_capacity)
 
-        self._entities.reserve(len(self._entities) + count)
         start_index = self._size
         for _ in range(count):
             self._entities.append(entity_pool.get())

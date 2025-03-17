@@ -14,7 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .query import Query, _EntityIterator
+from .query import Query, _EntityIterator, _ArchetypeEntityIterator
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
 
@@ -124,6 +124,7 @@ struct World[
         _,
         *component_types,
         component_manager = Self.component_manager,
+        has_start_indices=_,
     ]
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
@@ -270,35 +271,6 @@ struct World[
 
         return archetype_index
 
-    @always_inline
-    fn add_entity(mut self, out entity: Entity) raises:
-        """Returns a new or recycled [..entity.Entity].
-
-        Do not use during [.World.query] iteration!
-
-        ⚠️ Important:
-        Entities are intended to be stored and passed around via copy, not via pointers! See [..entity.Entity].
-
-        Example:
-
-        ```mojo {doctest="add_entity" global=true hide=true}
-        from larecs import World, Resources
-        ```
-
-        ```mojo {doctest="add_entity"}
-        world = World(Resources())
-        e = world.add_entity()
-        ```
-
-        Returns:
-            The new or recycled entity.
-
-        Raises:
-            Error: If the world is locked.
-        """
-        self._assert_unlocked()
-        entity = self._create_entity(0)
-
     fn add_entity[
         *Ts: ComponentType
     ](mut self, *components: *Ts, out entity: Entity) raises:
@@ -351,21 +323,29 @@ struct World[
 
         alias size = components.__len__()
 
-        archetype_index = self._get_archetype_index(
-            Self.component_manager.get_id_arr[*Ts]()
-        )
-        entity = self._create_entity(archetype_index)
-        index_in_archetype = self._entities[entity.get_id()].index
+        @parameter
+        if size:
+            archetype_index = self._get_archetype_index(
+                Self.component_manager.get_id_arr[*Ts]()
+            )
+        else:
+            archetype_index = 0
 
-        archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(archetype_index)
-        )
+        entity = self._create_entity(archetype_index)
 
         @parameter
-        for i in range(size):
-            archetype[].get_component[
-                T = Ts[i.value], assert_has_component=False
-            ](index_in_archetype) = components[i]
+        if size:
+            index_in_archetype = self._entities[entity.get_id()].index
+
+            archetype = Pointer.address_of(
+                self._archetypes.unsafe_get(archetype_index)
+            )
+
+            @parameter
+            for i in range(size):
+                archetype[].get_component[
+                    T = Ts[i.value], assert_has_component=False
+                ](index_in_archetype) = components[i]
 
         # TODO
         # if self._listener != nil:
@@ -380,10 +360,105 @@ struct World[
 
         return
 
+    fn add_entities[
+        *Ts: ComponentType
+    ](
+        mut self,
+        *components: *Ts,
+        count: UInt,
+        out iterator: _ArchetypeEntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+        ],
+    ) raises:
+        """Adds a batch of [..entity.Entity]s.
+
+        The given component types are added to the entities.
+        Do not use during [.World.query] iteration!
+
+        Example:
+
+        ```mojo {doctest="add_entity_comps" global=true hide=true}
+        from larecs import World, Resources
+
+        @value
+        struct Position:
+            var x: Float64
+            var y: Float64
+
+        @value
+        struct Velocity:
+            var x: Float64
+            var y: Float64
+        ```
+
+        ```mojo {doctest="add_entity_comps"}
+        world = World[Position, Velocity](Resources())
+        for entity in world.add_entities(
+            Position(0, 0),
+            Velocity(0.5, -0.5),
+            count = 5
+        ):
+            # Do things with the newly created entities
+            entity.get[Position]()
+        ```
+
+        Parameters:
+            Ts: The components to add to the entity.
+
+        Args:
+            components: The components to add to the entity.
+            count: The number of entities to add.
+
+        Raises:
+            Error: If the world is [.World.is_locked locked].
+
+        Returns:
+            An iterator to the new or recycled [..entity.Entity]s.
+
+        """
+        self._assert_unlocked()
+
+        alias size = components.__len__()
+
+        @parameter
+        if size:
+            archetype_index = self._get_archetype_index(
+                Self.component_manager.get_id_arr[*Ts]()
+            )
+        else:
+            archetype_index = 0
+
+        first_index_in_archetype = self._create_entities(archetype_index, count)
+
+        archetype = Pointer.address_of(
+            self._archetypes.unsafe_get(archetype_index)
+        )
+
+        @parameter
+        for i in range(size):
+            for j in range(
+                first_index_in_archetype, first_index_in_archetype + count
+            ):
+                archetype[].get_component[
+                    T = Ts[i.value], assert_has_component=False
+                ](j) = components[i]
+
+        iterator = _ArchetypeEntityIterator(
+            archetype,
+            Pointer.address_of(self._locks),
+            first_index_in_archetype,
+        )
+
     @always_inline
     fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
         """
         Creates an Entity and adds it to the given archetype.
+
+        Returns:
+            The new entity.
         """
         entity = self._entity_pool.get()
         idx = self._archetypes.unsafe_get(archetype_index).add(entity)
@@ -393,23 +468,36 @@ struct World[
             self._entities[entity.get_id()] = EntityIndex(idx, archetype_index)
 
     @always_inline
-    fn _create_entities[
-        element_origin: MutableOrigin
-    ](mut self, archetype_index: Int, count: Int):
+    fn _create_entities(mut self, archetype_index: Int, count: Int) -> UInt:
         """
         Creates multiple Entities and adds them to the given archetype.
+
+        Returns:
+            The index of the first newly created entity in the archetype.
         """
-        archetype = self._archetypes.unsafe_get(archetype_index)
-        arch_start_idx = archetype.extend(count, self._entity_pool)
-        last_entity_id = archetype.get_entity(arch_start_idx + count).get_id()
+        archetype = Pointer.address_of(
+            self._archetypes.unsafe_get(archetype_index)
+        )
+        arch_start_idx = archetype[].extend(count, self._entity_pool)
+        last_entity_id = Int(
+            archetype[].get_entity(arch_start_idx + count - 1).get_id()
+        )
         if last_entity_id > len(self._entities):
+            if last_entity_id > self._entities.capacity:
+                self._entities.reserve(
+                    max(last_entity_id, 2 * self._entities.capacity)
+                )
+
             self._entities.resize(
-                index(last_entity_id), EntityIndex(0, archetype_index)
+                last_entity_id, EntityIndex(0, archetype_index)
             )
+
         for i in range(arch_start_idx, arch_start_idx + count):
-            entity_id = archetype.get_entity(i).get_id()
+            entity_id = archetype[].get_entity(i).get_id()
             self._entities[entity_id].archetype_index = archetype_index
             self._entities[entity_id].index = arch_start_idx + i
+
+        return arch_start_idx
 
     fn remove_entity(mut self, entity: Entity) raises:
         """
@@ -1092,24 +1180,30 @@ struct World[
         )
 
     fn _get_iterator[
-        has_without_mask: Bool = True
+        has_without_mask: Bool = True, has_start_indices: Bool = False
     ](
         mut self,
         owned mask: BitMask,
         owned without_mask: BitMask,
+        owned start_indices: Self.Iterator[
+            has_start_indices=has_start_indices
+        ].StartIndices = None,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             has_without_mask=has_without_mask,
+            has_start_indices=has_start_indices,
         ],
     ) raises:
-        iterator = _EntityIterator[has_without_mask=has_without_mask].__init__[
-            True
-        ](
+        iterator = _EntityIterator[
+            has_without_mask=has_without_mask,
+            has_start_indices=has_start_indices,
+        ].__init__[True](
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
             without_mask,
+            start_indices,
         )
 
     @always_inline
