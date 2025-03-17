@@ -54,9 +54,7 @@ def test_comptime_optional_size():
 
 fn optional_argument_application[
     has_value: Bool = False
-](
-    opt: ComptimeOptional[Int, has_value] = None
-) -> Bool:
+](opt: ComptimeOptional[Int, has_value] = None) -> Bool:
     return opt.has_value
 
 
