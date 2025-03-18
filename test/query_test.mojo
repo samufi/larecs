@@ -2,6 +2,9 @@ from testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.resource import ResourceContaining
+from larecs.archetype import Archetype as _Archetype
+from larecs.component import ComponentManager
+from larecs.query import _ArchetypeIterator
 
 
 def test_query_length():
@@ -386,6 +389,27 @@ def test_query_lock():
         _ = world.add_entity(c0, c1, c2)
 
 
+def test_query_archetype_iterator():
+    alias Archetype = _Archetype[
+        FlexibleComponent[0],
+        component_manager = ComponentManager[FlexibleComponent[0]](),
+    ]
+
+    a = Archetype(0, BitMask(0))
+    _ = a.add(Entity(0, 0))
+    l = List[Archetype](a, a, a)
+    var count = 0
+
+    for archetype in _ArchetypeIterator[
+        __origin_of(l),
+        FlexibleComponent[0],
+        component_manager = ComponentManager[FlexibleComponent[0]](),
+    ](Pointer.address_of(l), BitMask(0)):
+        count += 1
+
+    assert_equal(count, 3)
+
+
 def run_all_query_tests():
     test_query_lock()
     test_query_component_reference()
@@ -395,6 +419,7 @@ def run_all_query_tests():
     test_query_has_component()
     test_query_empty()
     test_query_without()
+    test_query_archetype_iterator()
 
 
 def main():
