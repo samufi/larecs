@@ -11,6 +11,7 @@ from .debug_utils import debug_warn
 from .comptime_optional import ComptimeOptional
 
 from benchmark import keep
+from python import Python
 
 
 struct Query[
@@ -218,11 +219,19 @@ struct _ArchetypeIterator[
         self._without_mask = without_mask^
 
         self._buffer_index = -1
-        print(self._buffer_index)
+        # print(self._buffer_index)
         self._max_buffer_index = Self.buffer_size
         self._archetype_index_buffer = Self.BufferType(-1)
 
         self._fill_archetype_buffer()
+
+        # try:
+        #     builtins = Python.import_module("builtins")
+        #     # builtins.print(buffer_index)
+        #     builtins.print(self._archetype_index_buffer[0], self._archetype_index_buffer[1], self._archetype_index_buffer[2])
+        # except:
+        #     pass
+
 
     @doc_private
     @always_inline
@@ -305,6 +314,14 @@ struct _ArchetypeIterator[
                 buffer_index += 1
                 if buffer_index >= Self.buffer_size:
                     return
+
+            try:
+                # builtins = Python.import_module("builtins")
+                math = Python.import_module("math")
+                # builtins.print(buffer_index)
+                math.sqrt(buffer_index)
+            except:
+                pass
 
         # If the buffer is not full, we
         # note the last index that is still valid.
@@ -457,9 +474,9 @@ struct _EntityIterator[
     var _entity_index: Int
     var _last_entity_index: Int
     var _archetype_size: Int
+    var _archetype_iterator: Self.ArchetypeIterator
     var _start_indices: Self.StartIndices
     var _processed_archetypes_count: ComptimeOptional[Int, has_start_indices]
-    var _archetype_iterator: Self.ArchetypeIterator
 
     fn __init__(
         out self,
