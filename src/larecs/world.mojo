@@ -441,12 +441,14 @@ struct World[
 
         @parameter
         for i in range(size):
-            for j in range(
-                first_index_in_archetype, first_index_in_archetype + count
-            ):
+            ptr = UnsafePointer.address_of(
                 archetype[].get_component[
                     T = Ts[i.value], assert_has_component=False
-                ](j) = components[i]
+                ](first_index_in_archetype)
+            )
+            for _ in range(count):
+                ptr[] = components[i]
+                ptr += 1
 
         iterator = _ArchetypeEntityIterator(
             archetype,

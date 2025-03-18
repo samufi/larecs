@@ -1,6 +1,6 @@
 from sys.intrinsics import _type_is_eq
 from collections import InlineArray, Optional
-from memory import memcpy, UnsafePointer
+from memory import memcpy, memset, UnsafePointer
 from .component import (
     ComponentManager,
 )
