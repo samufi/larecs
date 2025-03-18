@@ -216,11 +216,16 @@ struct _ArchetypeIterator[
         self._mask = mask^
         self._without_mask = without_mask^
 
-        self._buffer_index = -1
+        self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
         self._archetype_index_buffer = InlineArray[Int, Self.buffer_size](-1)
 
         self._fill_archetype_buffer()
+
+        # If the buffer is not empty, we set the buffer index to -1
+        # so that it is incremented to 0 in the first call to __next__.
+        if self._archetype_index_buffer[0] >= 0:
+            self._buffer_index = -1
 
     @doc_private
     @always_inline
