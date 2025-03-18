@@ -1,4 +1,4 @@
-from memory import UnsafePointer
+from memory import UnsafePointer, Span
 from collections import Optional, InlineArray
 from algorithm import vectorize
 
@@ -441,14 +441,24 @@ struct World[
 
         @parameter
         for i in range(size):
-            ptr = UnsafePointer.address_of(
-                archetype[].get_component[
-                    T = Ts[i.value], assert_has_component=False
-                ](first_index_in_archetype)
+            # Span(
+            #     UnsafePointer.address_of(
+            #         archetype[].get_component[
+            #             T = Ts[i.value], assert_has_component=False
+            #         ](first_index_in_archetype)
+            #     ),
+            #     count,
+            # ).fill(components[i])
+            span = Span(
+                UnsafePointer.address_of(
+                    archetype[].get_component[
+                        T = Ts[i.value], assert_has_component=False
+                    ](first_index_in_archetype)
+                ),
+                count,
             )
-            for _ in range(count):
-                ptr[] = components[i]
-                ptr += 1
+            for j in range(count):
+                span[j] = components[i]
 
         iterator = _ArchetypeEntityIterator(
             archetype,
