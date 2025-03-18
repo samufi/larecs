@@ -189,7 +189,7 @@ struct _ArchetypeIterator[
         *component_types, component_manager=component_manager
     ]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _archetype_index_buffer: InlineArray[Int, Self.buffer_size]
+    var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _mask: BitMask
     var _without_mask: ComptimeOptional[BitMask, has_without_mask]
     var _archetype_count: Int
@@ -218,7 +218,7 @@ struct _ArchetypeIterator[
 
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
-        self._archetype_index_buffer = InlineArray[Int, Self.buffer_size](-1)
+        self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
 
         self._fill_archetype_buffer()
 
@@ -232,7 +232,7 @@ struct _ArchetypeIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_index_buffer: InlineArray[Int, Self.buffer_size],
+        archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
         owned mask: BitMask,
         owned without_mask: ComptimeOptional[BitMask, has_without_mask],
         archetype_count: Int,
