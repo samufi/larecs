@@ -1,5 +1,5 @@
 from collections import InlineArray, Optional
-from sys.intrinsics import unlikely
+from sys.intrinsics import unlikely, likely
 
 from .entity import Entity
 from .bitmask import BitMask
@@ -638,7 +638,7 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._entity_index < self._last_entity_index
+        return likely(self._entity_index < self._last_entity_index)
 
     @always_inline
     fn __bool__(self) -> Bool:
