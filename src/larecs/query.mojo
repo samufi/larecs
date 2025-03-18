@@ -232,7 +232,6 @@ struct _ArchetypeIterator[
         # except:
         #     pass
 
-
     @doc_private
     @always_inline
     fn __init__(
