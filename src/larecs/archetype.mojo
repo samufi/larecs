@@ -1,4 +1,4 @@
-from sys.intrinsics import _type_is_eq, unlikely
+from sys.intrinsics import _type_is_eq
 from collections import InlineArray, Optional
 from memory import memcpy, memset, UnsafePointer
 from .component import (
@@ -597,7 +597,7 @@ struct Archetype[
         Raises:
             Error: If the archetype does not contain the component.
         """
-        if unlikely(not self.has_component(id)):
+        if not self.has_component(id):
             raise Error(
                 "Archetype does not contain component with id "
                 + String(id)

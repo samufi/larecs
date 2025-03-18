@@ -1,5 +1,4 @@
 from collections import InlineArray, Optional
-from sys.intrinsics import unlikely, likely
 
 from .entity import Entity
 from .bitmask import BitMask
@@ -596,7 +595,7 @@ struct _EntityIterator[
             An [..archetype.EntityAccessor] to the entity.
         """
         self._entity_index += 1
-        if unlikely(self._entity_index >= self._archetype_size):
+        if self._entity_index >= self._archetype_size:
             self._next_archetype()
         accessor = self._current_archetype[].get_entity_accessor(
             self._entity_index,
@@ -638,7 +637,7 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return likely(self._entity_index < self._last_entity_index)
+        return self._entity_index < self._last_entity_index
 
     @always_inline
     fn __bool__(self) -> Bool:

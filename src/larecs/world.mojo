@@ -1,7 +1,6 @@
 from memory import UnsafePointer, Span
 from collections import Optional, InlineArray
 from algorithm import vectorize
-from sys.intrinsics import unlikely
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
@@ -926,7 +925,7 @@ struct World[
         Raises:
             Error: If the world is locked.
         """
-        if unlikely(self.is_locked()):
+        if self.is_locked():
             raise Error("Attempt to modify a locked world.")
 
     @always_inline
@@ -940,7 +939,7 @@ struct World[
         Raises:
             Error: If the entity does not exist.
         """
-        if unlikely(not self._entity_pool.is_alive(entity)):
+        if not self._entity_pool.is_alive(entity):
             raise Error("The considered entity does not exist anymore.")
 
     @always_inline
