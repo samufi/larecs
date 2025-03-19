@@ -496,14 +496,14 @@ struct World[
         last_entity_id = Int(
             archetype[].get_entity(arch_start_idx + count - 1).get_id()
         )
-        if last_entity_id > len(self._entities):
-            if last_entity_id > self._entities.capacity:
+        if last_entity_id >= len(self._entities):
+            if last_entity_id >= self._entities.capacity:
                 self._entities.reserve(
-                    max(last_entity_id, 2 * self._entities.capacity)
+                    max(last_entity_id + 1, 2 * self._entities.capacity)
                 )
 
             self._entities.resize(
-                last_entity_id, EntityIndex(0, archetype_index)
+                last_entity_id + 1, EntityIndex(0, archetype_index)
             )
 
         for i in range(arch_start_idx, arch_start_idx + count):
