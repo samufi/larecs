@@ -1147,22 +1147,6 @@ struct World[
     #     return &Batchw
 
     @always_inline
-    fn query(
-        mut self,
-        out iterator: Self.Query[__origin_of(self)],
-    ):
-        """
-        Returns an [..query.Query] for all [..entity.Entity Entities] without components.
-
-        Returns:
-            A [..query.Query] for all entities without components.
-        """
-        iterator = Self.Query(
-            Pointer.address_of(self),
-            BitMask(),
-        )
-
-    @always_inline
     fn query[
         *Ts: ComponentType
     ](mut self, out iterator: Self.Query[__origin_of(self)],):
@@ -1175,10 +1159,19 @@ struct World[
         Returns:
             A [..query.Query] for all entities with the given components.
         """
-        iterator = Self.Query(
-            Pointer.address_of(self),
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
-        )
+        alias size = VariadicPack[
+            MutableAnyOrigin, ComponentType, *Ts
+        ].__len__()
+
+        var bitmask: BitMask
+
+        @parameter
+        if not size:
+            bitmask = BitMask()
+        else:
+            bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+
+        iterator = Self.Query(Pointer.address_of(self), bitmask)
 
     fn _get_iterator[
         has_without_mask: Bool = False, has_start_indices: Bool = False
