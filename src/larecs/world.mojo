@@ -460,7 +460,7 @@ struct World[
                     ](first_index_in_archetype)
                 ),
                 count,
-            ) # This can be deleted once Mojo is fixed.
+            )  # This can be deleted once Mojo is fixed.
             for j in range(count):
                 span[j] = components[i]
 
