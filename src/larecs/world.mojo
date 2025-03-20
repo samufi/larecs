@@ -441,6 +441,10 @@ struct World[
 
         @parameter
         for i in range(size):
+            # Use the code below as soon as Mojo is fixed and updated
+            # so that it works. The uncommented replacement code can be
+            # deleted then.
+
             # Span(
             #     UnsafePointer.address_of(
             #         archetype[].get_component[
@@ -456,7 +460,7 @@ struct World[
                     ](first_index_in_archetype)
                 ),
                 count,
-            )
+            ) # This can be deleted once Mojo is fixed.
             for j in range(count):
                 span[j] = components[i]
 
@@ -493,17 +497,17 @@ struct World[
             self._archetypes.unsafe_get(archetype_index)
         )
         arch_start_idx = archetype[].extend(count, self._entity_pool)
-        last_entity_id = Int(
-            archetype[].get_entity(arch_start_idx + count - 1).get_id()
+        entities_size = (
+            Int(archetype[].get_entity(arch_start_idx + count - 1).get_id()) + 1
         )
-        if last_entity_id >= len(self._entities):
-            if last_entity_id >= self._entities.capacity:
+        if entities_size > len(self._entities):
+            if entities_size > self._entities.capacity:
                 self._entities.reserve(
-                    max(last_entity_id + 1, 2 * self._entities.capacity)
+                    max(entities_size, 2 * self._entities.capacity)
                 )
 
             self._entities.resize(
-                last_entity_id + 1, EntityIndex(0, archetype_index)
+                entities_size, EntityIndex(0, archetype_index)
             )
 
         for i in range(arch_start_idx, arch_start_idx + count):
