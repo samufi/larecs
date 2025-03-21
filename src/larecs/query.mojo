@@ -169,9 +169,11 @@ struct QueryInfo[
     has_without_mask: Bool = False,
 ]:
     """
-    Class that holds the same information as a query but no reference to world.
+    Class that holds the same information as a query but no reference to the world.
 
-    This is needed to avoid multiple references to the same memory location.
+    This struct can be constructed implicitly from a [.Query] instance.
+    Therefore, [.Query] instances can be used instead of QueryInfo in function
+    arguments.
 
     Parameters:
         has_without_mask: Whether the query has excluded components.
