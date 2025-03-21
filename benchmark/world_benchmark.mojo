@@ -627,9 +627,9 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_remove_entity_5_comp_1_000_000](
         BenchId("10^6 * add & remove entity (5 components)")
     )
-    bench.bench_function[benchmark_add_remove_entities_5_comp_1_000_batch_1_000](
-        BenchId("10^3 * add & remove entity (5 components) 1000 batch")
-    )
+    bench.bench_function[
+        benchmark_add_remove_entities_5_comp_1_000_batch_1_000
+    ](BenchId("10^3 * add & remove entity (5 components) 1000 batch"))
     bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
     bench.bench_function[benchmark_get_ptr_1_000_000](BenchId("10^6 * get_ptr"))
     bench.bench_function[benchmark_set_1_comp_1_000_000](
