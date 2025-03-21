@@ -564,6 +564,15 @@ struct Archetype[
         return (self._data[id] + index(idx) * component_size).bitcast[T]()[]
 
     @always_inline
+    fn get_entities(self) -> ref [self._entities] List[Entity]:
+        """Returns the entities in the archetype.
+
+        Returns:
+            A reference to the entities in the archetype.
+        """
+        return self._entities
+
+    @always_inline
     fn has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id.
 
@@ -643,6 +652,14 @@ struct Archetype[
             _ = self._entities.pop()
 
         return swapped
+
+    fn clear(mut self):
+        """Removes all entities from the archetype.
+
+        Note: does not free any memory.
+        """
+        self._entities.clear()
+        self._size = 0
 
     fn add(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
