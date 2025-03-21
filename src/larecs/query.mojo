@@ -98,7 +98,9 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_iterator(self._mask, self._without_mask)
+        iterator = self._world[]._get_entity_iterator(
+            self._mask, self._without_mask
+        )
 
     @always_inline
     fn without[
@@ -160,6 +162,37 @@ struct Query[
             self._mask,
             self._mask.invert(),
         )
+
+
+@value
+struct QueryInfo[
+    has_without_mask: Bool = False,
+]:
+    """
+    Class that holds the same information as a query but no reference to world.
+
+    This is needed to avoid multiple references to the same memory location.
+
+    Parameters:
+        has_without_mask: Whether the query has excluded components.
+    """
+
+    var mask: BitMask
+    var without_mask: ComptimeOptional[BitMask, has_without_mask]
+
+    @implicit
+    fn __init__(
+        out self,
+        query: Query[has_without_mask=has_without_mask],
+    ):
+        """
+        Takes the query info from an existing query.
+
+        Args:
+            query: The query the information should be taken from.
+        """
+        self.mask = query._mask
+        self.without_mask = query._without_mask
 
 
 struct _ArchetypeIterator[

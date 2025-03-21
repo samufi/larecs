@@ -15,7 +15,13 @@ from .component import (
 )
 from .bitmask import BitMask
 from .comptime_optional import ComptimeOptional
-from .query import Query, _EntityIterator, _ArchetypeEntityIterator
+from .query import (
+    Query,
+    QueryInfo,
+    _EntityIterator,
+    _ArchetypeEntityIterator,
+    _ArchetypeIterator,
+)
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
 
@@ -117,7 +123,7 @@ struct World[
         _,
         *component_types,
         resources_type=resources_type,
-        has_without_mask=False,
+        has_without_mask=_,
     ]
 
     alias Iterator = _EntityIterator[
@@ -200,6 +206,18 @@ struct World[
         other._entity_pool = self._entity_pool
         other._locks = self._locks
         other.resources = self.resources
+
+    fn __len__(self) -> Int:
+        """
+        Returns the number of entities in the world.
+
+        Note that this requires iterating over all archetypes and
+        may be an expensive operation.
+        """
+        size = 0
+        for archetype in self._archetypes:
+            size += len(archetype[])
+        return size
 
     @always_inline
     fn _get_archetype_index[
@@ -533,9 +551,8 @@ struct World[
         self._assert_alive(entity)
 
         idx = self._entities[entity.get_id()]
-        old_archetype_index = idx.archetype_index
         old_archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(index(old_archetype_index))
+            self._archetypes.unsafe_get(index(idx.archetype_index))
         )
 
         # if self._listener != nil:
@@ -561,6 +578,59 @@ struct World[
         if swapped:
             swap_entity = old_archetype[].get_entity(idx.index)
             self._entities[swap_entity.get_id()].index = idx.index
+
+    fn remove_entities(mut self, query: QueryInfo) raises:
+        """
+        Removes multiple entities based on the provided query, making them eligible for recycling.
+
+        Example:
+
+        ```mojo {doctest="apply" global=true hide=true}
+        from larecs import World, Resources, MutableEntityAccessor
+        from testing import assert_equal, assert_false
+        ```
+
+        ```mojo {doctest="apply"}
+        world = World[Float32, Float64](Resources())
+        _ = world.add_entity(Float32(0))
+        _ = world.add_entity(Float32(0), Float64(0))
+        _ = world.add_entity(Float64(0))
+
+        # Remove all entities with a Float32 component.
+        world.remove_entities(world.query[Float32]())
+        ```
+
+        Args:
+            query: The query to determine which entities to remove. Note, you can
+                   either use [..query.Query] or [..query.QueryInfo].
+
+        Raises:
+            Error: If the world is locked.
+        """
+        self._assert_unlocked()
+
+        for archetype in self._get_archetype_iterator(
+            query.mask, query.without_mask
+        ):
+            for entity in archetype[].get_entities():
+                self._entity_pool.recycle(entity[])
+            archetype[].clear()
+
+        # if self._listener != nil:
+        #     var oldRel *Id
+        #     if old_archetype.HasRelationComponent:
+        #         oldRel = &old_archetype.RelationComponent
+
+        #     var oldIds []Id
+        #     if len(old_archetype.node.Ids) > 0:
+        #         oldIds = old_archetype.node.Ids
+
+        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+        #     var trigger = self._listener.Subscriptions() & bits
+        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
+        #         var lock = self.lock()
+        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
+        #         self.unlock(lock)
 
     @always_inline
     fn is_alive(self, entity: Entity) -> Bool:
@@ -1149,7 +1219,10 @@ struct World[
     @always_inline
     fn query[
         *Ts: ComponentType
-    ](mut self, out iterator: Self.Query[__origin_of(self)],):
+    ](
+        mut self,
+        out iterator: Self.Query[__origin_of(self), has_without_mask=False],
+    ):
         """
         Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
 
@@ -1173,7 +1246,7 @@ struct World[
 
         iterator = Self.Query(Pointer.address_of(self), bitmask)
 
-    fn _get_iterator[
+    fn _get_entity_iterator[
         has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
@@ -1189,12 +1262,50 @@ struct World[
             has_start_indices=has_start_indices,
         ],
     ) raises:
+        """
+        Creates an iterator over all entities that have / do not have the compnents in the provided masks.
+
+        Parameters:
+            has_without_mask: Whether a without_mask is provided.
+            has_start_indices: Whether start_indices are provided.
+
+        Args:
+            mask:          The mask of components to include.
+            without_mask:  The mask of components to exclude.
+            start_indices: The start indices of the iterator. See [..query._EntityIterator].
+        """
         iterator = _EntityIterator(
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
             without_mask,
             start_indices,
+        )
+
+    @always_inline
+    fn _get_archetype_iterator[
+        has_without_mask: Bool = False
+    ](
+        ref self,
+        mask: BitMask,
+        without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
+        out iterator: _ArchetypeIterator[
+            __origin_of(self._archetypes),
+            *component_types,
+            component_manager = Self.component_manager,
+            has_without_mask=has_without_mask,
+        ],
+    ):
+        """
+        Creates an iterator over all archetypes that match the query.
+
+        Returns:
+            An iterator over all archetypes that match the query.
+        """
+        iterator = _ArchetypeIterator(
+            Pointer.address_of(self._archetypes),
+            mask,
+            without_mask,
         )
 
     @always_inline
