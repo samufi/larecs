@@ -19,7 +19,7 @@ def test_entity_pool():
     expected_all = List[Entity](
         Entity(0), Entity(1), Entity(2), Entity(3), Entity(4), Entity(5)
     )
-    expected_all[0]._gen = MAX_UINT16
+    expected_all[0]._generation = MAX_UINT16
 
     for _ in range(5):
         _ = p.get()
@@ -35,7 +35,7 @@ def test_entity_pool():
 
     e0_old = e0
     e0 = p.get()
-    expected_all[1]._gen += 1
+    expected_all[1]._generation += 1
     assert_true(
         p.is_alive(e0), "Recycled entity of new generation should be alive"
     )
@@ -51,7 +51,7 @@ def test_entity_pool():
     e0_old = p._entities[1]
     for i in range(5):
         p.recycle(p._entities[i + 1])
-        expected_all[i + 1]._gen += 1
+        expected_all[i + 1]._generation += 1
 
     assert_false(
         p.is_alive(e0_old),
