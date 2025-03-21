@@ -26,7 +26,7 @@ jobs:
     - name: Run tests
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo test --validate-doc-strings --sanitize address -I src/ test
+        magic run mojo test --validate-doc-strings --sanitize address -D ASSERT=all -I src/ test
 
     - name: Check formatting
       run: |
