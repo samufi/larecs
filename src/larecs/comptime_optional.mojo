@@ -111,10 +111,10 @@ struct ComptimeOptional[
 
     @always_inline
     fn or_else(self, value: ElementType) -> ElementType:
-        """Returns a copy of the value contained in the Optional or a default value if no value is not present.
+        """Returns a copy of the value contained in the Optional or a default value if no value is present.
 
         Args:
-            value: The dedault value to return if the optional is empty.
+            value: The default value to return if the optional is empty.
 
         Returns:
             A copy of the value contained in the Optional or the default value if no value is present.

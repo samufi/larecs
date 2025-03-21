@@ -10,8 +10,6 @@ from .resource import ResourceContaining
 from .debug_utils import debug_warn
 from .comptime_optional import ComptimeOptional
 
-from benchmark import keep
-
 
 struct Query[
     world_origin: MutableOrigin,
