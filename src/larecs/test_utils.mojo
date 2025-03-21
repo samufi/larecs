@@ -117,7 +117,7 @@ struct LargerComponent(ComponentType):
 
 
 @value
-struct FlexibleComponent[i: UInt](ComponentType):
+struct FlexibleComponent[i: Int](ComponentType):
     var x: Float64
     var y: Float32
 

@@ -27,14 +27,14 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     var _id: EntityId
     """Entity ID"""
-    var _gen: UInt32
+    var _generation: UInt32
     """Entity generation"""
 
     @doc_private
     @always_inline
-    fn __init__(mut self, id: EntityId = 0, gen: UInt32 = 0):
+    fn __init__(mut self, id: EntityId = 0, generation: UInt32 = 0):
         self._id = id
-        self._gen = gen
+        self._generation = generation
 
     @always_inline
     fn __eq__(self, other: Entity) -> Bool:
@@ -44,7 +44,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         Args:
             other: The other entity to compare to.
         """
-        return self._id == other._id and self._gen == other._gen
+        return self._id == other._id and self._generation == other._generation
 
     @always_inline
     fn __ne__(self, other: Entity) -> Bool:
@@ -68,13 +68,15 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         """
         Returns a string representation of the entity.
         """
-        return "Entity(" + String(self._id) + ", " + String(self._gen) + ")"
+        return (
+            "Entity(" + String(self._id) + ", " + String(self._generation) + ")"
+        )
 
     @always_inline
     fn __hash__(self, out output: UInt):
         """Returns a unique hash of the entity."""
         output = Int(self._id)
-        output |= bit_reverse(Int(self._gen))
+        output |= bit_reverse(Int(self._generation))
 
     @always_inline
     fn get_id(self) -> EntityId:
@@ -82,9 +84,9 @@ struct Entity(EqualityComparable, Stringable, Hashable):
         return self._id
 
     @always_inline
-    fn get_gen(self) -> UInt32:
+    fn get_generation(self) -> UInt32:
         """Returns the entity's generation."""
-        return self._gen
+        return self._generation
 
     @always_inline
     fn is_zero(self) -> Bool:

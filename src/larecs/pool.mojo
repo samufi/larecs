@@ -59,7 +59,7 @@ struct EntityPool(Movable, Copyable):
         if enitity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
-        self._entities[enitity.get_id()]._gen += 1
+        self._entities[enitity.get_id()]._generation += 1
         self._next, self._entities[enitity.get_id()]._id = (
             enitity.get_id(),
             self._next,
@@ -77,7 +77,7 @@ struct EntityPool(Movable, Copyable):
     fn is_alive(self, entity: Entity) -> Bool:
         """Returns whether an entity is still alive, based on the entity's generations.
         """
-        return entity._gen == self._entities[entity.get_id()]._gen
+        return entity._generation == self._entities[entity.get_id()]._generation
 
     @always_inline
     fn __len__(self) -> Int:

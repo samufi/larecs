@@ -74,6 +74,7 @@ Exports:
  - resource.NoResource
  - entity.Entity
  - query.Query
+ - query.QueryInfo
 """
 from .world import World
 from .component import ComponentType
