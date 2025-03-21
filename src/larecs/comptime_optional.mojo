@@ -110,6 +110,23 @@ struct ComptimeOptional[
         return UnsafePointer(ptr)[]
 
     @always_inline
+    fn or_else(self, value: ElementType) -> ElementType:
+        """Returns a copy of the value contained in the Optional or a default value if no value is present.
+
+        Args:
+            value: The default value to return if the optional is empty.
+
+        Returns:
+            A copy of the value contained in the Optional or the default value if no value is present.
+        """
+
+        @parameter
+        if has_value:
+            return self.value()
+        else:
+            return value
+
+    @always_inline
     fn unsafe_ptr(self) -> UnsafePointer[Self.ElementType]:
         """Get an `UnsafePointer` to the underlying array.
 

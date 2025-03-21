@@ -1,4 +1,4 @@
-from memory import UnsafePointer
+from memory import UnsafePointer, Span
 from collections import Optional, InlineArray
 from algorithm import vectorize
 
@@ -14,6 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
+from .comptime_optional import ComptimeOptional
 from .query import Query, _EntityIterator, _ArchetypeEntityIterator
 from .lock import LockMask, LockedContext
 from .resource import ResourceContaining, Resources
@@ -124,6 +125,7 @@ struct World[
         _,
         *component_types,
         component_manager = Self.component_manager,
+        has_without_mask=_,
         has_start_indices=_,
     ]
     # _listener       Listener                  # EntityEvent _listener.
@@ -439,12 +441,28 @@ struct World[
 
         @parameter
         for i in range(size):
-            for j in range(
-                first_index_in_archetype, first_index_in_archetype + count
-            ):
-                archetype[].get_component[
-                    T = Ts[i.value], assert_has_component=False
-                ](j) = components[i]
+            # Use the code below as soon as Mojo is fixed and updated
+            # so that it works. The uncommented replacement code can be
+            # deleted then.
+
+            # Span(
+            #     UnsafePointer.address_of(
+            #         archetype[].get_component[
+            #             T = Ts[i.value], assert_has_component=False
+            #         ](first_index_in_archetype)
+            #     ),
+            #     count,
+            # ).fill(components[i])
+            span = Span(
+                UnsafePointer.address_of(
+                    archetype[].get_component[
+                        T = Ts[i.value], assert_has_component=False
+                    ](first_index_in_archetype)
+                ),
+                count,
+            )  # This can be deleted once Mojo is fixed.
+            for j in range(count):
+                span[j] = components[i]
 
         iterator = _ArchetypeEntityIterator(
             archetype,
@@ -479,17 +497,17 @@ struct World[
             self._archetypes.unsafe_get(archetype_index)
         )
         arch_start_idx = archetype[].extend(count, self._entity_pool)
-        last_entity_id = Int(
-            archetype[].get_entity(arch_start_idx + count - 1).get_id()
+        entities_size = (
+            Int(archetype[].get_entity(arch_start_idx + count - 1).get_id()) + 1
         )
-        if last_entity_id > len(self._entities):
-            if last_entity_id > self._entities.capacity:
+        if entities_size > len(self._entities):
+            if entities_size > self._entities.capacity:
                 self._entities.reserve(
-                    max(last_entity_id, 2 * self._entities.capacity)
+                    max(entities_size, 2 * self._entities.capacity)
                 )
 
             self._entities.resize(
-                last_entity_id, EntityIndex(0, archetype_index)
+                entities_size, EntityIndex(0, archetype_index)
             )
 
         for i in range(arch_start_idx, arch_start_idx + count):
@@ -1129,22 +1147,6 @@ struct World[
     #     return &Batchw
 
     @always_inline
-    fn query(
-        mut self,
-        out iterator: Self.Query[__origin_of(self)],
-    ):
-        """
-        Returns an [..query.Query] for all [..entity.Entity Entities] without components.
-
-        Returns:
-            A [..query.Query] for all entities without components.
-        """
-        iterator = Self.Query(
-            Pointer.address_of(self),
-            BitMask(),
-        )
-
-    @always_inline
     fn query[
         *Ts: ComponentType
     ](mut self, out iterator: Self.Query[__origin_of(self)],):
@@ -1157,34 +1159,26 @@ struct World[
         Returns:
             A [..query.Query] for all entities with the given components.
         """
-        iterator = Self.Query(
-            Pointer.address_of(self),
-            BitMask(Self.component_manager.get_id_arr[*Ts]()),
-        )
+        alias size = VariadicPack[
+            MutableAnyOrigin, ComponentType, *Ts
+        ].__len__()
+
+        var bitmask: BitMask
+
+        @parameter
+        if not size:
+            bitmask = BitMask()
+        else:
+            bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+
+        iterator = Self.Query(Pointer.address_of(self), bitmask)
 
     fn _get_iterator[
-        has_without_mask: Bool = False
+        has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
         owned mask: BitMask,
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            has_without_mask=has_without_mask,
-        ],
-    ) raises:
-        iterator = _EntityIterator[has_without_mask=has_without_mask](
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
-            mask,
-        )
-
-    fn _get_iterator[
-        has_without_mask: Bool = True, has_start_indices: Bool = False
-    ](
-        mut self,
-        owned mask: BitMask,
-        owned without_mask: BitMask,
+        owned without_mask: ComptimeOptional[BitMask, has_without_mask],
         owned start_indices: Self.Iterator[
             has_start_indices=has_start_indices
         ].StartIndices = None,
@@ -1195,10 +1189,7 @@ struct World[
             has_start_indices=has_start_indices,
         ],
     ) raises:
-        iterator = _EntityIterator[
-            has_without_mask=has_without_mask,
-            has_start_indices=has_start_indices,
-        ].__init__[True](
+        iterator = _EntityIterator(
             Pointer.address_of(self._archetypes),
             Pointer.address_of(self._locks),
             mask,
