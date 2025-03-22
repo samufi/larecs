@@ -17,7 +17,7 @@ fn main() raises:
 
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))
 
-    add_satellites(world, 50)
+    add_satellites(world, 300)
     plt = Python.import_module("matplotlib.pyplot")
     fig = plt.figure()
     ax = plt.gca()
