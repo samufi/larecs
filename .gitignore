@@ -165,4 +165,10 @@ cython_debug/
 # magic environments
 .magic
 # **.go
-hello_world.mojo
+tt.mojo
+test_bug.mojo
+translate/*
+hello_world*.mojo
+benchmark/getter_benchmark.mojo
+benchmark/query_2benchmark.mojo
+benchmark/simd_benchmark.mojo
