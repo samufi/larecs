@@ -3,18 +3,19 @@ from parameters import Parameters
 from systems import move, accellerate, add_satellites, position_to_numpy
 from components import Position, Velocity
 from python import Python
+from sys import argv
 
 
-fn update(mut world: World, parameters: Parameters, step: Float64) raises:
-    for _ in range(Int(step / parameters.dt)):
-        move(world, parameters)
-        accellerate(world, parameters)
+fn update(mut world: World, step: Float64) raises:
+    for _ in range(Int(step / world.resources.get_ptr[Parameters]()[].dt)):
+        move(world)
+        accellerate(world)
 
 
 fn main() raises:
-    world = World[Position, Velocity](Resources())
+    world = World[Position, Velocity](Resources[Parameters]())
 
-    parameters = Parameters(dt=0.1, mass=5.972e24)
+    world.resources.add(Parameters(dt=0.1, mass=5.972e24))
 
     add_satellites(world, 300)
     plt = Python.import_module("matplotlib.pyplot")
@@ -24,7 +25,7 @@ fn main() raises:
 
     for _ in range(1000):
         # Update every 600s = 10 minutes
-        update(world, parameters, 600)
+        update(world, 600)
         data = position_to_numpy(world)
 
         ax.clear()
@@ -36,4 +37,5 @@ fn main() raises:
         fig.canvas.flush_events()
 
     print("Done")
+
     plt.show(block=True)

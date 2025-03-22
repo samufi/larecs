@@ -27,7 +27,7 @@ jobs:
       run: |
         source /home/runner/.bash_profile 
         magic run mojo test --validate-doc-strings --sanitize address -D ASSERT=all -I src/ test
-
+    
     - name: Check formatting
       run: |
         source /home/runner/.bash_profile 
@@ -39,3 +39,10 @@ jobs:
       run: |
         source /home/runner/.bash_profile 
         magic run mojo -I src/ benchmark/run_benchmarks.mojo
+
+    - name: Run examples
+      run: |
+        source /home/runner/.bash_profile
+        cd examples/satellites
+        magic install --locked
+        magic run mojo -I ../../src/ model.mojo
