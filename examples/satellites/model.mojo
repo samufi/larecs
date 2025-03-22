@@ -3,6 +3,7 @@ from parameters import Parameters
 from systems import move, accellerate, add_satellites, position_to_numpy
 from components import Position, Velocity
 from python import Python
+from sys import argv
 
 
 fn update(mut world: World, parameters: Parameters, step: Float64) raises:
@@ -36,4 +37,8 @@ fn main() raises:
         fig.canvas.flush_events()
 
     print("Done")
-    plt.show(block=True)
+
+    # Show the plot if not in the CI
+    args = argv()
+    if len(args) < 2 or args[1] != "CI":
+        plt.show(block=True)
