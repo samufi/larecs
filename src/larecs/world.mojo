@@ -463,24 +463,14 @@ struct World[
             # so that it works. The uncommented replacement code can be
             # deleted then.
 
-            # Span(
-            #     UnsafePointer.address_of(
-            #         archetype[].get_component[
-            #             T = Ts[i.value], assert_has_component=False
-            #         ](first_index_in_archetype)
-            #     ),
-            #     count,
-            # ).fill(components[i])
-            span = Span(
+            Span(
                 UnsafePointer.address_of(
                     archetype[].get_component[
                         T = Ts[i.value], assert_has_component=False
                     ](first_index_in_archetype)
                 ),
                 count,
-            )  # This can be deleted once Mojo is fixed.
-            for j in range(count):
-                span[j] = components[i]
+            ).fill(components[i])
 
         iterator = _ArchetypeEntityIterator(
             archetype,
