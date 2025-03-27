@@ -459,10 +459,6 @@ struct World[
 
         @parameter
         for i in range(size):
-            # Use the code below as soon as Mojo is fixed and updated
-            # so that it works. The uncommented replacement code can be
-            # deleted then.
-
             Span(
                 UnsafePointer.address_of(
                     archetype[].get_component[
