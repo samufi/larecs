@@ -90,7 +90,7 @@ struct ComponentManager[
     alias component_count = len(VariadicList(component_types))
     alias component_sizes = get_sizes[*component_types]()
 
-    fn __init__(mut self):
+    fn __init__(out self):
         constrained[
             dType.is_integral(),
             "dType needs to be an integral type.",

@@ -95,7 +95,7 @@ struct BitMask(Stringable, KeyElement):
         """
         self = Self(bits)
 
-    fn __copyinit__(mut self, other: Self):
+    fn __copyinit__(out self, other: Self):
         """Initializes the mask with the other mask."""
         self._bytes = other._bytes
 
