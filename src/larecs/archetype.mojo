@@ -302,7 +302,7 @@ struct Archetype[
         """
         other = self
 
-    fn __moveinit__(mut self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         """Moves the data from an existing archetype to a new one.
 
         Args:
@@ -318,7 +318,7 @@ struct Archetype[
         self._node_index = existing._node_index
         self._mask = existing._mask
 
-    fn __copyinit__(mut self, existing: Self):
+    fn __copyinit__(out self, existing: Self):
         """Copies the data from an existing archetype to a new one.
 
         Args:

@@ -19,7 +19,7 @@ struct EntityPool(Movable, Copyable):
     var _available: Int
 
     @always_inline
-    fn __init__(mut self):
+    fn __init__(out self):
         self._entities = List[Entity]()
         self._entities.append(Entity(0, MAX_UINT16))
         self._next = 0
@@ -113,7 +113,7 @@ struct BitPool:
     var _length: UInt16
 
     @always_inline
-    fn __init__(mut self):
+    fn __init__(out self):
         self._bits = SIMD[DType.uint8, Self.capacity]()
         self._next = 0
         self._length = 0
@@ -179,7 +179,7 @@ struct IntPool[ElementType: IndexingCollectionElement = Int]:
     var _available: UInt32
 
     @always_inline
-    fn __init__(mut self):
+    fn __init__(out self):
         """Creates a new, initialized entity pool."""
         self._pool = List[ElementType, True]()
         self._next = ElementType(0)
