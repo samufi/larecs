@@ -23,7 +23,7 @@ from .query import (
     _ArchetypeIterator,
 )
 from .lock import LockMask, LockedContext
-from .resource import ResourceContaining, Resources
+from .resource import Resources, TypeMapping
 
 
 @value
@@ -31,7 +31,7 @@ struct Replacer[
     world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
-    resources_type: ResourceContaining,
+    ResourceMap: TypeMapping,
 ]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
@@ -43,14 +43,14 @@ struct Replacer[
         world_origin: The mutale origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
-        resources_type: The type of the resource container.
+        ResourceMap: The mapping from resource types to resource IDs.
     """
 
     var _world: Pointer[
-        World[*component_types, resources_type=resources_type], world_origin
+        World[*component_types, ResourceMap=ResourceMap], world_origin
     ]
     var _remove_ids: InlineArray[
-        World[*component_types, resources_type=resources_type].Id, size
+        World[*component_types, ResourceMap=ResourceMap].Id, size
     ]
 
     fn by[
@@ -105,7 +105,7 @@ struct Replacer[
 
 
 struct World[
-    *component_types: ComponentType, resources_type: ResourceContaining
+    *component_types: ComponentType, ResourceMap: TypeMapping
 ](Movable):
     """
     World is the central type holding entity and component data, as well as resources.
@@ -116,13 +116,14 @@ struct World[
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
+    alias ResourcesType = Resources[ResourceMap]
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
     alias Query = Query[
         _,
         *component_types,
-        resources_type=resources_type,
+        ResourceMap=ResourceMap,
         has_without_mask=_,
     ]
 
@@ -156,11 +157,11 @@ struct World[
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    var resources: resources_type  # The resources of the world.
+    var resources: Self.ResourcesType  # The resources of the world.
 
     fn __init__(
-        mut self,
-        owned resources: resources_type = resources_type(),
+        out self,
+        owned resources: Self.ResourcesType = Self.ResourcesType(),
     ) raises:
         """
         Creates a new [.World].
@@ -185,7 +186,7 @@ struct World[
 
         # var node = self.createArchetypeNode(Mask, ID, false)
 
-    fn __moveinit__(mut self, owned other: Self):
+    fn __moveinit__(out self, owned other: Self):
         """
         Moves the contents of another [.World] into a new one.
         """
@@ -415,7 +416,7 @@ struct World[
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity](Resources())
+        world = World[Position, Velocity]()
         for entity in world.add_entities(
             Position(0, 0),
             Velocity(0.5, -0.5),
@@ -806,7 +807,7 @@ struct World[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
-        resources_type=resources_type,
+        ResourceMap=ResourceMap,
     ]:
         """
         Returns a [.Replacer] for removing and adding components to an Entity in one go.

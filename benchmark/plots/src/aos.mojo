@@ -311,7 +311,7 @@ alias World = lx.World[
     PayloadComponent[29],
     PayloadComponent[30],
     PayloadComponent[31],
-    resources_type = lx.Resources,
+    ResourceMap = lx.resources.StaticTypeMap,
 ]
 
 

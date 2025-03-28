@@ -6,7 +6,7 @@ from sys.info import sizeof
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
-from .resource import Resources
+from .resource import Resources, StaticTypeMap
 
 
 trait CopyAndMovable(Copyable, Movable):
@@ -154,7 +154,7 @@ alias SmallWorld = World[
     FlexibleComponent[8],
     FlexibleComponent[9],
     FlexibleComponent[10],
-    resources_type=Resources,
+    ResourceMap=StaticTypeMap,
 ]
 
 alias FullWorld = World[
@@ -414,7 +414,7 @@ alias FullWorld = World[
     FlexibleComponent[250],
     FlexibleComponent[251],
     FlexibleComponent[252],
-    resources_type=Resources,
+    ResourceMap=StaticTypeMap,
 ]
 
 

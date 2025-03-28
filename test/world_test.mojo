@@ -3,7 +3,7 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
-from larecs.resource import Resources
+from larecs.resource import Resources, StaticTypeMap
 from larecs.archetype import MutableEntityAccessor
 
 from larecs.test_utils import *
@@ -304,19 +304,21 @@ struct Resource2:
 
 
 def test_world_reseource_access():
-    resources = Resources(Resource1(2), Resource2(4))
+    resources = Resources(StaticTypeMap[Resource1, Resource2]())
+    resources.add(Resource1(2), Resource2(4))
+
     world = World[Position, Velocity](resources)
     assert_equal(world.resources.get[Resource1]().value, 2)
     assert_equal(world.resources.get[Resource2]().value, 4)
     assert_equal(world.resources.has[Resource1](), True)
 
-    world.resources.set[Resource1](Resource1(10))
+    world.resources.set(Resource1(10))
     assert_equal(world.resources.get[Resource1]().value, 10)
 
     world.resources.remove[Resource1]()
     assert_equal(world.resources.has[Resource1](), False)
 
-    world.resources.add[Resource1](Resource1(30))
+    world.resources.add(Resource1(30))
     assert_equal(world.resources.get[Resource1]().value, 30)
 
 

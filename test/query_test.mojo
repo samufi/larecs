@@ -1,7 +1,7 @@
 from testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
-from larecs.resource import ResourceContaining
+from larecs.resource import TypeMapping
 from larecs.archetype import Archetype as _Archetype
 from larecs.component import ComponentManager
 from larecs.query import _ArchetypeIterator
@@ -293,15 +293,15 @@ def test_query_exclusive():
 struct QueryOwner[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
-    resources_type: ResourceContaining,
+    ResourceMap: TypeMapping,
 ]:
     alias WorldPointer = Pointer[
-        World[*component_types, resources_type=resources_type], world_origin
+        World[*component_types, ResourceMap=ResourceMap], world_origin
     ]
     alias Query = Query[
         world_origin,
         *component_types,
-        resources_type=resources_type,
+        ResourceMap=ResourceMap,
         has_without_mask=_,
     ]
 

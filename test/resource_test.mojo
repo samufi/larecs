@@ -1,4 +1,4 @@
-from larecs.resource import Resources, ResourceContaining
+from larecs.resource import Resources, StaticTypeMap
 from testing import *
 
 
@@ -18,21 +18,19 @@ struct Resource3:
 
 
 def test_reseource_init():
-    resources = Resources[Resource1, Resource2, Resource3]()
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
     with assert_raises():
         _ = resources.get[Resource1]()
         _ = resources.get[Resource2]()
         _ = resources.get[Resource3]()
 
-    resources = Resources[Resource1, Resource2, Resource3](
-        Resource1(2), Resource2(4)
-    )
+    resources.add(Resource1(2), Resource2(4))
     assert_equal(resources.get[Resource1]().value, 2)
     assert_equal(resources.get[Resource2]().value, 4)
     with assert_raises():
         _ = resources.get[Resource3]()
 
-    resources = Resources[Resource1, Resource2, Resource3](
+    resources.set[add_if_not_found=True](
         Resource1(2), Resource2(4), Resource3(6)
     )
     assert_equal(resources.get[Resource1]().value, 2)
@@ -41,7 +39,7 @@ def test_reseource_init():
 
 
 def test_resources_add_set():
-    resources = Resources[Resource1, Resource2]()
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
 
     with assert_raises():
         resources.set[Resource1](Resource1(10))
@@ -66,7 +64,8 @@ def test_resources_add_set():
 
 
 def test_reseource_has():
-    resources = Resources[Resource1, Resource2]()
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
+
     assert_false(resources.has[Resource1]())
     assert_false(resources.has[Resource2]())
 
@@ -78,9 +77,8 @@ def test_reseource_has():
 
 
 def test_resources_get():
-    resource1 = Resource1(value=10)
-    resource2 = Resource2(value=20)
-    resources = Resources(resource1, resource2)
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
+    resources.add(Resource1(value=10), Resource2(value=20))
 
     assert_equal(resources.get[Resource1]().value, 10)
     assert_equal(resources.get[Resource2]().value, 20)
@@ -93,7 +91,8 @@ def test_resources_get():
 
 
 def test_resource_remove():
-    resources = Resources(Resource1(10), Resource2(20))
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
+    resources.add(Resource1(10), Resource2(20))
     resources.remove[Resource1]()
     with assert_raises():
         _ = resources.get[Resource1]()
@@ -113,9 +112,8 @@ def test_resource_remove():
 
 
 def test_resources_get_ptr():
-    resource1 = Resource1(value=10)
-    resource2 = Resource2(value=20)
-    resources = Resources(resource1, resource2)
+    resources = Resources(StaticTypeMap[Resource1, Resource2, Resource3]())
+    resources.add(Resource1(10), Resource2(20))
 
     ptr = resources.get_ptr[Resource1]()
     assert_equal(ptr[].value, 10)
@@ -124,32 +122,11 @@ def test_resources_get_ptr():
     assert_equal(resources.get[Resource1]().value, 30)
 
 
-struct S[*Ts: AnyType, R: ResourceContaining]():
-    var r: R
-
-    fn __init__(out self, r: R):
-        self.r = r
-
-    fn __init__(out self):
-        self.r = R()
-
-    fn get[T: CollectionElement](self) raises -> T:
-        return self.r.get[T]()
-
-
-def test_resources_usage():
-    s = S[UInt32, Float32](Resources())  # (5, 2.2))
-    # assert_equal(s.get[Int](), 5)
-
-
 def main():
-    r = Resources(1, 2.1)
     test_reseource_init()
     test_reseource_has()
     test_resources_add_set()
     test_resource_remove()
     test_resources_get()
     test_resources_get_ptr()
-    test_resources_usage()
-
     print("All tests passed!")
