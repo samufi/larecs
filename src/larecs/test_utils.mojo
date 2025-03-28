@@ -60,6 +60,23 @@ trait TestableCollectionElement(CollectionElement, Testable):
     pass
 
 
+fn is_mutable[
+    mut: Bool, //, T: AnyType, origin: Origin[mut]
+](ref [origin]val: T) -> Bool:
+    """
+    Check if the value is mutable.
+
+    Parameters:
+        mut: Whether the value is mutable.
+        T: The type of the value.
+        origin: The origin of the value.
+
+    Args:
+        val: The value to check.
+    """
+    return mut
+
+
 fn get_random_bitmask_list(
     count: Int,
     range_start: Int = 0,
