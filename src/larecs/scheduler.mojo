@@ -57,8 +57,52 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     """
     Manages the execution of systems in a world.
 
-    Parameters:
-        ComponentTypes: The types of the components in the world.
+    The systems must implement [.System].
+    Usage example:
+
+    Example:
+
+    ```mojo {doctest="scheduler" global=true hide=true}
+    from larecs import World, Scheduler, System
+
+    @value
+    struct Position:
+        var x: Float64
+        var y: Float64
+
+    @value
+    struct Velocity:
+        var x: Float64
+        var y: Float64
+    ```
+
+    ```mojo {doctest="scheduler"}
+
+    @value
+    struct MySystem:
+        var internal_variable: Int
+
+        # This is executed once at the beginning
+        fn initialize(mut self, mut world: World) raises:
+            _ = world.add_entities(Position(0.0, 0.0), Velocity(1.0, 1.0), count=10)
+
+        # This is executed in each step
+        fn update(mut self, mut world: World) raises:
+            for entity in world.query[Position, Velocity]():
+                entity.get[Position]().x += entity.get[Velocity]().x
+                entity.get[Position]().y += entity.get[Velocity]().y
+
+        # This is executed at the end
+        fn finalize(mut self, mut world: World) raises:
+            print("Final positions")
+            for entity in world.query[Position]():
+                print(entity.get[Position]().x, entity.get[Position]().y)
+
+    scheduler = Scheduler[Position, Velocity]()
+    scheduler.add_system(MySystem(internal_variable=42))
+    scheduler.run(10)
+    ```
+
     """
 
     alias World = World[*ComponentTypes]
