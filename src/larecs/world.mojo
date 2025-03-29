@@ -639,6 +639,7 @@ struct World[*component_types: ComponentType](Movable):
             index(self._entities[entity.get_id()].archetype_index)
         ).has_component(Self.component_manager.get_id[T]())
 
+    @always_inline
     fn get[
         T: ComponentType
     ](mut self, entity: Entity) raises -> ref [self._archetypes[0]._data] T:
@@ -680,6 +681,7 @@ struct World[*component_types: ComponentType](Movable):
             index(entity_index.archetype_index)
         ).get_component_ptr[T=T](entity_index.index)
 
+    @always_inline
     fn set[
         T: ComponentType
     ](mut self, entity: Entity, owned component: T) raises:
@@ -702,6 +704,7 @@ struct World[*component_types: ComponentType](Movable):
             index(entity_index.archetype_index)
         ).get_component[T=T](entity_index.index) = (component^)
 
+    @always_inline
     fn set[
         *Ts: ComponentType
     ](mut self, entity: Entity, owned *components: *Ts) raises:
