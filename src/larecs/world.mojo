@@ -32,7 +32,6 @@ struct Replacer[
     world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
-    ResourceMap: TypeMapping,
 ]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
@@ -44,15 +43,10 @@ struct Replacer[
         world_origin: The mutale origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
-        ResourceMap: The mapping from resource types to resource IDs.
     """
 
-    var _world: Pointer[
-        World[*component_types, ResourceMap=ResourceMap], world_origin
-    ]
-    var _remove_ids: InlineArray[
-        World[*component_types, ResourceMap=ResourceMap].Id, size
-    ]
+    var _world: Pointer[World[*component_types], world_origin]
+    var _remove_ids: InlineArray[World[*component_types].Id, size]
 
     fn by[
         *AddTs: ComponentType
@@ -105,9 +99,7 @@ struct Replacer[
         )
 
 
-struct World[
-    *component_types: ComponentType, ResourceMap: TypeMapping = DynamicTypeMap
-](Movable):
+struct World[*component_types: ComponentType](Movable):
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -117,14 +109,13 @@ struct World[
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
-    alias ResourcesType = Resources[DynamicTypeMap]  # Resources[ResourceMap]
+    alias ResourcesType = Resources[DynamicTypeMap]
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
     alias Query = Query[
         _,
         *component_types,
-        ResourceMap=ResourceMap,
         has_without_mask=_,
     ]
 
@@ -807,7 +798,6 @@ struct World[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
-        ResourceMap=ResourceMap,
     ]:
         """
         Returns a [.Replacer] for removing and adding components to an Entity in one go.

@@ -6,7 +6,6 @@ from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
-from .type_map import TypeMapping
 from .debug_utils import debug_warn
 from .comptime_optional import ComptimeOptional
 
@@ -14,7 +13,6 @@ from .comptime_optional import ComptimeOptional
 struct Query[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
-    ResourceMap: TypeMapping,
     has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components.
@@ -38,16 +36,14 @@ struct Query[
     Parameters:
         world_origin: The origin of the world.
         component_types: The types of the components to include in the query.
-        ResourceMap: The type mapping for the resources.
         has_without_mask: Whether the query has excluded components.
     """
 
-    alias World = World[*component_types, ResourceMap=ResourceMap]
+    alias World = World[*component_types]
 
     alias QueryWithWithout = Query[
         world_origin,
         *component_types,
-        ResourceMap=ResourceMap,
         has_without_mask=True,
     ]
 
