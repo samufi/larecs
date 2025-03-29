@@ -297,7 +297,7 @@ struct World[*component_types: ComponentType](Movable):
         Example:
 
         ```mojo {doctest="add_entity_comps" global=true hide=true}
-        from larecs import World, Resources
+        from larecs import World
 
         @value
         struct Position:
@@ -311,7 +311,7 @@ struct World[*component_types: ComponentType](Movable):
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity](Resources())
+        world = World[Position, Velocity]()
         e = world.add_entity(
             Position(0, 0),
             Velocity(0.5, -0.5),
@@ -414,7 +414,7 @@ struct World[*component_types: ComponentType](Movable):
             count = 5
         ):
             # Do things with the newly created entities
-            entity.get[Position]()
+            position = entity.get[Position]()
         ```
 
         Parameters:
@@ -564,12 +564,12 @@ struct World[*component_types: ComponentType](Movable):
         Example:
 
         ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
+        from larecs import World, MutableEntityAccessor
         from testing import assert_equal, assert_false
         ```
 
         ```mojo {doctest="apply"}
-        world = World[Float32, Float64](Resources())
+        world = World[Float32, Float64]()
         _ = world.add_entity(Float32(0))
         _ = world.add_entity(Float32(0), Float64(0))
         _ = world.add_entity(Float64(0))
@@ -1050,14 +1050,14 @@ struct World[*component_types: ComponentType](Movable):
 
         Example:
         ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
+        from larecs import World, MutableEntityAccessor
         ```
 
         ```mojo {doctest="apply"}
         from sys.info import simdwidthof
         from memory import UnsafePointer
 
-        world = World[Float64](Resources())
+        world = World[Float64]()
         e = world.add_entity()
 
         fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:

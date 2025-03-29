@@ -10,7 +10,7 @@ Example:
 
 ```mojo {doctest="readme" global=true}
 # Import the package
-from larecs import World, Resources
+from larecs import World
 
 
 # Define components
@@ -34,7 +34,7 @@ struct Velocity:
 # Run the ECS
 fn main() raises:
     # Create a world, list all components that will / may be used
-    world = World[Position, Velocity, IsStatic](Resources())
+    world = World[Position, Velocity, IsStatic]()
 
     for _ in range(100):
         # Add an entity. The returned value is the
