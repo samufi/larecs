@@ -73,7 +73,7 @@ fn constrain_components_unique[*Ts: ComponentType]():
 
 @register_passable("trivial")
 struct ComponentManager[
-    *component_types: ComponentType, dType: DType = BitMask.IndexDType
+    *ComponentTypes: ComponentType, dType: DType = BitMask.IndexDType
 ]():
     """ComponentManager is a manager for ECS components.
 
@@ -81,14 +81,14 @@ struct ComponentManager[
     references for passing them around.
 
     Parameters:
-        component_types: The component types that the manager should handle.
+        ComponentTypes: The component types that the manager should handle.
         dType: The data type to use for the component IDs.
     """
 
     alias Id = SIMD[dType, 1]
     alias max_size = get_max_size[dType]()
-    alias component_count = len(VariadicList(component_types))
-    alias component_sizes = get_sizes[*component_types]()
+    alias component_count = len(VariadicList(ComponentTypes))
+    alias component_sizes = get_sizes[*ComponentTypes]()
 
     fn __init__(out self):
         constrained[
@@ -96,7 +96,7 @@ struct ComponentManager[
             "dType needs to be an integral type.",
         ]()
         constrained[
-            len(VariadicList(component_types)) <= Self.max_size,
+            len(VariadicList(ComponentTypes)) <= Self.max_size,
             "At most "
             + String(Self.max_size)
             + " component types are allowed.",
@@ -112,15 +112,15 @@ struct ComponentManager[
         """
 
         @parameter
-        for i in range(len(VariadicList(component_types))):
+        for i in range(len(VariadicList(ComponentTypes))):
 
             @parameter
-            if _type_is_eq[T, component_types[i]]():
+            if _type_is_eq[T, ComponentTypes[i]]():
                 return i
 
         # This constraint will fail if the component type is not in the list.
         constrained[
-            contains_type[T, *component_types](),
+            contains_type[T, *ComponentTypes](),
             "The used component is not in the component parameter list.",
         ]()
 
@@ -165,7 +165,7 @@ struct ComponentManager[
         Parameters:
             i: The ID of the component type.
         """
-        return sizeof[component_types[i]]()
+        return sizeof[ComponentTypes[i]]()
 
     @staticmethod
     @always_inline

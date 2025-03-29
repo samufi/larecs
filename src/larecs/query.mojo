@@ -12,7 +12,7 @@ from .comptime_optional import ComptimeOptional
 
 struct Query[
     world_origin: MutableOrigin,
-    *component_types: ComponentType,
+    *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components.
@@ -35,15 +35,15 @@ struct Query[
 
     Parameters:
         world_origin: The origin of the world.
-        component_types: The types of the components to include in the query.
+        ComponentTypes: The types of the components to include in the query.
         has_without_mask: Whether the query has excluded components.
     """
 
-    alias World = World[*component_types]
+    alias World = World[*ComponentTypes]
 
     alias QueryWithWithout = Query[
         world_origin,
-        *component_types,
+        *ComponentTypes,
         has_without_mask=True,
     ]
 
@@ -202,8 +202,8 @@ struct QueryInfo[
 struct _ArchetypeIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
-    *component_types: ComponentType,
-    component_manager: ComponentManager[*component_types],
+    *ComponentTypes: ComponentType,
+    component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
 ]:
     """
@@ -214,14 +214,14 @@ struct _ArchetypeIterator[
     Parameters:
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
-        component_types: The types of the components.
+        ComponentTypes: The types of the components.
         component_manager: The component manager.
         has_without_mask: Whether the iterator has excluded components.
     """
 
     alias buffer_size = 8
     alias Archetype = _Archetype[
-        *component_types, component_manager=component_manager
+        *ComponentTypes, component_manager=component_manager
     ]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
@@ -456,8 +456,8 @@ struct _EntityIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
     lock_origin: MutableOrigin,
-    *component_types: ComponentType,
-    component_manager: ComponentManager[*component_types],
+    *ComponentTypes: ComponentType,
+    component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
     has_start_indices: Bool = False,
 ]:
@@ -469,7 +469,7 @@ struct _EntityIterator[
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
         lock_origin: The origin of the LockMask.
-        component_types: The types of the components.
+        ComponentTypes: The types of the components.
         component_manager: The component manager.
         has_without_mask: Whether the iterator has excluded components.
         has_start_indices: Whether the iterator starts iterating the
@@ -478,11 +478,11 @@ struct _EntityIterator[
 
     alias buffer_size = 8
     alias Archetype = _Archetype[
-        *component_types, component_manager=component_manager
+        *ComponentTypes, component_manager=component_manager
     ]
     alias ArchetypeIterator = _ArchetypeIterator[
         archetype_origin,
-        *component_types,
+        *ComponentTypes,
         component_manager=component_manager,
         has_without_mask=has_without_mask,
     ]
@@ -689,8 +689,8 @@ struct _ArchetypeEntityIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
     lock_origin: MutableOrigin,
-    *component_types: ComponentType,
-    component_manager: ComponentManager[*component_types],
+    *ComponentTypes: ComponentType,
+    component_manager: ComponentManager[*ComponentTypes],
 ]:
     """Iterator over all entities in a given [..archetype._Archetype].
 
@@ -700,12 +700,12 @@ struct _ArchetypeEntityIterator[
         archetype_mutability: Whether the reference to the archetype is mutable.
         archetype_origin: The origin of the archetype.
         lock_origin: The origin of the LockMask.
-        component_types: The types of the components.
+        ComponentTypes: The types of the components.
         component_manager: The component manager.
     """
 
     alias Archetype = _Archetype[
-        *component_types, component_manager=component_manager
+        *ComponentTypes, component_manager=component_manager
     ]
     var _archetype: Pointer[Self.Archetype, archetype_origin]
     var _lock_ptr: Pointer[LockMask, lock_origin]
