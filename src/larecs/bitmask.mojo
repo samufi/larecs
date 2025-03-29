@@ -65,12 +65,12 @@ struct BitMask(Stringable, KeyElement):
     var _bytes: SIMD[DType.uint8, Self.total_bytes]
 
     @always_inline
-    fn __init__(mut self, *, bytes: SIMD[DType.uint8, Self.total_bytes]):
+    fn __init__(out self, *, bytes: SIMD[DType.uint8, Self.total_bytes]):
         """Initializes the mask with the given bytes."""
         self._bytes = bytes
 
     @always_inline
-    fn __init__(mut self, bits: VariadicList[BitMask.IndexType]):
+    fn __init__(out self, bits: VariadicList[BitMask.IndexType]):
         """Initializes the mask with the bits at the given indices set to True.
         """
         self._bytes = SIMD[DType.uint8, Self.total_bytes]()
@@ -80,7 +80,7 @@ struct BitMask(Stringable, KeyElement):
     @always_inline
     fn __init__[
         size: Int
-    ](mut self, bits: InlineArray[BitMask.IndexType, size]):
+    ](out self, bits: InlineArray[BitMask.IndexType, size]):
         """Initializes the mask with the bits at the given indices set to True.
         """
         self._bytes = SIMD[DType.uint8, Self.total_bytes]()
@@ -95,7 +95,7 @@ struct BitMask(Stringable, KeyElement):
         """
         self = Self(bits)
 
-    fn __copyinit__(mut self, other: Self):
+    fn __copyinit__(out self, other: Self):
         """Initializes the mask with the other mask."""
         self._bytes = other._bytes
 

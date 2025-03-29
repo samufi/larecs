@@ -6,7 +6,6 @@ from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
-from .resource import ResourceContaining
 from .debug_utils import debug_warn
 from .comptime_optional import ComptimeOptional
 
@@ -14,7 +13,6 @@ from .comptime_optional import ComptimeOptional
 struct Query[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
-    resources_type: ResourceContaining,
     has_without_mask: Bool = False,
 ]:
     """Query builder for entities with and without specific components.
@@ -26,7 +24,7 @@ struct Query[
     ```
 
     ```mojo {doctest="query_init"}
-    world = World[Float64, Float32, Int](Resources())
+    world = World[Float64, Float32, Int]()
     _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
     _ = world.add_entity(Float64(1.0), 3)
 
@@ -34,14 +32,18 @@ struct Query[
         f = entity.get_ptr[Float64]()
         f[] += 1
     ```
+
+    Parameters:
+        world_origin: The origin of the world.
+        component_types: The types of the components to include in the query.
+        has_without_mask: Whether the query has excluded components.
     """
 
-    alias World = World[*component_types, resources_type=resources_type]
+    alias World = World[*component_types]
 
     alias QueryWithWithout = Query[
         world_origin,
         *component_types,
-        resources_type=resources_type,
         has_without_mask=True,
     ]
 
@@ -114,7 +116,7 @@ struct Query[
         ```
 
         ```mojo {doctest="query_without"}
-        world = World[Float64, Float32, Int](Resources())
+        world = World[Float64, Float32, Int]()
         _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
         _ = world.add_entity(Float64(1.0), 3)
 
@@ -145,7 +147,7 @@ struct Query[
         ```
 
         ```mojo {doctest="query_without"}
-        world = World[Float64, Float32, Int](Resources())
+        world = World[Float64, Float32, Int]()
         _ = world.add_entity(Float64(1.0), Float32(2.0), 3)
         _ = world.add_entity(Float64(1.0), 3)
 

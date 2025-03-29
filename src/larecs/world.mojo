@@ -23,7 +23,8 @@ from .query import (
     _ArchetypeIterator,
 )
 from .lock import LockMask, LockedContext
-from .resource import ResourceContaining, Resources
+from .resource import Resources
+from .type_map import TypeMapping, DynamicTypeMap
 
 
 @value
@@ -31,7 +32,6 @@ struct Replacer[
     world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
-    resources_type: ResourceContaining,
 ]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
@@ -43,15 +43,10 @@ struct Replacer[
         world_origin: The mutale origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
-        resources_type: The type of the resource container.
     """
 
-    var _world: Pointer[
-        World[*component_types, resources_type=resources_type], world_origin
-    ]
-    var _remove_ids: InlineArray[
-        World[*component_types, resources_type=resources_type].Id, size
-    ]
+    var _world: Pointer[World[*component_types], world_origin]
+    var _remove_ids: InlineArray[World[*component_types].Id, size]
 
     fn by[
         *AddTs: ComponentType
@@ -104,9 +99,7 @@ struct Replacer[
         )
 
 
-struct World[
-    *component_types: ComponentType, resources_type: ResourceContaining
-](Movable):
+struct World[*component_types: ComponentType](Movable):
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -116,13 +109,13 @@ struct World[
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
+    alias ResourcesType = Resources[DynamicTypeMap]
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
     alias Query = Query[
         _,
         *component_types,
-        resources_type=resources_type,
         has_without_mask=_,
     ]
 
@@ -156,11 +149,10 @@ struct World[
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    var resources: resources_type  # The resources of the world.
+    var resources: Self.ResourcesType  # The resources of the world.
 
     fn __init__(
-        mut self,
-        owned resources: resources_type = resources_type(),
+        out self,
     ) raises:
         """
         Creates a new [.World].
@@ -172,7 +164,7 @@ struct World[
         )
         self._entity_pool = EntityPool()
         self._locks = LockMask()
-        self.resources = resources^
+        self.resources = Self.ResourcesType()
 
         # TODO
         # var _tarquery = bitSet
@@ -185,7 +177,7 @@ struct World[
 
         # var node = self.createArchetypeNode(Mask, ID, false)
 
-    fn __moveinit__(mut self, owned other: Self):
+    fn __moveinit__(out self, owned other: Self):
         """
         Moves the contents of another [.World] into a new one.
         """
@@ -305,7 +297,7 @@ struct World[
         Example:
 
         ```mojo {doctest="add_entity_comps" global=true hide=true}
-        from larecs import World, Resources
+        from larecs import World
 
         @value
         struct Position:
@@ -319,7 +311,7 @@ struct World[
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity](Resources())
+        world = World[Position, Velocity]()
         e = world.add_entity(
             Position(0, 0),
             Velocity(0.5, -0.5),
@@ -415,14 +407,14 @@ struct World[
         ```
 
         ```mojo {doctest="add_entity_comps"}
-        world = World[Position, Velocity](Resources())
+        world = World[Position, Velocity]()
         for entity in world.add_entities(
             Position(0, 0),
             Velocity(0.5, -0.5),
             count = 5
         ):
             # Do things with the newly created entities
-            entity.get[Position]()
+            position = entity.get[Position]()
         ```
 
         Parameters:
@@ -459,10 +451,6 @@ struct World[
 
         @parameter
         for i in range(size):
-            # Use the code below as soon as Mojo is fixed and updated
-            # so that it works. The uncommented replacement code can be
-            # deleted then.
-
             Span(
                 UnsafePointer.address_of(
                     archetype[].get_component[
@@ -576,12 +564,12 @@ struct World[
         Example:
 
         ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
+        from larecs import World, MutableEntityAccessor
         from testing import assert_equal, assert_false
         ```
 
         ```mojo {doctest="apply"}
-        world = World[Float32, Float64](Resources())
+        world = World[Float32, Float64]()
         _ = world.add_entity(Float32(0))
         _ = world.add_entity(Float32(0), Float64(0))
         _ = world.add_entity(Float64(0))
@@ -651,6 +639,7 @@ struct World[
             index(self._entities[entity.get_id()].archetype_index)
         ).has_component(Self.component_manager.get_id[T]())
 
+    @always_inline
     fn get[
         T: ComponentType
     ](mut self, entity: Entity) raises -> ref [self._archetypes[0]._data] T:
@@ -692,6 +681,7 @@ struct World[
             index(entity_index.archetype_index)
         ).get_component_ptr[T=T](entity_index.index)
 
+    @always_inline
     fn set[
         T: ComponentType
     ](mut self, entity: Entity, owned component: T) raises:
@@ -714,6 +704,7 @@ struct World[
             index(entity_index.archetype_index)
         ).get_component[T=T](entity_index.index) = (component^)
 
+    @always_inline
     fn set[
         *Ts: ComponentType
     ](mut self, entity: Entity, owned *components: *Ts) raises:
@@ -810,7 +801,6 @@ struct World[
         __origin_of(self),
         VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
-        resources_type=resources_type,
     ]:
         """
         Returns a [.Replacer] for removing and adding components to an Entity in one go.
@@ -1060,14 +1050,14 @@ struct World[
 
         Example:
         ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, Resources, MutableEntityAccessor
+        from larecs import World, MutableEntityAccessor
         ```
 
         ```mojo {doctest="apply"}
         from sys.info import simdwidthof
         from memory import UnsafePointer
 
-        world = World[Float64](Resources())
+        world = World[Float64]()
         e = world.add_entity()
 
         fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
