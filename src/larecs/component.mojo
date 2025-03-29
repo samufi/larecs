@@ -46,7 +46,7 @@ fn get_sizes[
 
 
 @always_inline
-fn _contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
+fn contains_type[T: ComponentType, *Ts: ComponentType]() -> Bool:
     @parameter
     for i in range(len(VariadicList(Ts))):
 
@@ -120,7 +120,7 @@ struct ComponentManager[
 
         # This constraint will fail if the component type is not in the list.
         constrained[
-            _contains_type[T, *component_types](),
+            contains_type[T, *component_types](),
             "The used component is not in the component parameter list.",
         ]()
 

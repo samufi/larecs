@@ -2,91 +2,47 @@ from collections import Dict
 
 from .component import (
     ComponentType,
-    ComponentManager,
     get_max_size,
     constrain_components_unique,
+    contains_type,
+)
+from .type_map import (
+    TypeMapping,
+    IdentifiableCollectionElement,
+    StaticallyTypeMapping,
+    DynamicTypeMap,
 )
 from .unsafe_box import UnsafeBox
 
-alias ResourceManager = ComponentManager
-"""The mapper of resource types to resource IDs."""
-
-
-fn get_dtype[size: Int]() -> DType:
-    """Gets the data type for the given size.
-
-    Parameters:
-        size: The size of the data type.
-    """
-
-    @parameter
-    if size <= get_max_size[DType.uint8]():
-        return DType.uint8
-    elif size <= get_max_size[DType.uint16]():
-        return DType.uint16
-    elif size <= get_max_size[DType.uint32]():
-        return DType.uint32
-    else:
-        return DType.uint64
-
-
-trait TypeMapping(CollectionElement):
-    fn get_id[T: ComponentType](self) -> Int:
-        """Gets the ID of the type.
-
-        Parameters:
-            T: The type to get the ID for.
-
-        Returns:
-            The ID of the type.
-        """
-        ...
-
-    fn __init__(out self):
-        """Constructs a new type mapping."""
-        pass
-
 
 @value
-struct StaticTypeMap[*Ts: CollectionElement](TypeMapping):
-    """Maps types to resource IDs.
-
-    Parameters:
-        Ts: The types to map.
-    """
-
-    alias manager = ResourceManager[*Ts]()
-
-    fn get_id[T: ComponentType](self) -> Int:
-        return Int(self.manager.get_id[T]())
-
-
-@value
-struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
+struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     """Manages resources.
 
     Parameters:
-        TypeMapper: A mapping from types to resource IDs.
+        TypeMap: A mapping from types to resource IDs.
     """
 
-    var _type_mapper: TypeMapper
+    var _type_map: TypeMap
     var _storage: Dict[Int, UnsafeBox]
 
     @always_inline
     fn __init__(out self):
-        """Constructs an empty resource container."""
-        self._type_mapper = TypeMapper()
+        """
+        Constructs an empty resource container.
+        """
+        self._type_map = TypeMap()
         self._storage = Dict[Int, UnsafeBox]()
 
     @always_inline
-    fn __init__(out self, owned type_mapper: TypeMapper):
+    fn __init__(out self, owned type_map: TypeMap):
         """
-        Constructs an empty resource container with a given type mapper.
+        Constructs an empty resource container.
 
         Args:
-            type_mapper: The type mapper to use.
+            type_map: The type map to use.
         """
-        self._type_mapper = type_mapper^
+        self._type_map = type_map^
         self._storage = Dict[Int, UnsafeBox]()
 
     @always_inline
@@ -107,7 +63,9 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
         """
         return len(self._storage)
 
-    fn add[*Ts: CollectionElement](mut self, owned *resources: *Ts) raises:
+    fn add[
+        *Ts: IdentifiableCollectionElement
+    ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Adds resources.
 
         Parameters:
@@ -122,14 +80,49 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
 
         @parameter
         for i in range(resources.__len__()):
-            id = self._type_mapper.get_id[Ts[i]]()
-            if id in self._storage:
-                raise Error("Resource already exists.")
-            self._storage[id] = UnsafeBox(resources[i])
+            self._add(self._type_map.get_id[Ts[i]](), resources[i])
+
+    fn add[
+        *Ts: CollectionElement, M: StaticallyTypeMapping
+    ](mut self: Resources[M], owned *resources: *Ts) raises:
+        """Adds resources.
+
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            Ts: The Types of the resources to add.
+
+        Args:
+            resources: The resources to add.
+
+        Raises:
+            Error: If the resource already exists.
+        """
+
+        @parameter
+        for i in range(resources.__len__()):
+            self._add(self._type_map.get_id[Ts[i]](), resources[i])
+
+    @always_inline
+    fn _add[T: CollectionElement](mut self, id: Int, owned resource: T) raises:
+        """Adds a resource by ID.
+
+        Parameters:
+            T: The type of the resource to add.
+
+        Args:
+            id: The ID of the resource to add.
+            resource: The resource to add.
+
+        Raises:
+            Error: If the resource already exists.
+        """
+        if id in self._storage:
+            raise Error("Resource already exists.")
+        self._storage[id] = UnsafeBox(resource^)
 
     fn set[
-        *Ts: CollectionElement, add_if_not_found: Bool = False
-    ](mut self, owned *resources: *Ts) raises:
+        *Ts: IdentifiableCollectionElement, add_if_not_found: Bool = False
+    ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Sets the values of resources.
 
         Parameters:
@@ -145,19 +138,70 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
 
         @parameter
         for i in range(resources.__len__()):
-            ptr = self._storage.get_ptr(self._type_mapper.get_id[Ts[i]]())
+            self._set[add_if_not_found=add_if_not_found](
+                self._type_map.get_id[Ts[i]](),
+                resources[i],
+            )
 
-            if not ptr:
+    fn set[
+        *Ts: CollectionElement,
+        M: StaticallyTypeMapping,
+        add_if_not_found: Bool = False,
+    ](mut self: Resources[M], owned *resources: *Ts) raises:
+        """Sets the values of resources.
 
-                @parameter
-                if add_if_not_found:
-                    self.add(resources[i])
-                else:
-                    raise Error("Resource not found.")
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            Ts: The types of the resources to set.
+            add_if_not_found: If true, adds resources that do not exist.
+
+        Args:
+            resources: The resources to set.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
+
+        @parameter
+        for i in range(resources.__len__()):
+            self._set[add_if_not_found=add_if_not_found](
+                self._type_map.get_id[Ts[i]](),
+                resources[i],
+            )
+
+    @always_inline
+    fn _set[
+        T: CollectionElement, add_if_not_found: Bool
+    ](mut self, id: Int, owned resource: T) raises:
+        """Sets the values of the resources
+
+        Parameters:
+            T: The type of the resource to set.
+            add_if_not_found: If true, adds resources that do not exist.
+
+        Args:
+            id: The ID of the resource to set.
+            resource: The resource to set.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
+
+        ptr = self._storage.get_ptr(id)
+
+        if not ptr:
+
+            @parameter
+            if add_if_not_found:
+                self._add(id, resource^)
             else:
-                ptr.value()[].unsafe_get[Ts[i.value]]() = resources[i.value]
+                raise Error("Resource not found.")
+        else:
+            ptr.value()[].unsafe_get[T]() = resource^
 
-    fn remove[*Ts: CollectionElement](mut self) raises:
+    fn remove[
+        *Ts: IdentifiableCollectionElement
+    ](mut self: Resources[DynamicTypeMap]) raises:
         """Removes resources.
 
         Parameters:
@@ -169,15 +213,47 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
 
         @parameter
         for i in range(len(VariadicList(Ts))):
-            id = self._type_mapper.get_id[Ts[i]]()
-            if id not in self._storage:
-                raise Error("The resource does not exist.")
-            _ = self._storage.pop(id)
+            self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
+
+    fn remove[
+        *Ts: CollectionElement, M: StaticallyTypeMapping
+    ](mut self: Resources[M]) raises:
+        """Removes resources.
+
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            Ts: The types of the resources to remove.
+
+        Raises:
+            Error: If one of the resources does not exist.
+        """
+
+        @parameter
+        for i in range(len(VariadicList(Ts))):
+            self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
+
+    @always_inline
+    fn _remove[T: CollectionElement](mut self, id: Int) raises:
+        """Removes resources.
+
+        Parameters:
+            T: The type of the resource to remove.
+
+        Raises:
+            Error: If the resource does not exist.
+        """
+
+        ptr = self._storage.get_ptr(id)
+        if not ptr:
+            raise Error("The resource does not exist.")
+        _ = self._storage.pop(id)
 
     @always_inline
     fn get[
-        T: CollectionElement
-    ](ref self) raises -> ref [self.get_ptr[T]()[]] T:
+        T: IdentifiableCollectionElement
+    ](mut self: Resources[DynamicTypeMap]) raises -> ref [
+        self._get_ptr[T](0)[]
+    ] T:
         """Gets a resource.
 
         Parameters:
@@ -189,9 +265,24 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
         return self.get_ptr[T]()[]
 
     @always_inline
+    fn get[
+        T: CollectionElement, M: StaticallyTypeMapping
+    ](mut self: Resources[M]) raises -> ref [self._get_ptr[T](0)[]] T:
+        """Gets a resource.
+
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            T: The type of the resource to get.
+
+        Returns:
+            A reference to the resource.
+        """
+        return self.get_ptr[T, M]()[]
+
+    @always_inline
     fn get_ptr[
-        T: CollectionElement
-    ](ref self) raises -> Pointer[
+        T: IdentifiableCollectionElement
+    ](mut self: Resources[DynamicTypeMap]) raises -> Pointer[
         T, __origin_of(self._storage.get_ptr(0).value()[].unsafe_get_ptr[T]()[])
     ]:
         """Gets a pointer to a resource.
@@ -202,14 +293,53 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
         Returns:
             A pointer to the resource.
         """
-        ptr = self._storage.get_ptr(self._type_mapper.get_id[T]())
+        return self._get_ptr[T](self._type_map.get_id[T]())
+
+    @always_inline
+    fn get_ptr[
+        T: CollectionElement, M: StaticallyTypeMapping
+    ](mut self: Resources[M]) raises -> Pointer[
+        T, __origin_of(self._storage.get_ptr(0).value()[].unsafe_get_ptr[T]()[])
+    ]:
+        """Gets a pointer to a resource.
+
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            T: The type of the resource to get.
+
+        Returns:
+            A pointer to the resource.
+        """
+        return self._get_ptr[T](self._type_map.get_id[T]())
+
+    @always_inline
+    fn _get_ptr[
+        T: CollectionElement
+    ](mut self, id: Int) raises -> Pointer[
+        T,
+        __origin_of(self._storage.get_ptr(id).value()[].unsafe_get_ptr[T]()[]),
+    ]:
+        """Gets a pointer to a resource.
+
+        Parameters:
+            T: The type of the resource to get.
+
+        Args:
+            id: The ID of the resource to get.
+
+        Returns:
+            A pointer to the resource.
+        """
+        ptr = self._storage.get_ptr(id)
         if not ptr:
             raise Error("Resource not found.")
 
         return ptr.value()[].unsafe_get_ptr[T]()
 
     @always_inline
-    fn has[T: CollectionElement](self) -> Bool:
+    fn has[
+        T: IdentifiableCollectionElement
+    ](mut self: Resources[DynamicTypeMap]) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -218,4 +348,19 @@ struct Resources[TypeMapper: TypeMapping = StaticTypeMap]:
         Returns:
             True if the resource is present, otherwise False.
         """
-        return self._type_mapper.get_id[T]() in self._storage
+        return self._type_map.get_id[T]() in self._storage
+
+    @always_inline
+    fn has[
+        T: CollectionElement, M: StaticallyTypeMapping
+    ](mut self: Resources[M]) -> Bool:
+        """Checks if the resource is present.
+
+        Parameters:
+            M: The type of the mapping from resources to IDs.
+            T: The type of the resource to check.
+
+        Returns:
+            True if the resource is present, otherwise False.
+        """
+        return self._type_map.get_id[T]() in self._storage

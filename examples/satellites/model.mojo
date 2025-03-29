@@ -1,4 +1,4 @@
-from larecs import World, Resources, StaticTypeMap
+from larecs import World, Resources
 from parameters import Parameters
 from systems import move, accellerate, add_satellites, position_to_numpy
 from components import Position, Velocity
@@ -13,7 +13,7 @@ fn update(mut world: World, step: Float64) raises:
 
 
 fn main() raises:
-    world = World[Position, Velocity](Resources[StaticTypeMap[Parameters]]())
+    world = World[Position, Velocity]()
 
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))
 

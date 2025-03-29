@@ -6,7 +6,7 @@ from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
-from .resource import TypeMapping
+from .type_map import TypeMapping
 from .debug_utils import debug_warn
 from .comptime_optional import ComptimeOptional
 

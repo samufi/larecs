@@ -79,6 +79,6 @@ Exports:
 from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
-from .resource import Resources, StaticTypeMap
+from .resource import Resources
 from .entity import Entity
 from .query import Query

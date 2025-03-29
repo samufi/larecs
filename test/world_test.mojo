@@ -3,7 +3,8 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
-from larecs.resource import Resources, StaticTypeMap
+from larecs.resource import Resources
+from larecs.type_map import StaticTypeMap
 from larecs.archetype import MutableEntityAccessor
 
 from larecs.test_utils import *
@@ -295,19 +296,38 @@ def test_remove_and_add():
 
 @value
 struct Resource1:
+    alias id = 1
     var value: Int
 
 
 @value
 struct Resource2:
+    alias id = 2
     var value: Int
 
 
 def test_world_reseource_access():
-    resources = Resources(StaticTypeMap[Resource1, Resource2]())
-    resources.add(Resource1(2), Resource2(4))
+    world = World[Position, Velocity]()
+    world.resources.add(Resource1(2), Resource2(4))
+    assert_equal(world.resources.get[Resource1]().value, 2)
+    assert_equal(world.resources.get[Resource2]().value, 4)
+    assert_equal(world.resources.has[Resource1](), True)
 
-    world = World[Position, Velocity](resources)
+    world.resources.set(Resource1(10))
+    assert_equal(world.resources.get[Resource1]().value, 10)
+
+    world.resources.remove[Resource1]()
+    assert_equal(world.resources.has[Resource1](), False)
+
+    world.resources.add(Resource1(30))
+    assert_equal(world.resources.get[Resource1]().value, 30)
+
+
+def test_world_reseource_access_static():
+    world = World[
+        Position, Velocity, ResourceMap = StaticTypeMap[Resource1, Resource2]
+    ]()
+    world.resources.add(Resource1(2), Resource2(4))
     assert_equal(world.resources.get[Resource1]().value, 2)
     assert_equal(world.resources.get[Resource2]().value, 4)
     assert_equal(world.resources.has[Resource1](), True)
@@ -426,6 +446,7 @@ def main():
     test_world_remove()
     test_remove_and_add()
     test_world_reseource_access()
+    test_world_reseource_access_static()
     test_world_apply()
     test_world_apply_SIMD()
     test_world_lock()

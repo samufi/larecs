@@ -23,7 +23,8 @@ from .query import (
     _ArchetypeIterator,
 )
 from .lock import LockMask, LockedContext
-from .resource import Resources, TypeMapping
+from .resource import Resources
+from .type_map import TypeMapping, DynamicTypeMap
 
 
 @value
@@ -105,7 +106,7 @@ struct Replacer[
 
 
 struct World[
-    *component_types: ComponentType, ResourceMap: TypeMapping
+    *component_types: ComponentType, ResourceMap: TypeMapping = DynamicTypeMap
 ](Movable):
     """
     World is the central type holding entity and component data, as well as resources.
@@ -116,7 +117,7 @@ struct World[
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
-    alias ResourcesType = Resources[ResourceMap]
+    alias ResourcesType = Resources[DynamicTypeMap]  # Resources[ResourceMap]
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
@@ -161,7 +162,6 @@ struct World[
 
     fn __init__(
         out self,
-        owned resources: Self.ResourcesType = Self.ResourcesType(),
     ) raises:
         """
         Creates a new [.World].
@@ -173,7 +173,7 @@ struct World[
         )
         self._entity_pool = EntityPool()
         self._locks = LockMask()
-        self.resources = resources^
+        self.resources = Self.ResourcesType()
 
         # TODO
         # var _tarquery = bitSet

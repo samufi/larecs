@@ -1,7 +1,7 @@
 from testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
-from larecs.resource import TypeMapping
+from larecs.type_map import TypeMapping
 from larecs.archetype import Archetype as _Archetype
 from larecs.component import ComponentManager
 from larecs.query import _ArchetypeIterator
