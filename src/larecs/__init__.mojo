@@ -76,8 +76,8 @@ Exports:
  - resource.Resources
  - type_map.IdentifiableCollectionElement
  - type_map.TypeId
- - manager.Manager
- - manager.System
+ - scheduler.Scheduler
+ - scheduler.System
 """
 from .world import World
 from .component import ComponentType
@@ -86,4 +86,4 @@ from .resource import Resources
 from .type_map import IdentifiableCollectionElement, TypeId
 from .entity import Entity
 from .query import Query
-from .manager import Manager, System
+from .scheduler import Scheduler, System
