@@ -69,7 +69,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     ) raises
     """The type of system functions."""
 
-    var _world: Self.World
+    var world: Self.World
     var _systems: List[
         Tuple[
             UnsafeBox, Self.FunctionType, Self.FunctionType, Self.FunctionType
@@ -88,7 +88,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
                 Self.FunctionType,
             ]
         ]()
-        self._world = Self.World()
+        self.world = Self.World()
 
     fn __init__(out self, owned world: Self.World):
         """
@@ -105,9 +105,9 @@ struct Scheduler[*ComponentTypes: ComponentType]:
                 Self.FunctionType,
             ]
         ]()
-        self._world = world^
+        self.world = world^
 
-    fn add_system[S: System](mut self, system: S):
+    fn add_system[S: System](mut self, owned system: S):
         """Adds a system to the scheduler.
 
         Args:
@@ -116,7 +116,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
 
         self._systems.append(
             (
-                UnsafeBox(system),
+                UnsafeBox(system^),
                 _initialize_system[S, *ComponentTypes],
                 _update_system[S, *ComponentTypes],
                 _finalize_system[S, *ComponentTypes],
@@ -126,7 +126,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     fn initialize(mut self) raises:
         """Initializes all systems in the scheduler."""
         for system_info in self._systems:
-            system_info[][1](system_info[][0], self._world)
+            system_info[][1](system_info[][0], self.world)
 
     fn update(mut self, steps: Int = 1) raises:
         """Updates all systems in the scheduler repeatedly.
@@ -136,12 +136,12 @@ struct Scheduler[*ComponentTypes: ComponentType]:
         """
         for _ in range(steps):
             for system_info in self._systems:
-                system_info[][2](system_info[][0], self._world)
+                system_info[][2](system_info[][0], self.world)
 
     fn finalize(mut self) raises:
         """Finalizes all systems in the scheduler."""
         for system_info in self._systems:
-            system_info[][3](system_info[][0], self._world)
+            system_info[][3](system_info[][0], self.world)
 
     fn run(mut self, steps: Int) raises:
         """Runs the scheduler for a given number of steps.
