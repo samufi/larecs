@@ -88,8 +88,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Adds resources.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             Ts: The Types of the resources to add.
+            M: The type of the mapping from resources to IDs.
 
         Args:
             resources: The resources to add.
@@ -151,8 +151,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Sets the values of resources.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             Ts: The types of the resources to set.
+            M: The type of the mapping from resources to IDs.
             add_if_not_found: If true, adds resources that do not exist.
 
         Args:
@@ -221,8 +221,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Removes resources.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             Ts: The types of the resources to remove.
+            M: The type of the mapping from resources to IDs.
 
         Raises:
             Error: If one of the resources does not exist.
@@ -271,8 +271,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Gets a resource.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             T: The type of the resource to get.
+            M: The type of the mapping from resources to IDs.
 
         Returns:
             A reference to the resource.
@@ -304,8 +304,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Gets a pointer to a resource.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             T: The type of the resource to get.
+            M: The type of the mapping from resources to IDs.
 
         Returns:
             A pointer to the resource.
@@ -357,8 +357,8 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """Checks if the resource is present.
 
         Parameters:
-            M: The type of the mapping from resources to IDs.
             T: The type of the resource to check.
+            M: The type of the mapping from resources to IDs.
 
         Returns:
             True if the resource is present, otherwise False.

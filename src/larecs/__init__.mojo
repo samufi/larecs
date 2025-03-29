@@ -70,15 +70,16 @@ Exports:
  - component.ComponentType
  - archetype.MutableEntityAccessor
  - archetype.EntityAccessor
- - resource.Resources
- - resource.NoResource
  - entity.Entity
  - query.Query
  - query.QueryInfo
+ - resource.Resources
+ - type_map.IdentifiableCollectionElement
 """
 from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
 from .resource import Resources
+from .type_map import IdentifiableCollectionElement
 from .entity import Entity
 from .query import Query
