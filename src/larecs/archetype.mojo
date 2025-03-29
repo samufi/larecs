@@ -19,8 +19,8 @@ alias MutableEntityAccessor = EntityAccessor[True]
 struct EntityAccessor[
     archetype_mutability: Bool,
     archetype_origin: Origin[archetype_mutability],
-    *component_types: ComponentType,
-    component_manager: ComponentManager[*component_types],
+    *ComponentTypes: ComponentType,
+    component_manager: ComponentManager[*ComponentTypes],
 ]:
     """Accessor for an Entity.
 
@@ -30,12 +30,12 @@ struct EntityAccessor[
     Parameters:
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List.
-        component_types: The types of the components.
+        ComponentTypes: The types of the components.
         component_manager: The component manager.
     """
 
     alias Archetype = Archetype[
-        *component_types, component_manager=component_manager
+        *ComponentTypes, component_manager=component_manager
     ]
     """The archetype of the entity."""
 
