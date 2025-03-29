@@ -76,7 +76,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
         var y: Float64
     ```
 
-    ```mojo {doctest="scheduler"}
+    ```mojo {doctest="scheduler" global=true}
 
     @value
     struct MySystem:
@@ -97,7 +97,9 @@ struct Scheduler[*ComponentTypes: ComponentType]:
             print("Final positions")
             for entity in world.query[Position]():
                 print(entity.get[Position]().x, entity.get[Position]().y)
+    ```
 
+    ```mojo {doctest="scheduler"}
     scheduler = Scheduler[Position, Velocity]()
     scheduler.add_system(MySystem(internal_variable=42))
     scheduler.run(10)
