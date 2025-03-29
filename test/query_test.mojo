@@ -294,9 +294,7 @@ struct QueryOwner[
     world_origin: MutableOrigin,
     *component_types: ComponentType,
 ]:
-    alias WorldPointer = Pointer[
-        World[*component_types], world_origin
-    ]
+    alias WorldPointer = Pointer[World[*component_types], world_origin]
     alias Query = Query[
         world_origin,
         *component_types,
