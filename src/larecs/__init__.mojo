@@ -75,6 +75,8 @@ Exports:
  - query.QueryInfo
  - resource.Resources
  - type_map.IdentifiableCollectionElement
+ - manager.Manager
+ - manager.System
 """
 from .world import World
 from .component import ComponentType
@@ -83,3 +85,4 @@ from .resource import Resources
 from .type_map import IdentifiableCollectionElement
 from .entity import Entity
 from .query import Query
+from .manager import Manager, System
