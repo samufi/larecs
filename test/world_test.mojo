@@ -306,7 +306,7 @@ struct Resource2:
     var value: Int
 
 
-def test_world_reseource_access():
+def test_world_resource_access():
     world = World[Position, Velocity]()
     world.resources.add(Resource1(2), Resource2(4))
     assert_equal(world.resources.get[Resource1]().value, 2)
@@ -445,7 +445,7 @@ def main():
     test_world_add()
     test_world_remove()
     test_remove_and_add()
-    test_world_reseource_access()
+    test_world_resource_access()
     test_world_reseource_access_static()
     test_world_apply()
     test_world_apply_SIMD()

@@ -9,7 +9,7 @@ from .component import (
 from .type_map import (
     TypeMapping,
     IdentifiableCollectionElement,
-    StaticallyTypeMapping,
+    StaticlyTypeMapping,
     DynamicTypeMap,
 )
 from .unsafe_box import UnsafeBox
@@ -83,7 +83,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._add(self._type_map.get_id[Ts[i]](), resources[i])
 
     fn add[
-        *Ts: CollectionElement, M: StaticallyTypeMapping
+        *Ts: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M], owned *resources: *Ts) raises:
         """Adds resources.
 
@@ -145,7 +145,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     fn set[
         *Ts: CollectionElement,
-        M: StaticallyTypeMapping,
+        M: StaticlyTypeMapping,
         add_if_not_found: Bool = False,
     ](mut self: Resources[M], owned *resources: *Ts) raises:
         """Sets the values of resources.
@@ -216,7 +216,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
 
     fn remove[
-        *Ts: CollectionElement, M: StaticallyTypeMapping
+        *Ts: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises:
         """Removes resources.
 
@@ -266,7 +266,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get[
-        T: CollectionElement, M: StaticallyTypeMapping
+        T: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises -> ref [self._get_ptr[T](0)[]] T:
         """Gets a resource.
 
@@ -297,7 +297,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get_ptr[
-        T: CollectionElement, M: StaticallyTypeMapping
+        T: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises -> Pointer[
         T, __origin_of(self._storage.get_ptr(0).value()[].unsafe_get_ptr[T]()[])
     ]:
@@ -352,7 +352,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn has[
-        T: CollectionElement, M: StaticallyTypeMapping
+        T: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M]) -> Bool:
         """Checks if the resource is present.
 

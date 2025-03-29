@@ -13,7 +13,7 @@ trait IdentifiableCollectionElement(CollectionElement):
     alias id: IdType
 
 
-trait StaticallyTypeMapping(TypeMapping):
+trait StaticlyTypeMapping(TypeMapping):
     @always_inline
     @staticmethod
     fn get_id[T: CollectionElement]() -> Int:
