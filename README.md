@@ -10,7 +10,7 @@ It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented 
 - High performance due to archetypes and Mojo's compile-time programming
 - Support for SIMD via a [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/)-like syntax
 - Compile-time checks thanks to usage of parameters
-- Native support for [resources](https://mlange-42.github.io/arche/guide/resources/)
+- Native support for [resources](https://mlange-42.github.io/arche/guide/resources/) and scheduling.
 - Tested and benchmarked
 - No external dependencies
 - More features coming soon... 
@@ -108,10 +108,11 @@ fn main() raises:
 ### Only trivial types can be components
 
 Larecs🌲 currently only supports trivial types as components, i.e., structs 
-that have a fixed size in memory. Using types with heap-allocated memory will
+that have a fixed size in memory and can be copied and moved via a
+simple memory copy operation. Using types with heap-allocated memory will
 result in memory leaks and / or undefined behaviour, and as of now there is no
 good way to enforce that only compatible types are used. 
-Hence, it is up to the user to take care of this.
+Hence, it is up to the users to take care of this.
 
 Note that using types with heap-allocated memory is typically a bad idea for
 ECS and should be avoided anyway.
@@ -129,6 +130,7 @@ The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency
 In the near future, Larecs🌲 will take the following steps:
 - [ ] Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
 - [ ] Improve the documentation
+- [x] Add a scheduler for easy setup of ECS. 
 - [ ] Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - [x] Add further options to filter entities (e.g. "does not have component").
 - [ ] Add possibilities for parallel execution

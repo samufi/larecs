@@ -292,12 +292,12 @@ def test_query_exclusive():
 
 struct QueryOwner[
     world_origin: MutableOrigin,
-    *component_types: ComponentType,
+    *ComponentTypes: ComponentType,
 ]:
-    alias WorldPointer = Pointer[World[*component_types], world_origin]
+    alias WorldPointer = Pointer[World[*ComponentTypes], world_origin]
     alias Query = Query[
         world_origin,
-        *component_types,
+        *ComponentTypes,
         has_without_mask=_,
     ]
 
