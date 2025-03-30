@@ -26,7 +26,7 @@ Further, the total number of entities is varied from 100 to 1 million.
 ![AoS-benchmarks](images/aos_benchmark.svg)
 
 Note that the benchmarks run in the Github CI, 
-which uses very powerfull hardware.
+which uses very powerful hardware.
 Particularly, the processors have 256MB of cache.
 On a laptop or desktop computer with typically much less cache,
 Larecs🌲 will outperform AoS for everything but the smallest setups.
