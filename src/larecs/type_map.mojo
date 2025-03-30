@@ -94,6 +94,15 @@ struct TypeId(KeyElement):
         """
         return self._id
 
+    @always_inline
+    fn __str__(self) -> String:
+        """Gets the string representation of the ID.
+
+        Returns:
+            The string representation of the ID.
+        """
+        return String(self._name) + " (" + self._id.__str__() + ")"
+
 
 trait IdentifiableCollectionElement(CollectionElement):
     """A Type that is uniquely identifiable via a given ID.
