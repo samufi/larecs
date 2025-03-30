@@ -75,11 +75,12 @@ Exports:
  - query.QueryInfo
  - resource.Resources
  - type_map.IdentifiableCollectionElement
+ - type_map.TypeId
 """
 from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
 from .resource import Resources
-from .type_map import IdentifiableCollectionElement
+from .type_map import IdentifiableCollectionElement, TypeId
 from .entity import Entity
 from .query import Query

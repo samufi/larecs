@@ -9,6 +9,7 @@ from .component import (
 from .type_map import (
     TypeMapping,
     IdentifiableCollectionElement,
+    TypeId,
     StaticlyTypeMapping,
     DynamicTypeMap,
 )
@@ -24,7 +25,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     """
 
     var _type_map: TypeMap
-    var _storage: Dict[Int, UnsafeBox]
+    var _storage: Dict[TypeId.IdType, UnsafeBox]
 
     @always_inline
     fn __init__(out self):
@@ -32,7 +33,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         Constructs an empty resource container.
         """
         self._type_map = TypeMap()
-        self._storage = Dict[Int, UnsafeBox]()
+        self._storage = Dict[TypeId.IdType, UnsafeBox]()
 
     @always_inline
     fn __init__(out self, owned type_map: TypeMap):
@@ -43,7 +44,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             type_map: The type map to use.
         """
         self._type_map = type_map^
-        self._storage = Dict[Int, UnsafeBox]()
+        self._storage = Dict[TypeId.IdType, UnsafeBox]()
 
     @always_inline
     fn copy(self) -> Self:
