@@ -29,7 +29,7 @@ struct Node[DataType: KeyElement](CollectionElement):
     # The mask of the node.
     var bit_mask: BitMask
 
-    fn __init__(mut self, owned bit_mask: BitMask, owned value: DataType):
+    fn __init__(out self, owned bit_mask: BitMask, owned value: DataType):
         """Initializes the node with the given mask and value.
 
         Args:
@@ -75,7 +75,7 @@ struct BitMaskGraph[
     # Used for slow lookup of nodes.
     var _map: Dict[BitMask, Int]
 
-    fn __init__(mut self, owned first_value: DataType = Self.null_value):
+    fn __init__(out self, owned first_value: DataType = Self.null_value):
         """Initializes the graph.
 
         Args:

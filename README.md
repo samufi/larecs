@@ -76,8 +76,7 @@ struct Velocity:
 # Run the ECS
 fn main() raises:
     # Create a world, list all components that will / may be used
-    # Add resources (here, we do not need any)
-    world = World[Position, Velocity, IsStatic](Resources())
+    world = World[Position, Velocity, IsStatic]()
 
     for _ in range(100):
         # Add an entity. The returned value is the

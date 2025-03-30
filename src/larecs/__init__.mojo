@@ -10,7 +10,7 @@ Example:
 
 ```mojo {doctest="readme" global=true}
 # Import the package
-from larecs import World, Resources
+from larecs import World
 
 
 # Define components
@@ -34,7 +34,7 @@ struct Velocity:
 # Run the ECS
 fn main() raises:
     # Create a world, list all components that will / may be used
-    world = World[Position, Velocity, IsStatic](Resources())
+    world = World[Position, Velocity, IsStatic]()
 
     for _ in range(100):
         # Add an entity. The returned value is the
@@ -70,16 +70,17 @@ Exports:
  - component.ComponentType
  - archetype.MutableEntityAccessor
  - archetype.EntityAccessor
- - resource.Resources
- - resource.NoResource
  - entity.Entity
  - query.Query
  - query.QueryInfo
+ - resource.Resources
+ - type_map.IdentifiableCollectionElement
+ - type_map.TypeId
 """
 from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
 from .resource import Resources
-from .resource import NoResource
+from .type_map import IdentifiableCollectionElement, TypeId
 from .entity import Entity
 from .query import Query

@@ -14,7 +14,7 @@ struct LockMask:
     var bit_pool: BitPool  # The bit pool for getting and recycling bits.
 
     @always_inline
-    fn __init__(mut self):
+    fn __init__(out self):
         self.locks = BitMask()
         self.bit_pool = BitPool()
 

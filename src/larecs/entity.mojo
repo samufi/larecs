@@ -32,7 +32,7 @@ struct Entity(EqualityComparable, Stringable, Hashable):
 
     @doc_private
     @always_inline
-    fn __init__(mut self, id: EntityId = 0, generation: UInt32 = 0):
+    fn __init__(out self, id: EntityId = 0, generation: UInt32 = 0):
         self._id = id
         self._generation = generation
 
