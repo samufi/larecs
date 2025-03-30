@@ -24,8 +24,11 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         TypeMap: A mapping from types to resource IDs.
     """
 
+    alias IdType = TypeId
+    """The type of the internal type IDs."""
+
     var _type_map: TypeMap
-    var _storage: Dict[TypeId.IdType, UnsafeBox]
+    var _storage: Dict[TypeId, UnsafeBox]
 
     @always_inline
     fn __init__(out self):
@@ -33,7 +36,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         Constructs an empty resource container.
         """
         self._type_map = TypeMap()
-        self._storage = Dict[TypeId.IdType, UnsafeBox]()
+        self._storage = Dict[Self.IdType, UnsafeBox]()
 
     @always_inline
     fn __init__(out self, owned type_map: TypeMap):
@@ -44,7 +47,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             type_map: The type map to use.
         """
         self._type_map = type_map^
-        self._storage = Dict[TypeId.IdType, UnsafeBox]()
+        self._storage = Dict[Self.IdType, UnsafeBox]()
 
     @always_inline
     fn copy(self) -> Self:
@@ -104,7 +107,9 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._add(self._type_map.get_id[Ts[i]](), resources[i])
 
     @always_inline
-    fn _add[T: CollectionElement](mut self, id: Int, owned resource: T) raises:
+    fn _add[
+        T: CollectionElement
+    ](mut self, id: Self.IdType, owned resource: T) raises:
         """Adds a resource by ID.
 
         Parameters:
@@ -173,7 +178,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     @always_inline
     fn _set[
         T: CollectionElement, add_if_not_found: Bool
-    ](mut self, id: Int, owned resource: T) raises:
+    ](mut self, id: Self.IdType, owned resource: T) raises:
         """Sets the values of the resources
 
         Parameters:
@@ -234,7 +239,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
 
     @always_inline
-    fn _remove[T: CollectionElement](mut self, id: Int) raises:
+    fn _remove[T: CollectionElement](mut self, id: Self.IdType) raises:
         """Removes resources.
 
         Parameters:
@@ -253,7 +258,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     fn get[
         T: IdentifiableCollectionElement
     ](mut self: Resources[DynamicTypeMap]) raises -> ref [
-        self._get_ptr[T](0)[]
+        self._get_ptr[T](Self.IdType(0))[]
     ] T:
         """Gets a resource.
 
@@ -268,7 +273,9 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     @always_inline
     fn get[
         T: CollectionElement, M: StaticlyTypeMapping
-    ](mut self: Resources[M]) raises -> ref [self._get_ptr[T](0)[]] T:
+    ](mut self: Resources[M]) raises -> ref [
+        self._get_ptr[T](Self.IdType(0))[]
+    ] T:
         """Gets a resource.
 
         Parameters:
@@ -284,7 +291,12 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     fn get_ptr[
         T: IdentifiableCollectionElement
     ](mut self: Resources[DynamicTypeMap]) raises -> Pointer[
-        T, __origin_of(self._storage.get_ptr(0).value()[].unsafe_get_ptr[T]()[])
+        T,
+        __origin_of(
+            self._storage.get_ptr(Self.IdType(0))
+            .value()[]
+            .unsafe_get_ptr[T]()[]
+        ),
     ]:
         """Gets a pointer to a resource.
 
@@ -300,7 +312,12 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     fn get_ptr[
         T: CollectionElement, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises -> Pointer[
-        T, __origin_of(self._storage.get_ptr(0).value()[].unsafe_get_ptr[T]()[])
+        T,
+        __origin_of(
+            self._storage.get_ptr(Self.IdType(0))
+            .value()[]
+            .unsafe_get_ptr[T]()[]
+        ),
     ]:
         """Gets a pointer to a resource.
 
@@ -316,7 +333,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     @always_inline
     fn _get_ptr[
         T: CollectionElement
-    ](mut self, id: Int) raises -> Pointer[
+    ](mut self, id: Self.IdType) raises -> Pointer[
         T,
         __origin_of(self._storage.get_ptr(id).value()[].unsafe_get_ptr[T]()[]),
     ]:

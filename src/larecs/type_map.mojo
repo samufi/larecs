@@ -23,22 +23,15 @@ struct TypeId(KeyElement):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
-    The ID is generated as a hash of the string. There remains
-    a risk that two different types could have the same ID, but this is
-    rather unlikely. Nontheless, this approach of identifying types
-    is unsafe and will be replaced once reflections are available in Mojo.
-
-    To ensure that the ID is unique in a limited context, you can
+    If the ID is used in a limited context only, you can
     set the `id` manually by passing an integer to the constructor.
     """
 
-    alias IdType = UInt
-    """The type of the internal ID."""
-
     var _id: UInt
+    var _name: StringLiteral
 
     @always_inline
-    fn __init__(out self, name: String):
+    fn __init__(out self, name: StringLiteral):
         """Initializes the ID with a given name.
 
         The name should be a string that uniquely identifies the type.
@@ -48,19 +41,21 @@ struct TypeId(KeyElement):
             name: The name of the type.
         """
         self._id = name.__hash__()
+        self._name = name
 
     @always_inline
     fn __init__(out self, id: UInt):
         """Initializes the ID with a given value.
 
-        Use this if the context is limited and you want
-        to ensure that the ID is unique. In general,
+        Use this only if the context is limited and you can
+        manually ensure that the ID is unique. In general,
         this should be avoided.
 
         Args:
             id: The ID of the type.
         """
         self._id = id
+        self._name = ""
 
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
@@ -72,7 +67,7 @@ struct TypeId(KeyElement):
         Returns:
             True if the IDs are equal, False otherwise.
         """
-        return self._id == other._id
+        return self._id == other._id and self._name == other._name
 
     @always_inline
     fn __ne__(self, other: Self) -> Bool:
@@ -84,7 +79,7 @@ struct TypeId(KeyElement):
         Returns:
             True if the IDs are not equal, False otherwise.
         """
-        return self._id != other._id
+        return self._id != other._id or self._name != other._name
 
     @always_inline
     fn __hash__(self) -> UInt:
@@ -92,15 +87,6 @@ struct TypeId(KeyElement):
 
         Returns:
             The hash of the ID.
-        """
-        return self._id
-
-    @always_inline
-    fn id(self) -> UInt:
-        """Gets the ID.
-
-        Returns:
-            The ID.
         """
         return self._id
 
@@ -118,10 +104,7 @@ trait IdentifiableCollectionElement(CollectionElement):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
-    As the ID is generated as a hash of a string, there remains
-    a (small) risk that two different types could have the same ID.
-
-    To ensure that the ID is unique in a limited context, you can
+    If the ID is used in a limited context only, you can
     set the `id` manually by passing an integer to the constructor.
     """
 
@@ -134,7 +117,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
     @always_inline
     @staticmethod
-    fn get_id[T: CollectionElement]() -> Int:
+    fn get_id[T: CollectionElement]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:
@@ -155,26 +138,42 @@ struct StaticTypeMap[*Ts: CollectionElement](TypeMapping):
     """
 
     alias InputTrait = ComponentType
+    """The trait of the input type."""
 
     alias manager = ComponentManager[*Ts]()
+    """The component manager for the types."""
 
     @always_inline
     @staticmethod
-    fn get_id[T: Self.InputTrait]() -> UInt:
-        return UInt(Self.manager.get_id[T]())
-
-
-@value
-struct DynamicTypeMap(TypeMapping):
-    @always_inline
-    @staticmethod
-    fn get_id[T: IdentifiableCollectionElement]() -> TypeId.IdType:
+    fn get_id[T: Self.InputTrait]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:
             T: The type to get the ID for.
-        
+
         Returns:
             The ID of the type.
         """
-        return T.id.id()
+        return TypeId(Int(Self.manager.get_id[T]()))
+
+
+@value
+struct DynamicTypeMap(TypeMapping):
+    """
+    A dynamic mapping from types to IDs.
+
+    The types need to implement the [.IdentifiableCollectionElement] trait.
+    """
+
+    @always_inline
+    @staticmethod
+    fn get_id[T: IdentifiableCollectionElement]() -> TypeId:
+        """Gets the ID of a type.
+
+        Parameters:
+            T: The type to get the ID for.
+
+        Returns:
+            The ID of the type.
+        """
+        return T.id
