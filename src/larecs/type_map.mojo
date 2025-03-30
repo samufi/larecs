@@ -18,7 +18,11 @@ struct TypeId(KeyElement):
     module `my_module` in the package `my_package` would be
     assigned as follows:
 
-    ```mojo
+    ```mojo {doctest="type_id" global=true hide=true}
+    from larecs import TypeId, IdentifiableCollectionElement
+    ```
+
+    ```mojo {doctest="type_id" global=true}
     struct MyStruct(IdentifiableCollectionElement):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
