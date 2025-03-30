@@ -115,6 +115,18 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     ) raises
     """The type of system functions."""
 
+    alias _system_index = 0
+    """The index of the system in the systems storage."""
+
+    alias _initialize_index = 1
+    """The index of the initialize function in the systems storage."""
+
+    alias _update_index = 2
+    """The index of the update function in the systems storage."""
+
+    alias _finalize_index = 3
+    """The index of the finalize function in the systems storage."""
+
     var world: Self.World
     var _systems: List[
         Tuple[
@@ -172,7 +184,9 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     fn initialize(mut self) raises:
         """Initializes all systems in the scheduler."""
         for system_info in self._systems:
-            system_info[][1](system_info[][0], self.world)
+            system_info[][Self._initialize_index](
+                system_info[][Self._system_index], self.world
+            )
 
     fn update(mut self, steps: Int = 1) raises:
         """Updates all systems in the scheduler repeatedly.
@@ -182,15 +196,25 @@ struct Scheduler[*ComponentTypes: ComponentType]:
         """
         for _ in range(steps):
             for system_info in self._systems:
-                system_info[][2](system_info[][0], self.world)
+                system_info[][Self._update_index](
+                    system_info[][Self._system_index], self.world
+                )
 
     fn finalize(mut self) raises:
         """Finalizes all systems in the scheduler."""
         for system_info in self._systems:
-            system_info[][3](system_info[][0], self.world)
+            system_info[][Self._finalize_index](
+                system_info[][Self._system_index], self.world
+            )
 
     fn run(mut self, steps: Int) raises:
         """Runs the scheduler for a given number of steps.
+
+        This is the main entry point for running the scheduler.
+        It calls the `initialize`, `update`, and `finalize` methods in order.
+        The `update` method is called `steps` times.
+        The `initialize` method is called once at the beginning, and the
+        `finalize` method is called once at the end.
 
         Args:
             steps: The number of steps to run.
