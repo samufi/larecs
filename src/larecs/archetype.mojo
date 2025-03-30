@@ -173,7 +173,7 @@ struct Archetype[
             capacity:   The initial capacity of the archetype.
 
         Returns:
-            An archetype wihtout allocated memory.
+            An archetype without allocated memory.
         """
         self._size = 0
         self._mask = mask
@@ -228,7 +228,7 @@ struct Archetype[
     ):
         """Initializes the archetype with given components and BitMask.
 
-        The components in the archetyoe are determined by the component_ids.
+        The components in the archetype are determined by the component_ids.
         The mask is not checked for consistency with the component IDs.
 
         Args:

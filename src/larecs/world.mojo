@@ -40,7 +40,7 @@ struct Replacer[
     in one go.
 
     Parameters:
-        world_origin: The mutale origin of the world.
+        world_origin: The mutable origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
     """
@@ -1243,7 +1243,7 @@ struct World[*component_types: ComponentType](Movable):
         ],
     ) raises:
         """
-        Creates an iterator over all entities that have / do not have the compnents in the provided masks.
+        Creates an iterator over all entities that have / do not have the components in the provided masks.
 
         Parameters:
             has_without_mask: Whether a without_mask is provided.

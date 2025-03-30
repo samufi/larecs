@@ -54,14 +54,14 @@ struct EntityPool(Movable, Copyable):
         entity = Entity(EntityId(len(self._entities)))
         self._entities.append(entity)
 
-    fn recycle(mut self, enitity: Entity) raises:
+    fn recycle(mut self, entity: Entity) raises:
         """Hands an entity back for recycling."""
-        if enitity.get_id() == 0:
+        if entity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
-        self._entities[enitity.get_id()]._generation += 1
-        self._next, self._entities[enitity.get_id()]._id = (
-            enitity.get_id(),
+        self._entities[entity.get_id()]._generation += 1
+        self._next, self._entities[entity.get_id()]._id = (
+            entity.get_id(),
             self._next,
         )
         self._available += 1
