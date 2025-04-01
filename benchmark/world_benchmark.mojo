@@ -263,7 +263,9 @@ fn benchmark_apply_expexp_1_comp_100_000(
                 pass
 
         for _ in range(100):
-            world.apply[operation_plus, Position, unroll_factor=3]()
+            world.apply[operation_plus, unroll_factor=3](
+                world.query[Position]()
+            )
 
     bencher.iter[bench_fn]()
 
@@ -300,11 +302,9 @@ fn benchmark_apply_simd_expexp_1_comp_100_000(
         for _ in range(100):
             world.apply[
                 operation_plus,
-                Position,
-                Velocity,
                 simd_width=16,
                 unroll_factor=3,
-            ]()
+            ](world.query[Position, Velocity]())
 
     bencher.iter[bench_fn]()
 

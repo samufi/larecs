@@ -999,17 +999,19 @@ struct World[*component_types: ComponentType](Movable):
     @always_inline
     fn apply[
         operation: fn (accessor: MutableEntityAccessor) capturing -> None,
-        *Ts: ComponentType,
+        *,
         unroll_factor: Int = 1,
-    ](mut self) raises:
+    ](mut self, query: QueryInfo) raises:
         """
         Applies an operation to all entities with the given components.
 
         Parameters:
             operation: The operation to apply.
-            Ts:        The types of the components.
             unroll_factor: The unroll factor for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+
+        Args:
+            query: The query to determine which entities to apply the operation to.
 
         Raises:
             Error: If the world is locked.
@@ -1020,16 +1022,16 @@ struct World[*component_types: ComponentType](Movable):
         fn operation_wrapper[simd_width: Int](accessor: MutableEntityAccessor):
             operation(accessor)
 
-        self.apply[operation_wrapper, *Ts, unroll_factor=unroll_factor]()
+        self.apply[operation_wrapper, unroll_factor=unroll_factor](query)
 
     fn apply[
         operation: fn[simd_width: Int] (
             accessor: MutableEntityAccessor
         ) capturing -> None,
-        *Ts: ComponentType,
+        *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](mut self) raises:
+    ](mut self, query: QueryInfo) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1090,16 +1092,18 @@ struct World[*component_types: ComponentType](Movable):
             # Store the SIMD at the same address
             ptr.store(val)
 
-        world.apply[operation, Float64, simd_width=simdwidthof[Float64]()]()
+        world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
         ```
 
         Parameters:
             operation: The operation to apply.
-            Ts:        The types of the components.
             simd_width: The SIMD width for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
             unroll_factor: The unroll factor for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
+
+        Args:
+            query: The query to determine which entities to apply the operation to.
 
         Constraints:
             The simd_width must be a power of 2.
@@ -1110,20 +1114,21 @@ struct World[*component_types: ComponentType](Movable):
         self._assert_unlocked()
 
         with self._locked():
-            mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+            for archetype in _ArchetypeIterator(
+                Pointer.address_of(self._archetypes),
+                query.mask,
+                query.without_mask,
+            ):
 
-            for archetype in self._archetypes:
-                if archetype[].get_mask().contains(mask):
+                @always_inline
+                @parameter
+                fn closure[simd_width: Int](i: Int) capturing:
+                    accessor = archetype[].get_entity_accessor(i)
+                    operation[simd_width](accessor)
 
-                    @always_inline
-                    @parameter
-                    fn closure[simd_width: Int](i: Int) capturing:
-                        accessor = archetype[].get_entity_accessor(i)
-                        operation[simd_width](accessor)
-
-                    vectorize[closure, simd_width, unroll_factor=unroll_factor](
-                        len(archetype[])
-                    )
+                vectorize[closure, simd_width, unroll_factor=unroll_factor](
+                    len(archetype[])
+                )
 
     # fn Reset(self):
     #     """
