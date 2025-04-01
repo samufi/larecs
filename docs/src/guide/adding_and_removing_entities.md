@@ -4,20 +4,32 @@ title = "Adding and removing entities"
 weight = 20
 +++
 
-## Adding and removing entities
+## Individual entities
 
-Adding and removing entities is done via the `add_entity`
-and `remove_entity` methods of `World`. Revisiting
-our earlier example of a world with `Position` and 
+Adding and removing entities is done via the {{< api World.add_entity add_entity >}}
+and {{< api World.remove_entity remove_entity >}} methods of {{< api World >}}. 
+Revisiting our earlier example of a world with `Position` and 
 `Velocity`, this reads as
 
-```mojo {doctest="guide_add_remove_entities" global=true, hide=true}
+```mojo {doctest="guide_add_remove_entities" global=true hide=true}
 from larecs import World
+
+@value
+struct Position:
+    var x: Float64
+    var y: Float64
+
+@value
+struct Velocity:
+    var dx: Float64
+    var dy: Float64
+```
+
+```mojo {doctest="guide_add_remove_entities" hide=true}
+world = World[Position, Velocity]()
 ```
 
 ```mojo {doctest="guide_add_remove_entities"}
-world = World[Position, Velocity]()
-
 # Add an entity and get its representation
 entity = world.add_entity()
 
@@ -34,10 +46,10 @@ we can do the following:
 entity = world.add_entity(Position(0, 0), Velocity(1, 0))
 ```
 
-### Batch addition
+## Batch addition
 
 If we want to create multiple entities at once, 
-we can do this in a similar manner:
+we can do this in a similar manner via {{< World.add_entities add_entities >}}:
 
 ```mojo {doctest="guide_add_remove_entities"}
 # Add a batch of 10 entities with given position and velocity
@@ -61,22 +73,22 @@ for entity in world.add_entities(Position(0, 0), Velocity(1, 0), count=10):
 More information on manipulation of and iteration over entities 
 will be provided in the upcoming sections.
 
-Note! Iterators block certain changes to the world and should not
-be stored in a variable. That is, use the result of `add_entities` 
-only in the right hand side of for loop.
+> [Note!] Iterators block certain changes to the world and should not
+> be stored in a variable. That is, use the result of `add_entities` 
+> only in the right hand side of for loop.
 
-### Batch removal
+## Batch removal
 
 If we want to remove multiple entities at once, 
 we need to characterize which entities we mean. To that 
 end, we use queries, which characterize entities
 by their components. For example, removing all
 entities that have the component `Position`
-can be done as follows:
+can be done with {{< World.remove_entities remove_entities >}} as follows:
 
 ```mojo {doctest="guide_add_remove_entities"}
 # Add a batch of 10 entities with given position and velocity
-world.remove_entities(world.query[Position]()):
+world.remove_entities(world.query[Position]())
 ```
 
-More on queries can be found in section "Queries and iteration".
+More on queries can be found in section [Queries and iteration](../queries_iteration).

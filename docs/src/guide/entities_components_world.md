@@ -4,12 +4,10 @@ title = "Entities, components, and the world"
 weight = 10
 +++
 
-## Entities, components, and the `World`
+## A little bit of introduction...
 
-### A little bit of introduction...
-
-Larecs🌲 provides a way to store, access and manipulate 
-data belonging to computational entities efficiently.
+Larecs🌲 provides an efficient way to store, access and manipulate 
+data belonging to computational entities.
 "Entities" often represent objects or agents that have certain
 properties ("objects" in the object oriented framework),
 here called "Components". Which attributes an entity has 
@@ -34,7 +32,7 @@ Below, we provide more details on how entities
 and components are represented in Larecs🌲 and how
 an ECS can be set up with Larecs🌲.
 
-### Components
+## Components
 
 In Larecs🌲 and other ECS, components are modelled
 via structs. That is, each component is represented
@@ -66,10 +64,10 @@ such as `List` or `Dict`. Often, it is not advisable to
 use such objects in the ECS context anyway; however, 
 Larecs🌲 might support "complex" structs in a future version. 
 
-### Setting up the ECS: the `World`
+## Setting up the ECS: the `World`
 
 The central container type of Larecs🌲 is the
-`World`. The `World` stores all data and information about
+{{< api World >}}. The `World` stores all data and information about
 the state of the entities and their surroundings.
 
 Larecs🌲 gains a lot of its efficiency by using compile-time
@@ -80,8 +78,8 @@ upon creation. This also has the advantage that certain errors
 can already be prevented at compile time, which makes the
 program safer and faster.
 
-To create a world, simply import it from the `larecs` package
-and create a `World` as follows:
+To set up a `World`, simply import it from the `larecs` package
+and create a `World` instance as follows:
 
 ```mojo {doctest="guide_entities_components_world" global=true}
 from larecs import World
@@ -90,7 +88,7 @@ def main():
     world = World[Position, Velocity]()
 ```
 
-### Entities
+## Entities
 
 Entities are strictly bound to the world they live in.
 An entity merely contains an ID that the world can use 
@@ -98,9 +96,10 @@ to look up the entity's components. As a consequence,
 entities are small in memory and can be efficiently 
 stored, and their data can only be accessed via the world.
 
-Note! Though entities can safely be stored an passed around,
-their components (or pointers to them) should never be stored
-externally, as they can move in memory at any time.
+> [!NOTE] 
+> Though entities can safely be stored an passed around,
+> their components (or pointers to them) should never be stored
+> externally, as they can move in memory at any time.
 
 How entities are created and used will be discussed in the
-following sections.
+[next sections](../adding_and_removing_entities).
