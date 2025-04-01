@@ -1,7 +1,7 @@
 /* paragraph line height */
 .content :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
   margin-top: 0.66rem;
-  line-height: 1.33rem;
+  line-height: 1.5rem;
 }
 
 /* list line height */
