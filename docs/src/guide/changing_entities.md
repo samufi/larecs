@@ -4,7 +4,7 @@ title = "Changing entities"
 weight = 30
 +++
 
-## Accessing and manipulating components
+## Accessing and manipulating individual components
 
 The values of an entity's component can be 
 accessed and changed via the {{< api World.get get >}} and {{< api World.get_ptr get_ptr >}}
@@ -15,6 +15,7 @@ down the line.
 
 ```mojo {doctest="guide_change_entities" global=true hide=true}
 from larecs import World
+from testing import *
 
 @value
 struct Position:
@@ -55,6 +56,30 @@ pos_ptr = world.get_ptr[Position](entity)
 # Now, changing the value via the local pointer variable works.
 pos_ptr[].x = 10 # Use the `[]` operator to dereference the pointer
 print(world.get[Position](entity).x == 10) # True
+```
+
+Of course, accessing a component only works if the entity has
+the component in question. Accessing a component 
+that the entity does not have, will result in an error.
+
+```mojo {doctest="guide_change_entities"}
+# Add an entity without a velocity component
+entity = world.add_entity(Position(0, 0))
+
+with assert_raises():
+    # This will result in an error
+    _ = world.get[Velocity](entity)
+```
+
+We can check if an entity has a component using the 
+{{< api World.has has >}} method. 
+
+```mojo {doctest="guide_change_entities"}
+# Check if the entity has a velocity component
+if world.has[Velocity](entity):
+    print("Entity has a velocity component")
+else:
+    print("Entity does not have a velocity component")
 ```
 
 ## Setting multiple components at once
