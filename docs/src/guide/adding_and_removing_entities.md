@@ -4,7 +4,7 @@ title = "Adding and removing entities"
 weight = 20
 +++
 
-## Individual entities
+## Adding and removing individual entities
 
 Adding and removing entities is done via the {{< api World.add_entity add_entity >}}
 and {{< api World.remove_entity remove_entity >}} methods of {{< api World >}}. 
@@ -49,7 +49,7 @@ entity = world.add_entity(Position(0, 0), Velocity(1, 0))
 ## Batch addition
 
 If we want to create multiple entities at once, 
-we can do this in a similar manner via {{< World.add_entities add_entities >}}:
+we can do this in a similar manner via {{< api World.add_entities add_entities >}}:
 
 ```mojo {doctest="guide_add_remove_entities"}
 # Add a batch of 10 entities with given position and velocity
@@ -84,7 +84,7 @@ we need to characterize which entities we mean. To that
 end, we use queries, which characterize entities
 by their components. For example, removing all
 entities that have the component `Position`
-can be done with {{< World.remove_entities remove_entities >}} as follows:
+can be done with {{< api World.remove_entities remove_entities >}} as follows:
 
 ```mojo {doctest="guide_add_remove_entities"}
 # Add a batch of 10 entities with given position and velocity
