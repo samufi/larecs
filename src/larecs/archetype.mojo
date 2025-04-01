@@ -1,9 +1,7 @@
 from sys.intrinsics import _type_is_eq
 from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
-from .component import (
-    ComponentManager,
-)
+from .component import ComponentManager, constrain_components_unique
 from .entity import Entity
 from .bitmask import BitMask
 from .pool import EntityPool
@@ -82,6 +80,33 @@ struct EntityAccessor[
         return self._archetype[].get_component_ptr[T=T](
             self._index_in_archetype,
         )
+
+    @always_inline
+    fn set[
+        *Ts: ComponentType
+    ](
+        mut self: EntityAccessor[archetype_mutability=True],
+        owned *components: *Ts,
+    ) raises:
+        """
+        Overwrites components for an [..entity.Entity], using the given content.
+
+        Parameters:
+            Ts:        The types of the components.
+
+        Args:
+            components: The new components.
+
+        Raises:
+            Error: If the entity does not exist or does not have the component.
+        """
+        constrain_components_unique[*Ts]()
+
+        @parameter
+        for i in range(components.__len__()):
+            self._archetype[].get_component[T = Ts[i.value]](
+                self._index_in_archetype
+            ) = components[i]
 
     @always_inline
     fn has[T: ComponentType](self) -> Bool:

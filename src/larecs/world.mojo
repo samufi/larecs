@@ -709,7 +709,7 @@ struct World[*component_types: ComponentType](Movable):
         *Ts: ComponentType
     ](mut self, entity: Entity, owned *components: *Ts) raises:
         """
-        Overwrites a component for an [..entity.Entity], using the given content.
+        Overwrites components for an [..entity.Entity] using the given content.
 
         Parameters:
             Ts:        The types of the components.
