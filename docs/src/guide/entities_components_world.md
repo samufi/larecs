@@ -1,6 +1,6 @@
 +++
 type = "docs"
-title = "Entities, components, and the world"
+title = "Entities, components and the world"
 weight = 10
 +++
 
@@ -20,15 +20,17 @@ and tools to implement such entity component systems.
 ## Entities
 
 Entities are the central unit around which the data in
-an ECS is organized. Each entity can possess an arbitrary
+an ECS is organized. Entities could represent game objects,
+or potentially anything else that "lives" in a game or simulation.
+Each entity can possess an arbitrary
 set of components, which can also be used to characterize
 an entity. That is, in an ECS, cars would not directly 
 identified as "cars" but rather as everything that has 
 the components `Position`, `Velocity`, `Fuel reserves`, 
 `Engine power`, etc. 
 
-In ECS, the components are not stored in individual 
-objects but rather in a central container, the "world". 
+The components are not stored in individual 
+objects but rather in a central container, called the [`World`](#the-world). 
 Hence, an {{< api Entity >}} is merely an identifier that allows
 retrieving the corresponding components from the world.
 As such, entities are strictly bound to the world they live in,
@@ -44,8 +46,9 @@ How entities are created and used is discussed in the
 
 ## Components
 
-Components, the data associated with entities, are modelled
-via structs: each component is represented by a specific struct.
+Components are the data associated with entities, characterizing
+their state and properties. Components are represented
+via structs: each component type is a different struct.
 For example, if we want to model a world in which 
 entities may have a position and a velocity, we need to 
 define a `Position` and a `Velocity` struct.
@@ -62,10 +65,15 @@ struct Velocity:
     var dy: Float64
 ```
 
-These components can later be associated with entities,
-as described in the [later chapters](../adding_and_removing_entities).
+These structs are not only used to store data. Their
+types are also used as unique identifiers for the components
+of an entity. That is, they have a similar role to 
+a key in a dictionary.
 
-> [!Caution]
+How components can be associated with entities is described 
+in the [later chapters](../adding_and_removing_entities).
+
+> [!Warning]
 > Currently, only "trivial" structs are supported as 
 > components in Larecs🌲. That is, structs that can be
 > copied and moved via simple memory operations. This does
@@ -74,11 +82,14 @@ as described in the [later chapters](../adding_and_removing_entities).
 > use such objects in the ECS context anyway; however, 
 > Larecs🌲 might support such "complex" structs in a future version. 
 
-## Setting up the ECS: the `World`
+## The `World`
 
 The central container type of Larecs🌲 is the
 {{< api World >}}. The `World` stores all data and information about
 the state of the entities and their surroundings.
+The `World` struct provides the main functionality
+of the ECS, such as adding and removing entities,
+looking up components, and iterating over entities.
 
 Larecs🌲 gains a lot of its efficiency by using compile-time
 programming. To that end, it needs to know ahead of time 
