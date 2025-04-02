@@ -52,17 +52,14 @@ struct Velocity:
     var dy: Float64
 ```
 
-In this example, we consider a two-dimensional world.
-Therefore, the two structs have an attribute for both
-the `x` and the `y` dimension.
-
-Note! Currently, only "trivial" structs are supported as 
-components in Larecs🌲. That is, structs that can be
-copied and moved via simple memory operations. This does
-not include structs that manage heap-allocated memory
-such as `List` or `Dict`. Often, it is not advisable to
-use such objects in the ECS context anyway; however, 
-Larecs🌲 might support "complex" structs in a future version. 
+> [!Caution]
+> Currently, only "trivial" structs are supported as 
+> components in Larecs🌲. That is, structs that can be
+> copied and moved via simple memory operations. This does
+> not include structs that manage heap-allocated memory
+> such as `List` or `Dict`. Often, it is not advisable to
+> use such objects in the ECS context anyway; however, 
+> Larecs🌲 might support "complex" structs in a future version. 
 
 ## Setting up the ECS: the `World`
 
@@ -101,5 +98,5 @@ stored, and their data can only be accessed via the world.
 > their components (or pointers to them) should never be stored
 > externally, as they can move in memory at any time.
 
-How entities are created and used will be discussed in the
-[next sections](../adding_and_removing_entities).
+How entities are created and used is discussed in the
+[next chapters](../adding_and_removing_entities).

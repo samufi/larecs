@@ -71,9 +71,10 @@ for entity in world.add_entities(Position(0, 0), Velocity(1, 0), count=10):
 ```
 
 More information on manipulation of and iteration over entities 
-will be provided in the upcoming sections.
+will be provided in the upcoming chapters.
 
-> [Note!] Iterators block certain changes to the world and should not
+> [Note!] 
+> Iterators block certain changes to the world and should not
 > be stored in a variable. That is, use the result of `add_entities` 
 > only in the right hand side of for loop.
 
@@ -91,4 +92,4 @@ can be done with {{< api World.remove_entities remove_entities >}} as follows:
 world.remove_entities(world.query[Position]())
 ```
 
-More on queries can be found in section [Queries and iteration](../queries_iteration).
+More on queries can be found in the chapter [Queries and iteration](../queries_iteration).
