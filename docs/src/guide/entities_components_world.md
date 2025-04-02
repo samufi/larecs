@@ -4,41 +4,51 @@ title = "Entities, components, and the world"
 weight = 10
 +++
 
-## A little bit of introduction...
+Larecs🌲 provides a flexible and efficient way to store, 
+access and manipulate data records organized 
+around individual entities. Suppose we wanted to 
+model a world with different objects and agents that each have 
+certain properties. The idea of entity component systems 
+(ECS) is to characterize these objects and agents 
+(called "entities" in an ECS) via the set of 
+attributes ("components") they possess, and to 
+model the interactions between them via "systems",
+functions that operate on entities 
+with certain components. Larecs🌲 provides the functionality 
+and tools to implement such entity component systems.
 
-Larecs🌲 provides an efficient way to store, access and manipulate 
-data belonging to computational entities.
-"Entities" often represent objects or agents that have certain
-properties ("objects" in the object oriented framework),
-here called "Components". Which attributes an entity has 
-can change at runtime, making the approach extremely flexible.
-Furthermore, entities do not belong to pre-defined 
-"classes" but are rather fully characterized by their attributes.
-A key functionality of entity component systems is to 
-query all entities that have certain components and process them
-in a corresponding way. 
+## Entities
 
-For example, entities that can move may be characterized 
-via the components `Position` and `Velocity`, as nothing
-else is required for movement with constant velocity: 
-the new position can be computed from the current position, 
-the velocity, and a time increment `dt`:
+Entities are the central unit around which the data in
+an ECS is organized. Each entity can possess an arbitrary
+set of components, which can also be used to characterize
+an entity. That is, in an ECS, cars would not directly 
+identified as "cars" but rather as everything that has 
+the components `Position`, `Velocity`, `Fuel reserves`, 
+`Engine power`, etc. 
 
-```
-Position = Position + Velocity * dt
-```
+In ECS, the components are not stored in individual 
+objects but rather in a central container, the "world". 
+Hence, an {{< api Entity >}} is merely an identifier that allows
+retrieving the corresponding components from the world.
+As such, entities are strictly bound to the world they live in,
+but also small in memory and easy to store.
 
-Below, we provide more details on how entities 
-and components are represented in Larecs🌲 and how
-an ECS can be set up with Larecs🌲.
+> [!NOTE] 
+> Though entities can safely be stored and passed around,
+> their components (or pointers to them) should never be stored
+> externally, as they can move in memory at any time.
+
+How entities are created and used is discussed in the
+[next chapters](../adding_and_removing_entities).
 
 ## Components
 
-In Larecs🌲 and other ECS, components are modelled
-via structs. That is, each component is represented
-by a different struct. If we want to consider position 
-and velocity as in the example above, we need to 
-define a struct for each of the two:
+Components, the data associated with entities, are modelled
+via structs: each component is represented by a specific struct.
+For example, if we want to model a world in which 
+entities may have a position and a velocity, we need to 
+define a `Position` and a `Velocity` struct.
 
 ```mojo {doctest="guide_entities_components_world" global=true}
 @value
@@ -52,14 +62,17 @@ struct Velocity:
     var dy: Float64
 ```
 
+These components can later be associated with entities,
+as described in the [later chapters](../adding_and_removing_entities).
+
 > [!Caution]
 > Currently, only "trivial" structs are supported as 
 > components in Larecs🌲. That is, structs that can be
 > copied and moved via simple memory operations. This does
-> not include structs that manage heap-allocated memory
-> such as `List` or `Dict`. Often, it is not advisable to
+> *not* include structs that manage heap-allocated memory
+> such as `List` or `Dict`. Typically, it is not advisable to
 > use such objects in the ECS context anyway; however, 
-> Larecs🌲 might support "complex" structs in a future version. 
+> Larecs🌲 might support such "complex" structs in a future version. 
 
 ## Setting up the ECS: the `World`
 
@@ -68,10 +81,10 @@ The central container type of Larecs🌲 is the
 the state of the entities and their surroundings.
 
 Larecs🌲 gains a lot of its efficiency by using compile-time
-programming. To that end, it needs to know which components
-might turn up in the world at compile time, and the
-`World` struct must be parameterized with the entities
-upon creation. This also has the advantage that certain errors
+programming. To that end, it needs to know ahead of time 
+which components might turn up in the world, and the `World` 
+must be statically parameterized with the component types upon 
+creation. This also has the advantage that certain errors
 can already be prevented at compile time, which makes the
 program safer and faster.
 
@@ -82,21 +95,6 @@ and create a `World` instance as follows:
 from larecs import World
 
 def main():
+    # Create a world with the components Position and Velocity
     world = World[Position, Velocity]()
 ```
-
-## Entities
-
-Entities are strictly bound to the world they live in.
-An entity merely contains an ID that the world can use 
-to look up the entity's components. As a consequence,
-entities are small in memory and can be efficiently 
-stored, and their data can only be accessed via the world.
-
-> [!NOTE] 
-> Though entities can safely be stored an passed around,
-> their components (or pointers to them) should never be stored
-> externally, as they can move in memory at any time.
-
-How entities are created and used is discussed in the
-[next chapters](../adding_and_removing_entities).
