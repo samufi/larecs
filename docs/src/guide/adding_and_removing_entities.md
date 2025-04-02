@@ -4,12 +4,12 @@ title = "Adding and removing entities"
 weight = 20
 +++
 
-## Adding and removing individual entities
-
-Adding and removing entities is done via the {{< api World.add_entity add_entity >}}
-and {{< api World.remove_entity remove_entity >}} methods of {{< api World >}}. 
+Adding and removing individual entities is done 
+via the {{< api World.add_entity add_entity >}}
+and {{< api World.remove_entity remove_entity >}} 
+methods of {{< api World >}}. 
 Revisiting our earlier example of a world with `Position` and 
-`Velocity`, this reads as
+`Velocity`, this reads as follows:
 
 ```mojo {doctest="guide_add_remove_entities" global=true hide=true}
 from larecs import World
@@ -73,7 +73,7 @@ for entity in world.add_entities(Position(0, 0), Velocity(1, 0), count=10):
 More information on manipulation of and iteration over entities 
 will be provided in the upcoming chapters.
 
-> [Note!] 
+> [!Note]
 > Iterators block certain changes to the world and should not
 > be stored in a variable. That is, use the result of `add_entities` 
 > only in the right hand side of for loop.

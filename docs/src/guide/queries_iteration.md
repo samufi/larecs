@@ -4,9 +4,16 @@ title = "Queries and iteration"
 weight = 40
 +++
 
+Iterating over entities can be done via 
+classic `for` loops applied to [queries](#queries),
+or via an [`apply`](#applying-functions-to-entities-in-queries) 
+operation, which applies a given function to all entities 
+conforming to a query.
+
 ## Queries
 
-Queries allow to iterate over all entities with or without a specific 
+{{< api Query Queries >}} allow to iterate over all 
+entities with or without a specific 
 set of components. To create a query, we can use 
 the {{< api World.query query >}} method of 
 {{< api World >}}. The parameters used in this method are the components
@@ -78,7 +85,7 @@ excluding_query = world.query[Position]().exclusive()
 print(len(excluding_query)) # "1"
 ```
 
-> [Note!] 
+> [!Note] 
 > Determining the length of a query is not a trivial operation
 > and can be expensive if the ECS is involves many components.
 > Therefore, it is advisable to avoid applying the `len` function
@@ -106,12 +113,12 @@ for entity in world.query[Position]():
         entity.set(Position(0, 0), Velocity(0, 0))
 ```
 
-> [Note!]
+> [!Note] 
 > The `EntityAccessor` is a temporary object that is
 > created for each iteration. Therefore, should not be
 > stored in a container.
 
-> [Note!]
+> [!Note] 
 > Adding or removing entities or components to/from entities
 > would invalidate the iterator. Therefore, the world is 
 > locked during the iteration. This means that the forbidden
@@ -147,13 +154,13 @@ fn move(entity: MutableEntityAccessor) capturing:
 world.apply[move](world.query[Position, Velocity]())
 ```
 
-> [Note!]
+> [!Note] 
 > Currently, the applied operation can not raise exceptions.
 > Therefore, we need to catch exceptions in the function
 > itself. This is due to current limitations of Mojo and
 > will be changed as soon as possible.
 
-> [Caution!]
+> [!Caution]
 > The world is locked during the iteration, and 
 > accessing variables outside a locally defined
 > function is an immature feature in Mojo. Do not
@@ -271,12 +278,12 @@ alias simd_width=simdwidthof[Float64]()
 world.apply[move, simd_width=simd_width](world.query[Position, Velocity]())
 ```
 
-> [Tip!]
+> [!Tip]
 > It can be worthwhile to define project-specific load and store 
 > functions that take care of the stride and the width and
 > reduce the complexity of the code. 
 
-> [Note!]
+> [!Note]
 > The overhead from
 > the extra load and store operations can exceed the gain 
 > from SIMD operations in simple functions such as the move 

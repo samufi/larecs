@@ -4,8 +4,6 @@ title = "Changing entities"
 weight = 30
 +++
 
-## Accessing and manipulating individual components
-
 The values of an entity's component can be 
 accessed and changed via the {{< api World.get get >}} and {{< api World.get_ptr get_ptr >}}
 methods of world. Here, `get` returns a reference, 
