@@ -1,6 +1,6 @@
 from larecs import World, Resources
 from parameters import Parameters
-from systems import move, accellerate, add_satellites, position_to_numpy
+from systems import move, accelerate, add_satellites, position_to_numpy
 from components import Position, Velocity
 from python import Python
 from sys import argv
@@ -9,7 +9,7 @@ from sys import argv
 fn update(mut world: World, step: Float64) raises:
     for _ in range(Int(step / world.resources.get_ptr[Parameters]()[].dt)):
         move(world)
-        accellerate(world)
+        accelerate(world)
 
 
 fn main() raises:

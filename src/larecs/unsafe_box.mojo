@@ -47,8 +47,14 @@ fn _copy_initializer[
     Returns:
         A pointer to the newly allocated data.
     """
-    ptr = UnsafePointer[T].alloc(1)
-    ptr.init_pointee_copy(existing_box.bitcast[T]()[])
+
+    @parameter
+    if sizeof[T]() == 0:
+        ptr = UnsafePointer[T]()
+    else:
+        ptr = UnsafePointer[T].alloc(1)
+        ptr.init_pointee_copy(existing_box.bitcast[T]()[])
+
     return ptr.bitcast[Byte]()
 
 
@@ -119,9 +125,15 @@ struct UnsafeBox(CollectionElement):
         Args:
             data: The value to be stored in the box.
         """
-        ptr = UnsafePointer[T].alloc(1)
+
+        @parameter
+        if sizeof[T]() == 0:
+            ptr = UnsafePointer[T]()
+        else:
+            ptr = UnsafePointer[T].alloc(1)
+            ptr.init_pointee_move(data^)
+
         self._data = ptr.bitcast[Byte]()
-        ptr.init_pointee_move(data^)
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
 

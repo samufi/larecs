@@ -7,22 +7,22 @@ from .filter import MaskFilter
 struct _BitMaskIndexIter:
     """Iterator for BitMask indices."""
 
-    alias DataContainorType = SIMD[DType.uint8, BitMask.total_bytes]
+    alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]
 
     var _byte_index: Int
-    var _offest_index: Int
-    var _bytes: Self.DataContainorType
-    var _mask: Self.DataContainorType
-    var _compare: Self.DataContainorType
+    var _offset_index: Int
+    var _bytes: Self.DataContainerType
+    var _mask: Self.DataContainerType
+    var _compare: Self.DataContainerType
     var _index: UInt8
     var _size: Int
 
-    fn __init__(out self, owned bytes: Self.DataContainorType):
+    fn __init__(out self, owned bytes: Self.DataContainerType):
         self._bytes = bytes
-        self._mask = Self.DataContainorType(1)
+        self._mask = Self.DataContainerType(1)
         self._compare = self._bytes & self._mask
         self._byte_index = 0
-        self._offest_index = 0
+        self._offset_index = 0
         self._index = 0
         self._size = self._bytes.reduce_bit_count()
 
@@ -32,10 +32,10 @@ struct _BitMaskIndexIter:
     fn __next__(
         mut self,
     ) -> BitMask.IndexType:
-        for i in range(self._offest_index, 8):
+        for i in range(self._offset_index, 8):
             for j in range(self._byte_index, 32):
                 if self._compare[j]:
-                    self._offest_index = i
+                    self._offset_index = i
                     self._byte_index = j + 1
                     self._index += 1
                     return j * 8 + i

@@ -16,7 +16,7 @@ fn move(mut world: World) raises:
         position[].y += velocity[].y * parameters[].dt
 
 
-fn accellerate(mut world: World) raises:
+fn accelerate(mut world: World) raises:
     parameters = world.resources.get_ptr[Parameters]()
     constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
 

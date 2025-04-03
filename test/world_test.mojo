@@ -363,7 +363,7 @@ def test_world_apply():
         except:
             pass
 
-    world.apply[operation, Position, Velocity, unroll_factor=3]()
+    world.apply[operation, unroll_factor=3](world.query[Position, Velocity]())
 
     for entity in world.query[Position, Velocity]():
         assert_equal(entity.get[Position]().x, new_pos.x)
@@ -419,7 +419,9 @@ def test_world_apply_SIMD():
         except:
             pass
 
-    world.apply[operation, Position, Velocity, simd_width=4, unroll_factor=3]()
+    world.apply[operation, simd_width=4, unroll_factor=3](
+        world.query[Position, Velocity]()
+    )
 
     i = 0
     for entity in world.query[Position, Velocity]():

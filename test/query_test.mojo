@@ -126,6 +126,7 @@ def test_query_result_ids():
 
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
+        entity.set(FlexibleComponent[0](1.0, i))
         assert_equal(
             entity.get[FlexibleComponent[0]]().y,
             world.get[FlexibleComponent[0]](entities[i]).y,

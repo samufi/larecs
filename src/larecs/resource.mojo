@@ -49,15 +49,6 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         self._type_map = type_map^
         self._storage = Dict[Self.IdType, UnsafeBox]()
 
-    @always_inline
-    fn copy(self) -> Self:
-        """Explicitly constructs a copy of self.
-
-        Returns:
-            A copy of this value.
-        """
-        return self
-
     @always_inline("nodebug")
     fn __len__(self) -> Int:
         """Gets the number of stored resources.
@@ -66,6 +57,15 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             The number of stored resources.
         """
         return len(self._storage)
+
+    @always_inline
+    fn copy(self) -> Self:
+        """Explicitly constructs a copy of self.
+
+        Returns:
+            A copy of this value.
+        """
+        return self
 
     fn add[
         *Ts: IdentifiableCollectionElement

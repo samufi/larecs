@@ -1,7 +1,7 @@
 # Larecs🌲 – Lightweight archetype-based ECS
 
 Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
-It is based on the ECS [Arche](https://github.com/mlange-42/arche), implemented in the Go programming language. The package is still under construction, so be aware that the API might change in future versions.
+Its architecture is based on the Go ECS [Arche](https://github.com/mlange-42/arche). The package is still under construction, so be aware that the API might change in future versions.
 
 
 ## Features
