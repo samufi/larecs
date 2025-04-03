@@ -4,10 +4,8 @@ title = "User guide"
 weight = -1
 +++
 
-## User guide
-
 This user guide provides a brief explanation of the main data types and functionality
-of Larecs🌲. For new users it is advisable to go through it in the order of the 
+of Larecs&#xfeff;🌲. For new users it is advisable to go through it in the order of the 
 side menu.
 
 For a deeper dive into ECS and the architecture by Larecs🌲, have a look at
