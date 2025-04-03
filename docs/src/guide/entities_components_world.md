@@ -82,7 +82,7 @@ in the [later chapters](../adding_and_removing_entities).
 > use such objects in the ECS context anyway; however, 
 > Larecs🌲 might support such "complex" structs in a future version. 
 
-## The `World`
+## The world
 
 The central container type of Larecs🌲 is the
 {{< api World >}}. The `World` stores all data and information about

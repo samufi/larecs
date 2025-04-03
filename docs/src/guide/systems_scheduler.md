@@ -115,7 +115,8 @@ struct Logger[interval: Int](System):
 
     # This is executed once at the beginning
     fn initialize(mut self, mut world: World) raises:
-        print("Starting the world with", len(world.query[Position, Velocity]()), "moving entities.")
+        print("Starting with", len(world.query[Position, Velocity]()), 
+              "moving entities.")
 
     # This is executed in each step
     fn update(mut self, mut world: World) raises:
