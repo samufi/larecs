@@ -1,3 +1,5 @@
+![CodeQL](https://github.com/samufi/larecs/workflows/CodeQL/badge.svg)
+
 # Larecs🌲 – Lightweight archetype-based ECS
 
 Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
