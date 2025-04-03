@@ -61,6 +61,12 @@ struct EntityAccessor[
     ](ref self) raises -> ref [self._archetype[]._data] T:
         """Returns a reference to the given component of the Entity.
 
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            A reference to the component of the entity.
+
         Raises:
             Error: If the entity does not have the component.
         """
@@ -72,7 +78,13 @@ struct EntityAccessor[
     fn get_ptr[
         T: ComponentType
     ](ref self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
-        """Returns a reference to the given component of the Entity.
+        """Returns a pointer to the given component of the Entity.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            A pointer to the component of the entity.
 
         Raises:
             Error: If the entity does not have the component.
@@ -112,6 +124,12 @@ struct EntityAccessor[
     fn has[T: ComponentType](self) -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            Whether the entity has the component.
         """
         return self._archetype[].has_component[T]()
 
@@ -184,6 +202,7 @@ struct Archetype[
         """
         self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
+    @doc_private
     fn __init__[
         *, used_internally: Bool
     ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
@@ -192,14 +211,26 @@ struct Archetype[
         Note:
             Do not use this constructor directly!
 
+        Parameters:
+            used_internally: A flag indicating whether this constructor
+                is used internally.
+
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
             capacity:   The initial capacity of the archetype.
 
+        Constraints:
+            `used_internally` must be `True` to use this constructor.
+
         Returns:
             An archetype without allocated memory.
         """
+        constrained[
+            used_internally,
+            "This constructor is meant for internal use only.",
+        ]()
+
         self._size = 0
         self._mask = mask
         self._component_count = 0
@@ -232,6 +263,9 @@ struct Archetype[
             component_ids:   The IDs of the components of the archetype.
             capacity:        The initial capacity of the archetype.
 
+        Parameters:
+            component_count: The number of components in the archetype.
+
         Returns:
             The archetype with the given components.
         """
@@ -262,6 +296,9 @@ struct Archetype[
                   (not used in initializer; not checked for consistency with component_ids).
             component_ids: The IDs of the components of the archetype.
             capacity: The initial capacity of the archetype.
+
+        Parameters:
+            component_count: The number of components in the archetype.
 
         Returns:
             The archetype with the given components and BitMask.

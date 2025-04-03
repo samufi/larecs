@@ -86,11 +86,25 @@ struct ComponentManager[
     """
 
     alias Id = SIMD[dType, 1]
+    """The type of the component ID."""
+
     alias max_size = get_max_size[dType]()
+    """The maximal number of component types."""
+
     alias component_count = len(VariadicList(ComponentTypes))
+    """The number of component types handled by this ComponentManager."""
+
     alias component_sizes = get_sizes[*ComponentTypes]()
+    """The sizes of the component types handled by this ComponentManager."""
 
     fn __init__(out self):
+        """
+        Constructor for the ComponentManager.
+
+        Constraints:
+            The dType parameter needs to be integer-like.
+            The number of component types must not exceed the maximum size.
+        """
         constrained[
             dType.is_integral(),
             "dType needs to be an integral type.",
@@ -109,6 +123,12 @@ struct ComponentManager[
 
         Parameters:
             T: The component type.
+
+        Returns:
+            The ID of the component type.
+
+        Constraints:
+            The component type must be in the list of component types.
         """
 
         @parameter
@@ -144,6 +164,9 @@ struct ComponentManager[
 
         Returns:
             An InlineArray with the IDs of the component types.
+
+        Constraints:
+            The component types must be pair-wise different.
         """
         alias size = VariadicPack[
             MutableAnyOrigin, ComponentType, *Ts
@@ -164,6 +187,9 @@ struct ComponentManager[
 
         Parameters:
             i: The ID of the component type.
+
+        Returns:
+            The size of the component type.
         """
         return sizeof[ComponentTypes[i]]()
 
@@ -174,5 +200,8 @@ struct ComponentManager[
 
         Args:
             i: The ID of the component type.
+
+        Returns:
+            The size of the component type.
         """
         return Self.component_sizes[i]
