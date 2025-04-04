@@ -28,7 +28,7 @@ fn load[
     Args:
         val: The SIMD to load from.
     """
-    return UnsafePointer.address_of(val).strided_load[width=simd_width](stride)
+    return UnsafePointer(to=val).strided_load[width=simd_width](stride)
 
 
 @always_inline
@@ -47,9 +47,7 @@ fn store[
         val: The SIMD at the first entry where the data should be stored.
         simd: The SIMD to store.
     """
-    return UnsafePointer.address_of(val).strided_store[width=simd_width](
-        simd, stride
-    )
+    return UnsafePointer(to=val).strided_store[width=simd_width](simd, stride)
 
 
 alias load2 = load[_, 2]
@@ -90,9 +88,7 @@ fn get_random_bitmask_list(
         bytes[0] = Int(random.random_ui64(range_start, range_end))
         list.append(
             BitMask(
-                bytes=UnsafePointer.address_of(bytes).bitcast[
-                    SIMD[DType.uint8, 32]
-                ]()[]
+                bytes=UnsafePointer(to=bytes).bitcast[SIMD[DType.uint8, 32]]()[]
             )
         )
 
@@ -451,9 +447,9 @@ fn test_copy_move_del[
 
     container = container_factory(
         MemTestStruct(
-            UnsafePointer.address_of(copy_counter),
-            UnsafePointer.address_of(move_counter),
-            UnsafePointer.address_of(del_counter),
+            UnsafePointer(to=copy_counter),
+            UnsafePointer(to=move_counter),
+            UnsafePointer(to=del_counter),
         )
     )
 

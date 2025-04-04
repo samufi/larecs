@@ -369,8 +369,8 @@ struct _ArchetypeIterator[
             The next archetype as a pointer.
         """
         self._buffer_index += 1
-        archetype = Pointer.address_of(
-            self._archetypes[].unsafe_get(
+        archetype = Pointer(
+            to=self._archetypes[].unsafe_get(
                 index(self._archetype_index_buffer[self._buffer_index])
             )
         )
@@ -541,7 +541,7 @@ struct _EntityIterator[
         else:
             self._processed_archetypes_count = None
 
-        self._current_archetype = Pointer.address_of(archetypes[][0])
+        self._current_archetype = Pointer(to=archetypes[][0])
 
         # If the iterator is not empty
         if self._archetype_iterator:

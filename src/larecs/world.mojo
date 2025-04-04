@@ -349,9 +349,7 @@ struct World[*component_types: ComponentType](Movable):
         if size:
             index_in_archetype = self._entities[entity.get_id()].index
 
-            archetype = Pointer.address_of(
-                self._archetypes.unsafe_get(archetype_index)
-            )
+            archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
 
             @parameter
             for i in range(size):
@@ -445,15 +443,13 @@ struct World[*component_types: ComponentType](Movable):
 
         first_index_in_archetype = self._create_entities(archetype_index, count)
 
-        archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(archetype_index)
-        )
+        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
 
         @parameter
         for i in range(size):
             Span(
-                UnsafePointer.address_of(
-                    archetype[].get_component[
+                UnsafePointer(
+                    to=archetype[].get_component[
                         T = Ts[i.value], assert_has_component=False
                     ](first_index_in_archetype)
                 ),
@@ -462,7 +458,7 @@ struct World[*component_types: ComponentType](Movable):
 
         iterator = _ArchetypeEntityIterator(
             archetype,
-            Pointer.address_of(self._locks),
+            Pointer(to=self._locks),
             first_index_in_archetype,
         )
 
@@ -489,9 +485,7 @@ struct World[*component_types: ComponentType](Movable):
         Returns:
             The index of the first newly created entity in the archetype.
         """
-        archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(archetype_index)
-        )
+        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
         arch_start_idx = archetype[].extend(count, self._entity_pool)
         entities_size = (
             Int(archetype[].get_entity(arch_start_idx + count - 1).get_id()) + 1
@@ -529,8 +523,8 @@ struct World[*component_types: ComponentType](Movable):
         self._assert_alive(entity)
 
         idx = self._entities[entity.get_id()]
-        old_archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(index(idx.archetype_index))
+        old_archetype = Pointer(
+            to=self._archetypes.unsafe_get(index(idx.archetype_index))
         )
 
         # if self._listener != nil:
@@ -725,8 +719,8 @@ struct World[*component_types: ComponentType](Movable):
 
         self._assert_alive(entity)
         entity_index = self._entities[entity.get_id()]
-        archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(index(entity_index.archetype_index))
+        archetype = Pointer(
+            to=self._archetypes.unsafe_get(index(entity_index.archetype_index))
         )
 
         @parameter
@@ -817,7 +811,7 @@ struct World[*component_types: ComponentType](Movable):
             VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
             *component_types,
         ](
-            Pointer.address_of(self),
+            Pointer(to=self),
             Self.component_manager.get_id_arr[*Ts](),
         )
 
@@ -876,8 +870,8 @@ struct World[*component_types: ComponentType](Movable):
         idx = self._entities[entity.get_id()]
 
         old_archetype_index = idx.archetype_index
-        old_archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(index(old_archetype_index))
+        old_archetype = Pointer(
+            to=self._archetypes.unsafe_get(index(old_archetype_index))
         )
 
         index_in_old_archetype = idx.index
@@ -925,9 +919,7 @@ struct World[*component_types: ComponentType](Movable):
                 component_ids.value(), start_node_index
             )
 
-        archetype = Pointer.address_of(
-            self._archetypes.unsafe_get(archetype_index)
-        )
+        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
         index_in_archetype = archetype[].add(entity)
 
         @parameter
@@ -959,7 +951,7 @@ struct World[*component_types: ComponentType](Movable):
             archetype[].unsafe_set(
                 index_in_archetype,
                 component_ids.value()[i],
-                UnsafePointer.address_of(add_components[i]).bitcast[UInt8](),
+                UnsafePointer(to=add_components[i]).bitcast[UInt8](),
             )
 
         swapped = old_archetype[].remove(index_in_old_archetype)
@@ -1080,7 +1072,7 @@ struct World[*component_types: ComponentType](Movable):
 
             # Get an unsafe pointer to the memory
             # location of the component
-            ptr = UnsafePointer.address_of(component[])
+            ptr = UnsafePointer(to=component[])
 
             # Load a SIMD of size `simd_width`
             # Note that a strided load is needed if the component as more than one field.
@@ -1115,7 +1107,7 @@ struct World[*component_types: ComponentType](Movable):
 
         with self._locked():
             for archetype in _ArchetypeIterator(
-                Pointer.address_of(self._archetypes),
+                Pointer(to=self._archetypes),
                 query.mask,
                 query.without_mask,
             ):
@@ -1229,7 +1221,7 @@ struct World[*component_types: ComponentType](Movable):
         else:
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
-        iterator = Self.Query(Pointer.address_of(self), bitmask)
+        iterator = Self.Query(Pointer(to=self), bitmask)
 
     fn _get_entity_iterator[
         has_without_mask: Bool = False, has_start_indices: Bool = False
@@ -1260,8 +1252,8 @@ struct World[*component_types: ComponentType](Movable):
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
         iterator = _EntityIterator(
-            Pointer.address_of(self._archetypes),
-            Pointer.address_of(self._locks),
+            Pointer(to=self._archetypes),
+            Pointer(to=self._locks),
             mask,
             without_mask,
             start_indices,
@@ -1288,7 +1280,7 @@ struct World[*component_types: ComponentType](Movable):
             An iterator over all archetypes that match the query.
         """
         iterator = _ArchetypeIterator(
-            Pointer.address_of(self._archetypes),
+            Pointer(to=self._archetypes),
             mask,
             without_mask,
         )
