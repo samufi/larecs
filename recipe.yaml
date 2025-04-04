@@ -28,22 +28,8 @@ tests:
       run:
         - max >= 25.2
     files:
-      recipe:
-        - archetype_test.mojo
-        - bitmask_test.mojo
-        - component_test.mojo
-        - comptime_optional_test.mojo
-        - dict_test.mojo
-        - entity_test.mojo
-        - graph_test.mojo
-        - pool_test.mojo
-        - query_test.mojo
-        - resource_test.mojo
-        - scheduler_test.mojo
-        - type_map_test.mojo
-        - types_test.mojo
-        - unsafe_box_test.mojo
-        - world_test.mojo
+      source:
+        test/
 
 about:
   homepage: https://samufi.github.io/larecs/
