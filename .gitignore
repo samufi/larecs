@@ -167,6 +167,7 @@ cython_debug/
 # **.go
 translate/*
 tmp*.mojo
+output/*
 benchmark/getter_benchmark.mojo
 benchmark/query_2benchmark.mojo
 benchmark/simd_benchmark.mojo
