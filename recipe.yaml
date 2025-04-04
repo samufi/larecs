@@ -1,5 +1,6 @@
 context:
   version: "0.1.0"
+  max_requirement: "max >= 25.3.0.dev2025032705"
 
 package:
   name: "larecs"
@@ -15,7 +16,7 @@ build:
     - mojo package src/larecs -o ${{ PREFIX }}/lib/mojo/larecs.mojopkg
 requirements:
   host:
-    - max >= 25.2
+    - ${{ max_requirement }}
   run:
     - ${{ pin_compatible('max') }}
 
@@ -26,7 +27,7 @@ tests:
           - mojo test --sanitize address -D ASSERT=all test
     requirements:
       run:
-        - max >= 25.2
+        - ${{ max_requirement }}
     files:
       source:
         test/
