@@ -24,8 +24,8 @@ an ECS is organized. Entities could represent game objects,
 or potentially anything else that "lives" in a game or simulation.
 Each entity can possess an arbitrary
 set of components, which can also be used to characterize
-an entity. That is, in an ECS, cars would not directly 
-identified as "cars" but rather as everything that has 
+an entity. That is, in an ECS, cars would not be directly 
+identified as "cars" but rather as something that has 
 the components `Position`, `Velocity`, `Fuel reserves`, 
 `Engine power`, etc. 
 
@@ -70,7 +70,7 @@ types are also used as unique identifiers for the components
 of an entity. That is, they have a similar role to 
 a key in a dictionary.
 
-How components can be associated with entities is described 
+How components can be assigned to entities is described 
 in the [later chapters](../adding_and_removing_entities).
 
 > [!Warning]
@@ -84,15 +84,16 @@ in the [later chapters](../adding_and_removing_entities).
 
 ## The world
 
-The central container type of Larecs🌲 is the
-{{< api World >}}. The `World` stores all data and information about
+The central data structure of Larecs🌲 is the
+{{< api World >}}. It stores all data and information about
 the state of the entities and their surroundings.
 The `World` struct provides the main functionality
 of the ECS, such as adding and removing entities,
 looking up components, and iterating over entities.
 
-Larecs🌲 gains a lot of its efficiency by using compile-time
-programming. To that end, it needs to know ahead of time 
+Larecs🌲 gains efficiency and usability by exploiting
+Mojo's compile-time programming capabilities.
+To that end, it needs to know ahead of time 
 which components might turn up in the world, and the `World` 
 must be statically parameterized with the component types upon 
 creation. This also has the advantage that certain errors

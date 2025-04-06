@@ -93,3 +93,8 @@ world.remove_entities(world.query[Position]())
 ```
 
 More on queries can be found in the chapter [Queries and iteration](../queries_iteration).
+
+> [!Tip]
+> Adding and removing many components in one go is significantly 
+> more efficient than adding and removing components 
+> one by one.

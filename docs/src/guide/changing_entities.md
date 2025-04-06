@@ -5,11 +5,12 @@ weight = 30
 +++
 
 The values of an entity's component can be 
-accessed and changed via the {{< api World.get get >}} and {{< api World.get_ptr get_ptr >}}
+accessed and changed via the {{< api World.get get >}} 
+and {{< api World.get_ptr get_ptr >}}
 methods of world. Here, `get` returns a reference, 
-which can be changed in-place only and `get_ptr`
-returns a pointer, which can be changed later 
-down the line.
+which becomes a copy of the component if stored in a local variable,
+and `get_ptr` returns a pointer, which can write into  
+the original memory even if stored locally.
 
 ```mojo {doctest="guide_change_entities" global=true hide=true}
 from larecs import World
@@ -30,11 +31,15 @@ struct Velocity:
 world = World[Position, Velocity]()
 ```
 
+A reference to a component can be obtained 
+as follows:
+
 ```mojo {doctest="guide_change_entities"}
-# Add an entity and get its representation
+# Add an entity with a component
 entity = world.add_entity(Position(0, 0))
 
-# Get a copy of the position
+# Get a reference to the position;
+# storing this in a local variable makes it a copy
 pos = world.get[Position](entity)
 
 # This does not change the entity's state!
@@ -47,8 +52,13 @@ world.get[Position](entity).x = 5
 # Similarly, replacing the component completely 
 # works as well.
 world.get[Position](entity) = Position(5, 0)
+```
 
-# For later access of the position, use a pointer
+To access and change a component later in 
+the current method, we use a pointer:
+
+```mojo {doctest="guide_change_entities"}
+# Get a pointer to the Position component
 pos_ptr = world.get_ptr[Position](entity)
 
 # Now, changing the value via the local pointer variable works.
@@ -58,7 +68,7 @@ print(world.get[Position](entity).x == 10) # True
 
 Of course, accessing a component only works if the entity has
 the component in question. Accessing a component 
-that the entity does not have, will result in an error.
+that the entity does not have will result in an error.
 
 ```mojo {doctest="guide_change_entities"}
 # Add an entity without a velocity component
@@ -82,8 +92,9 @@ else:
 
 ## Setting multiple components at once
 
-We can set multiple components at once using the {{< api World.set set >}}` 
-method. This method takes a tuple of components and sets them 
+We can set the values of multiple components at once 
+using the {{< api World.set set >}}
+method. This method takes multiple components and sets them 
 all in one go.
 
 ```mojo {doctest="guide_change_entities"}
@@ -132,6 +143,6 @@ components, so we can replace any number of components with
 any other number of new components.
 
 > [!Tip]
-> Replacing components way in one go is significantly 
+> Replacing components in one go is significantly 
 > more efficient than removing and adding components separately. 
 
