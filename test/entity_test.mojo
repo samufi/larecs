@@ -27,6 +27,7 @@ def test_implicit_constructor():
 
     assert_equal(storage[0], entity)
 
+
 # TODO
 # fn example_entity():
 #     world = new_world()
