@@ -15,7 +15,7 @@ Systems can be thought of as functions that take a
 {{< api World >}} instance and perform operations on the 
 world's entities. However, to allow storing intermediate
 variables between multiple system calls, and to 
-support special initializing and finalizing operations
+support special initialization and finalization operations
 called at the beginning or the end of an ECS run, respectively,
 systems are expressed as structs implementing the 
 {{< api System >}} trait. This trait requires the
