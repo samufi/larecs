@@ -2,6 +2,9 @@
 type = "docs"
 title = "User guide"
 weight = -1
+
+[sidebar]
+open = true
 +++
 
 This user guide provides a brief explanation of the main data types and functionality

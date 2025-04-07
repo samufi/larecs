@@ -71,7 +71,7 @@ of an entity. That is, they have a similar role to
 a key in a dictionary.
 
 How components can be assigned to entities is described 
-in the [later chapters](../adding_and_removing_entities).
+in the [following chapters](../adding_and_removing_entities).
 
 > [!Warning]
 > Currently, only "trivial" structs are supported as 

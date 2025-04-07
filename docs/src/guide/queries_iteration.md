@@ -22,7 +22,8 @@ iterate over all entities with a `Position` and a `Velocity` component,
 we can do this as follows:
 
 ```mojo {doctest="guide_queries_iteration" global=true hide=true}
-from larecs import World, MutableEntityAccessor
+from larecs import World, MutableEntityAccessor, Entity
+from testing import *
 
 @value
 struct Position:
@@ -87,9 +88,10 @@ print(len(excluding_query)) # "1"
 
 > [!Note] 
 > Determining the length of a query is not a trivial operation
-> and can be expensive if the ECS is involves many components.
+> and may require an internal iteration if the ECS involves many components.
 > Therefore, it is advisable to avoid applying the `len` function
-> on queries in "hot" code.
+> to queries in "hot" code. Nonetheless, the `len` function
+> is much faster than counting entities manually by iterating over a query.
 
 ## Iterating over queries
 
@@ -99,7 +101,7 @@ object, i.e., not technically an {{< api Entity >}}, which is
 merely an identifier of an entity. Instead, the `EntityAccessor`
 directly provides methods to get, set, and check the existence
 of components, so that we do not need to call the world's 
-methods for this.
+methods for this, making the code more efficient. 
 
 ```mojo {doctest="guide_queries_iteration"}
 for entity in world.query[Position]():
@@ -109,20 +111,81 @@ for entity in world.query[Position]():
         + String(pos[].x) + ", " + String(pos[].y) + ")"
     )
     if entity.has[Velocity]():
-        # Reset position and velocity
-        entity.set(Position(0, 0), Velocity(0, 0))
+        vel = entity.get_ptr[Velocity]()
+        # Also print the velocity
+        print(
+            " - with velocity (" 
+            + String(vel[].dx) + ", " + String(vel[].dy) + ")"
+        )
 ```
 
 > [!Note] 
 > The `EntityAccessor` is a temporary object that is
-> created for each iteration. Therefore, should not be
-> stored in a container.
+> created for each iteration. Therefore, it should not be
+> stored in a container. Use {{< api EntityAccessor.get_entity >}} 
+> instead if you need to store the entity for later use.
 
-> [!Note] 
-> Adding or removing entities or components to/from entities
-> would invalidate the iterator. Therefore, the world is 
-> locked during the iteration. This means that the forbidden
-> operations will raise an exception during iterations.
+> [!Note]
+> The `EntityAccessor` can be implicitly
+> converted to an `Entity` object and hence be used
+> wherever an `Entity` is required.
+
+## Preventing iterator invalidation: the locked world
+
+Adding/removing entities to/from the world 
+or components to/from entities
+while iterating could invalidate the iterator. That is, 
+the iterator could leave out some entities or consider
+some entities multiple times. 
+To prevent this, Larecs🌲 locks the world during iterations. 
+This means that methods that change how many entities
+exist in the world or which components entities have
+will raise exceptions if called during iteration.
+
+```mojo {doctest="guide_queries_iteration"}
+for entity in world.query[Position]():
+
+    # Adding entities to the world while iterating
+    # is forbidden.
+    with assert_raises():
+        _ = world.add_entity(Velocity(1, 0)) # Raises an exception
+    
+    # Changing components of an entity while iterating
+    # is forbidden.
+    with assert_raises():
+        _ = world.add(entity, Position(1, 2)) # Raises an exception
+```
+
+If we want to add or remove components from entities while iterating,
+we need to store the entities in an intermediate 
+container and iterate over them in
+a separate loop. Consider the following example, where we
+add a `Velocity` component to all entities that have a `Position`
+but no `Velocity` component:
+
+```mojo {doctest="guide_queries_iteration"}
+# A container for the entities
+entities = List[Entity]()
+for entity in world.query[Position]().without[Velocity]():
+    
+    # Store the entity for later use
+    # The implicit conversion to `Entity` 
+    # allows us to use `entity` directly
+    entities.append(entity)
+
+# Add a velocity component to all stored entities
+for entity in entities:
+    # We can add components to the entity
+    # because we are not iterating over the world
+    _ = world.add(entity[], Velocity(1, 0))
+```
+
+> [!Note]
+> In a later release, Larecs🌲 will provide
+> a batched version of the `add` and `remove` methods
+> that will allow adding or removing components
+> from multiple entities at once.
+
 
 ## Applying functions to entities in queries
 
@@ -132,7 +195,10 @@ the {{< api World.apply apply >}} method. This method
 iterates over all entities conforming to a query and
 calls the provided function with the entities as arguments.
 The function must take a {{< api MutableEntityAccessor >}} 
-as its only argument.
+as its only argument. Applying a function to all entities
+can be more convenient and also faster than iterating over the entities
+manually, especially if the function is vectorized, as will be shown
+in the [next section](#application-of-vectorized-functions).
 
 For example, if we want to apply a function that moves all entities
 with a `Position` and a `Velocity` component, we can do this as follows:
@@ -201,9 +267,12 @@ _ = world.add_entities(Position(0, 0), Velocity(1, 0), count=10)
 
 Before defining the vectorized operation, we need to gather some 
 information about the memory layout of our components.
-Specifically, we need to know the space in memory between
+Specifically, we need to know how far apart the attributes
+
+the space in memory between
 two consecutive components of the same type. This is 
-needed if we want to load the same attribute of multiple components
+needed if we want to load the same attribute of multiple 
+instances of the component (belonging to different entities)
 at once. 
 
 Consider our `Position` component. It has two attributes
