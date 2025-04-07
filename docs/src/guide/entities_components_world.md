@@ -4,18 +4,25 @@ title = "Entities, components and the world"
 weight = 10
 +++
 
-Larecs🌲 provides a flexible and efficient way to store, 
-access and manipulate data records organized 
-around individual entities. Suppose we wanted to 
-model a world with different objects and agents that each have 
-certain properties. The idea of entity component systems 
-(ECS) is to characterize these objects and agents 
-(called "entities" in an ECS) via the set of 
-attributes ("components") they possess, and to 
-model the interactions between them via "systems",
-functions that operate on entities 
-with certain components. Larecs🌲 provides the functionality 
-and tools to implement such entity component systems.
+Larecs🌲 is an entity component system (ECS) framework for Mojo.
+The ECS concept is composed of three principal elements:
+
+- [Entities](#entities) represent game objects or simulation entities, like individuals in a population model.
+- [Components](#components) are the data associated to entities, i.e. their properties or state variables.
+- [Systems](../systems_scheduler) contain the game or simulation logic that manipulates entities and their components, using so-called queries.
+
+In an ECS, each entity is "composed of" an arbitrary set of components that can be added and removed at run-time.
+This modular design enables the development of highly flexible and reusable games or simulations.
+By decoupling the logic (systems) from the data (entities and components),
+ECS avoids convoluted inheritance hierarchies and eliminates hard-coded behavior.
+Instead, entities can be composed of components to exhibit diverse behaviors without sacrificing modularity.
+
+An ECS engine manages this architecture within a central storage structure known as the "[World](#the-world)".
+The engine handles common tasks such as maintaining entity lists, spawning or deleting entities,
+and scheduling logic operations, simplifying the development process for users.
+
+Larecs🌲 provides a high-performance ECS framework,
+empowering developers to create games and simulation models with exceptional flexibility and efficiency.
 
 ## Entities
 
