@@ -26,7 +26,7 @@ constructed from a string identifier. This requirement
 is enforced via the {{< api IdentifiableCollectionElement >}} trait.
 
 By convention, to avoid name clashes, the string identifier should
-include the package, module, and class name of the resource.
+include the package, module, and type name of the resource.
 For example, if we define a resource `Time` 
 in the module `my_module` in the package `my_package`, 
 the resource identifier would read `my_package.my_module.Time`.
