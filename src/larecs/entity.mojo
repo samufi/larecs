@@ -1,7 +1,7 @@
 from bit import bit_reverse
 
 from .types import EntityId
-from .archetype import Archetype
+from .archetype import Archetype, EntityAccessor
 
 # # Reflection type of an [Entity].
 # var entityType = reflect.TypeOf(Entity{})
@@ -35,6 +35,17 @@ struct Entity(EqualityComparable, Stringable, Hashable):
     fn __init__(out self, id: EntityId = 0, generation: UInt32 = 0):
         self._id = id
         self._generation = generation
+
+    @implicit
+    @always_inline
+    fn __init__(out self, accessor: EntityAccessor):
+        """
+        Initializes the entity from an [..archetype.EntityAccessor].
+
+        Args:
+            accessor: The entity accessor to initialize from.
+        """
+        self = accessor.get_entity()
 
     @always_inline
     fn __eq__(self, other: Entity) -> Bool:

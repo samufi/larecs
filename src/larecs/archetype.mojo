@@ -56,6 +56,15 @@ struct EntityAccessor[
         self._index_in_archetype = index_in_archetype
 
     @always_inline
+    fn get_entity(self) -> Entity:
+        """Returns the entity of the accessor.
+
+        Returns:
+            The entity of the accessor.
+        """
+        return self._archetype[].get_entity(self._index_in_archetype)
+
+    @always_inline
     fn get[
         T: ComponentType
     ](ref self) raises -> ref [self._archetype[]._data] T:

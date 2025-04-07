@@ -2,6 +2,7 @@ from testing import *
 from collections import InlineArray
 from larecs.entity import Entity, EntityIndex
 from larecs.archetype import Archetype
+from larecs.test_utils import SmallWorld, Position
 
 
 def test_entity_as_index():
@@ -16,6 +17,15 @@ def test_zero_entity():
     assert_true(Entity().is_zero())
     assert_false(Entity(1, 0).is_zero())
 
+
+def test_implicit_constructor():
+    world = SmallWorld()
+    entity = world.add_entity(Position(1, 0))
+    storage = List[Entity]()
+    for e in world.query[Position]():
+        storage.append(e)
+
+    assert_equal(storage[0], entity)
 
 # TODO
 # fn example_entity():
@@ -44,6 +54,7 @@ def main():
     print("Running tests...")
     test_entity_as_index()
     test_zero_entity()
+    test_implicit_constructor()
     print("All tests passed.")
     # report = benchmark.run[benchmark_entity_is_zero]()
     # report.print()
