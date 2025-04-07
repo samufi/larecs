@@ -7,18 +7,17 @@ weight = 60
 A key feature of entity-component systems is that 
 operations on the entities are organized in systems,
 which operate independently from one another and can
-be added or removed according to the respective needs.
+be added or removed as required.
 
 ## Systems
 
 Systems can be thought of as functions that take a 
 {{< api World >}} instance and perform operations on the 
-world's entities. However, to allow storing intermediate
+world's entities and/or resources. However, to allow storing intermediate
 variables between multiple system calls, and to 
-support special initialization and finalization operations
-called at the beginning or the end of an ECS run, respectively,
+support special initialization and finalization operations,
 systems are expressed as structs implementing the 
-{{< api System >}} trait. This trait requires the
+{{< api System >}} trait. This trait requires
 systems to implement {{< api System.initialize initialize >}}, and
 {{< api System.finalize finalize >}} methods, called before or
 after the ECS run, respectively, and an {{< api System.update update >}} 
@@ -55,8 +54,7 @@ struct Move(System):
 
 The {{< api Scheduler >}} is responsible for executing the systems
 in the correct order. A `Scheduler` contains a {{< api World >}} instance
-and a list of systems. The systems are executed in the order they
-are added to the scheduler. The scheduler has 
+and a list of systems. The scheduler has 
 {{< api Scheduler.initialize initialize >}},
 {{< api Scheduler.update update >}}, and {{< api Scheduler.finalize finalize >}} 
 methods, which call the respective functions of all

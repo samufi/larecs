@@ -5,9 +5,11 @@ weight = 50
 +++
 
 Not all data in a world is associated with 
-specific entities. Some data is shared across all entities
-(such as parameters), or is used to store global state
-variables (such as the current time).
+specific entities. This often applies to 
+parameters (such as a time step), 
+global state variables (such as the current time),
+or spatial data structures (such as a grid displaying 
+entity positions). These data are called resources.
 
 ## Defining resources
 
@@ -68,11 +70,11 @@ world = World[Position, Velocity]()
 # Add the `Time resource
 world.resources.add(Time(0.0))
 ```
-The `resources` attribute also allows you to access and
+The `resources` attribute also allows us to access and
 change resources via {{< api Resources.get get >}}, 
 {{< api Resources.get_ptr get_ptr >}} and 
 {{< api Resources.set set >}} methods resembling their
-[respective counterparts](../changing_entities) of `World`.
+[component-related counterparts](../changing_entities) of `World`.
 
 ```mojo {doctest="guide_resources"}
 # Change a resource value via a reference
@@ -120,9 +122,10 @@ world.resources.set(
 )
 ```
 
-As seen above with `SelectedEntities`, resources can also
-be "complex" types with heap-allocated memory and
-be used to store dynamic data.
+In contrast to components, resources can
+be "complex" types with heap-allocated memory,
+as demonstrated above with `SelectedEntities`. 
+We can use them to store arbitrary amounts of data.
 
 ```mojo {doctest="guide_resources"}
 # Create entities and add them to the selected entities
