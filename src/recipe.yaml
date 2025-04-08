@@ -1,6 +1,6 @@
 context:
   version: "0.1.0"
-  max_requirement: "max >= 25.3.0.dev2025032705"
+  max_requirement: "max = 25.3.0.dev2025040705"
 
 package:
   name: "larecs"
@@ -8,7 +8,7 @@ package:
 
 source:
   - git: https://github.com/samufi/larecs.git
-    rev: 7a10e811eb08421bd6458f17a7dce856138bb777
+    rev: fb5bcf6b0e4238f6a3c0d81aed8baf680055d8c0
 
 build:
   number: 0
