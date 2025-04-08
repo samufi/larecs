@@ -50,7 +50,7 @@ struct ComptimeOptional[
         """
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
 
-        var ptr = UnsafePointer.address_of(self.value())
+        var ptr = UnsafePointer(to=self.value())
         ptr.init_pointee_move(value^)
 
     @always_inline
@@ -104,7 +104,7 @@ struct ComptimeOptional[
         ]()
         alias zero = index(0)
         var ptr = __mlir_op.`pop.array.gep`(
-            UnsafePointer.address_of(self._value).address,
+            UnsafePointer(to=self._value).address,
             zero,
         )
         return UnsafePointer(ptr)[]
@@ -147,4 +147,4 @@ struct ComptimeOptional[
             ),
         ]()
 
-        return UnsafePointer.address_of(self._value).bitcast[Self.ElementType]()
+        return UnsafePointer(to=self._value).bitcast[Self.ElementType]()

@@ -67,7 +67,7 @@ struct LockMask:
         """
         Returns a locked context.
         """
-        return LockedContext(Pointer.address_of(self))
+        return LockedContext(Pointer(to=self))
 
 
 @value

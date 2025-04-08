@@ -322,8 +322,8 @@ struct QueryOwner[
 
 fn test_query_in_system() raises:
     world = SmallWorld()
-    sys1 = QueryOwner(Pointer.address_of(world))
-    sys2 = QueryOwner(Pointer.address_of(world))
+    sys1 = QueryOwner(Pointer(to=world))
+    sys2 = QueryOwner(Pointer(to=world))
 
     c0 = FlexibleComponent[0](1.0, 2.0)
 
@@ -401,7 +401,7 @@ def test_query_archetype_iterator():
         __origin_of(l),
         FlexibleComponent[0],
         component_manager = ComponentManager[FlexibleComponent[0]](),
-    ](Pointer.address_of(l), BitMask(0)):
+    ](Pointer(to=l), BitMask(0)):
         count += 1
 
     assert_equal(count, 3)

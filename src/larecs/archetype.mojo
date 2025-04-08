@@ -1,5 +1,4 @@
 from sys.intrinsics import _type_is_eq
-from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
 from .component import ComponentManager, constrain_components_unique
 from .entity import Entity
@@ -532,7 +531,7 @@ struct Archetype[
             An accessor for the entity at the given index.
         """
         accessor = Self.EntityAccessor(
-            Pointer.address_of(self),
+            Pointer(to=self),
             index(idx),
         )
 
@@ -595,10 +594,10 @@ struct Archetype[
         Returns:
             A pointer to the component.
         """
-        return Pointer[T, __origin_of(self._data)].address_of(
-            self.get_component[T=T, assert_has_component=assert_has_component](
-                idx
-            )
+        return Pointer[T, __origin_of(self._data)](
+            to=self.get_component[
+                T=T, assert_has_component=assert_has_component
+            ](idx)
         )
 
     @always_inline

@@ -183,9 +183,7 @@ struct UnsafeBox(CollectionElement):
         Returns:
             A pointer to the data stored in the box.
         """
-        return Pointer[T, __origin_of(self._data)].address_of(
-            self._data.bitcast[T]()[]
-        )
+        return Pointer[T, __origin_of(self._data)](to=self._data.bitcast[T]()[])
 
     @always_inline
     fn unsafe_get[T: CollectionElement](ref self) -> ref [self._data] T:

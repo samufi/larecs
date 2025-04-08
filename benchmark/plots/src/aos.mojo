@@ -1,4 +1,3 @@
-from collections import InlineArray
 from os import os
 from python import Python, PythonObject
 from time import perf_counter_ns
@@ -81,7 +80,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             handles.append(
                 plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
             )
-        labels.append("{0} components".format(String(comp)))
+        labels.append(String("{0} components").format(String(comp)))
         handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
 
     ax1.set_xscale("log")
@@ -129,7 +128,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             handles.append(
                 plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
             )
-        labels.append("10^{0} entities".format(String(entity_exp)))
+        labels.append(String("10^{0} entities").format(String(entity_exp)))
         handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
 
     ax2.set_xscale("log")

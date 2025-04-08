@@ -1,6 +1,3 @@
-from collections import Optional, InlineArray
-
-
 struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement](
     Copyable, Movable
 ):
