@@ -8,6 +8,9 @@ on:
     - main
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
 
   release:
