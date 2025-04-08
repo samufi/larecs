@@ -6,6 +6,9 @@ on:
     - main
   pull_request:
 
+permissions:
+  pages: write
+
 env:
   MODO_VERSION: 15b8f6d # 0.9.0
   HUGO_VERSION: mojo-lexer # 0.140.2
