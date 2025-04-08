@@ -197,7 +197,7 @@ calls the provided function with the entities as arguments.
 The function must take a {{< api EntityAccessor MutableEntityAccessor >}} 
 as its only argument. Applying a function to all entities
 can be more convenient and also faster than iterating over the entities
-manually, especially if the function is vectorized, as will be shown
+manually, especially if the function is vectorized, as is shown
 in the [vectorization](../vectorization) chapter.
 
 For example, if we want to apply a function that moves all entities
