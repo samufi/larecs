@@ -171,3 +171,6 @@ src/output/*
 benchmark/getter_benchmark.mojo
 benchmark/query_2benchmark.mojo
 benchmark/simd_benchmark.mojo
+
+# Mojo packages
+*.mojopkg

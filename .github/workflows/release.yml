@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  release:
+    types: [ created ]
+  push:
+    branches:
+    - main
+  pull_request:
+
+jobs:
+
+  release:
+    name: Build package and publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Larecs
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install magic CLI
+        run: |
+          curl -ssL https://magic.modular.com | bash
+          source /home/runner/.bash_profile
+
+      - name: Build package
+        run: |
+          source /home/runner/.bash_profile
+          magic run mojo package src/larecs
+
+      - name: Upload package
+        if: ${{ github.event_name == 'release' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: larecs.mojopkg
+          asset_name: larecs.mojopkg
+          tag: ${{ github.ref }}
