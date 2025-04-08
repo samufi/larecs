@@ -1,5 +1,4 @@
 from bit import pop_count, bit_not
-from collections import InlineArray
 from .filter import MaskFilter
 
 
@@ -54,7 +53,7 @@ struct _BitMaskIndexIter:
 
 
 @register_passable
-struct BitMask(Stringable, KeyElement):
+struct BitMask(Stringable):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8

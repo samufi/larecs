@@ -1,5 +1,4 @@
 from sys.intrinsics import _type_is_eq
-from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
 from .component import ComponentManager, constrain_components_unique
 from .entity import Entity

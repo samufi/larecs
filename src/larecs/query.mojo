@@ -1,5 +1,3 @@
-from collections import InlineArray, Optional
-
 from .entity import Entity
 from .bitmask import BitMask
 from .component import ComponentType, ComponentManager

@@ -1,5 +1,4 @@
 from memory import UnsafePointer, Span
-from collections import Optional, InlineArray
 from algorithm import vectorize
 
 from .pool import EntityPool

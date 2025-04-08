@@ -1,4 +1,3 @@
-from collections import InlineArray
 from os import os
 from python import Python, PythonObject
 from time import perf_counter_ns

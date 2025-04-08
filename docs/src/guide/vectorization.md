@@ -142,10 +142,10 @@ us to specify the stride manually.
 Hence, we need `UnsafePointer`s to the components.
 
 ```mojo {doctest="guide_simd_apply"}
-    pos_x_ptr = UnsafePointer.address_of(pos[].x)
-    pos_y_ptr = UnsafePointer.address_of(pos[].y)
-    vel_x_ptr = UnsafePointer.address_of(vel[].dx)
-    vel_y_ptr = UnsafePointer.address_of(vel[].dy)
+    pos_x_ptr = UnsafePointer(to=pos[].x)
+    pos_y_ptr = UnsafePointer(to=pos[].y)
+    vel_x_ptr = UnsafePointer(to=vel[].dx)
+    vel_y_ptr = UnsafePointer(to=vel[].dy)
 ```
 
 Now we can load `simd_width` values of `x` and `y`

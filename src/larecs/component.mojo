@@ -1,8 +1,6 @@
 from sys.info import sizeof
 from sys.intrinsics import _type_is_eq
-from collections import (
-    InlineArray,
-)  # Dict,
+# from collections import Dict
 from memory import UnsafePointer
 
 from .stupid_dict import SimdDict, StupidDict as Dict

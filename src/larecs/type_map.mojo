@@ -8,7 +8,7 @@ trait TypeMapping(CollectionElement):
 
 
 @register_passable("trivial")
-struct TypeId(KeyElement):
+struct TypeId():
     """An ID to distinguish different types.
 
     By convention, every type implementing
