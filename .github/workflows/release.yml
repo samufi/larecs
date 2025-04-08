@@ -27,6 +27,11 @@ jobs:
         run: |
           source /home/runner/.bash_profile
           magic run mojo package src/larecs
+    
+      - name: Test package
+        run: |
+          source /home/runner/.bash_profile
+          magic run mojo test --validate-doc-strings --sanitize address -D ASSERT=all -I . test
 
       - name: Upload package
         if: ${{ github.event_name == 'release' }}
