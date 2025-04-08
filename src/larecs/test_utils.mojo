@@ -420,22 +420,22 @@ alias FullWorld = World[
 struct MemTestStruct(CollectionElement):
     var copy_counter: UnsafePointer[Int]
     var move_counter: UnsafePointer[Int]
-    var del_conuter: UnsafePointer[Int]
+    var del_counter: UnsafePointer[Int]
 
     fn __moveinit__(out self, owned other: Self):
         self.move_counter = other.move_counter
-        self.del_conuter = other.del_conuter
+        self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
         self.move_counter[] += 1
 
     fn __copyinit__(out self, other: Self):
         self.move_counter = other.move_counter
-        self.del_conuter = other.del_conuter
+        self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
         self.copy_counter[] += 1
 
     fn __del__(owned self):
-        self.del_conuter[] += 1
+        self.del_counter[] += 1
 
 
 fn test_copy_move_del[

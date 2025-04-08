@@ -1,9 +1,7 @@
 from sys.intrinsics import _type_is_eq
 from collections import InlineArray, Optional
 from memory import memcpy, UnsafePointer
-from .component import (
-    ComponentManager,
-)
+from .component import ComponentManager, constrain_components_unique
 from .entity import Entity
 from .bitmask import BitMask
 from .pool import EntityPool
@@ -58,10 +56,25 @@ struct EntityAccessor[
         self._index_in_archetype = index_in_archetype
 
     @always_inline
+    fn get_entity(self) -> Entity:
+        """Returns the entity of the accessor.
+
+        Returns:
+            The entity of the accessor.
+        """
+        return self._archetype[].get_entity(self._index_in_archetype)
+
+    @always_inline
     fn get[
         T: ComponentType
     ](ref self) raises -> ref [self._archetype[]._data] T:
         """Returns a reference to the given component of the Entity.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            A reference to the component of the entity.
 
         Raises:
             Error: If the entity does not have the component.
@@ -74,7 +87,13 @@ struct EntityAccessor[
     fn get_ptr[
         T: ComponentType
     ](ref self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
-        """Returns a reference to the given component of the Entity.
+        """Returns a pointer to the given component of the Entity.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            A pointer to the component of the entity.
 
         Raises:
             Error: If the entity does not have the component.
@@ -84,9 +103,42 @@ struct EntityAccessor[
         )
 
     @always_inline
+    fn set[
+        *Ts: ComponentType
+    ](
+        mut self: EntityAccessor[archetype_mutability=True],
+        owned *components: *Ts,
+    ) raises:
+        """
+        Overwrites components for an [..entity.Entity], using the given content.
+
+        Parameters:
+            Ts:        The types of the components.
+
+        Args:
+            components: The new components.
+
+        Raises:
+            Error: If the entity does not exist or does not have the component.
+        """
+        constrain_components_unique[*Ts]()
+
+        @parameter
+        for i in range(components.__len__()):
+            self._archetype[].get_component[T = Ts[i.value]](
+                self._index_in_archetype
+            ) = components[i]
+
+    @always_inline
     fn has[T: ComponentType](self) -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            Whether the entity has the component.
         """
         return self._archetype[].has_component[T]()
 
@@ -159,6 +211,7 @@ struct Archetype[
         """
         self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
+    @doc_private
     fn __init__[
         *, used_internally: Bool
     ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
@@ -167,14 +220,26 @@ struct Archetype[
         Note:
             Do not use this constructor directly!
 
+        Parameters:
+            used_internally: A flag indicating whether this constructor
+                is used internally.
+
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
             capacity:   The initial capacity of the archetype.
 
+        Constraints:
+            `used_internally` must be `True` to use this constructor.
+
         Returns:
-            An archetype wihtout allocated memory.
+            An archetype without allocated memory.
         """
+        constrained[
+            used_internally,
+            "This constructor is meant for internal use only.",
+        ]()
+
         self._size = 0
         self._mask = mask
         self._component_count = 0
@@ -207,6 +272,9 @@ struct Archetype[
             component_ids:   The IDs of the components of the archetype.
             capacity:        The initial capacity of the archetype.
 
+        Parameters:
+            component_count: The number of components in the archetype.
+
         Returns:
             The archetype with the given components.
         """
@@ -228,7 +296,7 @@ struct Archetype[
     ):
         """Initializes the archetype with given components and BitMask.
 
-        The components in the archetyoe are determined by the component_ids.
+        The components in the archetype are determined by the component_ids.
         The mask is not checked for consistency with the component IDs.
 
         Args:
@@ -237,6 +305,9 @@ struct Archetype[
                   (not used in initializer; not checked for consistency with component_ids).
             component_ids: The IDs of the components of the archetype.
             capacity: The initial capacity of the archetype.
+
+        Parameters:
+            component_count: The number of components in the archetype.
 
         Returns:
             The archetype with the given components and BitMask.

@@ -8,7 +8,7 @@ struct ComptimeOptional[
 ](Movable, Copyable, ExplicitlyCopyable):
     """An optional type that can potentially hold a value of ElementType.
 
-    In contrast to the built-in oprtional, it is decided at
+    In contrast to the built-in optional, it is decided at
     compile time whether a value is present. This allows
     this type to have a size of 0 in these cases.
 

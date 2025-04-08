@@ -129,7 +129,7 @@ struct Query[
             Ts: The types of the components to exclude.
 
         Returns:
-            The query, exclusing the given components.
+            The query, excluding the given components.
         """
         query = Self.QueryWithWithout(
             self._world,
