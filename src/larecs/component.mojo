@@ -11,6 +11,7 @@ from .bitmask import BitMask
 
 
 alias ComponentType = CollectionElement
+"""The trait that components must conform to."""
 
 
 fn constrain_valid_components[*Ts: ComponentType]() -> Bool:

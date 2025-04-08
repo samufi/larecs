@@ -4,6 +4,12 @@ title = "Changing entities"
 weight = 30
 +++
 
+Entities may be changed by altering the values / attributes
+of their components, adding new components, or removing
+existing components. 
+
+## Accessing and changing individual components
+
 The values of an entity's component can be 
 accessed and changed via the {{< api World.get get >}} 
 and {{< api World.get_ptr get_ptr >}}
@@ -94,8 +100,8 @@ else:
 
 We can set the values of multiple components at once 
 using the {{< api World.set set >}}
-method. This method takes multiple components and sets them 
-all in one go.
+method. This method takes an arbitrary number of 
+components and sets them all in one go.
 
 ```mojo {doctest="guide_change_entities"}
 # Add an entity with two components

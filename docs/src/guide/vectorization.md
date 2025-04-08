@@ -127,8 +127,8 @@ to the `Position` and `Velocity` components.
         return
 ```
 
-The `entity` argument is a normal
-{{< api EntityAccessor MutableEntityAccessor >}} instance, allowing
+The `entity` argument is a normal mutable
+{{< api EntityAccessor >}} instance, allowing
 access to a single entity. However, the referenced entity
 is the *first* of a *batch* of `simd_width` entities, each with
 the same components. The `move` function will not be

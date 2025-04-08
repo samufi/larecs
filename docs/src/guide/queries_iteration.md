@@ -194,7 +194,8 @@ that have certain components. This can be achieved with
 the {{< api World.apply apply >}} method. This method
 iterates over all entities conforming to a query and
 calls the provided function with the entities as arguments.
-The function must take a {{< api EntityAccessor MutableEntityAccessor >}} 
+The function must take a `MutableEntityAccessor` 
+(an alias for {{< api EntityAccessor `EntityAccessor[True]` >}})
 as its only argument. Applying a function to all entities
 can be more convenient and also faster than iterating over the entities
 manually, especially if the function is vectorized, as is shown
