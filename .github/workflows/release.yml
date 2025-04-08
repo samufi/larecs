@@ -11,7 +11,7 @@ on:
 jobs:
 
   release:
-    name: Build package and publish
+    name: Build and publish package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Larecs
