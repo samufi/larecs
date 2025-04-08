@@ -150,9 +150,7 @@ struct World[*component_types: ComponentType](Movable):
 
     var resources: Self.ResourcesType  # The resources of the world.
 
-    fn __init__(
-        out self,
-    ) raises:
+    fn __init__(out self) raises:
         """
         Creates a new [.World].
         """
@@ -176,9 +174,27 @@ struct World[*component_types: ComponentType](Movable):
 
         # var node = self.createArchetypeNode(Mask, ID, false)
 
+    @always_inline
+    fn __init__(out self, other: Self):
+        """
+        Initializes a [.World] by copying another instance.
+
+        Args:
+            other: The other instance to copy.
+        """
+        self._archetype_map = other._archetype_map
+        self._archetypes = other._archetypes
+        self._entities = other._entities
+        self._entity_pool = other._entity_pool
+        self._locks = other._locks
+        self.resources = other.resources
+
     fn __moveinit__(out self, owned other: Self):
         """
         Moves the contents of another [.World] into a new one.
+
+        Args:
+            other: The instance to move.
         """
         self._archetype_map = other._archetype_map^
         self._archetypes = other._archetypes^
@@ -191,12 +207,7 @@ struct World[*component_types: ComponentType](Movable):
         """
         Copies the contents of another [.World] into a new one.
         """
-        other._archetype_map = self._archetype_map
-        other._archetypes = self._archetypes
-        other._entities = self._entities
-        other._entity_pool = self._entity_pool
-        other._locks = self._locks
-        other.resources = self.resources
+        other = Self(self)
 
     fn __len__(self) -> Int:
         """

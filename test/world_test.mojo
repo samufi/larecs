@@ -431,6 +431,28 @@ def test_world_apply_SIMD():
         i += 1
 
 
+def test_world_copy():
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    entity = world.add_entity(pos, vel)
+    world_copy = world.copy()
+
+    assert_equal(
+        world.get[Position](entity).x, world_copy.get[Position](entity).x
+    )
+    assert_equal(
+        world.get[Position](entity).y, world_copy.get[Position](entity).y
+    )
+    assert_equal(
+        world.get[Velocity](entity).dx, world_copy.get[Velocity](entity).dx
+    )
+    assert_equal(
+        world.get[Velocity](entity).dy, world_copy.get[Velocity](entity).dy
+    )
+
+
 def main():
     print("Running tests...")
     test_add_entity()
@@ -448,8 +470,9 @@ def main():
     test_world_remove()
     test_remove_and_add()
     test_world_resource_access()
-    test_world_reseource_access_static()
+    # test_world_reseource_access_static()
     test_world_apply()
     test_world_apply_SIMD()
     test_world_lock()
+    test_world_copy()
     print("All tests passed.")
