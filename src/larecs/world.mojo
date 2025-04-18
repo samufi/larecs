@@ -711,7 +711,7 @@ struct World[*component_types: ComponentType](Movable):
     @always_inline
     fn set[
         *Ts: ComponentType
-    ](mut self, entity: Entity, owned *components: *Ts) raises:
+    ](mut self, entity: Entity, *components: *Ts) raises:
         """
         Overwrites components for an [..entity.Entity] using the given content.
 

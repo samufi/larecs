@@ -14,6 +14,7 @@ from .type_map import (
     DynamicTypeMap,
 )
 from .unsafe_box import UnsafeBox
+from ._utils import unsafe_take
 
 
 @value
@@ -84,7 +85,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
         @parameter
         for i in range(resources.__len__()):
-            self._add(self._type_map.get_id[Ts[i]](), resources[i])
+            self._add(self._type_map.get_id[Ts[i]](), unsafe_take(resources[i]))
 
     fn add[
         *Ts: CollectionElement, M: StaticlyTypeMapping
@@ -104,7 +105,27 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
         @parameter
         for i in range(resources.__len__()):
-            self._add(self._type_map.get_id[Ts[i]](), resources[i])
+            self._add(self._type_map.get_id[Ts[i]](), unsafe_take(resources[i]))
+
+    @always_inline
+    fn _add[
+        T: CollectionElement
+    ](mut self, id: Self.IdType, owned resource: Pointer[T]) raises:
+        """Adds a resource by ID.
+
+        Parameters:
+            T: The type of the resource to add.
+
+        Args:
+            id: The ID of the resource to add.
+            resource: The resource to add.
+
+        Raises:
+            Error: If the resource already exists.
+        """
+        if id in self._storage:
+            raise Error("Resource already exists.")
+        self._storage[id] = UnsafeBox(resource[])
 
     @always_inline
     fn _add[
@@ -146,7 +167,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         for i in range(resources.__len__()):
             self._set[add_if_not_found=add_if_not_found](
                 self._type_map.get_id[Ts[i]](),
-                resources[i],
+                unsafe_take(resources[i]),
             )
 
     fn set[
@@ -172,7 +193,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         for i in range(resources.__len__()):
             self._set[add_if_not_found=add_if_not_found](
                 self._type_map.get_id[Ts[i]](),
-                resources[i],
+                unsafe_take(resources[i]),
             )
 
     @always_inline
@@ -201,7 +222,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             if add_if_not_found:
                 self._add(id, resource^)
             else:
-                raise Error("Resource not found.")
+                raise Error("Resource " + String(id) + " not found.")
         else:
             ptr.value()[].unsafe_get[T]() = resource^
 
@@ -350,7 +371,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         """
         ptr = self._storage.get_ptr(id)
         if not ptr:
-            raise Error("Resource not found.")
+            raise Error("Resource " + String(id) + " not found.")
 
         return ptr.value()[].unsafe_get_ptr[T]()
 
