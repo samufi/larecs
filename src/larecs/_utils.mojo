@@ -9,6 +9,8 @@ fn unsafe_take[T: Movable](mut arg: T, out result: T):
     [!Caution]
     This function leaves the original value in an invalid state.
     The value passed to this function should not be used after the call!
+    Also, you need to prevent calling the destructors of the elements.
+    You may use `__disable_del` for that.
 
     Parameters:
         T: The type of the value to be moved.

@@ -86,6 +86,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         @parameter
         for i in range(resources.__len__()):
             self._add(self._type_map.get_id[Ts[i]](), unsafe_take(resources[i]))
+        __disable_del resources
 
     fn add[
         *Ts: CollectionElement, M: StaticlyTypeMapping
@@ -106,6 +107,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         @parameter
         for i in range(resources.__len__()):
             self._add(self._type_map.get_id[Ts[i]](), unsafe_take(resources[i]))
+        __disable_del resources
 
     @always_inline
     fn _add[
@@ -169,6 +171,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
                 self._type_map.get_id[Ts[i]](),
                 unsafe_take(resources[i]),
             )
+        __disable_del resources
 
     fn set[
         *Ts: CollectionElement,
@@ -195,6 +198,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
                 self._type_map.get_id[Ts[i]](),
                 unsafe_take(resources[i]),
             )
+        __disable_del resources
 
     @always_inline
     fn _set[
