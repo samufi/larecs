@@ -69,7 +69,7 @@ struct EntityPool(Movable, Copyable):
     @always_inline
     fn reset(mut self):
         """Recycles all entities. Does NOT free the reserved memory."""
-        self._entities.resize(1)
+        self._entities.shrink(1)
         self._next = 0
         self._available = 0
 

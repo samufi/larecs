@@ -397,7 +397,7 @@ def test_query_archetype_iterator():
     l = List[Archetype](a, a, a)
     var count = 0
 
-    for archetype in _ArchetypeIterator[
+    for _ in _ArchetypeIterator[
         __origin_of(l),
         FlexibleComponent[0],
         component_manager = ComponentManager[FlexibleComponent[0]](),

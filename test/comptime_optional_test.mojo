@@ -7,7 +7,7 @@ from larecs.comptime_optional import ComptimeOptional
 def test_comptime_optional_init():
     opt = ComptimeOptional[Int, False]()
     assert_false(opt.has_value)
-
+    _ = opt._value
     l = List[Int](42)
     opt_with_value = ComptimeOptional(l)
     assert_true(opt_with_value.has_value)
@@ -21,7 +21,9 @@ def test_comptime_optional_copy():
     assert_equal(opt_copy.value(), 42)
     opt_without_value = ComptimeOptional[Int, False]()
     opt_copy_without = opt_without_value.copy()
+    _ = opt_copy_without._value
     opt_copy_without = opt_without_value
+    _ = opt_copy_without
 
 
 @value

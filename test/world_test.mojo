@@ -379,7 +379,7 @@ def test_world_lock():
         with world._locked():
             assert_true(world.is_locked())
             raise Error("Test")
-    except Error:
+    except:
         pass
 
     assert_false(world.is_locked())
