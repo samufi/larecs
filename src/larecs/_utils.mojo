@@ -19,6 +19,6 @@ fn unsafe_take[T: Movable](mut arg: T, out result: T):
         arg: The value to be moved.
 
     Returns:
-        result: The moved value.
+        Result: The moved value.
     """
     result = UnsafePointer.take_pointee(UnsafePointer(to=arg))
