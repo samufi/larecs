@@ -52,6 +52,7 @@ fn store[
 alias load2 = load[_, 2]
 alias store2 = store[_, 2]
 
+
 fn is_mutable[
     mut: Bool, //, T: AnyType, origin: Origin[mut]
 ](ref [origin]val: T) -> Bool:
