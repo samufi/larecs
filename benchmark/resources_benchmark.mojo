@@ -47,13 +47,13 @@ fn benchmark_get_resource_1_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn run_all_entity_benchmarks() raises:
+fn run_all_resource_benchmarks() raises:
     bench = DefaultBench()
-    run_all_entity_benchmarks(bench)
+    run_all_resource_benchmarks(bench)
     bench.dump_report()
 
 
-fn run_all_entity_benchmarks(mut bench: Bench) raises:
+fn run_all_resource_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_remove_resource_1_000](
         BenchId("10^3 * add + remove resource")
     )
@@ -63,4 +63,4 @@ fn run_all_entity_benchmarks(mut bench: Bench) raises:
 
 
 def main():
-    run_all_entity_benchmarks()
+    run_all_resource_benchmarks()
