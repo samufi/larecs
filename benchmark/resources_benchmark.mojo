@@ -4,7 +4,7 @@ from larecs import Resources, TypeId
 
 
 @value
-struct TestResource[size: Int = 1000000]:
+struct TestResource[size: Int = 1000]:
     alias id = TypeId("larecs.benchmark.TestResource")
 
     var _storage: InlineArray[Float64, size]
@@ -15,11 +15,11 @@ struct TestResource[size: Int = 1000000]:
 
 fn benchmark_add_remove_resource_1_000(mut bencher: Bencher) raises capturing:
     resources = Resources()
-    test_resource = TestResource()
 
     @parameter
     @always_inline
     fn bench_fn() capturing:
+        test_resource = TestResource()
         for _ in range(1_000):
             try:
                 resources.add(test_resource)
@@ -55,10 +55,10 @@ fn run_all_resource_benchmarks() raises:
 
 fn run_all_resource_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_remove_resource_1_000](
-        BenchId("10^3 * add + remove resource")
+        BenchId("10^3 * add + remove resource (1000 Float64)")
     )
     bench.bench_function[benchmark_get_resource_1_000](
-        BenchId("10^3 * get resource")
+        BenchId("10^3 * get resource (1000 Float64)")
     )
 
 
