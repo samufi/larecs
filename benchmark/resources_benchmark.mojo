@@ -12,14 +12,14 @@ struct TestResource[size: Int = 1000000]:
         self._storage = InlineArray[Float64, size](value)
 
 
-fn benchmark_add_remove_resource_1_000_000(mut bencher: Bencher) raises capturing:
+fn benchmark_add_remove_resource_1_000(mut bencher: Bencher) raises capturing:
     resources = Resources()
     test_resource = TestResource()
 
     @parameter
     @always_inline
     fn bench_fn() capturing:
-        for _ in range(1_000_000):
+        for _ in range(1_000):
             try:
                 resources.add(test_resource)
                 resources.remove[TestResource]()
@@ -29,7 +29,7 @@ fn benchmark_add_remove_resource_1_000_000(mut bencher: Bencher) raises capturin
     bencher.iter[bench_fn]()
 
 
-fn benchmark_get_resource_1_000_000(mut bencher: Bencher) raises capturing:
+fn benchmark_get_resource_1_000(mut bencher: Bencher) raises capturing:
     resources = Resources()
 
     resources.add(TestResource())
@@ -37,7 +37,7 @@ fn benchmark_get_resource_1_000_000(mut bencher: Bencher) raises capturing:
     @parameter
     @always_inline
     fn bench_fn() capturing:
-        for _ in range(1_000_000):
+        for _ in range(1_000):
             try:
                 keep(resources.get[TestResource]()._storage[0])
             except:
@@ -53,11 +53,11 @@ fn run_all_entity_benchmarks() raises:
 
 
 fn run_all_entity_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_add_remove_resource_1_000_000](
-        BenchId("10^6 * add + remove resource")
+    bench.bench_function[benchmark_add_remove_resource_1_000](
+        BenchId("10^3 * add + remove resource")
     )
-    bench.bench_function[benchmark_get_resource_1_000_000](
-        BenchId("10^6 * get resource")
+    bench.bench_function[benchmark_get_resource_1_000](
+        BenchId("10^3 * get resource")
     )
 
 
