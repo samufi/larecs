@@ -75,13 +75,33 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         )
         if comp_exp == 1:
             labels.append("Larecs")
-            handles.append(plt.Line2D(Python.list(0), Python.list(0), color="k", lw=1, linestyle="-"))
+            handles.append(
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="k",
+                    lw=1,
+                    linestyle="-",
+                )
+            )
             labels.append("Array of Structs")
             handles.append(
-                plt.Line2D(plt.Line2D(Python.list(0), Python.list(0), color="b", lw=1, linestyle="--"))
+                plt.Line2D(
+                    plt.Line2D(
+                        Python.list(0),
+                        Python.list(0),
+                        color="b",
+                        lw=1,
+                        linestyle="--",
+                    )
+                )
             )
         labels.append(String("{0} components").format(String(comp)))
-        handles.append(plt.Line2D(Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
@@ -123,13 +143,31 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         )
         if entity_exp == 2:
             labels.append("Larecs")
-            handles.append(plt.Line2D(Python.list(0), Python.list(0), color="k", lw=1, linestyle="-"))
+            handles.append(
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="k",
+                    lw=1,
+                    linestyle="-",
+                )
+            )
             labels.append("Array of Structs")
             handles.append(
-                plt.Line2D(Python.list(0), Python.list(0), color="b", lw=1, linestyle="--")
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="b",
+                    lw=1,
+                    linestyle="--",
+                )
             )
         labels.append(String("10^{0} entities").format(String(entity_exp)))
-        handles.append(plt.Line2D(Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
