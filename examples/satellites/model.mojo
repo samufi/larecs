@@ -31,8 +31,8 @@ fn main() raises:
         ax.clear()
         ax.scatter(data.T[0], data.T[1], s=0.1)
         scale = 1e8
-        ax.set_xlim((-scale, scale))
-        ax.set_ylim((-scale, scale))
+        ax.set_xlim(Python.tuple(-scale, scale))
+        ax.set_ylim(Python.tuple(-scale, scale))
         fig.canvas.draw()
         fig.canvas.flush_events()
 
