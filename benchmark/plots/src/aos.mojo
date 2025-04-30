@@ -87,13 +87,11 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             labels.append("Array of Structs")
             handles.append(
                 plt.Line2D(
-                    plt.Line2D(
-                        Python.list(0),
-                        Python.list(0),
-                        color="b",
-                        lw=1,
-                        linestyle="--",
-                    )
+                    Python.list(0),
+                    Python.list(0),
+                    color="b",
+                    lw=1,
+                    linestyle="--",
                 )
             )
         labels.append(String("{0} components").format(String(comp)))
