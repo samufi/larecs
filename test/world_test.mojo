@@ -3,7 +3,6 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
-from larecs.resource import Resources
 from larecs.type_map import TypeId
 from larecs.archetype import MutableEntityAccessor
 

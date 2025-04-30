@@ -592,7 +592,6 @@ fn prevent_inlining_replace() raises:
         component = FlexibleComponent[i + 1](i, 2.0)
         world.replace[FlexibleComponent[i]]().by(entity, component)
 
-
 fn run_all_world_benchmarks() raises:
     bench = DefaultBench()
     run_all_world_benchmarks(bench)
