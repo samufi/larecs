@@ -1,7 +1,7 @@
 from .component import ComponentManager
 
 
-trait TypeMapping(CollectionElement):
+trait TypeMapping(Copyable, Movable):
     fn __init__(out self):
         """Initializes the type mapping."""
         ...
@@ -104,7 +104,7 @@ struct TypeId:
         return String(self._name) + " (" + self._id.__str__() + ")"
 
 
-trait IdentifiableCollectionElement(CollectionElement):
+trait IdentifiableCollectionElement(Copyable, Movable):
     """A Type that is uniquely identifiable via a given ID.
 
     By convention, the ID should contain the package, module,
@@ -130,7 +130,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
     @always_inline
     @staticmethod
-    fn get_id[T: CollectionElement]() -> TypeId:
+    fn get_id[T: Copyable & Movable]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:
@@ -143,7 +143,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
 
 @value
-struct StaticTypeMap[*Ts: CollectionElement](TypeMapping):
+struct StaticTypeMap[*Ts: Copyable & Movable](TypeMapping):
     """Maps types to resource IDs.
 
     Parameters:

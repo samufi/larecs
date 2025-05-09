@@ -3,7 +3,7 @@ from memory import UnsafePointer
 
 @value
 struct ComptimeOptional[
-    ElementType: CollectionElement,
+    ElementType: Copyable & Movable,
     has_value: Bool = True,
 ](Movable, Copyable, ExplicitlyCopyable):
     """An optional type that can potentially hold a value of ElementType.

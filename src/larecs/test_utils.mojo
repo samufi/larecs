@@ -98,7 +98,7 @@ fn get_random_bitmask() -> BitMask:
 
 
 fn assert_equal_lists[
-    T: EqualityComparable & CollectionElement & Stringable
+    T: EqualityComparable & Copyable & Movable & Stringable
 ](a: List[T], b: List[T], msg: String = "") raises:
     assert_equal(len(a), len(b), msg)
     for i in range(len(a)):
@@ -408,7 +408,7 @@ alias FullWorld = World[
 
 
 @value
-struct MemTestStruct(CollectionElement):
+struct MemTestStruct(Copyable, Movable):
     var copy_counter: UnsafePointer[Int]
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]

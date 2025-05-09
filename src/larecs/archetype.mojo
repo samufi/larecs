@@ -145,7 +145,7 @@ struct EntityAccessor[
 struct Archetype[
     *Ts: ComponentType,
     component_manager: ComponentManager[*Ts],
-](CollectionElement, CollectionElementNew):
+](Copyable, Movable, ExplicitlyCopyable):
     """
     Archetype represents an ECS archetype.
 

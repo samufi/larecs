@@ -294,13 +294,13 @@ def test_remove_and_add():
 
 
 @value
-struct Resource1:
+struct Resource1(IdentifiableCollectionElement):
     alias id = TypeId(1)
     var value: Int
 
 
 @value
-struct Resource2:
+struct Resource2(IdentifiableCollectionElement):
     alias id = TypeId(2)
     var value: Int
 
