@@ -31,27 +31,27 @@ struct BenchConfig[max_comp_exp: Int]:
 def plot(config: BenchConfig, results: List[BenchResult]):
     plt = Python.import_module("matplotlib.pyplot")
 
-    var component_ticks: PythonObject = [2, 4, 8, 16, 32]
+    var component_ticks: PythonObject = Python.list(2, 4, 8, 16, 32)
 
     csv_file = os.path.join(RESULTS_DIR, FILE_NAME + ".csv")
 
     df = to_dataframe(results)
     df.to_csv(csv_file, index=False)
 
-    fig_and_ax = plt.subplots(ncols=2, figsize=(10, 4))
+    fig_and_ax = plt.subplots(ncols=2, figsize=Python.tuple(10, 4))
     fig = fig_and_ax[0]
     ax = fig_and_ax[1]
 
     ax1 = ax[0]
     ax2 = ax[1]
 
-    var handles: PythonObject = []
-    var labels: PythonObject = []
+    var handles: PythonObject = Python.list()
+    var labels: PythonObject = Python.list()
     for comp_exp in range(1, config.max_comp_exp + 1):
         comp = 2**comp_exp
-        var entities: PythonObject = []
-        var nanos_ecs: PythonObject = []
-        var nanos_aos: PythonObject = []
+        var entities: PythonObject = Python.list()
+        var nanos_ecs: PythonObject = Python.list()
+        var nanos_aos: PythonObject = Python.list()
         for row in results:
             if row[].components == comp:
                 entities.append(row[].entities)
@@ -75,13 +75,31 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         )
         if comp_exp == 1:
             labels.append("Larecs")
-            handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
+            handles.append(
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="k",
+                    lw=1,
+                    linestyle="-",
+                )
+            )
             labels.append("Array of Structs")
             handles.append(
-                plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="b",
+                    lw=1,
+                    linestyle="--",
+                )
             )
         labels.append(String("{0} components").format(String(comp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
@@ -93,13 +111,13 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         labels=labels,
     )
 
-    handles = []
-    labels = []
+    handles = Python.list()
+    labels = Python.list()
     for entity_exp in range(2, config.max_entity_exp + 1):
         num_entities = 10**entity_exp
-        var components: PythonObject = []
-        var nanos_ecs: PythonObject = []
-        var nanos_aos: PythonObject = []
+        var components: PythonObject = Python.list()
+        var nanos_ecs: PythonObject = Python.list()
+        var nanos_aos: PythonObject = Python.list()
         for row in results:
             if row[].entities == num_entities:
                 components.append(row[].components)
@@ -123,13 +141,31 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         )
         if entity_exp == 2:
             labels.append("Larecs")
-            handles.append(plt.Line2D([0], [0], color="k", lw=1, linestyle="-"))
+            handles.append(
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="k",
+                    lw=1,
+                    linestyle="-",
+                )
+            )
             labels.append("Array of Structs")
             handles.append(
-                plt.Line2D([0], [0], color="b", lw=1, linestyle="--")
+                plt.Line2D(
+                    Python.list(0),
+                    Python.list(0),
+                    color="b",
+                    lw=1,
+                    linestyle="--",
+                )
             )
         labels.append(String("10^{0} entities").format(String(entity_exp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                Python.list(0), Python.list(0), color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
@@ -150,10 +186,10 @@ def plot(config: BenchConfig, results: List[BenchResult]):
 
 def to_dataframe(results: List[BenchResult]) -> PythonObject:
     pd = Python.import_module("pandas")
-    var entities: PythonObject = []
-    var components: PythonObject = []
-    var nanos_ecs: PythonObject = []
-    var nanos_aos: PythonObject = []
+    var entities: PythonObject = Python.list()
+    var components: PythonObject = Python.list()
+    var nanos_ecs: PythonObject = Python.list()
+    var nanos_aos: PythonObject = Python.list()
     for result in results:
         entities.append(result[].entities)
         components.append(result[].components)

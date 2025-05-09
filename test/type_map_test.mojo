@@ -15,8 +15,13 @@ struct MockElement(IdentifiableCollectionElement):
 
 def test_type_id_initialization_with_name():
     type_id = TypeId("test_package.test_module.TestType")
-    assert_equal(type_id._name, "test_package.test_module.TestType")
-    assert_equal(type_id._id, "test_package.test_module.TestType".__hash__())
+    assert_equal(
+        type_id._name, StaticString("test_package.test_module.TestType")
+    )
+    assert_equal(
+        type_id._id,
+        StaticString("test_package.test_module.TestType").__hash__(),
+    )
 
 
 def test_type_id_initialization_with_id():
@@ -36,7 +41,8 @@ def test_type_id_equality():
 def test_type_id_hash():
     type_id = TypeId("test_package.test_module.TestType")
     assert_equal(
-        type_id.__hash__(), "test_package.test_module.TestType".__hash__()
+        type_id.__hash__(),
+        StaticString("test_package.test_module.TestType").__hash__(),
     )
 
 

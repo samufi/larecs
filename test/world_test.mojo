@@ -3,7 +3,6 @@ from testing import *
 from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
-from larecs.resource import Resources
 from larecs.type_map import TypeId
 from larecs.archetype import MutableEntityAccessor
 
@@ -379,7 +378,7 @@ def test_world_lock():
         with world._locked():
             assert_true(world.is_locked())
             raise Error("Test")
-    except Error:
+    except:
         pass
 
     assert_false(world.is_locked())

@@ -171,7 +171,6 @@ struct Scheduler[*ComponentTypes: ComponentType]:
         Args:
             system: The system to add.
         """
-
         self._systems.append(
             (
                 UnsafeBox(system^),

@@ -32,10 +32,10 @@ struct TypeId:
     """
 
     var _id: UInt
-    var _name: StringLiteral
+    var _name: StaticString
 
     @always_inline
-    fn __init__(out self, name: StringLiteral):
+    fn __init__(out self, name: StaticString):
         """Initializes the ID with a given name.
 
         The name should be a string that uniquely identifies the type.

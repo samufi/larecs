@@ -711,7 +711,7 @@ struct World[*component_types: ComponentType](Movable):
     @always_inline
     fn set[
         *Ts: ComponentType
-    ](mut self, entity: Entity, owned *components: *Ts) raises:
+    ](mut self, entity: Entity, *components: *Ts) raises:
         """
         Overwrites components for an [..entity.Entity] using the given content.
 
@@ -803,7 +803,7 @@ struct World[*component_types: ComponentType](Movable):
         *Ts: ComponentType
     ](mut self) -> Replacer[
         __origin_of(self),
-        VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+        VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
         *component_types,
     ]:
         """
@@ -818,7 +818,7 @@ struct World[*component_types: ComponentType](Movable):
         """
         return Replacer[
             __origin_of(self),
-            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+            VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
             *component_types,
         ](
             Pointer(to=self),
@@ -860,7 +860,7 @@ struct World[*component_types: ComponentType](Movable):
     ](
         mut self,
         entity: Entity,
-        add_components: VariadicPack[_, ComponentType, *Ts],
+        add_components: VariadicPack[_, _, ComponentType, *Ts],
         remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
     ) raises:
         """
@@ -1220,7 +1220,7 @@ struct World[*component_types: ComponentType](Movable):
             A [..query.Query] for all entities with the given components.
         """
         alias size = VariadicPack[
-            MutableAnyOrigin, ComponentType, *Ts
+            True, MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
 
         var bitmask: BitMask

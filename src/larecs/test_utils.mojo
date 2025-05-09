@@ -1,5 +1,4 @@
 from testing import assert_true, assert_false, assert_equal
-from testing.testing import Testable
 from random import random
 from memory import UnsafePointer
 from sys.info import sizeof
@@ -54,10 +53,6 @@ alias load2 = load[_, 2]
 alias store2 = store[_, 2]
 
 
-trait TestableCollectionElement(CollectionElement, Testable):
-    pass
-
-
 fn is_mutable[
     mut: Bool, //, T: AnyType, origin: Origin[mut]
 ](ref [origin]val: T) -> Bool:
@@ -103,7 +98,7 @@ fn get_random_bitmask() -> BitMask:
 
 
 fn assert_equal_lists[
-    T: TestableCollectionElement
+    T: EqualityComparable & CollectionElement & Stringable
 ](a: List[T], b: List[T], msg: String = "") raises:
     assert_equal(len(a), len(b), msg)
     for i in range(len(a)):

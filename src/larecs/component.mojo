@@ -154,7 +154,7 @@ struct ComponentManager[
     ](
         out ids: InlineArray[
             Self.Id,
-            VariadicPack[MutableAnyOrigin, ComponentType, *Ts].__len__(),
+            VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
         ]
     ):
         """Get the IDs of multiple component types.
@@ -169,7 +169,7 @@ struct ComponentManager[
             The component types must be pair-wise different.
         """
         alias size = VariadicPack[
-            MutableAnyOrigin, ComponentType, *Ts
+            True, MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
 
         constrain_components_unique[*Ts]()

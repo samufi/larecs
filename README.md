@@ -3,7 +3,7 @@
 # Larecs🌲 – Lightweight archetype-based ECS
 
 Larecs🌲 is a performance-oriented archetype-based ECS for [Mojo](https://www.modular.com/mojo)🔥. 
-Its architecture is based on the Go ECS [Arche](https://github.com/mlange-42/arche). The package is still under construction, so be aware that the API might change in future versions.
+Its architecture is based on the Go ECS [Arche](https://github.com/mlange-42/arche). The package is still under construction, so be aware that parts of the API might change in future versions.
 
 
 ## Features
@@ -130,16 +130,17 @@ this issue is insignificant. The problem will be fixed as soon as possible.
 
 The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
 In the near future, Larecs🌲 will take the following steps:
-- [ ] Add further useful functionality for working with multiple entities at once, e.g. via [batches](https://mlange-42.github.io/arche/guide/batch-ops/index.html).
-- [ ] Improve the documentation
+- [x] Add functionality for adding and removing multiple entities at once.
+- [ ] Add functionality for setting, adding and removing components of multiple entities at once.
+- [x] Improve the documentation
 - [x] Add a scheduler for easy setup of ECS. 
 - [ ] Add built-in support for [event systems](https://mlange-42.github.io/arche/guide/events/index.html).
 - [x] Add further options to filter entities (e.g. "does not have component").
 - [ ] Add possibilities for parallel execution
+- [ ] Improve the API for systems (e.g. allow systems to stop the execution)
 - [ ] Add GPU support 
 - [ ] Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
 - [ ] Fix the dictionary issue mentioned above.
-- [ ] Add a versioning scheme.
 
 ## License
 

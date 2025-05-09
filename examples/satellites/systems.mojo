@@ -54,7 +54,7 @@ fn position_to_numpy(mut world: World, out numpy_array: PythonObject) raises:
     iterator = world.query[Position]()
 
     np = Python.import_module("numpy")
-    numpy_array = np.zeros((len(iterator), 2))
+    numpy_array = np.zeros(Python.tuple(len(iterator), 2))
 
     i = 0
     for entity in iterator:
