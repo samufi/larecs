@@ -25,7 +25,8 @@ the current limitation that Mojo does not support
 reflections, the resource type needs to be specified
 via a unique {{< api TypeId >}} identifier, which in turn is
 constructed from a string identifier. This requirement
-is enforced via the {{< api Identifiable >}} trait.
+is enforced via the {{< api TypeIdentifiable >}} trait, which
+is part of the `ResourceType` trait composition.
 
 By convention, to avoid name clashes, the string identifier should
 include the package, module, and type name of the resource.
@@ -34,10 +35,10 @@ in the module `my_module` in the package `my_package`,
 the resource identifier would read `my_package.my_module.Time`.
 
 ```mojo {doctest="guide_resources" global=true}
-from larecs import World, Entity, Identifiable, TypeId
+from larecs import World, Entity, ResourceType, TypeId
 
 @value
-struct Time(Copyable, Movable, Identifiable):
+struct Time(ResourceType):
     # The type ID must be specified via an alias `id`
     alias id = TypeId("larecs.resources.Time")
     var time: Float64
@@ -94,13 +95,13 @@ and `SelectedEntities`.
 
 ```mojo {doctest="guide_resources" global=true}
 @value
-struct Temperature(Copyable, Movable, Identifiable):
+struct Temperature(ResourceType):
     # The type ID must be specified via an alias `id`
     alias id = TypeId("larecs.resources.Temperature")
     var temperature: Float64
 
 @value
-struct SelectedEntities(Copyable, Movable, Identifiable):
+struct SelectedEntities(ResourceType):
     # The type ID must be specified via an alias `id`
     alias id = TypeId("larecs.resources.SelectedEntities")
     var entities: List[Entity]

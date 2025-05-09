@@ -8,13 +8,16 @@ from .component import (
 )
 from .type_map import (
     TypeMapping,
-    Identifiable,
+    TypeIdentifiable,
     TypeId,
     StaticlyTypeMapping,
     DynamicTypeMap,
 )
 from .unsafe_box import UnsafeBox
 from ._utils import unsafe_take
+
+alias ResourceType = Copyable & Movable & TypeIdentifiable
+"""The trait that resources must conform to."""
 
 
 @value
@@ -69,7 +72,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         return self
 
     fn add[
-        *Ts: Copyable & Movable & Identifiable
+        *Ts: ResourceType
     ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Adds resources.
 
@@ -150,7 +153,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         self._storage[id] = UnsafeBox(resource^)
 
     fn set[
-        *Ts: Copyable & Movable & Identifiable, add_if_not_found: Bool = False
+        *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Sets the values of resources.
 
@@ -230,9 +233,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         else:
             ptr.value()[].unsafe_get[T]() = resource^
 
-    fn remove[
-        *Ts: Copyable & Movable & Identifiable
-    ](mut self: Resources[DynamicTypeMap]) raises:
+    fn remove[*Ts: ResourceType](mut self: Resources[DynamicTypeMap]) raises:
         """Removes resources.
 
         Parameters:
@@ -281,7 +282,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get[
-        T: Copyable & Movable & Identifiable
+        T: ResourceType
     ](mut self: Resources[DynamicTypeMap]) raises -> ref [
         self._get_ptr[T](Self.IdType(0))[]
     ] T:
@@ -314,7 +315,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get_ptr[
-        T: Copyable & Movable & Identifiable
+        T: ResourceType
     ](mut self: Resources[DynamicTypeMap]) raises -> Pointer[
         T,
         __origin_of(
@@ -380,9 +381,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         return ptr.value()[].unsafe_get_ptr[T]()
 
     @always_inline
-    fn has[
-        T: Copyable & Movable & Identifiable
-    ](mut self: Resources[DynamicTypeMap]) -> Bool:
+    fn has[T: ResourceType](mut self: Resources[DynamicTypeMap]) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
