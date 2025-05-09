@@ -8,7 +8,7 @@ trait IndexingCollectionElement(Indexer):
         ...
 
 
-struct EntityPool(Movable, Copyable):
+struct EntityPool(Movable, Copyable, Sized):
     """EntityPool is an implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/

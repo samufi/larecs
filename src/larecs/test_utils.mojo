@@ -7,11 +7,6 @@ from .bitmask import BitMask
 from .world import World
 from .resource import Resources
 
-
-trait CopyAndMovable(Copyable, Movable):
-    pass
-
-
 @always_inline
 fn load[
     dType: DType, //, simd_width: Int, stride: Int = 1
@@ -430,7 +425,7 @@ struct MemTestStruct(Copyable, Movable):
 
 
 fn test_copy_move_del[
-    Container: CopyAndMovable, //,
+    Container: Copyable & Movable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
 ](init_moves: Int = 0, copy_moves: Int = 0,) raises:
     var del_counter = 0

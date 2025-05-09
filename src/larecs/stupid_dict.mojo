@@ -1,5 +1,5 @@
 struct StupidDict[KeyType: KeyElement, ValueType: Copyable & Movable](
-    Copyable, Movable
+    Copyable, Movable, Sized
 ):
     """A trivial dict implementation.
 

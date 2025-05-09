@@ -3,7 +3,7 @@ from .filter import MaskFilter
 
 
 @value
-struct _BitMaskIndexIter:
+struct _BitMaskIndexIter(Sized):
     """Iterator for BitMask indices."""
 
     alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]
@@ -53,7 +53,7 @@ struct _BitMaskIndexIter:
 
 
 @register_passable
-struct BitMask(Stringable):
+struct BitMask(Copyable, Movable, EqualityComparable, Stringable, KeyElement):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8

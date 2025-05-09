@@ -8,7 +8,7 @@ trait TypeMapping(Copyable, Movable):
 
 
 @register_passable("trivial")
-struct TypeId:
+struct TypeId(KeyElement, Stringable):
     """An ID to distinguish different types.
 
     By convention, every type implementing
@@ -143,7 +143,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
 
 @value
-struct StaticTypeMap[*Ts: Copyable & Movable](TypeMapping):
+struct StaticTypeMap[*Ts: Copyable & Movable](TypeMapping, StaticlyTypeMapping):
     """Maps types to resource IDs.
 
     Parameters:
