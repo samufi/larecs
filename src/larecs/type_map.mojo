@@ -12,18 +12,18 @@ struct TypeId:
     """An ID to distinguish different types.
 
     By convention, every type implementing
-    `.IdentifiableCollectionElement` should have a `TypeId` that contains
+    `.Identifiable` should have a `TypeId` that contains
     its package, module, and class name.
     For example, the ID for a `MyStruct` in the
     module `my_module` in the package `my_package` would be
     assigned as follows:
 
     ```mojo {doctest="type_id" global=true hide=true}
-    from larecs import TypeId, IdentifiableCollectionElement
+    from larecs import TypeId, Identifiable
     ```
 
     ```mojo {doctest="type_id" global=true}
-    struct MyStruct(IdentifiableCollectionElement):
+    struct MyStruct(Identifiable):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
@@ -104,7 +104,7 @@ struct TypeId:
         return String(self._name) + " (" + self._id.__str__() + ")"
 
 
-trait IdentifiableCollectionElement(Copyable, Movable):
+trait Identifiable:
     """A Type that is uniquely identifiable via a given ID.
 
     By convention, the ID should contain the package, module,
@@ -113,7 +113,7 @@ trait IdentifiableCollectionElement(Copyable, Movable):
     assigned as follows:
 
     ```mojo
-    struct MyStruct(IdentifiableCollectionElement):
+    struct MyStruct(Identifiable):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
@@ -175,12 +175,12 @@ struct DynamicTypeMap(TypeMapping):
     """
     A dynamic mapping from types to IDs.
 
-    The types need to implement the [.IdentifiableCollectionElement] trait.
+    The types need to implement the [.Identifiable] trait.
     """
 
     @always_inline
     @staticmethod
-    fn get_id[T: IdentifiableCollectionElement]() -> TypeId:
+    fn get_id[T: Copyable & Movable & Identifiable]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:
