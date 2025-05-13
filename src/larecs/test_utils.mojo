@@ -7,6 +7,7 @@ from .bitmask import BitMask
 from .world import World
 from .resource import Resources
 
+
 @always_inline
 fn load[
     dType: DType, //, simd_width: Int, stride: Int = 1
