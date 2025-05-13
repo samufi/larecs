@@ -1,4 +1,4 @@
-from larecs import World, Scheduler, System, TypeId, TypeIdentifiable
+from larecs import World, Scheduler, System, TypeId, ResourceType
 from testing import *
 
 

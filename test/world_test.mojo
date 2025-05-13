@@ -4,7 +4,7 @@ from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.type_map import TypeId
-from larecs.resources import ResourceType
+from larecs.resource import ResourceType
 from larecs.archetype import MutableEntityAccessor
 
 from larecs.test_utils import *
