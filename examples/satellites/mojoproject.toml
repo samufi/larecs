@@ -1,6 +1,6 @@
 [project]
 authors = ["samufi <samufi@web.de>"]
-channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Example for the usage of the larecs ECS"
 name = "satellites"
 platforms = ["linux-64"]
