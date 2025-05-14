@@ -4,7 +4,7 @@ channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Example for the usage of the larecs ECS"
 name = "satellites"
 platforms = ["linux-64"]
-version = "0.1.1"
+version = "0.2.0"
 
 [tasks]
 
