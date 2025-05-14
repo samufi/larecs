@@ -12,7 +12,7 @@ struct Query[
     world_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
-]:
+](SizedRaising):
     """Query builder for entities with and without specific components.
 
     This type should not be used directly, but through the [..world.World.query] method:
@@ -458,7 +458,7 @@ struct _EntityIterator[
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
     has_start_indices: Bool = False,
-]:
+](Sized):
     """Iterator over all entities corresponding to a mask.
 
     Locks the world while it exists.
@@ -689,7 +689,7 @@ struct _ArchetypeEntityIterator[
     lock_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-]:
+](Sized):
     """Iterator over all entities in a given [..archetype._Archetype].
 
     Locks the world while it exists.

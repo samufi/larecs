@@ -2,7 +2,7 @@ from memory import UnsafePointer
 from sys.info import sizeof
 
 
-fn _destructor[T: CollectionElement](box_storage: UnsafeBox.data_type):
+fn _destructor[T: Copyable & Movable](box_storage: UnsafeBox.data_type):
     """
     Destructor for the UnsafeBox.
 
@@ -30,7 +30,7 @@ fn _dummy_destructor(box: UnsafeBox.data_type):
 
 
 fn _copy_initializer[
-    T: CollectionElement
+    T: Copyable & Movable
 ](existing_box: UnsafeBox.data_type) -> UnsafePointer[Byte]:
     """
     Copy initializer for the data in the UnsafeBox.
@@ -75,7 +75,7 @@ fn _dummy_copy_initializer(
     return UnsafePointer[Byte]()
 
 
-struct UnsafeBox(CollectionElement):
+struct UnsafeBox(Copyable, Movable):
     """
     A box that can hold a single value without knowing its type at compile time.
 
@@ -115,7 +115,7 @@ struct UnsafeBox(CollectionElement):
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
 
-    fn __init__[T: CollectionElement](out self, owned data: T):
+    fn __init__[T: Copyable & Movable](out self, owned data: T):
         """
         Constructor for the UnsafeBox.
 
@@ -172,7 +172,7 @@ struct UnsafeBox(CollectionElement):
 
     @always_inline
     fn unsafe_get_ptr[
-        T: CollectionElement
+        T: Copyable & Movable
     ](ref self) -> Pointer[T, __origin_of(self._data)]:
         """
         Returns a pointer to the data stored in the box.
@@ -186,7 +186,7 @@ struct UnsafeBox(CollectionElement):
         return Pointer[T, __origin_of(self._data)](to=self._data.bitcast[T]()[])
 
     @always_inline
-    fn unsafe_get[T: CollectionElement](ref self) -> ref [self._data] T:
+    fn unsafe_get[T: Copyable & Movable](ref self) -> ref [self._data] T:
         """
         Returns a reference to the data stored in the box.
 

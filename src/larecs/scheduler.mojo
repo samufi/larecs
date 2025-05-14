@@ -223,7 +223,7 @@ struct Scheduler[*ComponentTypes: ComponentType]:
         self.finalize()
 
 
-trait System(CollectionElement):
+trait System(Copyable, Movable):
     """Trait for systems in the scheduler."""
 
     fn initialize(mut self, mut world: World) raises:

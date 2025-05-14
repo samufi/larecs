@@ -1,10 +1,10 @@
 [project]
 authors = ["samufi <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
-channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Benchmarking plots for Larecs🌲"
 name = "plots"
 platforms = ["linux-64"]
-version = "0.1.0"
+version = "0.2.0"
 
 [tasks]
 

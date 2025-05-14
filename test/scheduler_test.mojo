@@ -1,9 +1,9 @@
-from larecs import World, Scheduler, System, TypeId
+from larecs import World, Scheduler, System, TypeId, ResourceType
 from testing import *
 
 
 @value
-struct MeanState:
+struct MeanState(ResourceType):
     alias id = TypeId(0)
     var value: Float64
 

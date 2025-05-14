@@ -8,10 +8,6 @@ from .world import World
 from .resource import Resources
 
 
-trait CopyAndMovable(Copyable, Movable):
-    pass
-
-
 @always_inline
 fn load[
     dType: DType, //, simd_width: Int, stride: Int = 1
@@ -98,7 +94,7 @@ fn get_random_bitmask() -> BitMask:
 
 
 fn assert_equal_lists[
-    T: EqualityComparable & CollectionElement & Stringable
+    T: EqualityComparable & Copyable & Movable & Stringable
 ](a: List[T], b: List[T], msg: String = "") raises:
     assert_equal(len(a), len(b), msg)
     for i in range(len(a)):
@@ -408,7 +404,7 @@ alias FullWorld = World[
 
 
 @value
-struct MemTestStruct(CollectionElement):
+struct MemTestStruct(Copyable, Movable):
     var copy_counter: UnsafePointer[Int]
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]
@@ -430,7 +426,7 @@ struct MemTestStruct(CollectionElement):
 
 
 fn test_copy_move_del[
-    Container: CopyAndMovable, //,
+    Container: Copyable & Movable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
 ](init_moves: Int = 0, copy_moves: Int = 0,) raises:
     var del_counter = 0

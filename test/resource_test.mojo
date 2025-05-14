@@ -1,23 +1,23 @@
-from larecs.resource import Resources
+from larecs.resource import Resources, ResourceType
 from larecs.type_map import StaticTypeMap, TypeMapping, TypeId
 
 from testing import *
 
 
 @value
-struct Resource1:
+struct Resource1(ResourceType):
     alias id = TypeId(1)
     var value: Int
 
 
 @value
-struct Resource2:
+struct Resource2(ResourceType):
     alias id = TypeId(2)
     var value: Int
 
 
 @value
-struct Resource3:
+struct Resource3(ResourceType):
     alias id = TypeId(3)
     var value: Int
 

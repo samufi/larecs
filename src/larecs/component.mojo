@@ -9,7 +9,7 @@ from .types import get_max_size
 from .bitmask import BitMask
 
 
-alias ComponentType = CollectionElement
+alias ComponentType = Copyable & Movable
 """The trait that components must conform to."""
 
 

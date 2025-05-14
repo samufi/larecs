@@ -4,6 +4,7 @@ from larecs.world import World
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.type_map import TypeId
+from larecs.resource import ResourceType
 from larecs.archetype import MutableEntityAccessor
 
 from larecs.test_utils import *
@@ -294,13 +295,13 @@ def test_remove_and_add():
 
 
 @value
-struct Resource1:
+struct Resource1(ResourceType):
     alias id = TypeId(1)
     var value: Int
 
 
 @value
-struct Resource2:
+struct Resource2(ResourceType):
     alias id = TypeId(2)
     var value: Int
 

@@ -8,7 +8,7 @@ from .stupid_dict import StupidDict as Dict
 
 
 @value
-struct Node[DataType: KeyElement](CollectionElement):
+struct Node[DataType: KeyElement](Copyable, Movable):
     """Node in a BitMaskGraph.
 
     Parameters:

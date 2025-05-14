@@ -1,29 +1,29 @@
 from .component import ComponentManager
 
 
-trait TypeMapping(CollectionElement):
+trait TypeMapping(Copyable, Movable):
     fn __init__(out self):
         """Initializes the type mapping."""
         ...
 
 
 @register_passable("trivial")
-struct TypeId:
+struct TypeId(KeyElement, Stringable):
     """An ID to distinguish different types.
 
     By convention, every type implementing
-    `.IdentifiableCollectionElement` should have a `TypeId` that contains
+    `.TypeIdentifiable` should have a `TypeId` that contains
     its package, module, and class name.
     For example, the ID for a `MyStruct` in the
     module `my_module` in the package `my_package` would be
     assigned as follows:
 
     ```mojo {doctest="type_id" global=true hide=true}
-    from larecs import TypeId, IdentifiableCollectionElement
+    from larecs import TypeId, TypeIdentifiable
     ```
 
     ```mojo {doctest="type_id" global=true}
-    struct MyStruct(IdentifiableCollectionElement):
+    struct MyStruct(TypeIdentifiable):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
@@ -104,7 +104,7 @@ struct TypeId:
         return String(self._name) + " (" + self._id.__str__() + ")"
 
 
-trait IdentifiableCollectionElement(CollectionElement):
+trait TypeIdentifiable:
     """A Type that is uniquely identifiable via a given ID.
 
     By convention, the ID should contain the package, module,
@@ -113,7 +113,7 @@ trait IdentifiableCollectionElement(CollectionElement):
     assigned as follows:
 
     ```mojo
-    struct MyStruct(IdentifiableCollectionElement):
+    struct MyStruct(TypeIdentifiable):
         alias id = TypeId("my_package.my_module.MyStruct")
     ```
 
@@ -130,7 +130,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
     @always_inline
     @staticmethod
-    fn get_id[T: CollectionElement]() -> TypeId:
+    fn get_id[T: Copyable & Movable]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:
@@ -143,7 +143,7 @@ trait StaticlyTypeMapping(TypeMapping):
 
 
 @value
-struct StaticTypeMap[*Ts: CollectionElement](TypeMapping):
+struct StaticTypeMap[*Ts: Copyable & Movable](TypeMapping, StaticlyTypeMapping):
     """Maps types to resource IDs.
 
     Parameters:
@@ -175,12 +175,12 @@ struct DynamicTypeMap(TypeMapping):
     """
     A dynamic mapping from types to IDs.
 
-    The types need to implement the [.IdentifiableCollectionElement] trait.
+    The types need to implement the [.TypeIdentifiable] trait.
     """
 
     @always_inline
     @staticmethod
-    fn get_id[T: IdentifiableCollectionElement]() -> TypeId:
+    fn get_id[T: ResourceType]() -> TypeId:
         """Gets the ID of a type.
 
         Parameters:

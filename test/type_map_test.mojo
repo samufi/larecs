@@ -3,13 +3,13 @@ from testing import *
 from larecs.type_map import (
     TypeId,
     DynamicTypeMap,
-    IdentifiableCollectionElement,
+    TypeIdentifiable,
 )
 
 
-# Mock struct for testing IdentifiableCollectionElement
+# Mock struct for testing TypeIdentifiable
 @value
-struct MockElement(IdentifiableCollectionElement):
+struct MockElement(Copyable & Movable & TypeIdentifiable):
     alias id = TypeId("test_package.test_module.MockElement")
 
 

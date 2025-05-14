@@ -1,5 +1,5 @@
-struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement](
-    Copyable, Movable
+struct StupidDict[KeyType: KeyElement, ValueType: Copyable & Movable](
+    Copyable, Movable, Sized
 ):
     """A trivial dict implementation.
 
@@ -50,7 +50,7 @@ struct StupidDict[KeyType: KeyElement, ValueType: CollectionElement](
         return len(self._data)
 
 
-struct SimdDict[keyDType: DType, ValueType: CollectionElement, size: Int]:
+struct SimdDict[keyDType: DType, ValueType: Copyable & Movable, size: Int]:
     """A trivial dict implementation.
 
     This will be deleted once the Dict type is fixed.

@@ -8,13 +8,16 @@ from .component import (
 )
 from .type_map import (
     TypeMapping,
-    IdentifiableCollectionElement,
+    TypeIdentifiable,
     TypeId,
     StaticlyTypeMapping,
     DynamicTypeMap,
 )
 from .unsafe_box import UnsafeBox
 from ._utils import unsafe_take
+
+alias ResourceType = Copyable & Movable & TypeIdentifiable
+"""The trait that resources must conform to."""
 
 
 @value
@@ -69,7 +72,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         return self
 
     fn add[
-        *Ts: IdentifiableCollectionElement
+        *Ts: ResourceType
     ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Adds resources.
 
@@ -89,7 +92,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         __disable_del resources
 
     fn add[
-        *Ts: CollectionElement, M: StaticlyTypeMapping
+        *Ts: Copyable & Movable, M: StaticlyTypeMapping
     ](mut self: Resources[M], owned *resources: *Ts) raises:
         """Adds resources.
 
@@ -111,7 +114,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn _add[
-        T: CollectionElement
+        T: Copyable & Movable
     ](mut self, id: Self.IdType, owned resource: Pointer[T]) raises:
         """Adds a resource by ID.
 
@@ -131,7 +134,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn _add[
-        T: CollectionElement
+        T: Copyable & Movable
     ](mut self, id: Self.IdType, owned resource: T) raises:
         """Adds a resource by ID.
 
@@ -150,7 +153,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         self._storage[id] = UnsafeBox(resource^)
 
     fn set[
-        *Ts: IdentifiableCollectionElement, add_if_not_found: Bool = False
+        *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self: Resources[DynamicTypeMap], owned *resources: *Ts) raises:
         """Sets the values of resources.
 
@@ -174,7 +177,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         __disable_del resources
 
     fn set[
-        *Ts: CollectionElement,
+        *Ts: Copyable & Movable,
         M: StaticlyTypeMapping,
         add_if_not_found: Bool = False,
     ](mut self: Resources[M], owned *resources: *Ts) raises:
@@ -202,7 +205,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn _set[
-        T: CollectionElement, add_if_not_found: Bool
+        T: Copyable & Movable, add_if_not_found: Bool
     ](mut self, id: Self.IdType, owned resource: T) raises:
         """Sets the values of the resources
 
@@ -230,9 +233,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         else:
             ptr.value()[].unsafe_get[T]() = resource^
 
-    fn remove[
-        *Ts: IdentifiableCollectionElement
-    ](mut self: Resources[DynamicTypeMap]) raises:
+    fn remove[*Ts: ResourceType](mut self: Resources[DynamicTypeMap]) raises:
         """Removes resources.
 
         Parameters:
@@ -247,7 +248,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
 
     fn remove[
-        *Ts: CollectionElement, M: StaticlyTypeMapping
+        *Ts: Copyable & Movable, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises:
         """Removes resources.
 
@@ -264,7 +265,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             self._remove[Ts[i]](self._type_map.get_id[Ts[i]]())
 
     @always_inline
-    fn _remove[T: CollectionElement](mut self, id: Self.IdType) raises:
+    fn _remove[T: Copyable & Movable](mut self, id: Self.IdType) raises:
         """Removes resources.
 
         Parameters:
@@ -281,7 +282,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get[
-        T: IdentifiableCollectionElement
+        T: ResourceType
     ](mut self: Resources[DynamicTypeMap]) raises -> ref [
         self._get_ptr[T](Self.IdType(0))[]
     ] T:
@@ -297,7 +298,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get[
-        T: CollectionElement, M: StaticlyTypeMapping
+        T: Copyable & Movable, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises -> ref [
         self._get_ptr[T](Self.IdType(0))[]
     ] T:
@@ -314,7 +315,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get_ptr[
-        T: IdentifiableCollectionElement
+        T: ResourceType
     ](mut self: Resources[DynamicTypeMap]) raises -> Pointer[
         T,
         __origin_of(
@@ -335,7 +336,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn get_ptr[
-        T: CollectionElement, M: StaticlyTypeMapping
+        T: Copyable & Movable, M: StaticlyTypeMapping
     ](mut self: Resources[M]) raises -> Pointer[
         T,
         __origin_of(
@@ -357,7 +358,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn _get_ptr[
-        T: CollectionElement
+        T: Copyable & Movable
     ](mut self, id: Self.IdType) raises -> Pointer[
         T,
         __origin_of(self._storage.get_ptr(id).value()[].unsafe_get_ptr[T]()[]),
@@ -380,9 +381,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         return ptr.value()[].unsafe_get_ptr[T]()
 
     @always_inline
-    fn has[
-        T: IdentifiableCollectionElement
-    ](mut self: Resources[DynamicTypeMap]) -> Bool:
+    fn has[T: ResourceType](mut self: Resources[DynamicTypeMap]) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -395,7 +394,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
 
     @always_inline
     fn has[
-        T: CollectionElement, M: StaticlyTypeMapping
+        T: Copyable & Movable, M: StaticlyTypeMapping
     ](mut self: Resources[M]) -> Bool:
         """Checks if the resource is present.
 

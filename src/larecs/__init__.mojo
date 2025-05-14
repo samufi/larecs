@@ -74,7 +74,8 @@ Exports:
  - query.Query
  - query.QueryInfo
  - resource.Resources
- - type_map.IdentifiableCollectionElement
+ - resource.ResourceType
+ - type_map.TypeIdentifiable
  - type_map.TypeId
  - scheduler.Scheduler
  - scheduler.System
@@ -82,8 +83,8 @@ Exports:
 from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
-from .resource import Resources
-from .type_map import IdentifiableCollectionElement, TypeId
+from .resource import Resources, ResourceType
+from .type_map import TypeIdentifiable, TypeId
 from .entity import Entity
 from .query import Query
 from .scheduler import Scheduler, System
