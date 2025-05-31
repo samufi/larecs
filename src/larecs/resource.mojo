@@ -221,17 +221,15 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
             Error: If one of the resources does not exist.
         """
 
-        ptr = self._storage.get_ptr(id)
-
-        if not ptr:
+        try:
+            self._storage._find_ref(id).unsafe_get[T]() = resource^
+        except:
 
             @parameter
             if add_if_not_found:
                 self._add(id, resource^)
             else:
                 raise Error("Resource " + String(id) + " not found.")
-        else:
-            ptr.value()[].unsafe_get[T]() = resource^
 
     fn remove[*Ts: ResourceType](mut self: Resources[DynamicTypeMap]) raises:
         """Removes resources.
@@ -274,11 +272,10 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         Raises:
             Error: If the resource does not exist.
         """
-
-        ptr = self._storage.get_ptr(id)
-        if not ptr:
+        try:
+            _ = self._storage.pop(id)
+        except:
             raise Error("The resource does not exist.")
-        _ = self._storage.pop(id)
 
     @always_inline
     fn get[
@@ -319,9 +316,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     ](mut self: Resources[DynamicTypeMap]) raises -> Pointer[
         T,
         __origin_of(
-            self._storage.get_ptr(Self.IdType(0))
-            .value()[]
-            .unsafe_get_ptr[T]()[]
+            self._storage._find_ref(Self.IdType(0)).unsafe_get_ptr[T]()[]
         ),
     ]:
         """Gets a pointer to a resource.
@@ -340,9 +335,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
     ](mut self: Resources[M]) raises -> Pointer[
         T,
         __origin_of(
-            self._storage.get_ptr(Self.IdType(0))
-            .value()[]
-            .unsafe_get_ptr[T]()[]
+            self._storage._find_ref(Self.IdType(0)).unsafe_get_ptr[T]()[]
         ),
     ]:
         """Gets a pointer to a resource.
@@ -361,7 +354,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         T: Copyable & Movable
     ](mut self, id: Self.IdType) raises -> Pointer[
         T,
-        __origin_of(self._storage.get_ptr(id).value()[].unsafe_get_ptr[T]()[]),
+        __origin_of(self._storage._find_ref(id).unsafe_get_ptr[T]()[]),
     ]:
         """Gets a pointer to a resource.
 
@@ -374,11 +367,7 @@ struct Resources[TypeMap: TypeMapping = DynamicTypeMap]:
         Returns:
             A pointer to the resource.
         """
-        ptr = self._storage.get_ptr(id)
-        if not ptr:
-            raise Error("Resource " + String(id) + " not found.")
-
-        return ptr.value()[].unsafe_get_ptr[T]()
+        return self._storage._find_ref(id).unsafe_get_ptr[T]()
 
     @always_inline
     fn has[T: ResourceType](mut self: Resources[DynamicTypeMap]) -> Bool:
