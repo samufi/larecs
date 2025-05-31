@@ -1,0 +1,21 @@
+[workspace]
+authors = ["samufi <samufi@web.de>"]
+channels = ["conda-forge", "https://conda.modular.com/max", "https://conda.modular.com/max-nightly"]
+description = "Example for the usage of the larecs ECS"
+name = "satellites"
+platforms = ["linux-64"]
+version = "0.2.0"
+preview = ["pixi-build"]
+
+[tasks]
+
+[dependencies]
+python = "==3.12"
+matplotlib = ">=3.10.0,<4"
+numpy = ">=1.26.4,<2"
+
+[package.build] 
+backend = { name = "pixi-build-python", version = "0.1.*" }
+
+[package.run-dependencies]
+larecs = { path = "../../" }
