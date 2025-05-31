@@ -869,6 +869,9 @@ struct World[*component_types: ComponentType](Movable, Sized):
         See documentation of overloaded function for details.
         """
         alias add_size = add_components.__len__()
+        alias ComponentIdsType = ComptimeOptional[
+            __type_of(Self.component_manager.get_id_arr[*Ts]()), add_size
+        ]
 
         self._assert_unlocked()
         self._assert_alive(entity)
@@ -886,13 +889,15 @@ struct World[*component_types: ComponentType](Movable, Sized):
 
         index_in_old_archetype = idx.index
 
-        var component_ids: Optional[InlineArray[Self.Id, add_size]] = None
+        var component_ids: ComponentIdsType
 
         @parameter
         if add_size:
-            component_ids = Optional[InlineArray[Self.Id, add_size]](
+            component_ids = ComponentIdsType(
                 Self.component_manager.get_id_arr[*Ts]()
             )
+        else:
+            component_ids = None
 
         start_node_index = old_archetype[].get_node_index()
 
