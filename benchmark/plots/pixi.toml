@@ -1,25 +1,15 @@
-[workspace]
+[project]
 authors = ["samufi <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
+channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 description = "Benchmarking plots for Larecs🌲"
 name = "plots"
 platforms = ["linux-64"]
 version = "0.2.0"
-channels = ["conda-forge", "https://conda.modular.com/max", "https://conda.modular.com/max-nightly"]
-preview = ["pixi-build"]
 
 [tasks]
 
 [dependencies]
+max = "*"
 python = "==3.12"
 matplotlib = ">=3.10.0,<4"
 pandas = ">=2.2"
-
-[package.build] 
-backend = { name = "pixi-build-python", version = "0.1.*" }
-channels = [
-  "https://prefix.dev/pixi-build-backends",
-  "https://prefix.dev/conda-forge",
-]
-
-[package.build-dependencies]
-larecs = { path = "../.." }
