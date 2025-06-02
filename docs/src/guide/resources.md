@@ -20,27 +20,14 @@ possible.
 
 However, in contrast to components, the (potentially) 
 used resources do not need to be known at compile time
-but can be dynamically added to the world. Due to
-the current limitation that Mojo does not support
-reflections, the resource type needs to be specified
-via a unique {{< api TypeId >}} identifier, which in turn is
-constructed from a string identifier. This requirement
-is enforced via the {{< api TypeIdentifiable >}} trait, which
-is part of the `ResourceType` trait composition.
-
-By convention, to avoid name clashes, the string identifier should
-include the package, module, and type name of the resource.
-For example, if we define a resource `Time` 
-in the module `my_module` in the package `my_package`, 
-the resource identifier would read `my_package.my_module.Time`.
+but can be dynamically added to the world and are 
+identified at runtime based on their struct name. 
 
 ```mojo {doctest="guide_resources" global=true}
-from larecs import World, Entity, ResourceType, TypeId
+from larecs import World, Entity, ResourceType
 
 @value
 struct Time(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.Time")
     var time: Float64
 ```
 
@@ -96,14 +83,10 @@ and `SelectedEntities`.
 ```mojo {doctest="guide_resources" global=true}
 @value
 struct Temperature(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.Temperature")
     var temperature: Float64
 
 @value
 struct SelectedEntities(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.SelectedEntities")
     var entities: List[Entity]
 ```
 

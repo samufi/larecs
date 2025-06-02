@@ -23,7 +23,6 @@ from .query import (
 )
 from .lock import LockMask, LockedContext
 from .resource import Resources
-from .type_map import TypeMapping, DynamicTypeMap
 
 
 @value
@@ -108,7 +107,6 @@ struct World[*component_types: ComponentType](Movable, Sized):
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
-    alias ResourcesType = Resources[DynamicTypeMap]
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
@@ -148,7 +146,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         Self.Archetype
     ]  # Archetypes that have no relations components.
 
-    var resources: Self.ResourcesType  # The resources of the world.
+    var resources: Resources  # The resources of the world.
 
     fn __init__(out self) raises:
         """
@@ -161,7 +159,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         )
         self._entity_pool = EntityPool()
         self._locks = LockMask()
-        self.resources = Self.ResourcesType()
+        self.resources = Resources()
 
         # TODO
         # var _tarquery = bitSet

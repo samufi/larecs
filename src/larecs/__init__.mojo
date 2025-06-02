@@ -75,8 +75,6 @@ Exports:
  - query.QueryInfo
  - resource.Resources
  - resource.ResourceType
- - type_map.TypeIdentifiable
- - type_map.TypeId
  - scheduler.Scheduler
  - scheduler.System
 """
@@ -84,7 +82,6 @@ from .world import World
 from .component import ComponentType
 from .archetype import MutableEntityAccessor
 from .resource import Resources, ResourceType
-from .type_map import TypeIdentifiable, TypeId
 from .entity import Entity
 from .query import Query
 from .scheduler import Scheduler, System
