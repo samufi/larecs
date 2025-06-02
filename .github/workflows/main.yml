@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash -leo
+        shell: bash -ieo pipefail {0}
 
 
     steps:
