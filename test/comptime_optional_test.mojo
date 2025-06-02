@@ -1,7 +1,7 @@
 from testing import *
 
 from larecs.test_utils import *
-from larecs.comptime_optional import StaticOptional
+from larecs.static_optional import StaticOptional
 
 
 def test_comptime_optional_init():

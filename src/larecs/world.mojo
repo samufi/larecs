@@ -13,7 +13,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .comptime_optional import StaticOptional
+from .static_optional import StaticOptional
 from .query import (
     Query,
     QueryInfo,

@@ -5,7 +5,7 @@ from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
 from .debug_utils import debug_warn
-from .comptime_optional import StaticOptional
+from .static_optional import StaticOptional
 
 
 struct Query[
