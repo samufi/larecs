@@ -17,34 +17,34 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install magic CLI
+    - name: Install pixi CLI
       run: |
-        curl -ssL https://magic.modular.com | bash
+        curl -fsSL https://pixi.sh/install.sh | bash
         source /home/runner/.bash_profile 
  
     - name: Install mojo and dependencies
       run: |
         source /home/runner/.bash_profile 
-        magic install --locked
+        pixi install --locked
   
     - name: Run tests
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
-    
+        pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
+
     - name: Check formatting
       run: |
         source /home/runner/.bash_profile 
-        if magic run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; els; e echo "Formatting OK"; fi
+        if pixi run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
 
     - name: Run benchmarks
       run: |
         source /home/runner/.bash_profile 
-        magic run mojo -I src/ benchmark/run_benchmarks.mojo
+        pixi run mojo -I src/ benchmark/run_benchmarks.mojo
 
     - name: Run examples
       run: |
         source /home/runner/.bash_profile
         cd examples/satellites
-        magic install --locked
-        magic run mojo -I ../../src/ model.mojo
+        pixi install --locked
+        pixi run mojo -I ../../src/ model.mojo
