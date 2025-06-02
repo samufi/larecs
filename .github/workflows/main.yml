@@ -19,12 +19,14 @@ jobs:
 
     - name: Install pixi CLI
       run: |
-        curl -fsSL https://pixi.sh/install.sh | bash
+        curl -fsSL https://pixi.sh/install.sh | sh
         bash
- 
-    - name: Install mojo and dependencies
-      run: |
+        cat /home/runner/.bashrc
+        
+        - name: Install mojo and dependencies
+        run: |
         bash
+        cat /home/runner/.bashrc
         pixi install --locked
   
     - name: Run tests
