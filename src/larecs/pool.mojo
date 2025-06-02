@@ -168,6 +168,7 @@ struct IntPool:
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
+
     var _pool: List[Int, True]
     var _next: Int
     var _available: UInt32
