@@ -25,7 +25,6 @@ jobs:
       - name: Install pixi CLI
         run: |
           curl -ssL https://pixi.sh/install.sh | bash
-          source /home/runner/.bashrc
         
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -68,7 +67,7 @@ jobs:
 
       - name: Run AoS benchmarks
         run: |
-          source /home/runner/.bashrc
+          bash
           cd benchmark/plots
           pixi install --locked
           pixi run mojo -I ../../src/ src/aos.mojo
@@ -86,7 +85,7 @@ jobs:
         
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
-          source /home/runner/.bashrc
+          bash
           pixi install --locked
           ./modo/modo build
       

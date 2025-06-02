@@ -20,26 +20,26 @@ jobs:
     - name: Install pixi CLI
       run: |
         curl -fsSL https://pixi.sh/install.sh | bash
-        source /home/runner/.bashrc 
+        bash
  
     - name: Install mojo and dependencies
       run: |
-        source /home/runner/.bashrc 
+        bash
         pixi install --locked
   
     - name: Run tests
       run: |
-        source /home/runner/.bashrc 
+        bash
         pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
 
     - name: Check formatting
       run: |
-        source /home/runner/.bashrc 
+        bash
         if pixi run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
 
     - name: Run benchmarks
       run: |
-        source /home/runner/.bashrc 
+        bash
         pixi run mojo -I src/ benchmark/run_benchmarks.mojo
 
     - name: Run examples
