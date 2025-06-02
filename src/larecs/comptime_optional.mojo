@@ -2,10 +2,10 @@ from memory import UnsafePointer
 
 
 @fieldwise_init
-struct ComptimeOptional[
+struct StaticOptional[
     ElementType: Copyable & Movable,
     has_value: Bool = True,
-](Copyable, ExplicitlyCopyable, Movable):
+](Boolable, Copyable, ExplicitlyCopyable, Movable):
     """An optional type that can potentially hold a value of ElementType.
 
     In contrast to the built-in optional, it is decided at
@@ -50,7 +50,7 @@ struct ComptimeOptional[
         """
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
 
-        var ptr = UnsafePointer(to=self.value())
+        var ptr = UnsafePointer(to=self[])
         ptr.init_pointee_move(value^)
 
     @always_inline
@@ -63,7 +63,7 @@ struct ComptimeOptional[
 
         @parameter
         if has_value:
-            return Self(self.value())
+            return Self(self[])
         else:
             return Self()
 
@@ -89,7 +89,7 @@ struct ComptimeOptional[
     # ===------------------------------------------------------------------===#
 
     @always_inline
-    fn value(ref self) -> ref [self] Self.ElementType:
+    fn __getitem__(ref self) -> ref [self] Self.ElementType:
         """Get a reference to the value.
 
         Returns:
@@ -122,7 +122,7 @@ struct ComptimeOptional[
 
         @parameter
         if has_value:
-            return self.value()
+            return self[]
         else:
             return value
 
@@ -148,3 +148,12 @@ struct ComptimeOptional[
         ]()
 
         return UnsafePointer(to=self._value).bitcast[Self.ElementType]()
+
+    @always_inline
+    fn __bool__(self) -> Bool:
+        """Check if the optional has a value.
+
+        Returns:
+            True if the optional has a value, False otherwise.
+        """
+        return has_value

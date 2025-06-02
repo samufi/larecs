@@ -13,7 +13,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
-from .comptime_optional import ComptimeOptional
+from .comptime_optional import StaticOptional
 from .query import (
     Query,
     QueryInfo,
@@ -802,19 +802,22 @@ struct World[*component_types: ComponentType](Movable, Sized):
 
     @always_inline
     fn _remove_and_add[
-        *Ts: ComponentType, rem_size: Int = 0
+        *Ts: ComponentType, rem_size: Int = 0, remove_some: Bool = False
     ](
         mut self,
         entity: Entity,
         *add_components: *Ts,
-        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], remove_some
+        ] = None,
     ) raises:
         """
         Adds and removes components to an [..entity.Entity].
 
         Parameters:
-            Ts:       The types of the components to add.
-            rem_size: The number of components to remove.
+            Ts:          The types of the components to add.
+            rem_size:    The number of components to remove.
+            remove_some: Whether to remove some components.
 
         Args:
             entity:         The entity to modify.
@@ -831,12 +834,14 @@ struct World[*component_types: ComponentType](Movable, Sized):
 
     @always_inline
     fn _remove_and_add[
-        *Ts: ComponentType, rem_size: Int = 0
+        *Ts: ComponentType, rem_size: Int = 0, remove_some: Bool = False
     ](
         mut self,
         entity: Entity,
         add_components: VariadicPack[_, _, ComponentType, *Ts],
-        remove_ids: Optional[InlineArray[Self.Id, rem_size]] = None,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], remove_some
+        ] = None,
     ) raises:
         """
         Adds and removes components to an [..entity.Entity].
@@ -844,7 +849,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         See documentation of overloaded function for details.
         """
         alias add_size = add_components.__len__()
-        alias ComponentIdsType = ComptimeOptional[
+        alias ComponentIdsType = StaticOptional[
             __type_of(Self.component_manager.get_id_arr[*Ts]()), add_size
         ]
 
@@ -888,7 +893,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
             @parameter
             if add_size:
                 start_node_index = self._archetype_map.get_node_index(
-                    remove_ids.value(), start_node_index
+                    remove_ids[], start_node_index
                 )
                 if not compare_mask.contains(
                     self._archetype_map.get_node_mask(start_node_index)
@@ -900,13 +905,13 @@ struct World[*component_types: ComponentType](Movable, Sized):
                 )
             else:
                 archetype_index = self._get_archetype_index(
-                    remove_ids.value(), start_node_index
+                    remove_ids[], start_node_index
                 )
 
         @parameter
         if add_size:
             archetype_index = self._get_archetype_index(
-                component_ids.value(), start_node_index
+                component_ids[], start_node_index
             )
 
         archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
@@ -940,7 +945,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         for i in range(add_size):
             archetype[].unsafe_set(
                 index_in_archetype,
-                component_ids.value()[i],
+                component_ids[][i],
                 UnsafePointer(to=add_components[i]).bitcast[UInt8](),
             )
 
@@ -1218,7 +1223,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
     ](
         mut self,
         owned mask: BitMask,
-        owned without_mask: ComptimeOptional[BitMask, has_without_mask],
+        owned without_mask: StaticOptional[BitMask, has_without_mask],
         owned start_indices: Self.Iterator[
             has_start_indices=has_start_indices
         ].StartIndices = None,
@@ -1255,7 +1260,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
     ](
         ref self,
         mask: BitMask,
-        without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
+        without_mask: StaticOptional[BitMask, has_without_mask] = None,
         out iterator: _ArchetypeIterator[
             __origin_of(self._archetypes),
             *component_types,
