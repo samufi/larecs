@@ -52,11 +52,11 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         var entities: PythonObject = Python.list()
         var nanos_ecs: PythonObject = Python.list()
         var nanos_aos: PythonObject = Python.list()
-        for row in results:
-            if row[].components == comp:
-                entities.append(row[].entities)
-                nanos_ecs.append(row[].nanos_ecs)
-                nanos_aos.append(row[].nanos_aos)
+        for ref row in results:
+            if row.components == comp:
+                entities.append(row.entities)
+                nanos_ecs.append(row.nanos_ecs)
+                nanos_aos.append(row.nanos_aos)
 
         lw = 0.5 + comp_exp / 4
         ax1.plot(
@@ -118,11 +118,11 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         var components: PythonObject = Python.list()
         var nanos_ecs: PythonObject = Python.list()
         var nanos_aos: PythonObject = Python.list()
-        for row in results:
-            if row[].entities == num_entities:
-                components.append(row[].components)
-                nanos_ecs.append(row[].nanos_ecs)
-                nanos_aos.append(row[].nanos_aos)
+        for ref row in results:
+            if row.entities == num_entities:
+                components.append(row.components)
+                nanos_ecs.append(row.nanos_ecs)
+                nanos_aos.append(row.nanos_aos)
 
         lw = 0.5 + entity_exp / 4
         ax2.plot(
@@ -190,11 +190,11 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
     var components: PythonObject = Python.list()
     var nanos_ecs: PythonObject = Python.list()
     var nanos_aos: PythonObject = Python.list()
-    for result in results:
-        entities.append(result[].entities)
-        components.append(result[].components)
-        nanos_ecs.append(result[].nanos_ecs)
-        nanos_aos.append(result[].nanos_aos)
+    for ref result in results:
+        entities.append(result.entities)
+        components.append(result.components)
+        nanos_ecs.append(result.nanos_ecs)
+        nanos_aos.append(result.nanos_aos)
 
     var data = Python.dict()
     data["entities"] = entities
@@ -274,8 +274,8 @@ struct AosWorld[components_exp: Int]:
 
     @always_inline
     fn update(mut self):
-        for entity in self.entities:
-            entity[].update()
+        for ref entity in self.entities:
+            entity.update()
 
 
 @value
