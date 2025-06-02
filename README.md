@@ -58,19 +58,19 @@ from larecs import World, Resources
 
 
 # Define components
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
 
-@value
-struct IsStatic:
+@fieldwise_init
+struct IsStatic(Copyable, Movable):
     pass
 
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var x: Float64
     var y: Float64
 

@@ -25,7 +25,7 @@ from .lock import LockMask, LockedContext
 from .resource import Resources
 
 
-@value
+@fieldwise_init
 struct Replacer[
     world_origin: MutableOrigin,
     size: Int,
@@ -307,12 +307,12 @@ struct World[*component_types: ComponentType](Movable, Sized):
         ```mojo {doctest="add_entity_comps" global=true hide=true}
         from larecs import World
 
-        @value
+        @fieldwise_init
         struct Position:
             var x: Float64
             var y: Float64
 
-        @value
+        @fieldwise_init
         struct Velocity:
             var x: Float64
             var y: Float64
@@ -401,12 +401,12 @@ struct World[*component_types: ComponentType](Movable, Sized):
         ```mojo {doctest="add_entity_comps" global=true hide=true}
         from larecs import World, Resources
 
-        @value
+        @fieldwise_init
         struct Position:
             var x: Float64
             var y: Float64
 
-        @value
+        @fieldwise_init
         struct Velocity:
             var x: Float64
             var y: Float64

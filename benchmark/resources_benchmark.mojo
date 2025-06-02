@@ -1,10 +1,10 @@
 from benchmark import Bencher, Bench, keep, BenchId
 from custom_benchmark import DefaultBench
-from larecs import Resources
+from larecs import Resources, ResourceType
 
 
-@value
-struct TestResource[size: Int = 1000]:
+@fieldwise_init
+struct TestResource[size: Int = 1000](ResourceType):
     var _storage: InlineArray[Float64, size]
 
     fn __init__(out self, value: Float64 = 0):

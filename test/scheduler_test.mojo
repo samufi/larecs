@@ -2,12 +2,12 @@ from larecs import World, Scheduler, System, ResourceType
 from testing import *
 
 
-@value
+@fieldwise_init
 struct MeanState(ResourceType):
     var value: Float64
 
 
-@value
+@fieldwise_init
 struct TestSystem[copies: Int, count: Int = 10](System):
     var a: Int
 

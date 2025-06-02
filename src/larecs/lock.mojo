@@ -2,7 +2,7 @@ from .bitmask import BitMask
 from .pool import BitPool
 
 
-@value
+@fieldwise_init
 struct LockMask:
     """
     Manages locks by mask bits.
@@ -70,7 +70,7 @@ struct LockMask:
         return LockedContext(Pointer(to=self))
 
 
-@value
+@fieldwise_init
 struct LockedContext[origin: MutableOrigin]:
     """
     A context manager for locking and unlocking the world.

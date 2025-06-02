@@ -26,7 +26,7 @@ def test_comptime_optional_copy():
     _ = opt_copy_without
 
 
-@value
+@fieldwise_init
 struct TestStruct[origin: MutableOrigin]:
     var del_conuter: Pointer[Int, origin]
 

@@ -164,7 +164,7 @@ struct Query[
         )
 
 
-@value
+@fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
 ]:

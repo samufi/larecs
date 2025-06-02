@@ -1,7 +1,7 @@
 from memory import UnsafePointer
 
 
-@value
+@fieldwise_init
 struct ComptimeOptional[
     ElementType: Copyable & Movable,
     has_value: Bool = True,

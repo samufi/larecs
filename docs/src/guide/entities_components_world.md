@@ -61,13 +61,13 @@ entities may have a position and a velocity, we need to
 define a `Position` and a `Velocity` struct.
 
 ```mojo {doctest="guide_entities_components_world" global=true}
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var dx: Float64
     var dy: Float64
 ```

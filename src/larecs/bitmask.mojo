@@ -2,7 +2,7 @@ from bit import pop_count, bit_not
 from .filter import MaskFilter
 
 
-@value
+@fieldwise_init
 struct _BitMaskIndexIter(Sized):
     """Iterator for BitMask indices."""
 

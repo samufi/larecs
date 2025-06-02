@@ -14,13 +14,13 @@ Revisiting our earlier example of a world with `Position` and
 ```mojo {doctest="guide_add_remove_entities" global=true hide=true}
 from larecs import World
 
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var dx: Float64
     var dy: Float64
 ```

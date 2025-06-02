@@ -12,7 +12,7 @@ from larecs.test_utils import *
 
 # ToDo: Remove this when the benchmark tools
 # are updated
-@value
+@fieldwise_init
 struct LargerComponent(ComponentType):
     var x: Float64
     var y: Float64

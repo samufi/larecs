@@ -7,7 +7,7 @@ from .bitmask import BitMask
 from .stupid_dict import StupidDict as Dict
 
 
-@value
+@fieldwise_init
 struct Node[DataType: KeyElement](Copyable, Movable):
     """Node in a BitMaskGraph.
 

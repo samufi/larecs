@@ -1,11 +1,11 @@
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct Position:
     var x: Float64
     var y: Float64
 
 
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct Velocity:
     var x: Float64

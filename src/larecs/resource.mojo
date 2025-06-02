@@ -14,7 +14,7 @@ alias ResourceType = Copyable & Movable
 """The trait that resources must conform to."""
 
 
-@value
+@fieldwise_init
 struct Resources(ExplicitlyCopyable, Movable):
     """Manages resources."""
 

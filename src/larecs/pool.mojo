@@ -90,7 +90,7 @@ struct EntityPool(Movable, Copyable, Sized):
         return self._available
 
 
-@value
+@fieldwise_init
 struct BitPool:
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 

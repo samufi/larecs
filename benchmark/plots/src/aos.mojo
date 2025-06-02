@@ -14,16 +14,16 @@ alias TARGET_ITERATIONS = 10**9
 """Target number of total entity iterations for each benchmark."""
 
 
-@value
-struct BenchResult:
+@fieldwise_init
+struct BenchResult(Copyable, Movable):
     var components: Int
     var entities: Int
     var nanos_ecs: Float64
     var nanos_aos: Float64
 
 
-@value
-struct BenchConfig[max_comp_exp: Int]:
+@fieldwise_init
+struct BenchConfig[max_comp_exp: Int](Copyable, Movable):
     var max_entity_exp: Int
     var target_iters: Int
 
@@ -256,7 +256,7 @@ fn create_ecs_entity[
         w.add(e, PayloadComponent[i](1.0, 2.0))
 
 
-struct AosWorld[components_exp: Int]:
+struct AosWorld[components_exp: Int](Copyable, Movable):
     var entities: List[AosEntity[components_exp]]
 
     fn __init__(out self, entities: Int):
@@ -270,8 +270,8 @@ struct AosWorld[components_exp: Int]:
             entity.update()
 
 
-@value
-struct AosEntity[components_exp: Int]:
+@fieldwise_init
+struct AosEntity[components_exp: Int](Copyable, Movable):
     var comps: InlineArray[Position, 2**components_exp]
 
     fn __init__(out self):
@@ -285,19 +285,19 @@ struct AosEntity[components_exp: Int]:
         self.comps[0].y += self.comps[1].y
 
 
-@value
+@fieldwise_init
 struct Position(lx.ComponentType):
     var x: Float64
     var y: Float64
 
 
-@value
+@fieldwise_init
 struct Velocity(lx.ComponentType):
     var x: Float64
     var y: Float64
 
 
-@value
+@fieldwise_init
 struct PayloadComponent[i: UInt](lx.ComponentType):
     var x: Float64
     var y: Float64

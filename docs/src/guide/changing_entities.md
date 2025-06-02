@@ -18,13 +18,13 @@ method of world.
 from larecs import World
 from testing import *
 
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var dx: Float64
     var dy: Float64
 ```

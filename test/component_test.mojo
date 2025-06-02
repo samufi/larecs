@@ -33,7 +33,7 @@ struct DummyComponentType(EqualityComparable, Stringable):
         pass
 
 
-@value
+@fieldwise_init
 struct FlexibleDummyComponentType[type_hash: Int = 12345](
     EqualityComparable, Stringable
 ):
