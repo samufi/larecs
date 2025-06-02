@@ -9,11 +9,11 @@ fn move(mut world: World) raises:
     ref parameters = world.resources.get[Parameters]()
 
     for entity in world.query[Position, Velocity]():
-        position = entity.get_ptr[Position]()
-        velocity = entity.get_ptr[Velocity]()
+        ref position = entity.get[Position]()
+        ref velocity = entity.get[Velocity]()
 
-        position[].x += velocity[].x * parameters.dt
-        position[].y += velocity[].y * parameters.dt
+        position.x += velocity.x * parameters.dt
+        position.y += velocity.y * parameters.dt
 
 
 fn accelerate(mut world: World) raises:
@@ -21,13 +21,13 @@ fn accelerate(mut world: World) raises:
     constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
 
     for entity in world.query[Position, Velocity]():
-        position = entity.get[Position]()
-        velocity = entity.get_ptr[Velocity]()
+        ref position = entity.get[Position]()
+        ref velocity = entity.get[Velocity]()
 
         multiplier = constant * (position.x**2 + position.y**2) ** (-1.5)
 
-        velocity[].x += position.x * multiplier
-        velocity[].y += position.y * multiplier
+        velocity.x += position.x * multiplier
+        velocity.y += position.y * multiplier
 
 
 fn get_random_position() -> Position:

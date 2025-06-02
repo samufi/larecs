@@ -228,10 +228,10 @@ fn benchmark[
     var start_ecs: Float64 = perf_counter_ns()
     for _ in range(rounds):
         for entity in w1.query[Position, Velocity]():
-            position = entity.get_ptr[Position]()
-            velocity = entity.get[Velocity]()
-            position[].x += velocity.x
-            position[].y += velocity.y
+            ref position = entity.get[Position]()
+            ref velocity = entity.get[Velocity]()
+            position.x += velocity.x
+            position.y += velocity.y
     dur_ecs = (perf_counter_ns() - start_ecs) / (entities * rounds)
 
     w2 = AosWorld[components_exp](entities)

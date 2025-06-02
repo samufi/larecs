@@ -89,6 +89,12 @@ def test_resources_get():
     assert_equal(resources.get[Resource1]().value, 30)
     assert_equal(resources.get[Resource2]().value, 40)
 
+    ref resource = resources.get[Resource1]()
+    assert_equal(resource.value, 30)
+
+    resource.value = 50
+    assert_equal(resources.get[Resource1]().value, 50)
+
 
 def test_resource_remove():
     resources = Resources()
@@ -111,22 +117,10 @@ def test_resource_remove():
     assert_false(resources.has[Resource2]())
 
 
-def test_resources_get_ptr():
-    resources = Resources()
-    resources.add(Resource1(10), Resource2(20))
-
-    ref resource = resources.get[Resource1]()
-    assert_equal(resource.value, 10)
-
-    resource.value = 30
-    assert_equal(resources.get[Resource1]().value, 30)
-
-
 def main():
     test_reseource_init()
     test_reseource_has()
     test_resources_add_set()
     test_resource_remove()
     test_resources_get()
-    test_resources_get_ptr()
     print("All tests passed!")

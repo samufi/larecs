@@ -176,8 +176,8 @@ def test_query_component_reference():
 
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
-        a = entity.get_ptr[FlexibleComponent[0]]()
-        a[].y = i
+        ref a = entity.get[FlexibleComponent[0]]()
+        a.y = i
         i += 1
 
     i = 0
@@ -315,8 +315,8 @@ struct QueryOwner[
 
     fn update(self) raises:
         for entity in self._query:
-            f = entity.get_ptr[FlexibleComponent[0]]()
-            f[].x += 1
+            ref f = entity.get[FlexibleComponent[0]]()
+            f.x += 1
 
 
 fn test_query_in_system() raises:
@@ -335,8 +335,8 @@ fn test_query_in_system() raises:
         sys2.update()
 
     for entity in world.query[FlexibleComponent[0]]():
-        f = entity.get_ptr[FlexibleComponent[0]]()
-        assert_equal(f[].x, 21)
+        ref f = entity.get[FlexibleComponent[0]]()
+        assert_equal(f.x, 21)
 
 
 def test_query_lock():

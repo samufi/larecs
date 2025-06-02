@@ -83,25 +83,6 @@ struct EntityAccessor[
         )
 
     @always_inline
-    fn get_ptr[
-        T: ComponentType
-    ](ref self) raises -> Pointer[T, __origin_of(self._archetype[]._data)]:
-        """Returns a pointer to the given component of the Entity.
-
-        Parameters:
-            T: The type of the component.
-
-        Returns:
-            A pointer to the component of the entity.
-
-        Raises:
-            Error: If the entity does not have the component.
-        """
-        return self._archetype[].get_component_ptr[T=T](
-            self._index_in_archetype,
-        )
-
-    @always_inline
     fn set[
         *Ts: ComponentType
     ](
@@ -569,36 +550,6 @@ struct Archetype[
             A pointer to the component.
         """
         return self._data[id] + idx * self._item_sizes[id]
-
-    @always_inline
-    fn get_component_ptr[
-        IndexType: Indexer, //,
-        *,
-        T: ComponentType,
-        assert_has_component: Bool = True,
-    ](ref self, idx: IndexType) raises -> Pointer[T, __origin_of(self._data)]:
-        """Returns the component with the given id at the given index.
-
-        Args:
-            idx:    The index of the entity.
-
-        Parameters:
-            IndexType: The type of the index.
-            T: The type of the component.
-            assert_has_component: Whether to assert that the archetype
-                    contains the component.
-
-        Raises:
-            Error:  If assert_has_component and the archetype does not contain the component.
-
-        Returns:
-            A pointer to the component.
-        """
-        return Pointer[T, __origin_of(self._data)](
-            to=self.get_component[
-                T=T, assert_has_component=assert_has_component
-            ](idx)
-        )
 
     @always_inline
     fn get_component[

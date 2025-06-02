@@ -140,29 +140,6 @@ fn prevent_inlining_get() raises:
     keep(world.get[Position](entity).x)
 
 
-fn benchmark_get_ptr_1_000_000(mut bencher: Bencher) raises capturing:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing raises:
-        world = SmallWorld()
-        entity = world.add_entity(pos, vel)
-        for _ in range(1_000_000):
-            keep(world.get_ptr[Position](entity)[].x)
-
-    bencher.iter[bench_fn]()
-
-
-fn prevent_inlining_get_ptr() raises:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-    world = SmallWorld()
-    entity = world.add_entity(pos, vel)
-    keep(world.get_ptr[Position](entity)[].x)
-
-
 fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
@@ -256,9 +233,9 @@ fn benchmark_apply_expexp_1_comp_100_000(
         @parameter
         fn operation_plus(accessor: MutableEntityAccessor) capturing:
             try:
-                pos2 = accessor.get_ptr[Position]()
-                pos2[].x = exp(1 - exp(pos2[].x))
-                pos2[].y = exp(1 - exp(pos2[].y))
+                ref pos2 = accessor.get[Position]()
+                pos2.x = exp(1 - exp(pos2.x))
+                pos2.y = exp(1 - exp(pos2.y))
             except:
                 pass
 
@@ -292,10 +269,10 @@ fn benchmark_apply_simd_expexp_1_comp_100_000(
             alias _store = store2[simd_width]
 
             try:
-                pos2 = accessor.get_ptr[Position]()
+                ref pos2 = accessor.get[Position]()
 
-                _store(pos2[].x, exp(1 - exp(_load(pos2[].x))))
-                _store(pos2[].y, exp(1 - exp(_load(pos2[].y))))
+                _store(pos2.x, exp(1 - exp(_load(pos2.x))))
+                _store(pos2.y, exp(1 - exp(_load(pos2.y))))
             except:
                 pass
 
@@ -629,7 +606,6 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
         benchmark_add_remove_entities_5_comp_1_000_batch_1_000
     ](BenchId("10^3 * add & remove entity (5 components) 1000 batch"))
     bench.bench_function[benchmark_get_1_000_000](BenchId("10^6 * get"))
-    bench.bench_function[benchmark_get_ptr_1_000_000](BenchId("10^6 * get_ptr"))
     bench.bench_function[benchmark_set_1_comp_1_000_000](
         BenchId("10^6 * set 1 component")
     )
@@ -664,7 +640,6 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     prevent_inlining_add_entity_1_comp()
     prevent_inlining_add_entity_5_comp()
     prevent_inlining_get()
-    prevent_inlining_get_ptr()
     prevent_inlining_set_1_comp()
     prevent_inlining_set_5_comp()
     prevent_inlining_replace()
