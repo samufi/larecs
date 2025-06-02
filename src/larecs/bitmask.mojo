@@ -3,7 +3,7 @@ from .filter import MaskFilter
 
 
 @fieldwise_init
-struct _BitMaskIndexIter(Sized):
+struct _BitMaskIndexIter(Sized, Copyable, ExplicitlyCopyable, Movable):
     """Iterator for BitMask indices."""
 
     alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]

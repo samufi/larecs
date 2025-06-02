@@ -185,7 +185,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         self._entities = other._entities
         self._entity_pool = other._entity_pool
         self._locks = other._locks
-        self.resources = other.resources
+        self.resources = other.resources.copy()
 
     fn __moveinit__(out self, owned other: Self):
         """

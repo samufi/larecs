@@ -91,7 +91,7 @@ struct EntityPool(Movable, Copyable, Sized):
 
 
 @fieldwise_init
-struct BitPool:
+struct BitPool(Copyable, Movable):
     """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
 
     This implementation uses an implicit list.
