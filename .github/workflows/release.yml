@@ -24,16 +24,16 @@ jobs:
       - name: Install pixi CLI
         run: |
           curl -ssL https://pixi.sh/install.sh | bash
-          source /home/runner/.bash_profile
+          source /home/runner/.bashrc
 
       - name: Build package
         run: |
-          source /home/runner/.bash_profile
+          source /home/runner/.bashrc
           pixi run mojo package src/larecs
 
       - name: Test package
         run: |
-          source /home/runner/.bash_profile
+          source /home/runner/.bashrc
           pixi run mojo test --validate-doc-strings -D ASSERT=all -I . test
 
       - name: Upload package
