@@ -6,19 +6,19 @@ from python import PythonObject, Python
 
 
 fn move(mut world: World) raises:
-    parameters = world.resources.get_ptr[Parameters]()
+    ref parameters = world.resources.get[Parameters]()
 
     for entity in world.query[Position, Velocity]():
         position = entity.get_ptr[Position]()
         velocity = entity.get_ptr[Velocity]()
 
-        position[].x += velocity[].x * parameters[].dt
-        position[].y += velocity[].y * parameters[].dt
+        position[].x += velocity[].x * parameters.dt
+        position[].y += velocity[].y * parameters.dt
 
 
 fn accelerate(mut world: World) raises:
-    parameters = world.resources.get_ptr[Parameters]()
-    constant = -GRAVITATIONAL_CONSTANT * parameters[].mass * parameters[].dt
+    ref parameters = world.resources.get[Parameters]()
+    constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
 
     for entity in world.query[Position, Velocity]():
         position = entity.get[Position]()

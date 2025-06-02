@@ -59,20 +59,19 @@ world = World[Position, Velocity]()
 world.resources.add(Time(0.0))
 ```
 The `resources` attribute also allows us to access and
-change resources via {{< api Resources.get get >}}, 
-{{< api Resources.get_ptr get_ptr >}} and 
-{{< api Resources.set set >}} methods resembling their
+change resources via {{< api Resources.get get >}}
+and {{< api Resources.set set >}} methods resembling their
 [component-related counterparts](../changing_entities) of `World`.
 
 ```mojo {doctest="guide_resources"}
 # Change a resource value via a reference
 world.resources.get[Time]().time = 1.0
 
-# Get a pointer to a resource
-time_ptr = world.resources.get_ptr[Time]()
+# Get a reference to a resource
+ref time = world.resources.get[Time]()
 
 # Change the resource value via the pointer
-time_ptr[].time = 2.0
+time.time = 2.0
 ```
 
 The {{< api Resources.add add >}} and the {{< api Resources.set set >}}
