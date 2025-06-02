@@ -16,6 +16,11 @@ jobs:
   release:
     name: Build and publish package
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ieo pipefail {0}
+
     steps:
       - name: Checkout Larecs
         uses: actions/checkout@v3
@@ -27,12 +32,10 @@ jobs:
 
       - name: Build package
         run: |
-          bash
           pixi run mojo package src/larecs
 
       - name: Test package
         run: |
-          bash
           pixi run mojo test --validate-doc-strings -D ASSERT=all -I . test
 
       - name: Upload package
