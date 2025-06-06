@@ -77,9 +77,8 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     ```
 
     ```mojo {doctest="scheduler" global=true}
-
     @value
-    struct MySystem:
+    struct MySystem(System):
         var internal_variable: Int
 
         # This is executed once at the beginning

@@ -174,10 +174,10 @@ for entity in world.query[Position]().without[Velocity]():
     entities.append(entity)
 
 # Add a velocity component to all stored entities
-for entity in entities:
+for ref entity in entities:
     # We can add components to the entity
     # because we are not iterating over the world
-    _ = world.add(entity[], Velocity(1, 0))
+    _ = world.add(entity, Velocity(1, 0))
 ```
 
 > [!Note]
