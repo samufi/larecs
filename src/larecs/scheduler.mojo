@@ -1,6 +1,5 @@
 from .component import ComponentType
 from .resource import Resources
-from .type_map import DynamicTypeMap
 from .world import World
 from .unsafe_box import UnsafeBox
 

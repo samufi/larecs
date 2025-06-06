@@ -20,27 +20,14 @@ possible.
 
 However, in contrast to components, the (potentially) 
 used resources do not need to be known at compile time
-but can be dynamically added to the world. Due to
-the current limitation that Mojo does not support
-reflections, the resource type needs to be specified
-via a unique {{< api TypeId >}} identifier, which in turn is
-constructed from a string identifier. This requirement
-is enforced via the {{< api TypeIdentifiable >}} trait, which
-is part of the `ResourceType` trait composition.
-
-By convention, to avoid name clashes, the string identifier should
-include the package, module, and type name of the resource.
-For example, if we define a resource `Time` 
-in the module `my_module` in the package `my_package`, 
-the resource identifier would read `my_package.my_module.Time`.
+but can be dynamically added to the world and are 
+identified at runtime based on their struct name. 
 
 ```mojo {doctest="guide_resources" global=true}
-from larecs import World, Entity, ResourceType, TypeId
+from larecs import World, Entity, ResourceType
 
 @value
 struct Time(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.Time")
     var time: Float64
 ```
 
@@ -72,20 +59,19 @@ world = World[Position, Velocity]()
 world.resources.add(Time(0.0))
 ```
 The `resources` attribute also allows us to access and
-change resources via {{< api Resources.get get >}}, 
-{{< api Resources.get_ptr get_ptr >}} and 
-{{< api Resources.set set >}} methods resembling their
+change resources via {{< api Resources.get get >}}
+and {{< api Resources.set set >}} methods resembling their
 [component-related counterparts](../changing_entities) of `World`.
 
 ```mojo {doctest="guide_resources"}
 # Change a resource value via a reference
 world.resources.get[Time]().time = 1.0
 
-# Get a pointer to a resource
-time_ptr = world.resources.get_ptr[Time]()
+# Get a reference to a resource
+ref time = world.resources.get[Time]()
 
 # Change the resource value via the pointer
-time_ptr[].time = 2.0
+time.time = 2.0
 ```
 
 The {{< api Resources.add add >}} and the {{< api Resources.set set >}}
@@ -96,14 +82,10 @@ and `SelectedEntities`.
 ```mojo {doctest="guide_resources" global=true}
 @value
 struct Temperature(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.Temperature")
     var temperature: Float64
 
 @value
 struct SelectedEntities(ResourceType):
-    # The type ID must be specified via an alias `id`
-    alias id = TypeId("larecs.resources.SelectedEntities")
     var entities: List[Entity]
 ```
 

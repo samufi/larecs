@@ -2,7 +2,11 @@
 
 ## [Unreleased](https://github.com/samufi/larecs/compare/v0.1.0...main)
 
-- ...
+### Breaking changes
+- Update the utilized Mojo version and adjust the code accordingly.
+- Remove the `TypeIdentifiable` trait, the `TypeId` struct, as well as the TypeMaps. 
+  Instead, resources now use the built-in reflections module to identify types.
+- Remove `Resource.get_ptr`, since getting a reference is now sufficient if using the `ref` keyword.
 
 ## [v0.2.0 (2025-05-14)](https://github.com/samufi/larecs/tree/v0.2.0)
 

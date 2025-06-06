@@ -1,12 +1,10 @@
 from benchmark import Bencher, Bench, keep, BenchId
 from custom_benchmark import DefaultBench
-from larecs import Resources, TypeId
+from larecs import Resources
 
 
 @value
 struct TestResource[size: Int = 1000]:
-    alias id = TypeId("larecs.benchmark.TestResource")
-
     var _storage: InlineArray[Float64, size]
 
     fn __init__(out self, value: Float64 = 0):

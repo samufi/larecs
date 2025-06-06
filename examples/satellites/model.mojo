@@ -7,7 +7,7 @@ from sys import argv
 
 
 fn update(mut world: World, step: Float64) raises:
-    for _ in range(Int(step / world.resources.get_ptr[Parameters]()[].dt)):
+    for _ in range(Int(step / world.resources.get[Parameters]().dt)):
         move(world)
         accelerate(world)
 

@@ -1,9 +1,6 @@
-from larecs import TypeId, TypeIdentifiable
-
 
 @value
-struct Parameters(Copyable & Movable & TypeIdentifiable):
-    alias id = TypeId("satellites.parameters.Parameters")
+struct Parameters(Copyable & Movable):
     var dt: Float64
     var mass: Float64
 
