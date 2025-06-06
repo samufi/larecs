@@ -45,11 +45,11 @@ ref pos = world.get[Position](entity)
 
 # We can change the reference.
 pos.x = 5
-assert_equal(world.get[Position](entity).x == 5)
+assert_equal(world.get[Position](entity).x, 5)
 
 # We can also replace the component completely. 
 world.get[Position](entity) = Position(10, 0)
-assert_equal(world.get[Position](entity).x == 10)
+assert_equal(world.get[Position](entity).x, 10)
 ```
 
 Of course, accessing a component only works if the entity has
