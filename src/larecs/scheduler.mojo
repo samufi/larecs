@@ -77,9 +77,8 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     ```
 
     ```mojo {doctest="scheduler" global=true}
-
     @value
-    struct MySystem:
+    struct MySystem(System):
         var internal_variable: Int
 
         # This is executed once at the beginning
@@ -182,9 +181,9 @@ struct Scheduler[*ComponentTypes: ComponentType]:
 
     fn initialize(mut self) raises:
         """Initializes all systems in the scheduler."""
-        for system_info in self._systems:
-            system_info[][Self._initialize_index](
-                system_info[][Self._system_index], self.world
+        for ref system_info in self._systems:
+            system_info[Self._initialize_index](
+                system_info[Self._system_index], self.world
             )
 
     fn update(mut self, steps: Int = 1) raises:
@@ -194,16 +193,16 @@ struct Scheduler[*ComponentTypes: ComponentType]:
             steps: How often the systems should be updated.
         """
         for _ in range(steps):
-            for system_info in self._systems:
-                system_info[][Self._update_index](
-                    system_info[][Self._system_index], self.world
+            for ref system_info in self._systems:
+                system_info[Self._update_index](
+                    system_info[Self._system_index], self.world
                 )
 
     fn finalize(mut self) raises:
         """Finalizes all systems in the scheduler."""
-        for system_info in self._systems:
-            system_info[][Self._finalize_index](
-                system_info[][Self._system_index], self.world
+        for ref system_info in self._systems:
+            system_info[Self._finalize_index](
+                system_info[Self._system_index], self.world
             )
 
     fn run(mut self, steps: Int) raises:

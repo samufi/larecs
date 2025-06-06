@@ -217,8 +217,8 @@ struct World[*component_types: ComponentType](Movable, Sized):
         may be an expensive operation.
         """
         size = 0
-        for archetype in self._archetypes:
-            size += len(archetype[])
+        for ref archetype in self._archetypes:
+            size += len(archetype)
         return size
 
     @always_inline
@@ -594,8 +594,8 @@ struct World[*component_types: ComponentType](Movable, Sized):
         for archetype in self._get_archetype_iterator(
             query.mask, query.without_mask
         ):
-            for entity in archetype[].get_entities():
-                self._entity_pool.recycle(entity[])
+            for ref entity in archetype[].get_entities():
+                self._entity_pool.recycle(entity)
             archetype[].clear()
 
         # if self._listener != nil:
@@ -869,6 +869,9 @@ struct World[*component_types: ComponentType](Movable, Sized):
         See documentation of overloaded function for details.
         """
         alias add_size = add_components.__len__()
+        alias ComponentIdsType = ComptimeOptional[
+            __type_of(Self.component_manager.get_id_arr[*Ts]()), add_size
+        ]
 
         self._assert_unlocked()
         self._assert_alive(entity)
@@ -886,13 +889,15 @@ struct World[*component_types: ComponentType](Movable, Sized):
 
         index_in_old_archetype = idx.index
 
-        var component_ids: Optional[InlineArray[Self.Id, add_size]] = None
+        var component_ids: ComponentIdsType
 
         @parameter
         if add_size:
-            component_ids = Optional[InlineArray[Self.Id, add_size]](
+            component_ids = ComponentIdsType(
                 Self.component_manager.get_id_arr[*Ts]()
             )
+        else:
+            component_ids = None
 
         start_node_index = old_archetype[].get_node_index()
 

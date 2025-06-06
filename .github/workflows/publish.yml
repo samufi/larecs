@@ -11,7 +11,7 @@ permissions:
   pages: write
 
 env:
-  MODO_VERSION: 15b8f6d # 0.9.0
+  MODO_VERSION: v0.11.6
   HUGO_VERSION: mojo-lexer # 0.140.2
 
 jobs:
@@ -19,13 +19,17 @@ jobs:
   publish:
     name: Publish API docs
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash -ieo pipefail {0}
+
     steps:
       - name: Checkout Larecs
         uses: actions/checkout@v3
-      - name: Install magic CLI
+      - name: Install pixi CLI
         run: |
-          curl -ssL https://magic.modular.com | bash
-          source /home/runner/.bash_profile
+          curl -ssL https://pixi.sh/install.sh | bash
         
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -68,10 +72,9 @@ jobs:
 
       - name: Run AoS benchmarks
         run: |
-          source /home/runner/.bash_profile
           cd benchmark/plots
-          magic install --locked
-          magic run mojo -I ../../src/ src/aos.mojo
+          pixi install --locked
+          pixi run mojo -I ../../src/ src/aos.mojo
         
       - name: Archive benchmark results
         uses: actions/upload-artifact@v4
@@ -86,8 +89,7 @@ jobs:
         
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
-          source /home/runner/.bash_profile
-          magic install --locked
+          pixi install --locked
           ./modo/modo build
       
       - name: Run Hugo

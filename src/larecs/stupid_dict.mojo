@@ -19,29 +19,29 @@ struct StupidDict[KeyType: KeyElement, ValueType: Copyable & Movable](
 
     @always_inline
     fn __getitem__(self, key: KeyType) raises -> ValueType:
-        for k_v in self._data:
-            if k_v[][0] == key:
-                return k_v[][1]
+        for ref k_v in self._data:
+            if k_v[0] == key:
+                return k_v[1]
         raise Error("Key not found")
 
     @always_inline
     fn __contains__(self, key: KeyType) -> Bool:
-        for k_v in self._data:
-            if k_v[][0] == key:
+        for ref k_v in self._data:
+            if k_v[0] == key:
                 return True
         return False
 
     @always_inline
     fn get(self, key: KeyType) -> Optional[ValueType]:
-        for k_v in self._data:
-            if k_v[][0] == key:
-                return Optional(k_v[][1])
+        for ref k_v in self._data:
+            if k_v[0] == key:
+                return Optional(k_v[1])
         return Optional[ValueType](None)
 
     fn __setitem__(mut self, key: KeyType, value: ValueType):
-        for k_v in self._data:
-            if k_v[][0] == key:
-                k_v[][1] = value
+        for ref k_v in self._data:
+            if k_v[0] == key:
+                k_v[1] = value
                 return
         self._data.append(Tuple(key, value))
 

@@ -3,11 +3,6 @@ from .entity import Entity
 from .constants import MAX_UINT16
 
 
-trait IndexingCollectionElement(Indexer):
-    fn __init__[T: Intable](out self, value: T):
-        ...
-
-
 struct EntityPool(Movable, Copyable, Sized):
     """EntityPool is an implementation using implicit linked lists.
 
@@ -168,24 +163,24 @@ struct BitPool:
         self._available = 0
 
 
-struct IntPool[ElementType: IndexingCollectionElement = Int]:
+struct IntPool:
     """IntPool is a pool implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
 
-    var _pool: List[ElementType, True]
-    var _next: ElementType
+    var _pool: List[Int, True]
+    var _next: Int
     var _available: UInt32
 
     @always_inline
     fn __init__(out self):
         """Creates a new, initialized entity pool."""
-        self._pool = List[ElementType, True]()
-        self._next = ElementType(0)
+        self._pool = List[Int, True]()
+        self._next = 0
         self._available = 0
 
-    fn get(mut self) -> ElementType:
+    fn get(mut self) -> Int:
         """Returns a fresh or recycled entity."""
         if self._available == 0:
             return self._get_new()
@@ -199,14 +194,14 @@ struct IntPool[ElementType: IndexingCollectionElement = Int]:
         return self._pool[curr]
 
     @always_inline
-    fn _get_new(mut self) -> ElementType:
+    fn _get_new(mut self) -> Int:
         """Allocates and returns a new entity. For internal use."""
-        element = ElementType(len(self._pool))
+        element = len(self._pool)
         self._pool.append(element)
         return element
 
     @always_inline
-    fn recycle(mut self, element: ElementType):
+    fn recycle(mut self, element: Int):
         """Hands an entity back for recycling."""
         self._next, self._pool[element] = element, self._next
         self._available += 1
@@ -215,5 +210,5 @@ struct IntPool[ElementType: IndexingCollectionElement = Int]:
     fn reset(mut self):
         """Recycles all _entities. Does NOT free the reserved memory."""
         self._pool.clear()
-        self._next = ElementType(0)
+        self._next = 0
         self._available = 0

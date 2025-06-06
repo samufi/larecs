@@ -30,10 +30,10 @@ fn get_random_uint8_list(size: Int, out vals: List[UInt8]):
 fn unique(l: List[UInt8], out result: List[UInt8]):
     mask = InlineArray[Bool, 256](0)
     result = List[UInt8]()
-    for v in l:
-        if not mask[v[]]:
-            mask[v[]] = True
-            result.append(v[])
+    for ref v in l:
+        if not mask[v]:
+            mask[v] = True
+            result.append(v)
 
 
 @always_inline
@@ -189,8 +189,8 @@ def test_bitmask_get_indices():
     random.seed(0)
     indices = get_random_uint8_list(size)
     var mask = BitMask()
-    for index in indices:
-        mask.set(index[], True)
+    for ref index in indices:
+        mask.set(index, True)
     unique_indices = unique(indices)
 
     assert_equal(len(unique_indices), len(mask.get_indices()))
@@ -201,10 +201,10 @@ def test_bitmask_get_indices():
     for value in unique_indices:
         found = False
         for idx in mask.get_indices():
-            if value[] == idx:
+            if value == idx:
                 found = True
                 break
-        assert_true(found, String(value[]) + " not found.")
+        assert_true(found, String(value) + " not found.")
         size += 1
 
     assert_equal(len(unique_indices), size)
