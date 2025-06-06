@@ -28,7 +28,7 @@ on which they perform the desired operations.
 ```mojo {doctest="guide_systems_scheduler" global=true}
 from larecs import World, System
 
-@value
+@fieldwise_init
 struct Move(System):
     
     # This is executed once at the beginning
@@ -67,19 +67,19 @@ To construct an example of a scheduler, let us define
 further systems for adding entities and logging their positions.
 
 ```mojo {doctest="guide_systems_scheduler" global=true hide=true}
-@value
-struct Position:
+@fieldwise_init
+struct Position(Movable, Copyable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Movable, Copyable):
     var dx: Float64
     var dy: Float64
 ```
 
 ```mojo {doctest="guide_systems_scheduler" global=true}
-@value
+@fieldwise_init
 struct AddMovers[count: Int](System):
 
     # This is executed once at the beginning
@@ -98,7 +98,7 @@ struct AddMovers[count: Int](System):
         # We do not need to do anything here
         pass
 
-@value
+@fieldwise_init
 struct Logger[interval: Int](System):
 
     var _logging_step: Int

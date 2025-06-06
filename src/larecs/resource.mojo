@@ -14,7 +14,7 @@ alias ResourceType = Copyable & Movable
 """The trait that resources must conform to."""
 
 
-@value
+@fieldwise_init
 struct Resources(ExplicitlyCopyable, Movable):
     """Manages resources."""
 
@@ -38,6 +38,14 @@ struct Resources(ExplicitlyCopyable, Movable):
             The number of stored resources.
         """
         return len(self._storage)
+
+    fn copy(self, out resources: Self):
+        """Creates a copy of the resources.
+
+        Returns:
+            A copy of the resources.
+        """
+        resources = Resources(self._storage.copy())
 
     fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
         """Adds resources.

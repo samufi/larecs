@@ -64,19 +64,19 @@ struct Scheduler[*ComponentTypes: ComponentType]:
     ```mojo {doctest="scheduler" global=true hide=true}
     from larecs import World, Scheduler, System
 
-    @value
-    struct Position:
+    @fieldwise_init
+    struct Position(Copyable, Movable):
         var x: Float64
         var y: Float64
 
-    @value
-    struct Velocity:
+    @fieldwise_init
+    struct Velocity(Copyable, Movable):
         var x: Float64
         var y: Float64
     ```
 
     ```mojo {doctest="scheduler" global=true}
-    @value
+    @fieldwise_init
     struct MySystem(System):
         var internal_variable: Int
 

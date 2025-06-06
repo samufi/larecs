@@ -24,10 +24,10 @@ but can be dynamically added to the world and are
 identified at runtime based on their struct name. 
 
 ```mojo {doctest="guide_resources" global=true}
-from larecs import World, Entity, ResourceType
+from larecs import World, Entity
 
-@value
-struct Time(ResourceType):
+@fieldwise_init
+struct Time(Copyable, Movable):
     var time: Float64
 ```
 
@@ -39,13 +39,13 @@ of {{< api World >}}. Adding a resource is done via the
 
 ```mojo {doctest="guide_resources" global=true hide=true}
 
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var dx: Float64
     var dy: Float64
 ```
@@ -80,12 +80,12 @@ For example, consider the additional entities `Temperature`
 and `SelectedEntities`.
 
 ```mojo {doctest="guide_resources" global=true}
-@value
-struct Temperature(ResourceType):
+@fieldwise_init
+struct Temperature(Copyable, Movable):
     var temperature: Float64
 
-@value
-struct SelectedEntities(ResourceType):
+@fieldwise_init
+struct SelectedEntities(Copyable, Movable):
     var entities: List[Entity]
 ```
 

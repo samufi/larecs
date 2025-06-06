@@ -8,7 +8,11 @@
   Instead, resources now use the built-in reflections module to identify types.
 - Remove all `get_ptr` functions, since getting a reference is now sufficient if using the `ref` keyword.
   This applies to entities as well as resources.
+- Make `Resources` explicitly copyable only.
 
+### Other changes
+- Remove the `@value` decorator in favour of the `@fieldwise_init` decorator and explicit trait conformance.
+- Refactor the internal type `ComptimeOptional` to `StaticOptional` so as to match the naming conventions of the standard library.
 
 ## [v0.2.0 (2025-05-14)](https://github.com/samufi/larecs/tree/v0.2.0)
 

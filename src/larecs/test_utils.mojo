@@ -101,27 +101,30 @@ fn assert_equal_lists[
         assert_equal(a[i], b[i], msg)
 
 
-@value
-struct Position(ComponentType):
+alias ExplicitlyCopyableComponentType = ComponentType & ExplicitlyCopyable
+
+
+@fieldwise_init
+struct Position(ExplicitlyCopyableComponentType):
     var x: Float64
     var y: Float64
 
 
-@value
-struct Velocity(ComponentType):
+@fieldwise_init
+struct Velocity(ExplicitlyCopyableComponentType):
     var dx: Float64
     var dy: Float64
 
 
-@value
-struct LargerComponent(ComponentType):
+@fieldwise_init
+struct LargerComponent(ExplicitlyCopyableComponentType):
     var x: Float64
     var y: Float64
     var z: Float64
 
 
-@value
-struct FlexibleComponent[i: Int](ComponentType):
+@fieldwise_init
+struct FlexibleComponent[i: Int](ExplicitlyCopyableComponentType):
     var x: Float64
     var y: Float32
 
@@ -403,7 +406,7 @@ alias FullWorld = World[
 ]
 
 
-@value
+@fieldwise_init
 struct MemTestStruct(Copyable, Movable):
     var copy_counter: UnsafePointer[Int]
     var move_counter: UnsafePointer[Int]

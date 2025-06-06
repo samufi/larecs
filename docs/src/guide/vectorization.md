@@ -54,13 +54,13 @@ requires us to skip the `y` attributes.
 
 ```mojo {doctest="guide_simd_apply" global=true hide=true}
 
-@value
-struct Position:
+@fieldwise_init
+struct Position(Copyable, Movable):
     var x: Float64
     var y: Float64
 
-@value
-struct Velocity:
+@fieldwise_init
+struct Velocity(Copyable, Movable):
     var dx: Float64
     var dy: Float64
 ```

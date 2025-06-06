@@ -2,8 +2,8 @@ from .bitmask import BitMask
 from .pool import BitPool
 
 
-@value
-struct LockMask:
+@fieldwise_init
+struct LockMask(Copyable, ExplicitlyCopyable, Movable):
     """
     Manages locks by mask bits.
 
@@ -70,8 +70,10 @@ struct LockMask:
         return LockedContext(Pointer(to=self))
 
 
-@value
-struct LockedContext[origin: MutableOrigin]:
+@fieldwise_init
+struct LockedContext[origin: MutableOrigin](
+    Copyable, ExplicitlyCopyable, Movable
+):
     """
     A context manager for locking and unlocking the world.
 

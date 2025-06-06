@@ -4,7 +4,7 @@ from larecs.test_utils import *
 from larecs.unsafe_box import UnsafeBox
 
 
-@value
+@fieldwise_init
 struct TestStruct:
     var value_1: Int
     var value_2: Float32

@@ -2,8 +2,8 @@ from bit import pop_count, bit_not
 from .filter import MaskFilter
 
 
-@value
-struct _BitMaskIndexIter(Sized):
+@fieldwise_init
+struct _BitMaskIndexIter(Sized, Copyable, ExplicitlyCopyable, Movable):
     """Iterator for BitMask indices."""
 
     alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]

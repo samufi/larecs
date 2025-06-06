@@ -5,7 +5,7 @@ from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockMask
 from .debug_utils import debug_warn
-from .comptime_optional import ComptimeOptional
+from .static_optional import StaticOptional
 
 
 struct Query[
@@ -47,14 +47,14 @@ struct Query[
 
     var _world: Pointer[Self.World, world_origin]
     var _mask: BitMask
-    var _without_mask: ComptimeOptional[BitMask, has_without_mask]
+    var _without_mask: StaticOptional[BitMask, has_without_mask]
 
     @doc_private
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
         owned mask: BitMask,
-        owned without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
+        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates a new query.
@@ -164,7 +164,7 @@ struct Query[
         )
 
 
-@value
+@fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
 ]:
@@ -180,7 +180,7 @@ struct QueryInfo[
     """
 
     var mask: BitMask
-    var without_mask: ComptimeOptional[BitMask, has_without_mask]
+    var without_mask: StaticOptional[BitMask, has_without_mask]
 
     @implicit
     fn __init__(
@@ -224,7 +224,7 @@ struct _ArchetypeIterator[
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _mask: BitMask
-    var _without_mask: ComptimeOptional[BitMask, has_without_mask]
+    var _without_mask: StaticOptional[BitMask, has_without_mask]
     var _archetype_count: Int
     var _buffer_index: Int
     var _max_buffer_index: Int
@@ -233,7 +233,7 @@ struct _ArchetypeIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         owned mask: BitMask,
-        owned without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
+        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates an entity iterator.
@@ -267,7 +267,7 @@ struct _ArchetypeIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
         owned mask: BitMask,
-        owned without_mask: ComptimeOptional[BitMask, has_without_mask],
+        owned without_mask: StaticOptional[BitMask, has_without_mask],
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -333,7 +333,7 @@ struct _ArchetypeIterator[
                     not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
-                    .contains_any(self._without_mask.value())
+                    .contains_any(self._without_mask[])
                 )
 
             if is_valid:
@@ -405,7 +405,7 @@ struct _ArchetypeIterator[
                     not self._archetypes[]
                     .unsafe_get(i)
                     .get_mask()
-                    .contains_any(self._without_mask.value())
+                    .contains_any(self._without_mask[])
                 )
 
             size += is_valid
@@ -484,7 +484,7 @@ struct _EntityIterator[
         component_manager=component_manager,
         has_without_mask=has_without_mask,
     ]
-    alias StartIndices = ComptimeOptional[
+    alias StartIndices = StaticOptional[
         List[UInt, hint_trivial_type=True], has_start_indices
     ]
     var _current_archetype: Pointer[Self.Archetype, archetype_origin]
@@ -494,7 +494,7 @@ struct _EntityIterator[
     var _last_entity_index: Int
     var _archetype_size: Int
     var _start_indices: Self.StartIndices
-    var _processed_archetypes_count: ComptimeOptional[Int, has_start_indices]
+    var _processed_archetypes_count: StaticOptional[Int, has_start_indices]
     var _archetype_iterator: Self.ArchetypeIterator
 
     fn __init__(
@@ -502,7 +502,7 @@ struct _EntityIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         lock_ptr: Pointer[LockMask, lock_origin],
         owned mask: BitMask,
-        owned without_mask: ComptimeOptional[BitMask, has_without_mask] = None,
+        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
         owned start_indices: Self.StartIndices = None,
     ) raises:
         """
@@ -600,10 +600,10 @@ struct _EntityIterator[
 
         @parameter
         if has_start_indices:
-            self._entity_index = self._start_indices.value()[
-                self._processed_archetypes_count.value()
+            self._entity_index = self._start_indices[][
+                self._processed_archetypes_count[]
             ]
-            self._processed_archetypes_count.value() += 1
+            self._processed_archetypes_count[] += 1
         else:
             self._entity_index = 0
 
@@ -655,10 +655,10 @@ struct _EntityIterator[
         @parameter
         if has_start_indices:
             for i in range(
-                self._processed_archetypes_count.value(),
-                len(self._start_indices.value()),
+                self._processed_archetypes_count[],
+                len(self._start_indices[]),
             ):
-                size -= self._start_indices.value()[i]
+                size -= self._start_indices[][i]
 
         return size
 

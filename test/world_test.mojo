@@ -286,12 +286,12 @@ def test_remove_and_add():
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
 
-@value
+@fieldwise_init
 struct Resource1(ResourceType):
     var value: Int
 
 
-@value
+@fieldwise_init
 struct Resource2(ResourceType):
     var value: Int
 

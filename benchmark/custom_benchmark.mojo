@@ -20,7 +20,7 @@ fn DefaultBench() raises -> Bench_:
     return Bench_(DefaultConfig())
 
 
-@value
+@fieldwise_init
 struct Bencher:
     """A helper struct for benchmarking functions.
 
@@ -67,8 +67,8 @@ struct Bencher:
         self._iters = 0
 
 
-@value
-struct BenchConfig:
+@fieldwise_init
+struct BenchConfig(Copyable, Movable):
     """A configuration struct for benchmarking.
 
     It mimics some features of benchmark.BenchConfig

@@ -105,7 +105,7 @@ struct Entity(EqualityComparable, Stringable, Hashable, KeyElement):
         return self._id == 0
 
 
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct EntityIndex:
     """Indicates where an entity is currently stored."""

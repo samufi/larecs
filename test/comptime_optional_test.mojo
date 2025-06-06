@@ -1,32 +1,32 @@
 from testing import *
 
 from larecs.test_utils import *
-from larecs.comptime_optional import ComptimeOptional
+from larecs.static_optional import StaticOptional
 
 
 def test_comptime_optional_init():
-    opt = ComptimeOptional[Int, False]()
+    opt = StaticOptional[Int, False]()
     assert_false(opt.has_value)
     _ = opt._value
     l = List[Int](42)
-    opt_with_value = ComptimeOptional(l)
+    opt_with_value = StaticOptional(l)
     assert_true(opt_with_value.has_value)
-    assert_equal(opt_with_value.value()[0], 42)
+    assert_equal(opt_with_value[][0], 42)
 
 
 def test_comptime_optional_copy():
-    opt_with_value = ComptimeOptional(42)
+    opt_with_value = StaticOptional(42)
     opt_copy = opt_with_value.copy()
     assert_true(opt_copy.has_value)
-    assert_equal(opt_copy.value(), 42)
-    opt_without_value = ComptimeOptional[Int, False]()
+    assert_equal(opt_copy[], 42)
+    opt_without_value = StaticOptional[Int, False]()
     opt_copy_without = opt_without_value.copy()
     _ = opt_copy_without._value
     opt_copy_without = opt_without_value
     _ = opt_copy_without
 
 
-@value
+@fieldwise_init
 struct TestStruct[origin: MutableOrigin]:
     var del_conuter: Pointer[Int, origin]
 
@@ -37,7 +37,7 @@ struct TestStruct[origin: MutableOrigin]:
 def test_comptime_optional_move_del():
     fn factory(
         owned val: MemTestStruct,
-        out result: ComptimeOptional[MemTestStruct, True],
+        out result: StaticOptional[MemTestStruct, True],
     ):
         result = __type_of(result)(val^)
 
@@ -45,18 +45,18 @@ def test_comptime_optional_move_del():
 
 
 def test_comptime_optional_value():
-    opt_with_value = ComptimeOptional[Int, True](42)
-    assert_equal(opt_with_value.value(), 42)
+    opt_with_value = StaticOptional[Int, True](42)
+    assert_equal(opt_with_value[], 42)
 
 
 def test_comptime_optional_size():
-    assert_equal(sizeof[ComptimeOptional[UInt16, True]](), 2)
-    assert_equal(sizeof[ComptimeOptional[UInt16, False]](), 0)
+    assert_equal(sizeof[StaticOptional[UInt16, True]](), 2)
+    assert_equal(sizeof[StaticOptional[UInt16, False]](), 0)
 
 
 fn optional_argument_application[
     has_value: Bool = False
-](opt: ComptimeOptional[Int, has_value] = None) -> Bool:
+](opt: StaticOptional[Int, has_value] = None) -> Bool:
     return opt.has_value
 
 
@@ -66,9 +66,9 @@ def test_optional_argument_application():
 
 
 def test_or_else():
-    opt = ComptimeOptional[Int, False]()
+    opt = StaticOptional[Int, False]()
     assert_equal(opt.or_else(42), 42)
-    opt2 = ComptimeOptional(10)
+    opt2 = StaticOptional(10)
     assert_equal(opt2.or_else(42), 10)
 
 

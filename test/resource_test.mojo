@@ -2,17 +2,17 @@ from larecs.resource import Resources, ResourceType
 from testing import *
 
 
-@value
+@fieldwise_init
 struct Resource1(ResourceType):
     var value: Int
 
 
-@value
+@fieldwise_init
 struct Resource2(ResourceType):
     var value: Int
 
 
-@value
+@fieldwise_init
 struct Resource3(ResourceType):
     var value: Int
 

@@ -13,7 +13,7 @@ from .bitmask import BitMask
 #     matches(bits BitMask): Bool
 
 
-@value
+@fieldwise_init
 struct MaskFilter:
     """MaskFilter is a filter for including and excluding certain components.
 

@@ -1,5 +1,4 @@
-
-@value
+@fieldwise_init
 struct Parameters(Copyable & Movable):
     var dt: Float64
     var mass: Float64
