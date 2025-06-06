@@ -108,8 +108,8 @@ struct Logger[interval: Int](System):
 
     fn _print_positions(self, mut world: World) raises:
         for entity in world.query[Position, Velocity]():
-            pos = entity.get_ptr[Position]()
-            print("(", pos[].x, ",", pos[].y, ")")
+            ref pos = entity.get[Position]()
+            print("(", pos.x, ",", pos.y, ")")
 
     # This is executed once at the beginning
     fn initialize(mut self, mut world: World) raises:

@@ -50,14 +50,12 @@ fn main() raises:
 
     # We can query entities with specific components
     for entity in world.query[Position, Velocity]():
-        # use get_ptr to get a pointer to a specific component
-        position = entity.get_ptr[Position]()
+        # get references to components
+        ref position = entity.get[Position]()
+        ref velocity = entity.get[Velocity]()
 
-        # use get to get a reference / copy of a specific component
-        velocity = entity.get[Velocity]()
-
-        position[].x += velocity.x
-        position[].y += velocity.y
+        position.x += velocity.x
+        position.y += velocity.y
 ```
 
 ```mojo {doctest="readme" hide=true}

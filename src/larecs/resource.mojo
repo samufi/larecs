@@ -182,7 +182,7 @@ struct Resources(ExplicitlyCopyable, Movable):
     fn get[
         T: ResourceType
     ](mut self) raises -> ref [
-        __origin_of(self._storage._find_ref("").unsafe_get_ptr[T]()[])
+        __origin_of(self._storage._find_ref("").unsafe_get[T]())
     ] T:
         """Gets a resource.
 
@@ -192,7 +192,7 @@ struct Resources(ExplicitlyCopyable, Movable):
         Returns:
             A reference to the resource.
         """
-        return self._storage._find_ref(get_type_name[T]()).unsafe_get_ptr[T]()[]
+        return self._storage._find_ref(get_type_name[T]()).unsafe_get[T]()
 
     @always_inline
     fn has[T: ResourceType](mut self) -> Bool:

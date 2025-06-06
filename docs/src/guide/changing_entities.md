@@ -12,11 +12,7 @@ existing components.
 
 The values of an entity's component can be 
 accessed and changed via the {{< api World.get get >}} 
-and {{< api World.get_ptr get_ptr >}}
-methods of world. Here, `get` returns a reference, 
-which becomes a copy of the component if stored in a local variable,
-and `get_ptr` returns a pointer, which can write into  
-the original memory even if stored locally.
+method of world. 
 
 ```mojo {doctest="guide_change_entities" global=true hide=true}
 from larecs import World
@@ -45,31 +41,15 @@ as follows:
 entity = world.add_entity(Position(0, 0))
 
 # Get a reference to the position;
-# storing this in a local variable makes it a copy
-pos = world.get[Position](entity)
+ref pos = world.get[Position](entity)
 
-# This does not change the entity's state!
-pos.x = 5 
-print(world.get[Position](entity).x == pos.x) # False
+# We can change the reference.
+pos.x = 5
+assert_equal(world.get[Position](entity).x, 5)
 
-# Changing the reference in-place works, though.
-world.get[Position](entity).x = 5
-
-# Similarly, replacing the component completely 
-# works as well.
-world.get[Position](entity) = Position(5, 0)
-```
-
-To access and change a component later in 
-the current method, we use a pointer:
-
-```mojo {doctest="guide_change_entities"}
-# Get a pointer to the Position component
-pos_ptr = world.get_ptr[Position](entity)
-
-# Now, changing the value via the local pointer variable works.
-pos_ptr[].x = 10 # Use the `[]` operator to dereference the pointer
-print(world.get[Position](entity).x == 10) # True
+# We can also replace the component completely. 
+world.get[Position](entity) = Position(10, 0)
+assert_equal(world.get[Position](entity).x, 10)
 ```
 
 Of course, accessing a component only works if the entity has

@@ -56,10 +56,10 @@ print(len(query)) # "2"
 
 # Now let us iterate over the queried entities
 for entity in query:
-    pos = entity.get_ptr[Position]()
+    ref pos = entity.get[Position]()
     print(
         "Entity at position: (" 
-        + String(pos[].x) + ", " + String(pos[].y) + ")"
+        + String(pos.x) + ", " + String(pos.y) + ")"
     )
 ```
 
@@ -105,17 +105,17 @@ methods for this, making the code more efficient.
 
 ```mojo {doctest="guide_queries_iteration"}
 for entity in world.query[Position]():
-    pos = entity.get_ptr[Position]()
+    ref pos = entity.get[Position]()
     print(
         "Entity at position: (" 
-        + String(pos[].x) + ", " + String(pos[].y) + ")"
+        + String(pos.x) + ", " + String(pos.y) + ")"
     )
     if entity.has[Velocity]():
-        vel = entity.get_ptr[Velocity]()
+        ref vel = entity.get[Velocity]()
         # Also print the velocity
         print(
             " - with velocity (" 
-            + String(vel[].dx) + ", " + String(vel[].dy) + ")"
+            + String(vel.dx) + ", " + String(vel.dy) + ")"
         )
 ```
 
@@ -208,10 +208,10 @@ with a `Position` and a `Velocity` component, we can do this as follows:
 # Define the move function
 fn move(entity: MutableEntityAccessor) capturing:
     try:
-        move_pos = entity.get_ptr[Position]()
-        move_vel = entity.get_ptr[Velocity]()
-        move_pos[].x += move_vel[].dx
-        move_pos[].y += move_vel[].dy
+        ref move_pos = entity.get[Position]()
+        ref move_vel = entity.get[Velocity]()
+        move_pos.x += move_vel.dx
+        move_pos.y += move_vel.dy
     except:
         # We could do proper error handling here
         # but for now, we just ignore the error

@@ -121,8 +121,8 @@ to the `Position` and `Velocity` components.
 
 ```mojo {doctest="guide_simd_apply"}
     try:
-        pos = entity.get_ptr[Position]()
-        vel = entity.get_ptr[Velocity]()
+        pos = Pointer(to=entity.get[Position]())
+        vel = Pointer(to=entity.get[Velocity]())
     except:
         return
 ```

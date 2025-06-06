@@ -55,26 +55,6 @@ fn benchmark_query_2_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_2_comp_ptr_1_000_000(
-    mut bencher: Bencher,
-) raises capturing:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1000):
-            _ = world.add_entity(pos, vel)
-        for _ in range(1000):
-            for entity in world.query[Position, Velocity]():
-                keep(entity.get_ptr[Position]()[].x)
-                keep(entity.get_ptr[Velocity]()[].dx)
-
-    bencher.iter[bench_fn]()
-
-
 fn benchmark_query_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
@@ -163,9 +143,6 @@ fn run_all_query_benchmarks(mut bench: Bench) raises:
     )
     bench.bench_function[benchmark_query_2_comp_1_000_000](
         BenchId("10^6 * query & get 2 comp")
-    )
-    bench.bench_function[benchmark_query_2_comp_ptr_1_000_000](
-        BenchId("10^6 * query & get ptr 2 comp")
     )
     bench.bench_function[benchmark_query_5_comp_1_000_000](
         BenchId("10^6 * query & get 5 comp")

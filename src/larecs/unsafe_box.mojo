@@ -171,21 +171,6 @@ struct UnsafeBox(Copyable, Movable):
         self._destructor(self._data)
 
     @always_inline
-    fn unsafe_get_ptr[
-        T: Copyable & Movable
-    ](ref self) -> Pointer[T, __origin_of(self._data)]:
-        """
-        Returns a pointer to the data stored in the box.
-
-        Parameters:
-            T: The type of the element stored in the UnsafeBox.
-
-        Returns:
-            A pointer to the data stored in the box.
-        """
-        return Pointer[T, __origin_of(self._data)](to=self._data.bitcast[T]()[])
-
-    @always_inline
     fn unsafe_get[T: Copyable & Movable](ref self) -> ref [self._data] T:
         """
         Returns a reference to the data stored in the box.
@@ -196,4 +181,4 @@ struct UnsafeBox(Copyable, Movable):
         Returns:
             A reference to the data stored in the box.
         """
-        return self.unsafe_get_ptr[T]()[]
+        return self._data.bitcast[T]()[]

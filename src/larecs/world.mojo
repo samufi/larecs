@@ -661,29 +661,6 @@ struct World[*component_types: ComponentType](Movable, Sized):
         ).get_component[T=T](entity_index.index)
 
     @always_inline
-    fn get_ptr[
-        T: ComponentType
-    ](mut self, entity: Entity) raises -> Pointer[
-        T, __origin_of(self._archetypes[0]._data)
-    ]:
-        """Returns a pointer to the given component of the [..entity.Entity].
-
-        Parameters:
-            T: The type of the component.
-
-        Args:
-            entity: The entity to get the component from.
-
-        Raises:
-            Error: If the entity is not alive or does not have the component.
-        """
-        entity_index = self._entities[entity.get_id()]
-        self._assert_alive(entity)
-        return self._archetypes.unsafe_get(
-            index(entity_index.archetype_index)
-        ).get_component_ptr[T=T](entity_index.index)
-
-    @always_inline
     fn set[
         T: ComponentType
     ](mut self, entity: Entity, owned component: T) raises:
@@ -1077,15 +1054,15 @@ struct World[*component_types: ComponentType](Movable, Sized):
             # as it will not be reflected in the world
             # or may cause a segmentation fault.
 
-            # Get the component
             try:
-                component = accessor.get_ptr[Float64]()
+                # Get the component
+                ref component = accessor.get[Float64]()
+
+                # Get an unsafe pointer to the memory
+                # location of the component
+                ptr = UnsafePointer(to=component)
             except:
                 return
-
-            # Get an unsafe pointer to the memory
-            # location of the component
-            ptr = UnsafePointer(to=component[])
 
             # Load a SIMD of size `simd_width`
             # Note that a strided load is needed if the component as more than one field.

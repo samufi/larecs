@@ -27,8 +27,8 @@ struct Query[
     _ = world.add_entity(Float64(1.0), 3)
 
     for entity in world.query[Float64, Int]():
-        f = entity.get_ptr[Float64]()
-        f[] += 1
+        ref f = entity.get[Float64]()
+        f += 1
     ```
 
     Parameters:
@@ -119,8 +119,8 @@ struct Query[
         _ = world.add_entity(Float64(1.0), 3)
 
         for entity in world.query[Float64, Int]().without[Float32]():
-            f = entity.get_ptr[Float64]()
-            f[] += 1
+            ref f = entity.get[Float64]()
+            f += 1
         ```
 
         Parameters:
@@ -150,8 +150,8 @@ struct Query[
         _ = world.add_entity(Float64(1.0), 3)
 
         for entity in world.query[Float64, Int]().exclusive():
-            f = entity.get_ptr[Float64]()
-            f[] += 1
+            ref f = entity.get[Float64]()
+            f += 1
         ```
 
         Returns:

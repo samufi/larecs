@@ -116,16 +116,9 @@ def test_entity_get():
     world.get[Position](entity).x = 123
     assert_equal(world.get[Position](entity).x, 123)
 
-
-def test_entity_get_ptr():
-    world = SmallWorld()
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-    entity = world.add_entity(pos, vel)
-    assert_equal(world.get[Position](entity).x, pos.x)
-    entity_pos = world.get_ptr[Position](entity)
-    entity_pos[].x = 123
-    assert_equal(world.get[Position](entity).x, 123)
+    ref entity_pos = world.get[Position](entity)
+    entity_pos.x = 456
+    assert_equal(world.get[Position](entity).x, 456)
 
 
 def test_get_archetype_index():
@@ -353,10 +346,10 @@ def test_world_apply():
 
     fn operation(accessor: MutableEntityAccessor) capturing:
         try:
-            pos2 = accessor.get_ptr[Position]()
-            vel2 = accessor.get_ptr[Velocity]()
-            pos2[].x += vel2[].dx
-            pos2[].y += vel2[].dy
+            ref pos2 = accessor.get[Position]()
+            ref vel2 = accessor.get[Velocity]()
+            pos2.x += vel2.dx
+            pos2.y += vel2.dy
         except:
             pass
 
@@ -399,20 +392,20 @@ def test_world_apply_SIMD():
 
     fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
         try:
-            pos2 = accessor.get_ptr[Position]()
-            vel2 = accessor.get_ptr[Velocity]()
+            ref pos2 = accessor.get[Position]()
+            ref vel2 = accessor.get[Velocity]()
 
             alias _load = load2[simd_width]
             alias _store = store2[simd_width]
 
-            x = _load(pos2[].x)
-            y = _load(pos2[].y)
+            x = _load(pos2.x)
+            y = _load(pos2.y)
 
-            x += _load(vel2[].dx)
-            y += _load(vel2[].dy)
+            x += _load(vel2.dx)
+            y += _load(vel2.dy)
 
-            _store(pos2[].x, x)
-            _store(pos2[].y, y)
+            _store(pos2.x, x)
+            _store(pos2.y, y)
         except:
             pass
 
@@ -459,7 +452,6 @@ def main():
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
-    test_entity_get_ptr()
     test_remove_entity()
     test_remove_archetype()
     test_world_has_component()
