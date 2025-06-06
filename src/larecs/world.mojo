@@ -1054,15 +1054,15 @@ struct World[*component_types: ComponentType](Movable, Sized):
             # as it will not be reflected in the world
             # or may cause a segmentation fault.
 
-            # Get the component
             try:
+                # Get the component
                 ref component = accessor.get[Float64]()
+
+                # Get an unsafe pointer to the memory
+                # location of the component
+                ptr = UnsafePointer(to=component)
             except:
                 return
-
-            # Get an unsafe pointer to the memory
-            # location of the component
-            ptr = UnsafePointer(to=component)
 
             # Load a SIMD of size `simd_width`
             # Note that a strided load is needed if the component as more than one field.
