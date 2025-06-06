@@ -48,7 +48,7 @@ templates:
 pre-run:
   - |
     echo Running 'mojo doc'...
-    magic run mojo doc -o docs/src/larecs.json src/larecs
+    pixi run mojo doc -o docs/src/larecs.json src/larecs
     echo Done.
 
 # Bash scripts to run before build.
@@ -63,7 +63,7 @@ pre-test: []
 post-test:
   - |
     echo Running 'mojo test'...
-    magic run mojo test -I src docs/test
+    pixi run mojo test -I src docs/test
     echo Done.
 
 # Bash scripts to run after build.
