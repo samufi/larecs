@@ -308,12 +308,12 @@ struct World[*component_types: ComponentType](Movable, Sized):
         from larecs import World
 
         @fieldwise_init
-        struct Position:
+        struct Position(Copyable, Movable):
             var x: Float64
             var y: Float64
 
         @fieldwise_init
-        struct Velocity:
+        struct Velocity(Copyable, Movable):
             var x: Float64
             var y: Float64
         ```
@@ -402,12 +402,12 @@ struct World[*component_types: ComponentType](Movable, Sized):
         from larecs import World, Resources
 
         @fieldwise_init
-        struct Position:
+        struct Position(Copyable, Movable):
             var x: Float64
             var y: Float64
 
         @fieldwise_init
-        struct Velocity:
+        struct Velocity(Copyable, Movable):
             var x: Float64
             var y: Float64
         ```

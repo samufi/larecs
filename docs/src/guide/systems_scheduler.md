@@ -68,12 +68,12 @@ further systems for adding entities and logging their positions.
 
 ```mojo {doctest="guide_systems_scheduler" global=true hide=true}
 @fieldwise_init
-struct Position:
+struct Position(Movable, Copyable):
     var x: Float64
     var y: Float64
 
 @fieldwise_init
-struct Velocity:
+struct Velocity(Movable, Copyable):
     var dx: Float64
     var dy: Float64
 ```
