@@ -52,7 +52,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         var entities: PythonObject = []
         var nanos_ecs: PythonObject = []
         var nanos_aos: PythonObject = []
-        for ref row in results:
+        for row in results:
             if row.components == comp:
                 entities.append(row.entities)
                 nanos_ecs.append(row.nanos_ecs)
@@ -114,7 +114,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
         var components: PythonObject = []
         var nanos_ecs: PythonObject = []
         var nanos_aos: PythonObject = []
-        for ref row in results:
+        for row in results:
             if row.entities == num_entities:
                 components.append(row.components)
                 nanos_ecs.append(row.nanos_ecs)
@@ -182,7 +182,7 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
     var components: PythonObject = []
     var nanos_ecs: PythonObject = []
     var nanos_aos: PythonObject = []
-    for ref result in results:
+    for result in results:
         entities.append(result.entities)
         components.append(result.components)
         nanos_ecs.append(result.nanos_ecs)
