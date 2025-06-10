@@ -299,7 +299,7 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
         for _ in range(1000):
             for _ in range(1000):
                 entities.append(world.add_entity(pos))
-            for ref entity in entities:
+            for entity in entities:
                 world.remove_entity(entity)
             entities.clear()
 
@@ -351,7 +351,7 @@ fn benchmark_add_remove_entity_5_comp_1_000_000(
             for _ in range(1000):
                 entities.append(world.add_entity(c1, c2, c3, c4, c5))
             e = world.add_entity(c3, c5)
-            for ref entity in entities:
+            for entity in entities:
                 world.remove_entity(entity)
             world.remove_entity(e)
             entities.clear()
@@ -455,9 +455,9 @@ fn benchmark_add_remove_1_comp_1_000_000(
             @parameter
             for i in range(20):
                 component = FlexibleComponent[i + 1](i, 2.0)
-                for ref entity in entities:
+                for entity in entities:
                     world.add(entity, component)
-                for ref entity in entities:
+                for entity in entities:
                     world.remove[FlexibleComponent[i]](entity)
 
     bencher.iter[bench_fn]()
@@ -536,7 +536,7 @@ fn benchmark_replace_1_comp_1_000_000(
             @parameter
             for i in range(20):
                 component = FlexibleComponent[i + 1](i, 2.0)
-                for ref entity in entities:
+                for entity in entities:
                     world.replace[FlexibleComponent[i]]().by(entity, component)
 
     bencher.iter[bench_fn]()
