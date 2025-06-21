@@ -30,7 +30,7 @@ fn get_random_uint8_list(size: Int, out vals: List[UInt8]):
 fn unique(l: List[UInt8], out result: List[UInt8]):
     mask = InlineArray[Bool, 256](0)
     result = List[UInt8]()
-    for ref v in l:
+    for v in l:
         if not mask[v]:
             mask[v] = True
             result.append(v)
@@ -189,7 +189,7 @@ def test_bitmask_get_indices():
     random.seed(0)
     indices = get_random_uint8_list(size)
     var mask = BitMask()
-    for ref index in indices:
+    for index in indices:
         mask.set(index, True)
     unique_indices = unique(indices)
 

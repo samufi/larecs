@@ -81,7 +81,7 @@ def test_entity_pool_stochastic():
             e = p.get()
             alive[e] = True
 
-        for ref item in alive.items():
+        for item in alive.items():
             e, isAlive = item.key, item.value
             assert_equal(
                 isAlive,
@@ -96,7 +96,7 @@ def test_entity_pool_stochastic():
             p.recycle(e)
             alive[e] = False
 
-        for ref item in alive.items():
+        for item in alive.items():
             e, isAlive = item.key, item.value
             assert_equal(
                 isAlive,
@@ -111,7 +111,7 @@ def test_entity_pool_stochastic():
             e = p.get()
             alive[e] = True
 
-        for ref item in alive.items():
+        for item in alive.items():
             e, isAlive = item.key, item.value
             assert_equal(
                 isAlive,
@@ -124,7 +124,7 @@ def test_entity_pool_stochastic():
 
         assert_equal(0, p._available, "No more _entities should be available")
 
-        for ref item in alive.items():
+        for item in alive.items():
             e, isAlive = item.key, item.value
             if not isAlive or random_float64() > 0.75:
                 continue
@@ -132,7 +132,7 @@ def test_entity_pool_stochastic():
             p.recycle(e)
             alive[e] = False
 
-        for ref item in alive.items():
+        for item in alive.items():
             e, a = item.key, item.value
             assert_equal(
                 a,

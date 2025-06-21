@@ -215,7 +215,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         may be an expensive operation.
         """
         size = 0
-        for ref archetype in self._archetypes:
+        for archetype in self._archetypes:
             size += len(archetype)
         return size
 
@@ -592,7 +592,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         for archetype in self._get_archetype_iterator(
             query.mask, query.without_mask
         ):
-            for ref entity in archetype[].get_entities():
+            for entity in archetype[].get_entities():
                 self._entity_pool.recycle(entity)
             archetype[].clear()
 
