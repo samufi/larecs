@@ -3,7 +3,7 @@ from .entity import Entity
 from .constants import MAX_UINT16
 
 
-struct EntityPool(Movable, Copyable, Sized):
+struct EntityPool(Copyable, Movable, Sized):
     """EntityPool is an implementation using implicit linked lists.
 
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/

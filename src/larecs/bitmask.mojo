@@ -3,7 +3,7 @@ from .filter import MaskFilter
 
 
 @fieldwise_init
-struct _BitMaskIndexIter(Sized, Copyable, ExplicitlyCopyable, Movable):
+struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
     """Iterator for BitMask indices."""
 
     alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]
@@ -53,7 +53,7 @@ struct _BitMaskIndexIter(Sized, Copyable, ExplicitlyCopyable, Movable):
 
 
 @register_passable
-struct BitMask(Copyable, Movable, EqualityComparable, Stringable, KeyElement):
+struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8
