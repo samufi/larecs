@@ -8,7 +8,7 @@
 ### Other changes
 - ...
 
-## [v0.2.0 (2025-06-21)](https://github.com/samufi/larecs/tree/v0.3.0)
+## [v0.3.0 (2025-06-23)](https://github.com/samufi/larecs/compare/v0.2.0...v0.3.0)
 
 ### Breaking changes
 - Update the utilized Mojo version to 25.4 and adjust the code accordingly.
@@ -22,7 +22,7 @@
 - Remove the `@value` decorator in favour of the `@fieldwise_init` decorator and explicit trait conformance.
 - Refactor the internal type `ComptimeOptional` to `StaticOptional` so as to match the naming conventions of the standard library.
 
-## [v0.2.0 (2025-05-14)](https://github.com/samufi/larecs/tree/v0.2.0)
+## [v0.2.0 (2025-05-14)](https://github.com/samufi/larecs/compare/v0.1.0...v0.2.0)
 
 ### Breaking changes
 - Introduce a trait `ResourceType` to define the type of resources and replace the old `IdentifiableCollectionElement` trait.
