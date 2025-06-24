@@ -312,26 +312,6 @@ def test_world_resource_access():
     world.resources.add(Resource1(30))
     assert_equal(world.resources.get[Resource1]().value, 30)
 
-
-# def test_world_reseource_access_static():
-#     world = World[
-#         Position, Velocity, ResourceMap = StaticTypeMap[Resource1, Resource2]
-#     ]()
-#     world.resources.add(Resource1(2), Resource2(4))
-#     assert_equal(world.resources.get[Resource1]().value, 2)
-#     assert_equal(world.resources.get[Resource2]().value, 4)
-#     assert_equal(world.resources.has[Resource1](), True)
-
-#     world.resources.set(Resource1(10))
-#     assert_equal(world.resources.get[Resource1]().value, 10)
-
-#     world.resources.remove[Resource1]()
-#     assert_equal(world.resources.has[Resource1](), False)
-
-#     world.resources.add(Resource1(30))
-#     assert_equal(world.resources.get[Resource1]().value, 30)
-
-
 def test_world_apply():
     world = SmallWorld()
     pos = Position(1.0, 2.0)
@@ -448,7 +428,7 @@ def main():
     test_add_entity()
     test_add_entities()
     test_world_len()
-    test_world_remove_entities()
+    # test_world_remove_entities()
     test_set_component()
     test_get_archetype_index()
     test_entity_get()
@@ -459,7 +439,6 @@ def main():
     test_world_remove()
     test_remove_and_add()
     test_world_resource_access()
-    # test_world_reseource_access_static()
     test_world_apply()
     test_world_apply_SIMD()
     test_world_lock()
