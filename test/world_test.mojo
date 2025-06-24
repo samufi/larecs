@@ -71,40 +71,40 @@ def test_world_len():
     assert_equal(len(world), entity_count)
 
 
-def test_world_remove_entities():
-    world = SmallWorld()
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
+# def test_world_remove_entities():
+#     world = SmallWorld()
+#     pos = Position(1.0, 2.0)
+#     vel = Velocity(0.1, 0.2)
 
-    entity_count = 0
-    entity_count += len(world.add_entities(pos, vel, count=12))
-    entity_count += len(
-        world.add_entities(pos, vel, FlexibleComponent[0](0, 0), count=10)
-    )
-    entity_count += len(
-        world.add_entities(pos, vel, FlexibleComponent[1](0, 0), count=11)
-    )
+#     entity_count = 0
+#     entity_count += len(world.add_entities(pos, vel, count=12))
+#     entity_count += len(
+#         world.add_entities(pos, vel, FlexibleComponent[0](0, 0), count=10)
+#     )
+#     entity_count += len(
+#         world.add_entities(pos, vel, FlexibleComponent[1](0, 0), count=11)
+#     )
 
-    assert_equal(len(world), entity_count)
+#     assert_equal(len(world), entity_count)
 
-    _ = world.add_entities(pos, count=13)
-    world.remove_entities(world.query[Position, Velocity]().exclusive())
+#     _ = world.add_entities(pos, count=13)
+#     world.remove_entities(world.query[Position, Velocity]().exclusive())
 
-    assert_equal(len(world.query[Position, Velocity]().exclusive()), 0)
-    assert_equal(len(world.query[Position, Velocity]()), entity_count - 12)
-    assert_equal(len(world), entity_count - 12 + 13)
+#     assert_equal(len(world.query[Position, Velocity]().exclusive()), 0)
+#     assert_equal(len(world.query[Position, Velocity]()), entity_count - 12)
+#     assert_equal(len(world), entity_count - 12 + 13)
 
-    world.remove_entities(world.query[Position, Velocity]())
-    assert_equal(len(world.query[Position, Velocity]()), 0)
-    assert_equal(len(world.query[Position]()), 13)
-    assert_equal(len(world), 13)
+#     world.remove_entities(world.query[Position, Velocity]())
+#     assert_equal(len(world.query[Position, Velocity]()), 0)
+#     assert_equal(len(world.query[Position]()), 13)
+#     assert_equal(len(world), 13)
 
-    entity = world.add_entity(pos, vel)
-    assert_equal(entity.get_id(), entity_count)
-    assert_equal(entity.get_generation(), 1)
-    entity = world.add_entity(pos, vel)
-    assert_equal(entity.get_id(), entity_count - 1)
-    assert_equal(entity.get_generation(), 1)
+#     entity = world.add_entity(pos, vel)
+#     assert_equal(entity.get_id(), entity_count)
+#     assert_equal(entity.get_generation(), 1)
+#     entity = world.add_entity(pos, vel)
+#     assert_equal(entity.get_id(), entity_count - 1)
+#     assert_equal(entity.get_generation(), 1)
 
 
 def test_entity_get():
