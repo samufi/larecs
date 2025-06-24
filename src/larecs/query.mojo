@@ -249,6 +249,12 @@ struct _ArchetypeIterator[
         self._mask = mask^
         self._without_mask = without_mask^
 
+        print("Create archetype iterator with mask: ", self._mask._bytes)
+        if self._without_mask.has_value:
+            print(
+                "Exclude mask: ", self._without_mask.or_else(BitMask())._bytes
+            )
+
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
         self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
@@ -335,6 +341,17 @@ struct _ArchetypeIterator[
                     .get_mask()
                     .contains_any(self._without_mask[])
                 )
+
+            print(
+                "Archetype ",
+                i,
+                " valid: ",
+                is_valid,
+                " mask: ",
+                self._archetypes[][i].get_mask()._bytes,
+                " length ",
+                len(self._archetypes[][i]),
+            )
 
             if is_valid:
                 self._archetype_index_buffer[buffer_index] = i

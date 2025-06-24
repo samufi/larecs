@@ -592,6 +592,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         for archetype in self._get_archetype_iterator(
             query.mask, query.without_mask
         ):
+            print("Removing archetype with mask", archetype[].get_mask()._bytes)
             for entity in archetype[].get_entities():
                 self._entity_pool.recycle(entity)
             archetype[].clear()
@@ -1310,6 +1311,18 @@ struct World[*component_types: ComponentType](Movable, Sized):
             A context manager that unlocks the world when it goes out of scope.
         """
         return self._locks.locked()
+
+    fn _print_debug_info(self, start_string: String = ""):
+        """
+        Prints debug information about the world, including the number of entities,
+        archetypes, and components.
+        """
+        print("World Debug Info:", start_string)
+        print("  Entities:", len(self._entity_pool))
+        print("  Archetypes:", len(self._archetypes))
+        for archetype in self._archetypes:
+            print("    Archetype:", archetype.get_mask()._bytes)
+            print("      Entities:", len(archetype))
 
     # fn Mask(self, entity: Entity) -> Mask:
     #     """
