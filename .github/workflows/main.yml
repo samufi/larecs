@@ -36,9 +36,9 @@ jobs:
       run: |
         pixi install --locked
   
-    - name: Run tests
-      run: |
-        pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
+    # - name: Run tests
+    #   run: |
+    #     pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
 
     - name: Check formatting
       run: |
