@@ -3,7 +3,7 @@ authors = ["Samuel M. Fischer <samufi@web.de>", "Martin Lange <martin_lange_@gmx
 channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
-platforms = ["linux-64", "linux-armv7l", "osx-64"]
+platforms = ["linux-64", "osx-arm64", 'linux-aarch64']
 version = "0.3.0"
 
 [tasks]
