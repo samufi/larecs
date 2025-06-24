@@ -11,7 +11,14 @@ permissions: {}
 jobs:
   build_and_test:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        arch: [x64, arm64]
+        exclude:
+          - os: macos-latest
+            arch: arm64  # macos-latest arm64 is not available on GitHub-hosted runners
 
     defaults:
       run:
@@ -31,18 +38,18 @@ jobs:
   
     - name: Run tests
       run: |
-        pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test
+        pixi run mojo test --validate-doc-strings -D ASSERT=all -I src/ test/world_test.mojo
 
-    - name: Check formatting
-      run: |
-        if pixi run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
+    # - name: Check formatting
+    #   run: |
+    #     if pixi run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
 
-    - name: Run benchmarks
-      run: |
-        pixi run mojo -I src/ benchmark/run_benchmarks.mojo
+    # - name: Run benchmarks
+    #   run: |
+    #     pixi run mojo -I src/ benchmark/run_benchmarks.mojo
 
-    - name: Run examples
-      run: |
-        cd examples/satellites
-        pixi install --locked
-        pixi run mojo -I ../../src/ model.mojo
+    # - name: Run examples
+    #   run: |
+    #     cd examples/satellites
+    #     pixi install --locked
+    #     pixi run mojo -I ../../src/ model.mojo

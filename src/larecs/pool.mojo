@@ -54,7 +54,14 @@ struct EntityPool(Copyable, Movable, Sized):
         if entity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
+        if entity.get_id() >= len(self._entities):
+            raise Error(
+                String("Entity ID {} is out of bounds (max: {})").format(
+                    entity.get_id(), len(self._entities) - 1
+                )
+            )
         self._entities[entity.get_id()]._generation += 1
+        
         self._next, self._entities[entity.get_id()]._id = (
             entity.get_id(),
             self._next,
