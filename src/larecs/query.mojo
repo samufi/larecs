@@ -323,15 +323,15 @@ struct _ArchetypeIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
+            is_valid = (
+                self._archetypes[][i].get_mask().contains(self._mask)
+                and self._archetypes[][i]
+            )
 
             @parameter
             if has_without_mask:
                 is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
+                    not self._archetypes[][i]
                     .get_mask()
                     .contains_any(self._without_mask[])
                 )
@@ -368,9 +368,9 @@ struct _ArchetypeIterator[
         """
         self._buffer_index += 1
         archetype = Pointer(
-            to=self._archetypes[].unsafe_get(
-                index(self._archetype_index_buffer[self._buffer_index])
-            )
+            to=self._archetypes[][
+                self._archetype_index_buffer[self._buffer_index]
+            ]
         )
         if self._buffer_index >= Self.buffer_size - 1:
             self._fill_archetype_buffer()
@@ -395,15 +395,15 @@ struct _ArchetypeIterator[
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
+            is_valid = (
+                self._archetypes[][i].get_mask().contains(self._mask)
+                and self._archetypes[][i]
+            )
 
             @parameter
             if has_without_mask:
                 is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
+                    not self._archetypes[][i]
                     .get_mask()
                     .contains_any(self._without_mask[])
                 )
