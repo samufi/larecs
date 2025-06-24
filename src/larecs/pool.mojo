@@ -55,10 +55,10 @@ struct EntityPool(Copyable, Movable, Sized):
             raise Error("Can't recycle reserved zero entity")
 
         self._entities[entity.get_id()]._generation += 1
-        self._next, self._entities[entity.get_id()]._id = (
-            entity.get_id(),
-            self._next,
-        )
+
+        tmp = self._next
+        self._next = entity.get_id()
+        self._entities[entity.get_id()]._id = tmp
         self._available += 1
 
     @always_inline
