@@ -312,6 +312,7 @@ def test_world_resource_access():
     world.resources.add(Resource1(30))
     assert_equal(world.resources.get[Resource1]().value, 30)
 
+
 def test_world_apply():
     world = SmallWorld()
     pos = Position(1.0, 2.0)
