@@ -2,6 +2,7 @@ from memory import UnsafePointer
 from .bitmask import BitMask
 from sys.intrinsics import _type_is_eq
 
+
 @fieldwise_init
 struct StaticOptional[
     ElementType: Copyable & Movable,
@@ -53,15 +54,33 @@ struct StaticOptional[
 
         @parameter
         if _type_is_eq[Self.ElementType, BitMask]():
-            print("Initializing StaticOptional with BitMask:", UnsafePointer(to=value).bitcast[BitMask]()[]._bytes)
+            print(
+                "Initializing StaticOptional with BitMask:",
+                UnsafePointer(to=value).bitcast[BitMask]()[]._bytes,
+            )
 
         UnsafePointer(to=value).move_pointee_into(self.unsafe_ptr())
+
         @parameter
         if _type_is_eq[Self.ElementType, BitMask]():
-            print("The stored value is:", UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes)
-        
+            print(
+                "The stored value is:",
+                UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes,
+            )
+
         __disable_del value
 
+    fn __moveinit__(out self, owned other: Self):
+        """Move construct the optional.
+
+        Args:
+            other: The optional to move.
+        """
+        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
+
+        @parameter
+        if has_value:
+            other.unsafe_ptr().move_pointee_into(self.unsafe_ptr())
 
     @always_inline
     fn copy(self) -> Self:
