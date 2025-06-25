@@ -179,6 +179,7 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn invert(self) -> BitMask:
         """Returns the inversion of this mask."""
+        print("Create inversion:", bit_not(self._bytes))
         return BitMask(bytes=bit_not(self._bytes))
 
     @always_inline
