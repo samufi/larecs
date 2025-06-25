@@ -1247,6 +1247,10 @@ struct World[*component_types: ComponentType](Movable, Sized):
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
+        @parameter
+        if has_without_mask:
+            print("Create iterator with exclude mask: ", without_mask.or_else(BitMask())._bytes)
+
         iterator = _EntityIterator(
             Pointer(to=self._archetypes),
             Pointer(to=self._locks),

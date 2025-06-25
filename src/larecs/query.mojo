@@ -68,7 +68,22 @@ struct Query[
         """
         self._world = world
         self._mask = mask^
+
+        @parameter
+        if has_without_mask:
+            print(
+                "Create query with exclude mask: ",
+                without_mask.or_else(BitMask())._bytes,
+            )
+
         self._without_mask = without_mask^
+
+        @parameter
+        if has_without_mask:
+            print(
+                "The stored exclude mask: ",
+                self._without_mask.or_else(BitMask())._bytes,
+            )
 
     fn __len__(self) raises -> Int:
         """
@@ -538,6 +553,10 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
+
+        @parameter
+        if has_without_mask:
+            print("Create _EntityIterator with exclude mask: ", without_mask.or_else(BitMask())._bytes)
 
         self._archetype_iterator = Self.ArchetypeIterator(
             archetypes, mask, without_mask
