@@ -50,8 +50,8 @@ struct StaticOptional[
         """
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
 
-        var ptr = UnsafePointer(to=self[])
-        ptr.init_pointee_move(value^)
+        UnsafePointer(to=value).move_pointee_into(self.unsafe_ptr())
+        __disable_del value
 
     @always_inline
     fn copy(self) -> Self:
@@ -81,8 +81,7 @@ struct StaticOptional[
 
         @parameter
         if has_value:
-            var ptr = self.unsafe_ptr()
-            ptr.destroy_pointee()
+            self.unsafe_ptr().destroy_pointee()
 
     # ===------------------------------------------------------------------===#
     # Methods
@@ -95,19 +94,7 @@ struct StaticOptional[
         Returns:
             A reference to the value.
         """
-        constrained[
-            has_value,
-            (
-                "The value is not present. Use `has_value` to check if the"
-                " value is present."
-            ),
-        ]()
-        alias zero = index(0)
-        var ptr = __mlir_op.`pop.array.gep`(
-            UnsafePointer(to=self._value).address,
-            zero,
-        )
-        return UnsafePointer(ptr)[]
+        return self.unsafe_ptr()[]
 
     @always_inline
     fn or_else(self, value: ElementType) -> ElementType:
@@ -127,7 +114,13 @@ struct StaticOptional[
             return value
 
     @always_inline
-    fn unsafe_ptr(self) -> UnsafePointer[Self.ElementType]:
+    fn unsafe_ptr(
+        ref self,
+    ) -> UnsafePointer[
+        Self.ElementType,
+        mut = Origin(__origin_of(self)).mut,
+        origin = __origin_of(self),
+    ]:
         """Get an `UnsafePointer` to the underlying array.
 
         That pointer is unsafe but can be used to read or write to the array.
@@ -147,7 +140,13 @@ struct StaticOptional[
             ),
         ]()
 
-        return UnsafePointer(to=self._value).bitcast[Self.ElementType]()
+        return (
+            UnsafePointer(to=self._value)
+            .bitcast[Self.ElementType]()
+            .origin_cast[
+                mut = Origin(__origin_of(self)).mut, origin = __origin_of(self)
+            ]()
+        )
 
     @always_inline
     fn __bool__(self) -> Bool:
