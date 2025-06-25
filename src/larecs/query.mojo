@@ -172,10 +172,14 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
+
+        optional = StaticOptional[BitMask, True](self._mask.invert())
+        print("Created optional with mask: ", optional[]._bytes)
+
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            self._mask.invert(),
+            optional^,
         )
 
 
@@ -556,7 +560,10 @@ struct _EntityIterator[
 
         @parameter
         if has_without_mask:
-            print("Create _EntityIterator with exclude mask: ", without_mask.or_else(BitMask())._bytes)
+            print(
+                "Create _EntityIterator with exclude mask: ",
+                without_mask.or_else(BitMask())._bytes,
+            )
 
         self._archetype_iterator = Self.ArchetypeIterator(
             archetypes, mask, without_mask
