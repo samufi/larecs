@@ -73,6 +73,7 @@ struct Query[
         if has_without_mask:
             print(
                 "Create query with exclude mask: ",
+                String(without_mask.unsafe_ptr()),
                 without_mask.or_else(BitMask())._bytes,
             )
 
@@ -82,6 +83,7 @@ struct Query[
         if has_without_mask:
             print(
                 "The stored exclude mask: ",
+                String(self._without_mask.unsafe_ptr()),
                 self._without_mask.or_else(BitMask())._bytes,
             )
 
@@ -174,12 +176,21 @@ struct Query[
         """
 
         optional = StaticOptional[BitMask, True](self._mask.invert())
-        print("Created optional with mask: ", optional[]._bytes)
+        print(
+            "Created optional with mask: ",
+            String(optional.unsafe_ptr()),
+            optional[]._bytes,
+        )
 
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            optional^,
+            optional,
+        )
+        print(
+            "Optional still has mask: ",
+            String(optional.unsafe_ptr()),
+            optional[]._bytes,
         )
 
 
