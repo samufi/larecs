@@ -431,7 +431,7 @@ struct MemTestStruct(Copyable, Movable):
 fn test_copy_move_del[
     Container: Copyable & Movable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
-](init_moves: Int = 0, copy_moves: Int = 0,) raises:
+](init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     var del_counter = 0
     var move_counter = 0
     var copy_counter = 0
@@ -465,6 +465,7 @@ fn test_copy_move_del[
     assert_equal(copy_counter, test_copy_counter)
 
     container2 = container^
+    test_move_counter += move_moves
     assert_equal(del_counter, test_del_counter)
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)

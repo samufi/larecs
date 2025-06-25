@@ -80,7 +80,21 @@ struct StaticOptional[
 
         @parameter
         if has_value:
+
+            @parameter
+            if _type_is_eq[Self.ElementType, BitMask]():
+                print(
+                    "Moving StaticOptional with BitMask:",
+                    UnsafePointer(to=other[]).bitcast[BitMask]()[]._bytes,
+                )
             other.unsafe_ptr().move_pointee_into(self.unsafe_ptr())
+
+            @parameter
+            if _type_is_eq[Self.ElementType, BitMask]():
+                print(
+                    "The moved value is:",
+                    UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes,
+                )
 
     @always_inline
     fn copy(self) -> Self:
@@ -89,12 +103,7 @@ struct StaticOptional[
         Returns:
             A copy of the value.
         """
-
-        @parameter
-        if has_value:
-            return Self(self[])
-        else:
-            return Self()
+        return self
 
     @always_inline
     fn __copyinit__(out self, other: Self):
@@ -103,7 +112,11 @@ struct StaticOptional[
         Args:
             other: The optional to copy.
         """
-        self = other.copy()
+        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
+
+        @parameter
+        if has_value:
+            self.unsafe_ptr().init_pointee_copy(other[])
 
     fn __del__(owned self):
         """Deallocate the optional."""

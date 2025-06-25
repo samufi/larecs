@@ -97,7 +97,6 @@ def test_world_remove_entities():
     world.remove_entities(to_remove)
     world._print_debug_info("3")
 
-
     assert_equal(len(world.query[Position, Velocity]().exclusive()), 0)
     assert_equal(len(world.query[Position, Velocity]()), entity_count - 12)
     assert_equal(len(world), entity_count - 12 + 13)
