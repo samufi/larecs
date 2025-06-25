@@ -1,5 +1,6 @@
 from memory import UnsafePointer
-
+from .bitmask import BitMask
+from sys.intrinsics import _type_is_eq
 
 @fieldwise_init
 struct StaticOptional[
@@ -50,8 +51,17 @@ struct StaticOptional[
         """
         __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
 
+        @parameter
+        if _type_is_eq[Self.ElementType, BitMask]():
+            print("Initializing StaticOptional with BitMask:", UnsafePointer(to=value).bitcast[BitMask]()[]._bytes)
+
         UnsafePointer(to=value).move_pointee_into(self.unsafe_ptr())
+        @parameter
+        if _type_is_eq[Self.ElementType, BitMask]():
+            print("The stored value is:", UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes)
+        
         __disable_del value
+
 
     @always_inline
     fn copy(self) -> Self:
