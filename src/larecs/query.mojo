@@ -174,23 +174,10 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
-
-        optional = StaticOptional[BitMask, True](self._mask.invert())
-        print(
-            "Created optional with mask: ",
-            String(optional.unsafe_ptr()),
-            optional[]._bytes,
-        )
-
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            optional,
-        )
-        print(
-            "Optional still has mask: ",
-            String(optional.unsafe_ptr()),
-            optional[]._bytes,
+            self._mask.invert(),
         )
 
 
