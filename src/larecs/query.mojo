@@ -73,7 +73,7 @@ struct Query[
         if has_without_mask:
             print(
                 "Create query with exclude mask: ",
-                String(without_mask.unsafe_ptr()),
+                # String(without_mask.unsafe_ptr()),
                 without_mask.or_else(BitMask())._bytes,
             )
 
@@ -83,7 +83,7 @@ struct Query[
         if has_without_mask:
             print(
                 "The stored exclude mask: ",
-                String(self._without_mask.unsafe_ptr()),
+                # String(self._without_mask.unsafe_ptr()),
                 self._without_mask.or_else(BitMask())._bytes,
             )
 
