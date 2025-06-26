@@ -77,6 +77,44 @@ def test_or_else():
     assert_equal(opt2.or_else(42), 10)
 
 
+fn recipient_comperator(
+    compare: SIMD[DType.uint8, 16],
+    owned optional: StaticOptional[SIMD[DType.uint8, 16], True] = None,
+) raises:
+    assert_true(
+        (optional[] == compare).reduce_and(),
+        String("Received {} but expected {}").format(optional[], compare),
+    )
+
+
+fn recipient_comperator_for_inline_array(
+    compare: SIMD[DType.uint8, 16],
+    owned optional: InlineArray[SIMD[DType.uint8, 16], 1],
+) raises:
+    assert_true(
+        (optional[0] == compare).reduce_and(),
+        String("Received {} but expected {}").format(optional[0], compare),
+    )
+
+
+def test_handover_to_callee():
+    data = SIMD[DType.uint8, 16](255)
+    for i in range(5):
+        data[i] = i * i
+    optional = StaticOptional(data)
+    recipient_comperator(data, optional)
+    recipient_comperator(data, data)
+
+
+def test_inline_array_handover_to_callee():
+    data = SIMD[DType.uint8, 16](255)
+    for i in range(5):
+        data[i] = i * i
+    optional = InlineArray[SIMD[DType.uint8, 16], 1](data)
+    recipient_comperator_for_inline_array(data, optional)
+    recipient_comperator_for_inline_array(data, data)
+
+
 def main():
     print("Running tests...")
     test_static_optional_size()
@@ -85,5 +123,7 @@ def main():
     test_static_optional_move_del()
     test_static_optional_value()
     test_optional_argument_application()
+    test_handover_to_callee()
+    test_inline_array_handover_to_callee()
     test_or_else()
     print("All tests passed.")
