@@ -17,12 +17,18 @@ def test_unsafe_box_copy_move_del():
     ):
         result = __type_of(result)(val^)
 
-    test_copy_move_del[factory](init_moves=1)
+    fn getter(container: UnsafeBox) raises -> UnsafePointer[MemTestStruct]:
+        return UnsafePointer(to=container.get[MemTestStruct]())
+
+    test_copy_move_del[factory, getter](init_moves=1)
 
 
 def test_unsafe_box_value():
     box = UnsafeBox(42)
+    assert_equal(box.get[Int](), 42)
     assert_equal(box.unsafe_get[Int](), 42)
+    with assert_raises():
+        _ = box.get[Float32]()
 
 
 def main():

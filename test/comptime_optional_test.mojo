@@ -41,7 +41,12 @@ def test_static_optional_move_del():
     ):
         result = __type_of(result)(val^)
 
-    test_copy_move_del[factory](1, 0, 1)
+    fn getter(
+        container: StaticOptional[MemTestStruct, True]
+    ) raises -> UnsafePointer[MemTestStruct]:
+        return UnsafePointer(to=container[])
+
+    test_copy_move_del[factory, getter](1, 0, 1)
 
 
 def test_static_optional_value():
