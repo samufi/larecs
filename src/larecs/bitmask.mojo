@@ -53,7 +53,9 @@ struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
 
 
 @register_passable
-struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
+struct BitMask(
+    Copyable, EqualityComparable, KeyElement, Movable, Representable, Stringable
+):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8
