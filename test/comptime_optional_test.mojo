@@ -2,6 +2,7 @@ from testing import *
 
 from larecs.test_utils import *
 from larecs.static_optional import StaticOptional
+from larecs.bitmask import BitMask
 
 
 def test_static_optional_init():
@@ -78,39 +79,43 @@ def test_or_else():
 
 
 fn recipient_comperator(
-    compare: SIMD[DType.uint8, 16],
-    owned optional: StaticOptional[SIMD[DType.uint8, 16], True] = None,
+    compare: BitMask,
+    owned optional: StaticOptional[BitMask, True] = None,
 ) raises:
     assert_true(
-        (optional[] == compare).reduce_and(),
+        optional[] == compare,
         String("Received {} but expected {}").format(optional[], compare),
     )
 
 
 fn recipient_comperator_for_inline_array(
-    compare: SIMD[DType.uint8, 16],
-    owned optional: InlineArray[SIMD[DType.uint8, 16], 1],
+    compare: BitMask,
+    owned optional: InlineArray[BitMask, 1],
 ) raises:
     assert_true(
-        (optional[0] == compare).reduce_and(),
+        optional[0] == compare,
         String("Received {} but expected {}").format(optional[0], compare),
     )
 
 
 def test_handover_to_callee():
-    data = SIMD[DType.uint8, 16](255)
-    for i in range(5):
-        data[i] = i * i
+    data = BitMask()
+    data.set(0, True)
+    data.set(1, True)
+    data.set(5, True)
+    data = data.invert()
     optional = StaticOptional(data)
     recipient_comperator(data, optional)
     recipient_comperator(data, data)
 
 
 def test_inline_array_handover_to_callee():
-    data = SIMD[DType.uint8, 16](255)
-    for i in range(5):
-        data[i] = i * i
-    optional = InlineArray[SIMD[DType.uint8, 16], 1](data)
+    data = BitMask()
+    data.set(0, True)
+    data.set(1, True)
+    data.set(5, True)
+    data = data.invert()
+    optional = InlineArray[BitMask, 1](data)
     recipient_comperator_for_inline_array(data, optional)
     recipient_comperator_for_inline_array(data, data)
 

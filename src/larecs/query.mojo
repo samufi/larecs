@@ -6,6 +6,7 @@ from .world import World
 from .lock import LockMask
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
+from memory import UnsafePointer
 
 
 struct Query[
@@ -73,7 +74,7 @@ struct Query[
         if has_without_mask:
             print(
                 "Create query with exclude mask: ",
-                # String(without_mask.unsafe_ptr()),
+                String(UnsafePointer(to=without_mask.or_else(BitMask()))),
                 without_mask.or_else(BitMask())._bytes,
             )
 
