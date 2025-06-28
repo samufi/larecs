@@ -52,7 +52,6 @@ struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
         return self._size
 
 
-@register_passable
 struct BitMask(
     Copyable, EqualityComparable, KeyElement, Movable, Representable, Stringable
 ):
