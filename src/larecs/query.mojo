@@ -175,6 +175,13 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
+        mask = StaticOptional(self._mask.invert())
+        print(
+            "Create exclude mask: ",
+            String(UnsafePointer(to=mask.or_else(BitMask()))),
+            mask.or_else(BitMask())._bytes,
+        )
+
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
