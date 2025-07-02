@@ -1217,7 +1217,16 @@ struct World[*component_types: ComponentType](Movable, Sized):
         else:
             print(
                 "World: create query with IDs",
-                Self.component_manager.get_id_arr[*Ts](),
+                Self.component_manager.get_id_arr[*Ts]()[0],
+                Self.component_manager.get_id_arr[*Ts]()[1],
+                Self.component_manager.get_id_arr[*Ts]()[2],
+                Self.component_manager.get_id_arr[*Ts]()[3],
+                Self.component_manager.get_id_arr[*Ts]()[4],
+                Self.component_manager.get_id_arr[*Ts]()[5],
+                Self.component_manager.get_id_arr[*Ts]()[6],
+                Self.component_manager.get_id_arr[*Ts]()[7],
+                Self.component_manager.get_id_arr[*Ts]()[8],
+                Self.component_manager.get_id_arr[*Ts]()[9],
             )
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
             print(

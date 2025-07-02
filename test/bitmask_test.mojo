@@ -201,7 +201,7 @@ def test_bitmask_get_indices():
 
 
 fn bistmask_5_receiver(mask: BitMask) raises:
-    assert_equals(mask._bytes[0], 5)
+    assert_equal(mask._bytes[0], 5)
 
 
 fn test_bitmask_handover() raises:
@@ -210,7 +210,7 @@ fn test_bitmask_handover() raises:
     mask.set(UInt8(0), True)
     mask.set(UInt8(2), True)
     bistmask_5_receiver(mask)
-    assert_equals(mask._bytes[0], 5)
+    assert_equal(mask._bytes[0], 5)
 
 
 fn run_all_bitmask_tests() raises:

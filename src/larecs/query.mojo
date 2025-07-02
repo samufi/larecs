@@ -68,11 +68,16 @@ struct Query[
             without_mask: The mask for components to exclude.
         """
         self._world = world
-        self._mask = mask^
         print(
             "Create query with mask: ",
             String(UnsafePointer(to=mask)),
             mask._bytes,
+        )
+        self._mask = mask^
+        print(
+            "Moved to: ",
+            String(UnsafePointer(to=self._mask)),
+            self._mask._bytes,
         )
 
         @parameter
