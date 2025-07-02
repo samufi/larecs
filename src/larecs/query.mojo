@@ -69,11 +69,16 @@ struct Query[
         """
         self._world = world
         self._mask = mask^
+        print(
+            "Create query with mask: ",
+            String(UnsafePointer(to=mask)),
+            mask._bytes,
+        )
 
         @parameter
         if has_without_mask:
             print(
-                "Create query with exclude mask: ",
+                "Corresponding exclude mask: ",
                 String(UnsafePointer(to=without_mask.or_else(BitMask()))),
                 without_mask.or_else(BitMask())._bytes,
             )
@@ -185,7 +190,7 @@ struct Query[
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            self._mask.invert(),
+            mask,
         )
 
 

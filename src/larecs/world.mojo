@@ -1197,7 +1197,7 @@ struct World[*component_types: ComponentType](Movable, Sized):
         out iterator: Self.Query[__origin_of(self), has_without_mask=False],
     ):
         """
-        Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
+        Returns a [..query.Query] for all [..entity.Entity Entities] with the given components.
 
         Parameters:
             Ts: The types of the components.
@@ -1215,7 +1215,16 @@ struct World[*component_types: ComponentType](Movable, Sized):
         if not size:
             bitmask = BitMask()
         else:
+            print(
+                "World: create query with IDs",
+                Self.component_manager.get_id_arr[*Ts](),
+            )
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+            print(
+                "Bitmask has bytes:",
+                String(UnsafePointer(to=bitmask)),
+                bitmask._bytes,
+            )
 
         iterator = Self.Query(Pointer(to=self), bitmask)
 
@@ -1247,9 +1256,13 @@ struct World[*component_types: ComponentType](Movable, Sized):
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
+
         @parameter
         if has_without_mask:
-            print("Create iterator with exclude mask: ", without_mask.or_else(BitMask())._bytes)
+            print(
+                "Create iterator with exclude mask: ",
+                without_mask.or_else(BitMask())._bytes,
+            )
 
         iterator = _EntityIterator(
             Pointer(to=self._archetypes),

@@ -50,16 +50,6 @@ fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
 # ------ Tests ------
 
 
-fn run_all_bitmask_tests() raises:
-    print("Running all bitmask tests...")
-    test_bit_mask()
-    test_bit_mask_without_exclusive()
-    test_bit_mask_256()
-    test_bit_mask_eq()
-    test_bitmask_get_indices()
-    print("Done")
-
-
 fn test_bit_mask() raises:
     var mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
 
@@ -208,6 +198,30 @@ def test_bitmask_get_indices():
         size += 1
 
     assert_equal(len(unique_indices), size)
+
+
+fn bistmask_5_receiver(mask: BitMask) raises:
+    assert_equals(mask._bytes[0], 5)
+
+
+fn test_bitmask_handover() raises:
+    """Test that a BitMask can be passed to a function."""
+    mask = BitMask()
+    mask.set(UInt8(0), True)
+    mask.set(UInt8(2), True)
+    bistmask_5_receiver(mask)
+    assert_equals(mask._bytes[0], 5)
+
+
+fn run_all_bitmask_tests() raises:
+    print("Running all bitmask tests...")
+    test_bit_mask()
+    test_bit_mask_without_exclusive()
+    test_bit_mask_256()
+    test_bit_mask_eq()
+    test_bitmask_get_indices()
+    test_bitmask_handover()
+    print("Done")
 
 
 fn main() raises:
