@@ -117,7 +117,6 @@ def test_inline_array_handover_to_callee():
     data = data.invert()
     optional = InlineArray[BitMask, 1](data)
     recipient_comperator_for_inline_array(data, optional)
-    recipient_comperator_for_inline_array(data, data)
 
 
 def main():
