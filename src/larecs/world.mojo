@@ -1215,18 +1215,13 @@ struct World[*component_types: ComponentType](Movable, Sized):
         if not size:
             bitmask = BitMask()
         else:
+            l = List[Self.Id, size]()
+            s: String = ""
+            for i in range(len(l)):
+                s += String(Self.component_manager.get_id_arr[*Ts]()[i])
             print(
                 "World: create query with IDs",
-                Self.component_manager.get_id_arr[*Ts]()[0],
-                Self.component_manager.get_id_arr[*Ts]()[1],
-                Self.component_manager.get_id_arr[*Ts]()[2],
-                Self.component_manager.get_id_arr[*Ts]()[3],
-                Self.component_manager.get_id_arr[*Ts]()[4],
-                Self.component_manager.get_id_arr[*Ts]()[5],
-                Self.component_manager.get_id_arr[*Ts]()[6],
-                Self.component_manager.get_id_arr[*Ts]()[7],
-                Self.component_manager.get_id_arr[*Ts]()[8],
-                Self.component_manager.get_id_arr[*Ts]()[9],
+                s
             )
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
             print(
