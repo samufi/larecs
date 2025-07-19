@@ -1,4 +1,4 @@
-from testing import assert_true, assert_false, assert_equal
+from testing import assert_true, assert_false, assert_equal, assert_not_equal
 from random import random
 from memory import UnsafePointer
 from sys.info import sizeof
@@ -412,17 +412,24 @@ struct MemTestStruct(Copyable, Movable):
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]
 
+    var simd_data: SIMD[DType.uint8, 16]
+    var list_data: List[Int]
+
     fn __moveinit__(out self, owned other: Self):
         self.move_counter = other.move_counter
         self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
         self.move_counter[] += 1
+        self.simd_data = other.simd_data
+        self.list_data = other.list_data^
 
     fn __copyinit__(out self, other: Self):
         self.move_counter = other.move_counter
         self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
         self.copy_counter[] += 1
+        self.simd_data = other.simd_data
+        self.list_data = other.list_data
 
     fn __del__(owned self):
         self.del_counter[] += 1
@@ -431,7 +438,10 @@ struct MemTestStruct(Copyable, Movable):
 fn test_copy_move_del[
     Container: Copyable & Movable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
-](init_moves: Int = 0, copy_moves: Int = 0,) raises:
+    get_element_ptr: fn (container: Container) raises -> UnsafePointer[
+        MemTestStruct
+    ],
+](init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     var del_counter = 0
     var move_counter = 0
     var copy_counter = 0
@@ -439,17 +449,26 @@ fn test_copy_move_del[
     var test_move_counter = init_moves
     var test_copy_counter = 0
 
+    test_list = [1, 5, 7, 12313]
+    test_simd = SIMD[DType.uint8, 16]()
+    for i in range(16):
+        test_simd[i] = i
+
     container = container_factory(
         MemTestStruct(
             UnsafePointer(to=copy_counter),
             UnsafePointer(to=move_counter),
             UnsafePointer(to=del_counter),
+            test_simd,
+            test_list,
         )
     )
 
     assert_equal(del_counter, test_del_counter)
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)
+    assert_equal(get_element_ptr(container)[].simd_data, test_simd)
+    assert_equal(get_element_ptr(container)[].list_data, test_list)
 
     container2 = container
     test_copy_counter += 1
@@ -458,16 +477,39 @@ fn test_copy_move_del[
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)
 
+    assert_equal(
+        get_element_ptr(container2)[].simd_data,
+        get_element_ptr(container)[].simd_data,
+    )
+    assert_equal(
+        get_element_ptr(container2)[].list_data,
+        get_element_ptr(container)[].list_data,
+    )
+    assert_not_equal(
+        get_element_ptr(container2)[].list_data.unsafe_ptr(),
+        get_element_ptr(container)[].list_data.unsafe_ptr(),
+    )
+    list_address = get_element_ptr(container)[].list_data.unsafe_ptr()
+
     _ = container2^
     test_del_counter += 1
     assert_equal(del_counter, test_del_counter)
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)
 
+
     container2 = container^
+    test_move_counter += move_moves
     assert_equal(del_counter, test_del_counter)
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)
+
+    assert_equal(get_element_ptr(container2)[].simd_data, test_simd)
+    assert_equal(get_element_ptr(container2)[].list_data, test_list)
+    assert_equal(
+        get_element_ptr(container2)[].list_data.unsafe_ptr(),
+        list_address,
+    )
 
     _ = container2^
     test_del_counter += 1

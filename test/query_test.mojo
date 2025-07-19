@@ -416,6 +416,7 @@ def run_all_query_tests():
     test_query_empty()
     test_query_without()
     test_query_archetype_iterator()
+    test_query_in_system()
 
 
 def main():

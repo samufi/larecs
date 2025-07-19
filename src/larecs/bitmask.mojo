@@ -1,4 +1,5 @@
 from bit import pop_count, bit_not
+from hashlib import Hasher
 from .filter import MaskFilter
 
 
@@ -52,8 +53,9 @@ struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
         return self._size
 
 
-@register_passable
-struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
+struct BitMask(
+    Copyable, EqualityComparable, KeyElement, Movable, Representable, Stringable
+):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8
@@ -94,14 +96,10 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
         """
         self = Self(bits)
 
-    fn __copyinit__(out self, other: Self):
-        """Initializes the mask with the other mask."""
-        self._bytes = other._bytes
-
     @always_inline
-    fn __hash__(self) -> UInt:
+    fn __hash__[H: Hasher](self, mut hasher: H):
         """Hashes the mask."""
-        return hash(self._bytes)
+        return hasher.update(self._bytes)
 
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
@@ -179,6 +177,7 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn invert(self) -> BitMask:
         """Returns the inversion of this mask."""
+        print("Create inversion:", bit_not(self._bytes))
         return BitMask(bytes=bit_not(self._bytes))
 
     @always_inline

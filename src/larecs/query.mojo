@@ -6,6 +6,7 @@ from .world import World
 from .lock import LockMask
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
+from memory import UnsafePointer
 
 
 struct Query[
@@ -67,8 +68,35 @@ struct Query[
             without_mask: The mask for components to exclude.
         """
         self._world = world
+        print(
+            "Create query with mask: ",
+            String(UnsafePointer(to=mask)),
+            mask._bytes,
+        )
         self._mask = mask^
+        print(
+            "Moved to: ",
+            String(UnsafePointer(to=self._mask)),
+            self._mask._bytes,
+        )
+
+        @parameter
+        if has_without_mask:
+            print(
+                "Corresponding exclude mask: ",
+                String(UnsafePointer(to=without_mask.or_else(BitMask()))),
+                without_mask.or_else(BitMask())._bytes,
+            )
+
         self._without_mask = without_mask^
+
+        @parameter
+        if has_without_mask:
+            print(
+                "The stored exclude mask: ",
+                # String(self._without_mask.unsafe_ptr()),
+                self._without_mask.or_else(BitMask())._bytes,
+            )
 
     fn __len__(self) raises -> Int:
         """
@@ -157,10 +185,17 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
+        mask = StaticOptional(self._mask.invert())
+        print(
+            "Create exclude mask: ",
+            String(UnsafePointer(to=mask.or_else(BitMask()))),
+            mask.or_else(BitMask())._bytes,
+        )
+
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            self._mask.invert(),
+            mask,
         )
 
 
@@ -249,6 +284,12 @@ struct _ArchetypeIterator[
         self._mask = mask^
         self._without_mask = without_mask^
 
+        print("Create archetype iterator with mask: ", self._mask._bytes)
+        if self._without_mask.has_value:
+            print(
+                "Exclude mask: ", self._without_mask.or_else(BitMask())._bytes
+            )
+
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
         self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
@@ -323,18 +364,29 @@ struct _ArchetypeIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
+            is_valid = (
+                self._archetypes[][i].get_mask().contains(self._mask)
+                and self._archetypes[][i]
+            )
 
             @parameter
             if has_without_mask:
                 is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
+                    not self._archetypes[][i]
                     .get_mask()
                     .contains_any(self._without_mask[])
                 )
+
+            print(
+                "Archetype ",
+                i,
+                " valid: ",
+                is_valid,
+                " mask: ",
+                self._archetypes[][i].get_mask()._bytes,
+                " length ",
+                len(self._archetypes[][i]),
+            )
 
             if is_valid:
                 self._archetype_index_buffer[buffer_index] = i
@@ -368,9 +420,9 @@ struct _ArchetypeIterator[
         """
         self._buffer_index += 1
         archetype = Pointer(
-            to=self._archetypes[].unsafe_get(
-                index(self._archetype_index_buffer[self._buffer_index])
-            )
+            to=self._archetypes[][
+                self._archetype_index_buffer[self._buffer_index]
+            ]
         )
         if self._buffer_index >= Self.buffer_size - 1:
             self._fill_archetype_buffer()
@@ -395,15 +447,15 @@ struct _ArchetypeIterator[
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
+            is_valid = (
+                self._archetypes[][i].get_mask().contains(self._mask)
+                and self._archetypes[][i]
+            )
 
             @parameter
             if has_without_mask:
                 is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
+                    not self._archetypes[][i]
                     .get_mask()
                     .contains_any(self._without_mask[])
                 )
@@ -521,6 +573,13 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
+
+        @parameter
+        if has_without_mask:
+            print(
+                "Create _EntityIterator with exclude mask: ",
+                without_mask.or_else(BitMask())._bytes,
+            )
 
         self._archetype_iterator = Self.ArchetypeIterator(
             archetypes, mask, without_mask

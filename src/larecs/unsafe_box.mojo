@@ -1,5 +1,6 @@
 from memory import UnsafePointer
 from sys.info import sizeof
+from compile.reflection import get_type_name
 
 
 fn _destructor[T: Copyable & Movable](box_storage: UnsafeBox.data_type):
@@ -95,6 +96,7 @@ struct UnsafeBox(Copyable, Movable):
     var _copy_initializer: fn (
         existing_box: UnsafeBox.data_type
     ) -> UnsafePointer[Byte]
+    var _element_type_name: String
 
     fn __init__[used_internally: Bool = False](out self):
         """
@@ -114,6 +116,7 @@ struct UnsafeBox(Copyable, Movable):
         self._data = UnsafePointer[Byte]()
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
+        self._element_type_name = ""
 
     fn __init__[T: Copyable & Movable](out self, owned data: T):
         """
@@ -136,17 +139,7 @@ struct UnsafeBox(Copyable, Movable):
         self._data = ptr.bitcast[Byte]()
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
-
-    fn __moveinit__(out self, owned other: Self):
-        """
-        Move constructor for the UnsafeBox.
-
-        Args:
-            other: The UnsafeBox instance to be moved from.
-        """
-        self._data = other._data
-        self._destructor = other._destructor
-        self._copy_initializer = other._copy_initializer
+        self._element_type_name = get_type_name[T]()
 
     fn __copyinit__(out self, other: Self):
         """
@@ -159,6 +152,7 @@ struct UnsafeBox(Copyable, Movable):
         self._data = other._copy_initializer(other._data)
         self._destructor = other._destructor
         self._copy_initializer = other._copy_initializer
+        self._element_type_name = other._element_type_name
 
     @always_inline
     fn __del__(owned self):
@@ -171,9 +165,36 @@ struct UnsafeBox(Copyable, Movable):
         self._destructor(self._data)
 
     @always_inline
-    fn unsafe_get[T: Copyable & Movable](ref self) -> ref [self._data] T:
+    fn get[T: Copyable & Movable](ref self) raises -> ref [self._data] T:
         """
         Returns a reference to the data stored in the box.
+
+        Parameters:
+            T: The type of the element stored in the UnsafeBox.
+
+        Returns:
+            A reference to the data stored in the box.
+
+        Raises:
+            Exception: if the name of the provided type does not match the name
+            of the type stored in the UnsafeBox.
+        """
+        if not self._element_type_name == get_type_name[T]():
+            raise Error(
+                String("UnsafeBox: Type mismatch. Expected {}, got {}.").format(
+                    self._element_type_name, get_type_name[T]()
+                )
+            )
+        return self._data.bitcast[T]()[]
+
+    @always_inline
+    fn unsafe_get[T: Copyable & Movable](ref self) -> ref [self._data] T:
+        """
+        Returns a reference to the data stored in the box without type checking.
+
+        This method does not perform any type checks and should be used
+        with caution. It is the caller's responsibility to ensure that
+        the type `T` matches the type of the data stored in the UnsafeBox.
 
         Parameters:
             T: The type of the element stored in the UnsafeBox.

@@ -1,4 +1,6 @@
 from memory import UnsafePointer
+from .bitmask import BitMask
+from sys.intrinsics import _type_is_eq
 
 
 @fieldwise_init
@@ -18,10 +20,7 @@ struct StaticOptional[
     """
 
     # Fields
-    alias type = __mlir_type[
-        `!pop.array<`, Int(has_value).value, `, `, Self.ElementType, `>`
-    ]
-    var _value: Self.type
+    var _value: InlineArray[ElementType, Int(has_value), run_destructors=False]
     """The underlying storage for the optional."""
 
     # ===------------------------------------------------------------------===#
@@ -38,7 +37,7 @@ struct StaticOptional[
             not has_value,
             "Initialize with a value if `has_value` is `True`",
         ]()
-        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
+        self._value = {uninitialized=True}
 
     @always_inline
     @implicit
@@ -48,24 +47,23 @@ struct StaticOptional[
         Args:
             value: The value to fill the optional with.
         """
-        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
-
-        var ptr = UnsafePointer(to=self[])
-        ptr.init_pointee_move(value^)
-
-    @always_inline
-    fn copy(self) -> Self:
-        """Explicitly copy the provided value.
-
-        Returns:
-            A copy of the value.
-        """
 
         @parameter
-        if has_value:
-            return Self(self[])
-        else:
-            return Self()
+        if _type_is_eq[Self.ElementType, BitMask]():
+            print(
+                "Initializing StaticOptional with BitMask:",
+                UnsafePointer(to=value).bitcast[BitMask]()[]._bytes,
+            )
+
+        self._value = {uninitialized=True}
+        self._value.unsafe_ptr().init_pointee_move(value^)
+
+        @parameter
+        if _type_is_eq[Self.ElementType, BitMask]():
+            print(
+                "The stored value is:",
+                UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes,
+            )
 
     @always_inline
     fn __copyinit__(out self, other: Self):
@@ -74,40 +72,57 @@ struct StaticOptional[
         Args:
             other: The optional to copy.
         """
-        self = other.copy()
+        self._value = {uninitialized=True}
 
+        @parameter
+        if has_value:
+            self.unsafe_ptr().init_pointee_copy(other[])
+
+    fn __moveinit__(out self, owned other: Self):
+        """Move construct the optional.
+
+        Args:
+            other: The optional to move.
+        """
+        self._value = {uninitialized=True}
+
+        @parameter
+        if has_value:
+
+            @parameter
+            if _type_is_eq[Self.ElementType, BitMask]():
+                print(
+                    "Moving StaticOptional with BitMask:",
+                    UnsafePointer(to=other[]).bitcast[BitMask]()[]._bytes,
+                )
+            other.unsafe_ptr().move_pointee_into(self.unsafe_ptr())
+
+            @parameter
+            if _type_is_eq[Self.ElementType, BitMask]():
+                print(
+                    "The moved value is:",
+                    UnsafePointer(to=self[]).bitcast[BitMask]()[]._bytes,
+                )
+    
     fn __del__(owned self):
         """Deallocate the optional."""
 
         @parameter
         if has_value:
-            var ptr = self.unsafe_ptr()
-            ptr.destroy_pointee()
+            self._value.unsafe_ptr().destroy_pointee()
 
     # ===------------------------------------------------------------------===#
     # Methods
     # ===------------------------------------------------------------------===#
 
     @always_inline
-    fn __getitem__(ref self) -> ref [self] Self.ElementType:
+    fn __getitem__(ref self) -> ref [self._value] Self.ElementType:
         """Get a reference to the value.
 
         Returns:
             A reference to the value.
         """
-        constrained[
-            has_value,
-            (
-                "The value is not present. Use `has_value` to check if the"
-                " value is present."
-            ),
-        ]()
-        alias zero = index(0)
-        var ptr = __mlir_op.`pop.array.gep`(
-            UnsafePointer(to=self._value).address,
-            zero,
-        )
-        return UnsafePointer(ptr)[]
+        return self._value[0]
 
     @always_inline
     fn or_else(self, value: ElementType) -> ElementType:
@@ -127,7 +142,13 @@ struct StaticOptional[
             return value
 
     @always_inline
-    fn unsafe_ptr(self) -> UnsafePointer[Self.ElementType]:
+    fn unsafe_ptr(
+        ref self,
+    ) -> UnsafePointer[
+        Self.ElementType,
+        mut = Origin(__origin_of(self._value)).mut,
+        origin = __origin_of(self._value),
+    ]:
         """Get an `UnsafePointer` to the underlying array.
 
         That pointer is unsafe but can be used to read or write to the array.
@@ -147,7 +168,7 @@ struct StaticOptional[
             ),
         ]()
 
-        return UnsafePointer(to=self._value).bitcast[Self.ElementType]()
+        return self._value.unsafe_ptr()
 
     @always_inline
     fn __bool__(self) -> Bool:

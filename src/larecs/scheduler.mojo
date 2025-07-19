@@ -17,7 +17,7 @@ fn _update_system[
         system: The system to update.
         world: The world to use for the update.
     """
-    system.unsafe_get[S]().update(world)
+    system.get[S]().update(world)
 
 
 fn _initialize_system[
@@ -33,7 +33,7 @@ fn _initialize_system[
         system: The system to initialize.
         world: The world to use for the initialization.
     """
-    system.unsafe_get[S]().initialize(world)
+    system.get[S]().initialize(world)
 
 
 fn _finalize_system[
@@ -49,7 +49,7 @@ fn _finalize_system[
         system: The system to finalize.
         world: The world to use for the finalization.
     """
-    system.unsafe_get[S]().finalize(world)
+    system.get[S]().finalize(world)
 
 
 struct Scheduler[*ComponentTypes: ComponentType]:
