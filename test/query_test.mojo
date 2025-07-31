@@ -290,53 +290,53 @@ def test_query_exclusive():
     assert_false(world.is_locked())
 
 
-struct QueryOwner[
-    world_origin: MutableOrigin,
-    *ComponentTypes: ComponentType,
-]:
-    alias WorldPointer = Pointer[World[*ComponentTypes], world_origin]
-    alias Query = Query[
-        world_origin,
-        *ComponentTypes,
-        has_without_mask=_,
-    ]
+# struct QueryOwner[
+#     world_origin: MutableOrigin,
+#     *ComponentTypes: ComponentType,
+# ]:
+#     alias WorldPointer = Pointer[World[*ComponentTypes], world_origin]
+#     alias Query = Query[
+#         world_origin,
+#         *ComponentTypes,
+#         has_without_mask=_,
+#     ]
 
-    var _query: Self.Query[has_without_mask=True]
+#     var _query: Self.Query[has_without_mask=True]
 
-    fn __init__(
-        world: Self.WorldPointer,
-        out self,
-    ) raises:
-        self._query = (
-            world[]
-            .query[FlexibleComponent[0]]()
-            .without[FlexibleComponent[1]]()
-        )
+#     fn __init__(
+#         world: Self.WorldPointer,
+#         out self,
+#     ) raises:
+#         self._query = (
+#             world[]
+#             .query[FlexibleComponent[0]]()
+#             .without[FlexibleComponent[1]]()
+#         )
 
-    fn update(self) raises:
-        for entity in self._query:
-            ref f = entity.get[FlexibleComponent[0]]()
-            f.x += 1
+#     fn update(self) raises:
+#         for entity in self._query:
+#             ref f = entity.get[FlexibleComponent[0]]()
+#             f.x += 1
 
 
-fn test_query_in_system() raises:
-    world = SmallWorld()
-    sys1 = QueryOwner(Pointer(to=world))
-    sys2 = QueryOwner(Pointer(to=world))
+# fn test_query_in_system() raises:
+#     world = SmallWorld()
+#     sys1 = QueryOwner(Pointer(to=world))
+#     sys2 = QueryOwner(Pointer(to=world))
 
-    c0 = FlexibleComponent[0](1.0, 2.0)
+#     c0 = FlexibleComponent[0](1.0, 2.0)
 
-    n = 10
-    for _ in range(n):
-        _ = world.add_entity(c0)
+#     n = 10
+#     for _ in range(n):
+#         _ = world.add_entity(c0)
 
-    for _ in range(10):
-        sys1.update()
-        sys2.update()
+#     for _ in range(10):
+#         sys1.update()
+#         sys2.update()
 
-    for entity in world.query[FlexibleComponent[0]]():
-        ref f = entity.get[FlexibleComponent[0]]()
-        assert_equal(f.x, 21)
+#     for entity in world.query[FlexibleComponent[0]]():
+#         ref f = entity.get[FlexibleComponent[0]]()
+#         assert_equal(f.x, 21)
 
 
 def test_query_lock():

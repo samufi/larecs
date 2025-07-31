@@ -1,12 +1,6 @@
 # from collections import Dict
 from .bitmask import BitMask
 
-# We use a stupid dict to circumvent a current
-# bug in the compiler causing a segfault when
-# using the Dict type.
-from .stupid_dict import StupidDict as Dict
-
-
 @fieldwise_init
 struct Node[DataType: KeyElement](Copyable, Movable):
     """Node in a BitMaskGraph.

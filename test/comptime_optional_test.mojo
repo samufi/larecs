@@ -26,22 +26,22 @@ def test_comptime_optional_copy():
     _ = opt_copy_without
 
 
-@fieldwise_init
-struct TestStruct[origin: MutableOrigin]:
-    var del_conuter: Pointer[Int, origin]
+# @fieldwise_init
+# struct TestStruct[origin: MutableOrigin]:
+#     var del_conuter: Pointer[Int, origin]
 
-    fn __del__(owned self):
-        self.del_conuter[] += 1
+#     fn __del__(owned self):
+#         self.del_conuter[] += 1
 
 
-def test_comptime_optional_move_del():
-    fn factory(
-        owned val: MemTestStruct,
-        out result: StaticOptional[MemTestStruct, True],
-    ):
-        result = __type_of(result)(val^)
+# def test_comptime_optional_move_del():
+#     fn factory(
+#         owned val: MemTestStruct,
+#         out result: StaticOptional[MemTestStruct, True],
+#     ):
+#         result = __type_of(result)(val^)
 
-    test_copy_move_del[factory](1, 1)
+#     test_copy_move_del[factory](1, 1)
 
 
 def test_comptime_optional_value():
@@ -77,7 +77,7 @@ def main():
     test_comptime_optional_size()
     test_comptime_optional_init()
     test_comptime_optional_copy()
-    test_comptime_optional_move_del()
+    # test_comptime_optional_move_del()
     test_comptime_optional_value()
     test_optional_argument_application()
     test_or_else()

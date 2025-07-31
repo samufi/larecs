@@ -4,7 +4,6 @@ from sys.intrinsics import _type_is_eq
 # from collections import Dict
 from memory import UnsafePointer
 
-from .stupid_dict import SimdDict, StupidDict as Dict
 from .types import get_max_size
 from .bitmask import BitMask
 
@@ -36,7 +35,7 @@ fn get_sizes[
         len(VariadicList(Ts)) > 0,
         "At least one component is needed.",
     ]()
-    sizes = InlineArray[UInt32, len(VariadicList(Ts))](0)
+    sizes = InlineArray[UInt32, len(VariadicList(Ts))](fill=0)
 
     @parameter
     for i in range(len(VariadicList(Ts))):
