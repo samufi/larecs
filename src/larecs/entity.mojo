@@ -15,7 +15,7 @@ from .archetype import Archetype, EntityAccessor
 
 
 @register_passable("trivial")
-struct Entity(EqualityComparable, Hashable, KeyElement, Stringable):
+struct Entity(Boolable, EqualityComparable, Hashable, KeyElement, Stringable):
     """Entity identifier.
     Holds an entity ID and it's generation for recycling.
 

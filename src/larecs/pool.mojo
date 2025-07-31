@@ -20,16 +20,6 @@ struct EntityPool(Copyable, Movable, Sized):
         self._next = 0
         self._available = 0
 
-    fn __copyinit__(out self, other: Self):
-        self._entities = other._entities
-        self._next = other._next
-        self._available = other._available
-
-    fn __moveinit__(out self, owned other: Self):
-        self._entities = other._entities^
-        self._next = other._next
-        self._available = other._available
-
     fn get(mut self) -> Entity:
         """Returns a fresh or recycled entity."""
         if self._available == 0:

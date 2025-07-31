@@ -3,7 +3,7 @@ from .bitmask import BitMask
 
 
 @fieldwise_init
-struct Node[DataType: KeyElement](Copyable, Movable):
+struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
     """Node in a BitMaskGraph.
 
     Parameters:

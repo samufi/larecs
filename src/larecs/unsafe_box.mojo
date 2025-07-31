@@ -137,17 +137,6 @@ struct UnsafeBox(Copyable, Movable):
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
 
-    fn __moveinit__(out self, owned other: Self):
-        """
-        Move constructor for the UnsafeBox.
-
-        Args:
-            other: The UnsafeBox instance to be moved from.
-        """
-        self._data = other._data
-        self._destructor = other._destructor
-        self._copy_initializer = other._copy_initializer
-
     fn __copyinit__(out self, other: Self):
         """
         Copy constructor for the UnsafeBox.

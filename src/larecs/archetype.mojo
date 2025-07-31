@@ -353,22 +353,6 @@ struct Archetype[
         """
         other = self
 
-    fn __moveinit__(out self, owned existing: Self):
-        """Moves the data from an existing archetype to a new one.
-
-        Args:
-            existing: The archetype to move from.
-        """
-        self._data = existing._data^
-        self._size = existing._size
-        self._capacity = existing._capacity
-        self._component_count = existing._component_count
-        self._item_sizes = existing._item_sizes^
-        self._entities = existing._entities^
-        self._ids = existing._ids
-        self._node_index = existing._node_index
-        self._mask = existing._mask
-
     fn __copyinit__(out self, existing: Self):
         """Copies the data from an existing archetype to a new one.
 

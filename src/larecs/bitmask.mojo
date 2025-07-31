@@ -95,10 +95,6 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
         """
         self = Self(bits)
 
-    fn __copyinit__(out self, other: Self):
-        """Initializes the mask with the other mask."""
-        self._bytes = other._bytes
-
     @always_inline
     fn __hash__[H: Hasher](self, mut hasher: H):
         """Hashes the mask."""
