@@ -339,9 +339,7 @@ struct _ArchetypeIterator[
         iterator = self^
 
     @always_inline
-    fn __next__(
-        mut self, out archetype: Self.Element
-    ):
+    fn __next__(mut self, out archetype: Self.Element):
         """
         Returns the next archetype in the iteration.
 
