@@ -664,7 +664,6 @@ struct _ArchetypeEntityIterator[
     alias Archetype = _Archetype[
         *ComponentTypes, component_manager=component_manager
     ]
-    alias Element = T
     var _archetype: Pointer[Self.Archetype, archetype_origin]
     var _lock_ptr: Pointer[LockMask, lock_origin]
     var _lock: UInt8
