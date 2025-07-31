@@ -1,5 +1,4 @@
 from testing import *
-from collections import InlineArray
 from larecs.bitmask import BitMask
 from larecs.graph import Node, BitMaskGraph
 

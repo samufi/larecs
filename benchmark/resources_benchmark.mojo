@@ -8,7 +8,7 @@ struct TestResource[size: Int = 1000](ResourceType):
     var _storage: InlineArray[Float64, size]
 
     fn __init__(out self, value: Float64 = 0):
-        self._storage = InlineArray[Float64, size](value)
+        self._storage = InlineArray[Float64, size](fill=value)
 
 
 fn benchmark_add_remove_resource_1_000(mut bencher: Bencher) raises capturing:

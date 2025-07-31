@@ -23,15 +23,15 @@ struct Node[DataType: KeyElement](Copyable, Movable):
     # The mask of the node.
     var bit_mask: BitMask
 
-    fn __init__(out self, owned bit_mask: BitMask, owned value: DataType):
+    fn __init__(out self, bit_mask: BitMask, owned value: DataType):
         """Initializes the node with the given mask and value.
 
         Args:
             bit_mask: The bit mask of the node.
             value:    The value stored in the node.
         """
-        self.value = value
-        self.neighbours = InlineArray[Int, 256](Self.null_index)
+        self.value = value^
+        self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
         self.bit_mask = bit_mask
 
     fn copy(self, out other: Self):
@@ -80,20 +80,12 @@ struct BitMaskGraph[
             Node[DataType], hint_trivial_type=hint_trivial_type
         ]()
         self._map = Dict[BitMask, Int]()
-        _ = self.add_node(BitMask(), first_value)
-
-    fn __copyinit__(out self, other: Self):
-        self._nodes = other._nodes
-        self._map = other._map
-
-    fn __moveinit__(out self, owned other: Self):
-        self._nodes = other._nodes^
-        self._map = other._map^
+        _ = self.add_node(BitMask(), first_value^)
 
     @always_inline
     fn add_node(
         mut self,
-        owned node_mask: BitMask,
+        node_mask: BitMask,
         owned value: DataType = Self.null_value,
     ) -> Int:
         """Adds a node to the graph.
@@ -106,7 +98,7 @@ struct BitMaskGraph[
             The index of the added node.
         """
         self._map[node_mask] = len(self._nodes)
-        self._nodes.append(Node(node_mask, value))
+        self._nodes.append(Node(node_mask, value^))
         return len(self._nodes) - 1
 
     @always_inline
@@ -205,6 +197,7 @@ struct BitMaskGraph[
         """
         return self._nodes[node_index].value
 
+    @always_inline
     fn has_value[T: Indexer](self: Self, node_index: T) -> Bool:
         """Returns whether the node at the given index has a value.
 

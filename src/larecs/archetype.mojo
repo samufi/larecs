@@ -227,10 +227,10 @@ struct Archetype[
         self._ids = SIMD[Self.dType, Self.max_size]()
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
-        ](UnsafePointer[UInt8]())
+        ](fill=UnsafePointer[UInt8]())
         self._item_sizes = InlineArray[
             UInt32, Self.max_size, run_destructors=True
-        ](0)
+        ](fill=0)
         self._entities = List[Entity]()
         self._node_index = node_index
 
@@ -242,7 +242,7 @@ struct Archetype[
         node_index: UInt,
         component_ids: InlineArray[Self.Id, component_count] = InlineArray[
             Self.Id, component_count
-        ](),
+        ](fill=Self.Id(0)),
         capacity: UInt = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with given components.
@@ -389,7 +389,7 @@ struct Archetype[
         # Copy the data
         self._data = InlineArray[
             UnsafePointer[UInt8], Self.max_size, run_destructors=True
-        ](UnsafePointer[UInt8]())
+        ](fill=UnsafePointer[UInt8]())
 
         for i in range(existing._component_count):
             id = existing._ids[i]

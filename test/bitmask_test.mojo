@@ -1,6 +1,4 @@
 import random
-from collections import InlineArray
-from memory import UnsafePointer
 from testing import *
 from benchmark import keep
 from larecs.bitmask import BitMask
@@ -28,7 +26,7 @@ fn get_random_uint8_list(size: Int, out vals: List[UInt8]):
 
 
 fn unique(l: List[UInt8], out result: List[UInt8]):
-    mask = InlineArray[Bool, 256](0)
+    mask = InlineArray[Bool, 256](fill=0)
     result = List[UInt8]()
     for v in l:
         if not mask[v]:

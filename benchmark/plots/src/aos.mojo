@@ -276,7 +276,7 @@ struct AosEntity[components_exp: Int](Copyable, Movable):
 
     fn __init__(out self):
         self.comps = InlineArray[Position, 2**components_exp](
-            Position(1.0, 2.0)
+            fill=Position(1.0, 2.0)
         )
 
     @always_inline
