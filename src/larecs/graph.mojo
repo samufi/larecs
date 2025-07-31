@@ -1,6 +1,7 @@
 # from collections import Dict
 from .bitmask import BitMask
 
+
 @fieldwise_init
 struct Node[DataType: KeyElement](Copyable, Movable):
     """Node in a BitMaskGraph.
