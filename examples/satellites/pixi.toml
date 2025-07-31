@@ -1,6 +1,6 @@
 [project]
 authors = ["samufi <samufi@web.de>"]
-channels = ["conda-forge", "https://conda.modular.com/max"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
 description = "Example for the usage of the larecs ECS"
 name = "satellites"
 platforms = ["linux-64"]
@@ -9,7 +9,8 @@ version = "0.3.0"
 [tasks]
 
 [dependencies]
-max = ">=25.4,<25.5"
+max = ">=25.6.0.dev2025073007,<26"
+mojo = ">=25.6.0.dev2025073007,<26"
 python = "==3.12"
 matplotlib = ">=3.10.0,<4"
 numpy = ">=1.26.4,<2"
