@@ -33,7 +33,7 @@ def test_comptime_optional_move_del():
     ):
         result = __type_of(result)(val^)
 
-    test_copy_move_del[factory](1)
+    test_copy_move_del[factory](init_moves=1, move_moves=1)
 
 
 def test_comptime_optional_value():

@@ -431,7 +431,28 @@ struct MemTestStruct(Copyable, Movable):
 fn test_copy_move_del[
     Container: Copyable & Movable, //,
     container_factory: fn (owned val: MemTestStruct) -> Container,
-](init_moves: Int = 0, copy_moves: Int = 0) raises:
+](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
+    """Test the copy, move, and delete operations of a container.
+
+    This function tests that the copy, move, and delete methods of
+    the elements of a container are called the expected number of times.
+    Note that some containers need to move the elements during initialization or
+    while copying. This can be specified with the `init_moves` parameter.
+
+    Similarly, elements may not be moved if the container is moved,
+    since the underlying storage may stay constant. In other instances,
+    the storage is moved as well, which can be specified with the `move_moves` parameter.
+
+    Parameters:
+        Container: The type of the container to test.
+        container_factory: A function that creates a container from a MemTestStruct.
+
+    Args:
+        init_moves: The expected number of element move operations during initialization.
+        copy_moves: The expected number of element move operations during copying.
+        move_moves: The expected number of element move operations during moving.
+    """
+
     var del_counter = 0
     var move_counter = 0
     var copy_counter = 0
@@ -469,7 +490,7 @@ fn test_copy_move_del[
 
     # Move
     container2 = container^
-    test_move_counter += 1
+    test_move_counter += move_moves
     assert_equal(del_counter, test_del_counter)
     assert_equal(move_counter, test_move_counter)
     assert_equal(copy_counter, test_copy_counter)
