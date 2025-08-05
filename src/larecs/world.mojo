@@ -756,6 +756,99 @@ struct World[*component_types: ComponentType](
         """
         self._remove_and_add(entity, add_components)
 
+    fn add[
+        *Ts: ComponentType
+    ](
+        mut self,
+        query: QueryInfo[
+            has_without_mask=True
+        ],  # has_without_mask must always be True, to explicitly exclude entities that already have some of the components to add
+        *add_components: *Ts,
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            has_without_mask=True,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Adds components to multiple entities at once, specified by a [..query.Query].
+        Parameters:
+            Ts: The types of the components to add.
+
+        Args:
+            query:          The query to determine which entities to modify.
+            add_components: The components to add.
+
+        Raises:
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+            Error: when called with query that could match archetypes that already have at least one of the components to add.
+
+        Example:
+
+        ```mojo {doctest="add_query_comps" global=true hide=true}
+        from larecs import World
+
+        @fieldwise_init
+        struct Position(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        @fieldwise_init
+        struct Velocity(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        world = World[Position, Velocity]()
+        _ = world.add_entity(Position(0, 0))
+
+        changed_entities = world.add[Velocity](
+            world.query[Position](),
+            Velocity(0.5, -0.5),
+        )
+
+        for e in changed_entities:
+            velocity = e.get[Velocity]()
+            position = e.get[Position]()
+            e.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
+            e.set[Velocity](Velocity(velocity.x - 0.05, velocity.y - 0.05))
+        ```
+        """
+        self._assert_unlocked()
+
+        # search for the archetype that matches the query mask
+        # if query could match archetypes that already have at least one of the components, raise an error
+
+        alias added_component_ids = Self.component_manager.get_id_arr[*Ts]()
+
+        if query.without_mask[].contains(BitMask(added_component_ids)):
+            raise Error(
+                "Query could match archetypes that already have at least one of"
+                " the components to add."
+            )
+
+        # add components and store start index per archetype
+
+        # four cases:
+        # 1. an archetype A exists that matches the query mask and an archetype with the new component combination does not exist yet
+        # ---> create a new archetype with the new component combination, reuse old pointers from A and then delete A
+
+        # 2. an archetype A exists that matches the query mask and an archetype B with the new component combination exists
+        # ---> allocate more memory in B, copy pointers from A to B and then delete A
+
+        # 3. no archetype exists that matches the query mask, but an archetype B with the new component combination exists
+        # ---> allocate more memory in B, query matching entities for query manually, add entities to B and copy their component data
+
+        # 4. no archetype exists that matches the query mask and no archetype with the new component combination exists
+        # ---> create archetype with the new component combination, query matching entities for query manually, add entities to B and copy their component data
+
+        # return iterator to iterate over the changed entities
+        iterator = self._get_entity_iterator(
+            query.mask,
+            query.without_mask,
+            StaticOptional[List[UInt, True]]([0]),
+        )
+
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
         """
         Removes components from an [..entity.Entity].
