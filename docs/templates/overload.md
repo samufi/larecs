@@ -6,7 +6,7 @@
 {{template "description" . -}}
 {{template "func_parameters" . -}}
 {{template "func_args" . -}}
-{{template "func_returns" . -}}
+{{if .Returns}}{{template "func_returns" . -}}{{else}}{{template "func_returns_old" . -}}{{end}}
 {{template "func_raises" . -}}
 {{`{{<html>}}`}}</details>{{`{{</html>}}`}}
 {{end}}
