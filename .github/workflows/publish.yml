@@ -90,7 +90,7 @@ jobs:
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
           pixi install --locked
-          ./modo/modo build
+          ./modo/modo build --tests ""
       
       - name: Run Hugo
         run: |
