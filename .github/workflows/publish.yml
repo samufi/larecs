@@ -12,7 +12,7 @@ permissions:
 
 env:
   MODO_VERSION: v0.11.10
-  HUGO_VERSION: mojo-lexer # 0.140.2
+  HUGO_VERSION: 0.148.2
 
 jobs:
 
@@ -36,39 +36,29 @@ jobs:
         with:
           go-version: '1.23.x'
 
-      # Install Modo from commit hash
-      - name: Clone Modo
-        run: |
-          git clone https://github.com/mlange-42/modo.git
-          cd modo
-          git checkout ${{env.MODO_VERSION}}
-      - name: Build Modo
-        run: |
-          cd modo
-          go get .
-          go build .
+      ## Install Modo from commit hash
+      #- name: Clone Modo
+      #  run: |
+      #    git clone https://github.com/mlange-42/modo.git
+      #    cd modo
+      #    git checkout ${{env.MODO_VERSION}}
+      #- name: Build Modo
+      #  run: |
+      #    cd modo
+      #    go get .
+      #    go build .
       
       # Download Modo release
-      #- name: Download Modo
-      #  run: |
-      #    mkdir modo/
-      #    curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
-
-      #- name: Setup Hugo
-      #  uses: peaceiris/actions-hugo@v3
-      #  with:
-      #    hugo-version: '${{env.HUGO_VERSION}}'
-      #    extended: true
-
-      - name: Clone Hugo
+      - name: Download Modo
         run: |
-          git clone https://github.com/mlange-42/hugo.git
-          cd hugo
-          git checkout ${{env.HUGO_VERSION}}
-      - name: Install Hugo
-        run: |
-          cd hugo
-          go install .
+          mkdir modo/
+          curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '${{env.HUGO_VERSION}}'
+          extended: true
 
       - name: Run AoS benchmarks
         run: |
