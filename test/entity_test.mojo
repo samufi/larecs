@@ -1,5 +1,4 @@
 from testing import *
-from collections import InlineArray
 from larecs.entity import Entity, EntityIndex
 from larecs.archetype import Archetype
 from larecs.test_utils import SmallWorld, Position

@@ -291,10 +291,6 @@ fn benchmark_get_last_id_1_000_000(mut bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-from collections import InlineArray
-from memory import UnsafePointer
-
-
 fn t[size: Int](arr: InlineArray[UInt8, size]) -> UInt8:
     return arr[0]
 

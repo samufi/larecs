@@ -1,4 +1,5 @@
 from bit import bit_reverse
+from hashlib import Hasher
 
 from .types import EntityId
 from .archetype import Archetype, EntityAccessor
@@ -14,7 +15,7 @@ from .archetype import Archetype, EntityAccessor
 
 
 @register_passable("trivial")
-struct Entity(EqualityComparable, Hashable, KeyElement, Stringable):
+struct Entity(Boolable, EqualityComparable, Hashable, KeyElement, Stringable):
     """Entity identifier.
     Holds an entity ID and it's generation for recycling.
 
@@ -84,10 +85,10 @@ struct Entity(EqualityComparable, Hashable, KeyElement, Stringable):
         )
 
     @always_inline
-    fn __hash__(self, out output: UInt):
+    fn __hash__[H: Hasher](self, mut hasher: H):
         """Returns a unique hash of the entity."""
-        output = Int(self._id)
-        output |= bit_reverse(Int(self._generation))
+        hasher.update(self._id)
+        hasher.update(self._generation)
 
     @always_inline
     fn get_id(self) -> EntityId:

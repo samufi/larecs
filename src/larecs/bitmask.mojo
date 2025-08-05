@@ -1,5 +1,6 @@
 from bit import pop_count, bit_not
 from .filter import MaskFilter
+from hashlib import Hasher
 
 
 @fieldwise_init
@@ -94,14 +95,10 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
         """
         self = Self(bits)
 
-    fn __copyinit__(out self, other: Self):
-        """Initializes the mask with the other mask."""
-        self._bytes = other._bytes
-
     @always_inline
-    fn __hash__(self) -> UInt:
+    fn __hash__[H: Hasher](self, mut hasher: H):
         """Hashes the mask."""
-        return hash(self._bytes)
+        return hasher.update(self._bytes)
 
     @always_inline
     fn __eq__(self, other: Self) -> Bool:

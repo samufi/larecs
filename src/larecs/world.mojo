@@ -97,7 +97,9 @@ struct Replacer[
         )
 
 
-struct World[*component_types: ComponentType](Movable, Sized):
+struct World[*component_types: ComponentType](
+    ExplicitlyCopyable, Movable, Sized
+):
     """
     World is the central type holding entity and component data, as well as resources.
 

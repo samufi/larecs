@@ -1,5 +1,3 @@
-from memory import UnsafePointer
-from collections import InlineArray
 from testing import *
 
 from larecs.archetype import Archetype as _Archetype

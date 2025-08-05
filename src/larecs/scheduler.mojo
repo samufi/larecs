@@ -52,7 +52,7 @@ fn _finalize_system[
     system.unsafe_get[S]().finalize(world)
 
 
-struct Scheduler[*ComponentTypes: ComponentType]:
+struct Scheduler[*ComponentTypes: ComponentType](Movable):
     """
     Manages the execution of systems in a world.
 

@@ -15,7 +15,7 @@ alias ResourceType = Copyable & Movable
 
 
 @fieldwise_init
-struct Resources(ExplicitlyCopyable, Movable):
+struct Resources(ExplicitlyCopyable, Movable, Sized):
     """Manages resources."""
 
     alias IdType = StringSlice[StaticConstantOrigin]

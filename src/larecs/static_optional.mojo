@@ -1,6 +1,3 @@
-from memory import UnsafePointer
-
-
 @fieldwise_init
 struct StaticOptional[
     ElementType: Copyable & Movable,
@@ -18,10 +15,7 @@ struct StaticOptional[
     """
 
     # Fields
-    alias type = __mlir_type[
-        `!pop.array<`, Int(has_value).value, `, `, Self.ElementType, `>`
-    ]
-    var _value: Self.type
+    var _value: InlineArray[ElementType, Int(has_value), run_destructors=True]
     """The underlying storage for the optional."""
 
     # ===------------------------------------------------------------------===#
@@ -38,7 +32,7 @@ struct StaticOptional[
             not has_value,
             "Initialize with a value if `has_value` is `True`",
         ]()
-        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
+        self._value = {uninitialized = True}
 
     @always_inline
     @implicit
@@ -48,48 +42,10 @@ struct StaticOptional[
         Args:
             value: The value to fill the optional with.
         """
-        __mlir_op.`lit.ownership.mark_initialized`(__get_mvalue_as_litref(self))
-
-        var ptr = UnsafePointer(to=self[])
-        ptr.init_pointee_move(value^)
+        self._value = {value^}
 
     @always_inline
-    fn copy(self) -> Self:
-        """Explicitly copy the provided value.
-
-        Returns:
-            A copy of the value.
-        """
-
-        @parameter
-        if has_value:
-            return Self(self[])
-        else:
-            return Self()
-
-    @always_inline
-    fn __copyinit__(out self, other: Self):
-        """Copy construct the optional.
-
-        Args:
-            other: The optional to copy.
-        """
-        self = other.copy()
-
-    fn __del__(owned self):
-        """Deallocate the optional."""
-
-        @parameter
-        if has_value:
-            var ptr = self.unsafe_ptr()
-            ptr.destroy_pointee()
-
-    # ===------------------------------------------------------------------===#
-    # Methods
-    # ===------------------------------------------------------------------===#
-
-    @always_inline
-    fn __getitem__(ref self) -> ref [self] Self.ElementType:
+    fn __getitem__(ref self) -> ref [self._value] Self.ElementType:
         """Get a reference to the value.
 
         Returns:
@@ -102,15 +58,12 @@ struct StaticOptional[
                 " value is present."
             ),
         ]()
-        alias zero = index(0)
-        var ptr = __mlir_op.`pop.array.gep`(
-            UnsafePointer(to=self._value).address,
-            zero,
-        )
-        return UnsafePointer(ptr)[]
+        return self._value.unsafe_get(0)
 
     @always_inline
-    fn or_else(self, value: ElementType) -> ElementType:
+    fn or_else(
+        ref self, ref value: ElementType
+    ) -> ref [self._value, value] ElementType:
         """Returns a copy of the value contained in the Optional or a default value if no value is present.
 
         Args:
@@ -147,7 +100,7 @@ struct StaticOptional[
             ),
         ]()
 
-        return UnsafePointer(to=self._value).bitcast[Self.ElementType]()
+        return self._value.unsafe_ptr()
 
     @always_inline
     fn __bool__(self) -> Bool:

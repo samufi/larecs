@@ -12,7 +12,7 @@ struct Query[
     world_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
-](SizedRaising):
+](Copyable, ExplicitlyCopyable, Movable, SizedRaising):
     """Query builder for entities with and without specific components.
 
     This type should not be used directly, but through the [..world.World.query] method:
@@ -167,7 +167,7 @@ struct Query[
 @fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
-]:
+](Copyable, ExplicitlyCopyable, Movable):
     """
     Class that holds the same information as a query but no reference to the world.
 
@@ -203,7 +203,7 @@ struct _ArchetypeIterator[
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
-]:
+](Boolable, ExplicitlyCopyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given include and exclude masks.
 
@@ -221,6 +221,7 @@ struct _ArchetypeIterator[
     alias Archetype = _Archetype[
         *ComponentTypes, component_manager=component_manager
     ]
+    alias Element = Pointer[Self.Archetype, archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _mask: BitMask
@@ -292,25 +293,6 @@ struct _ArchetypeIterator[
         self._buffer_index = buffer_index
         self._max_buffer_index = max_buffer_index
 
-    fn __moveinit__(
-        out self,
-        owned other: Self,
-    ):
-        """
-        Moves the iterator to a different location in memory.
-
-        Args:
-            other: The iterator at the original location.
-        """
-        self._archetypes = other._archetypes
-        self._archetype_index_buffer = other._archetype_index_buffer
-        self._mask = other._mask^
-        self._without_mask = other._without_mask^
-
-        self._archetype_count = other._archetype_count
-        self._buffer_index = other._buffer_index
-        self._max_buffer_index = other._max_buffer_index
-
     fn _fill_archetype_buffer(mut self):
         """
         Find the next archetypes that contain the mask.
@@ -357,9 +339,7 @@ struct _ArchetypeIterator[
         iterator = self^
 
     @always_inline
-    fn __next__(
-        mut self, out archetype: Pointer[Self.Archetype, archetype_origin]
-    ):
+    fn __next__(mut self, out archetype: Self.Element):
         """
         Returns the next archetype in the iteration.
 
@@ -458,7 +438,7 @@ struct _EntityIterator[
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
     has_start_indices: Bool = False,
-](Sized):
+](Boolable, Movable, Sized):
     """Iterator over all entities corresponding to a mask.
 
     Locks the world while it exists.
@@ -549,27 +529,6 @@ struct _EntityIterator[
             # We need to reduce the index by 1, because the
             # first call to __next__ will increment it.
             self._entity_index -= 1
-
-    fn __moveinit__(
-        out self,
-        owned other: Self,
-    ):
-        """
-        Moves the iterator to a different location in memory.
-
-        Args:
-            other: The iterator at the original location.
-        """
-        self._lock_ptr = other._lock_ptr
-        self._lock = other._lock
-        self._current_archetype = other._current_archetype
-        self._start_indices = other._start_indices^
-        self._processed_archetypes_count = other._processed_archetypes_count^
-        self._archetype_iterator = other._archetype_iterator^
-
-        self._last_entity_index = other._last_entity_index
-        self._entity_index = other._entity_index
-        self._archetype_size = other._archetype_size
 
     fn __del__(owned self):
         """
@@ -689,7 +648,7 @@ struct _ArchetypeEntityIterator[
     lock_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-](Sized):
+](Boolable, Movable, Sized):
     """Iterator over all entities in a given [..archetype._Archetype].
 
     Locks the world while it exists.
@@ -736,22 +695,7 @@ struct _ArchetypeEntityIterator[
         self._archetype = archetype
         self._archetype_size = len(self._archetype[])
 
-    fn __moveinit__(
-        out self,
-        owned other: Self,
-    ):
-        """
-        Moves the iterator to a different location in memory.
-
-        Args:
-            other: The iterator at the original location.
-        """
-        self._archetype = other._archetype
-        self._lock_ptr = other._lock_ptr
-        self._lock = other._lock
-        self._next_entity_index = other._next_entity_index
-        self._archetype_size = other._archetype_size
-
+    @always_inline
     fn __del__(owned self):
         """
         Releases the lock.

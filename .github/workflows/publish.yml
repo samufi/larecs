@@ -11,7 +11,7 @@ permissions:
   pages: write
 
 env:
-  MODO_VERSION: v0.11.6
+  MODO_VERSION: v0.11.10
   HUGO_VERSION: mojo-lexer # 0.140.2
 
 jobs:
@@ -90,7 +90,7 @@ jobs:
       - name: Run Modo # Includes 'mojo doc' and 'mojo test'
         run: |
           pixi install --locked
-          ./modo/modo build
+          ./modo/modo build --tests ""
       
       - name: Run Hugo
         run: |

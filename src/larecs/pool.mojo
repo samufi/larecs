@@ -20,16 +20,6 @@ struct EntityPool(Copyable, Movable, Sized):
         self._next = 0
         self._available = 0
 
-    fn __copyinit__(out self, other: Self):
-        self._entities = other._entities
-        self._next = other._next
-        self._available = other._available
-
-    fn __moveinit__(out self, owned other: Self):
-        self._entities = other._entities^
-        self._next = other._next
-        self._available = other._available
-
     fn get(mut self) -> Entity:
         """Returns a fresh or recycled entity."""
         if self._available == 0:
@@ -54,11 +44,17 @@ struct EntityPool(Copyable, Movable, Sized):
         if entity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
+        if entity.get_id() >= len(self._entities):
+            raise Error(
+                "Entity ID {} is out of bounds (max: {})".format(
+                    entity.get_id(), len(self._entities) - 1
+                )
+            )
         self._entities[entity.get_id()]._generation += 1
-        self._next, self._entities[entity.get_id()]._id = (
-            entity.get_id(),
-            self._next,
-        )
+
+        tmp = self._next
+        self._next = entity.get_id()
+        self._entities[entity.get_id()]._id = tmp
         self._available += 1
 
     @always_inline
