@@ -35,7 +35,7 @@ jobs:
       - name: Download Modo
         run: |
           mkdir modo/
-          curl -sSL https://github.com/mlange-42/modo/releases/download/v${{env.MODO_VERSION}}/modo-v${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
+          curl -sSL https://github.com/mlange-42/modo/releases/download/${{env.MODO_VERSION}}/modo-${{env.MODO_VERSION}}-linux-amd64.tar.gz | tar -xz -C modo/
 
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
