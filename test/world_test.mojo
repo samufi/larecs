@@ -230,6 +230,23 @@ def test_world_add():
         world.add(entity, Velocity(0.3, 0.4))
 
 
+def test_world_batch_add():
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    entity = world.add_entity(pos)
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+    pos = Position(3.0, 4.0)
+    entity = world.add_entity(pos)
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+
+    for entity in world.add(world.query[Position](), Velocity(0.1, 0.2)):
+        assert_true(world.has[Velocity](entity))
+        assert_equal(world.get[Velocity](entity).dx, 0.1)
+        assert_equal(world.get[Velocity](entity).dy, 0.2)
+
+
 def test_world_remove():
     world = SmallWorld()
     pos = Position(1.0, 2.0)
@@ -437,6 +454,7 @@ def main():
     test_remove_archetype()
     test_world_has_component()
     test_world_add()
+    test_world_batch_add()
     test_world_remove()
     test_remove_and_add()
     test_world_resource_access()
