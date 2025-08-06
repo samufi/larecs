@@ -117,13 +117,6 @@ Hence, it is up to the users to take care of this.
 Note that using types with heap-allocated memory is typically a bad idea for
 ECS and should be avoided anyway.
 
-### Inefficient dictionary for first-time archetype lookup
-
-Due to a [bug](https://github.com/modularml/mojo/issues/3781) in Mojo🔥, Larecs🌲 uses a very 
-inefficient dict implementation for first-time archetype lookup. 
-As long as the number of component combinations (archetypes) is limited,
-this issue is insignificant. The problem will be fixed as soon as possible.
-
 ## Next steps
 
 The goal of Larecs🌲 is to provide a user-friendly ECS with maximal efficiency. 
@@ -138,7 +131,8 @@ In the near future, Larecs🌲 will take the following steps:
 - [ ] Improve the API for systems (e.g. allow systems to stop the execution)
 - [ ] Add GPU support 
 - [ ] Improve the usability by switching to value unpacking in queries as soon as this is available in Mojo🔥.
-- [ ] Fix the dictionary issue mentioned above.
+- [x] Fix using an inefficient dictionary for first-time archetype lookup.
+- [ ] Allow the usage of complex types as components, i.e., types that have heap-allocated memory.
 
 ## License
 
