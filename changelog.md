@@ -1,12 +1,23 @@
 # Changelog
 
-## [Unreleased](https://github.com/samufi/larecs/compare/v0.3.0...main)
+## [Unreleased](https://github.com/samufi/larecs/compare/v0.4.0...main)
 
 ### Breaking changes
 - ...
 
 ### Other changes
 - ...
+
+## [Unreleased](https://github.com/samufi/larecs/compare/v0.3.0...v0.4.0)
+
+### Breaking changes
+- Update the utilized Mojo version to 25.5 and adjust the code accordingly.
+
+### Other changes
+- Use the builtin dict for better performance.
+- Change StaticOptional to build on `InlineArray` for simpler code.
+- Remove boilerplate code that can now be synthesized automatically.
+- Disable some tests that cannot be executed in the new Mojo version due to a bug.
 
 ## [v0.3.0 (2025-06-23)](https://github.com/samufi/larecs/compare/v0.2.0...v0.3.0)
 
