@@ -813,34 +813,64 @@ struct World[*component_types: ComponentType](
             e.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
             e.set[Velocity](Velocity(velocity.x - 0.05, velocity.y - 0.05))
         ```
+
+        NOTE: This operation can never map multiple archetypes onto one, due to the requirement that components to add must be excluded in the query.
+                Therefore, we can apply the transformation to each matching archetype individually, without checking for edge cases where multiple archetypes get merged into one.
+                This also helps in a potential parallelization optimization.
         """
         self._assert_unlocked()
 
-        # search for the archetype that matches the query mask
-        # if query could match archetypes that already have at least one of the components, raise an error
-
         alias added_component_ids = Self.component_manager.get_id_arr[*Ts]()
 
+        # if query could match archetypes that already have at least one of the components, raise an error
         if query.without_mask[].contains(BitMask(added_component_ids)):
             raise Error(
                 "Query could match archetypes that already have at least one of"
                 " the components to add."
             )
+        
+        arch_start_idxs = List[UInt]()
 
-        # add components and store start index per archetype
+        # search for the archetype that matches the query mask
+        with self._locked():
+            # TODO: Find out if _ArchetypeIterator produces archetypes in a stable order analogous to _EntityIterator.
+            for old_archetype in _ArchetypeIterator(
+                Pointer(to=self._archetypes),
+                query.mask,
+                query.without_mask,
+            ):
+                # two cases per matching archetype A:
+                # 1. an archetype B with the new component combination exists => move entities from A to B and insert new component data for moved entities
+                # 2. an archetype with the new component combination does not exist yet => create new archetype B = A + added_components_ids and move entities + component data from A to B
+                new_archetype_index = self._get_archetype_index(
+                    added_component_ids, old_archetype[].get_node_index()
+                )
 
-        # four cases:
-        # 1. an archetype A exists that matches the query mask and an archetype with the new component combination does not exist yet
-        # ---> create a new archetype with the new component combination, reuse old pointers from A and then delete A
+                arch_start_idx = self._create_entities(
+                    new_archetype_index,
+                    len(old_archetype[]),
+                )
 
-        # 2. an archetype A exists that matches the query mask and an archetype B with the new component combination exists
-        # ---> allocate more memory in B, copy pointers from A to B and then delete A
+                arch_start_idxs.append(arch_start_idx)
 
-        # 3. no archetype exists that matches the query mask, but an archetype B with the new component combination exists
-        # ---> allocate more memory in B, query matching entities for query manually, add entities to B and copy their component data
+                new_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(new_archetype_index)
+                )
 
-        # 4. no archetype exists that matches the query mask and no archetype with the new component combination exists
-        # ---> create archetype with the new component combination, query matching entities for query manually, add entities to B and copy their component data
+                # move component data from old archetype to new archetype
+                for arch_idx in range(arch_start_idx, arch_start_idx + len(old_archetype[])):
+                    new_entity_idx = index(arch_idx)
+                    old_entity_idx = index(arch_idx - arch_start_idx)
+
+                    alias components = VariadicList(Ts)
+                    @parameter
+                    for T in components:
+                        alias comp_id = Self.component_manager.get_id[T]()
+                        comp_ptr = old_archetype[]._get_component_ptr(old_entity_idx, comp_id)
+                        new_archetype[].get_component[T=T[add_comp_idx]](new_entity_idx)
+
+                # TODO: finish
+                pass
 
         # return iterator to iterate over the changed entities
         iterator = self._get_entity_iterator(
