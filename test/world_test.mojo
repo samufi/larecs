@@ -238,6 +238,17 @@ def test_world_batch_add():
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), 0)
 
+    # DEBUG START:
+    for entity in world.query[Position]().without[Velocity]():
+        e = entity.get_entity()
+        print(
+            "Entity "
+            + String(e.get_id())
+            + " in archetype "
+            + String(world._archetype_map[entity._archetype[]._node_index])
+        )
+    # DEBUG END:
+
     for entity in world.add(
         world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)
     ):
@@ -265,6 +276,17 @@ def test_world_batch_add():
         world.query[Position](),
         LargerComponent(0.3, 0.4, 0.5),
     )
+
+    # DEBUG START:
+    for entity in world.query[Position]().without[Velocity]():
+        e = entity.get_entity()
+        print(
+            "Entity "
+            + String(e.get_id())
+            + " in archetype "
+            + String(world._archetype_map[entity._archetype[]._node_index])
+        )
+    # DEBUG END:
 
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
     assert_equal(len(world.query[Position, Velocity]()), 2)
