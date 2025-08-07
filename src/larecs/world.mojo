@@ -828,6 +828,8 @@ struct World[*component_types: ComponentType](
             )
 
         arch_start_idxs = List[UInt, True]()
+        with_mask = query.mask
+        without_mask = query.without_mask[]
 
         # search for the archetype that matches the query mask
         with self._locked():
@@ -868,6 +870,9 @@ struct World[*component_types: ComponentType](
                 # add new components to the new archetype
                 @parameter
                 for comp_idx in range(add_components.__len__()):
+                    alias comp_id = component_ids[comp_idx]
+                    with_mask.set(comp_id, True)
+                    without_mask.set(comp_id, False)
                     for idx in range(len(old_archetype[])):
                         new_idx = new_archetype[].add(
                             old_archetype[].get_entity(idx)
@@ -875,7 +880,7 @@ struct World[*component_types: ComponentType](
                         entity = new_archetype[].get_entity(new_idx)
                         new_archetype[].unsafe_set(
                             new_idx,
-                            component_ids[comp_idx],
+                            comp_id,
                             UnsafePointer(to=add_components[comp_idx]).bitcast[
                                 UInt8
                             ](),
@@ -889,8 +894,8 @@ struct World[*component_types: ComponentType](
 
         # return iterator to iterate over the changed entities
         iterator = self._get_entity_iterator(
-            query.mask,
-            query.without_mask,
+            with_mask,
+            without_mask,
             StaticOptional(arch_start_idxs),
         )
 
