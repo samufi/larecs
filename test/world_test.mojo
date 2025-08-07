@@ -241,7 +241,7 @@ def test_world_batch_add():
     assert_true(world.has[Position](entity))
     assert_false(world.has[Velocity](entity))
 
-    for entity in world.add(world.query[Position](), Velocity(0.1, 0.2)):
+    for entity in world.add(world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)):
         assert_true(world.has[Velocity](entity))
         assert_equal(world.get[Velocity](entity).dx, 0.1)
         assert_equal(world.get[Velocity](entity).dy, 0.2)

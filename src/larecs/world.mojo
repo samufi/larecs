@@ -786,7 +786,7 @@ struct World[*component_types: ComponentType](
 
         Example:
 
-        ```mojo {doctest="add_query_comps" global=true hide=true}
+        ```mojo {doctest="add_query_comps" global=true}
         from larecs import World
 
         @fieldwise_init
@@ -802,12 +802,10 @@ struct World[*component_types: ComponentType](
         world = World[Position, Velocity]()
         _ = world.add_entity(Position(0, 0))
 
-        changed_entities = world.add[Velocity](
-            world.query[Position](),
+        for e in world.add[Velocity](
+            world.query[Position]().without_mask[Velocity](),
             Velocity(0.5, -0.5),
-        )
-
-        for e in changed_entities:
+        ):
             velocity = e.get[Velocity]()
             position = e.get[Position]()
             e.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
