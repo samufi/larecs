@@ -834,10 +834,8 @@ struct World[*component_types: ComponentType](
         # search for the archetype that matches the query mask
         with self._locked():
             # TODO: Find out if _ArchetypeIterator produces archetypes in a stable order analogous to _EntityIterator.
-            for old_archetype in _ArchetypeIterator(
-                Pointer(to=self._archetypes),
-                query.mask,
-                query.without_mask,
+            for old_archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
             ):
                 # two cases per matching archetype A:
                 # 1. an archetype B with the new component combination exists => move entities from A to B and insert new component data for moved entities
