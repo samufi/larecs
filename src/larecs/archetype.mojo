@@ -521,6 +521,35 @@ struct Archetype[
         )
 
     @always_inline
+    fn unsafe_set[
+        T: Indexer,
+    ](
+        mut self,
+        start_idx: T,
+        id: Self.Id,
+        data: UnsafePointer[UInt8],
+        count: UInt,
+    ):
+        """Sets the data of the component with the given id for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the index.
+
+        Args:
+            start_idx: The index of the first entity to set.
+            id:       The id of the component.
+            data:   The data to set the component with.
+            count:  The number of elements to set.
+        """
+        component_size = component_manager.component_sizes[id]
+
+        memcpy(
+            self._data[id] + self._size * component_size,
+            data,
+            index(component_size) * count,
+        )
+
+    @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index.
 
