@@ -880,7 +880,7 @@ struct World[*component_types: ComponentType](
                     id = old_archetype[]._ids[i]
 
                     new_archetype[].unsafe_set(
-                        arch_start_idx + i,
+                        arch_start_idx,
                         id,
                         old_archetype[]._data[id],
                         len(old_archetype[]),
