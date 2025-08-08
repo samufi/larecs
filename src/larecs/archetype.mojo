@@ -436,6 +436,9 @@ struct Archetype[
 
         Does nothing if the new capacity is not larger than the current capacity.
 
+        Note:
+            Allocates twice the requested size to avoid frequent reallocations.
+
         Args:
             new_capacity: The new capacity of the archetype.
         """
@@ -445,7 +448,7 @@ struct Archetype[
         for i in range(self._component_count):
             id = self._ids[i]
             old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_capacity
+            new_size = index(self._item_sizes[id]) * new_capacity * 2
             new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
