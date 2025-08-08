@@ -537,9 +537,9 @@ struct Archetype[
 
         Args:
             start_idx: The index of the first entity to set.
-            id:       The id of the component.
-            data:   The data to set the component with.
-            count:  The number of elements to set.
+            id: The id of the component.
+            data: Pointer to the values to set the component with.
+            count: The number of elements to set.
         """
         component_size = component_manager.component_sizes[id]
 
@@ -574,7 +574,7 @@ struct Archetype[
         """Returns the component with the given id at the given index.
 
         Args:
-            idx:    The index of the entity.
+            idx: The index of the entity.
 
         Parameters:
             IndexType: The type of the index.
@@ -583,7 +583,7 @@ struct Archetype[
                     contains the component.
 
         Raises:
-            Error:  If assert_has_component and the archetype does not contain the component.
+            Error: If assert_has_component and the archetype does not contain the component.
 
         Returns:
             A reference to the component.

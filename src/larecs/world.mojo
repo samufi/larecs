@@ -760,9 +760,7 @@ struct World[*component_types: ComponentType](
         *Ts: ComponentType
     ](
         mut self,
-        query: QueryInfo[
-            has_without_mask=True
-        ],  # has_without_mask must always be True, to explicitly exclude entities that already have some of the components to add
+        query: QueryInfo[has_without_mask=True],
         owned *add_components: *Ts,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
@@ -773,16 +771,12 @@ struct World[*component_types: ComponentType](
     ) raises:
         """
         Adds components to multiple entities at once, specified by a [..query.Query].
-        Parameters:
-            Ts: The types of the components to add.
 
-        Args:
-            query:          The query to determine which entities to modify.
-            add_components: The components to add.
-
-        Raises:
-            Error: when called on a locked world. Do not use during [.World.query] iteration.
-            Error: when called with query that could match archetypes that already have at least one of the components to add.
+        Note:
+            This operation can never map multiple archetypes onto one, due to the requirement that components to add
+            must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+            individually, without checking for edge cases where multiple archetypes get merged into one.
+            This also enables potential parallelization optimizations.
 
         Example:
 
@@ -800,46 +794,58 @@ struct World[*component_types: ComponentType](
             var y: Float64
 
         world = World[Position, Velocity]()
-        _ = world.add_entity(Position(0, 0))
+        _ = world.add_entities(Position(0, 0), 100)
 
-        for e in world.add[Velocity](
+        for entity in world.add[Velocity](
             world.query[Position]().without_mask[Velocity](),
             Velocity(0.5, -0.5),
         ):
-            velocity = e.get[Velocity]()
-            position = e.get[Position]()
-            e.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
-            e.set[Velocity](Velocity(velocity.x - 0.05, velocity.y - 0.05))
+            velocity = entity.get[Velocity]()
+            position = entity.get[Position]()
+            entity.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
+            entity.set[Velocity](Velocity(velocity.x - 0.05, velocity.y - 0.05))
         ```
 
-        NOTE: This operation can never map multiple archetypes onto one, due to the requirement that components to add must be excluded in the query.
-                Therefore, we can apply the transformation to each matching archetype individually, without checking for edge cases where multiple archetypes get merged into one.
-                This also helps in a potential parallelization optimization.
+        Parameters:
+            Ts: The types of the components to add.
+
+        Args:
+            query: The query to determine which entities to modify. The query parameter `has_without_mask` must always
+                be `True`, to explicitly exclude entities that already have some of the components to add.
+            add_components: The components to add.
+
+        Raises:
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+            Error: when called with a query that could match archetypes that already have at least one of the components
+                to add.
         """
         self._assert_unlocked()
 
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
 
-        # if query could match archetypes that already have at least one of the components, raise an error
+        # If query could match archetypes that already have at least one of the components, raise an error
         if not query.without_mask[].contains(BitMask(component_ids)):
             raise Error(
                 "Query could match archetypes that already have at least one of"
-                " the components to add."
+                " the components to add. Use `Query.without(Component, ...)` to"
+                " exclude those components."
             )
 
-        arch_start_idxs = List[UInt, True]()
+        arch_start_idcs = List[UInt, True]()
         with_mask = query.mask
         without_mask = query.without_mask[]
 
-        # search for the archetype that matches the query mask
+        # Search for the archetype that matches the query mask
         with self._locked():
             # TODO: Find out if _ArchetypeIterator produces archetypes in a stable order analogous to _EntityIterator.
             for old_archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
-                # two cases per matching archetype A:
-                # 1. an archetype B with the new component combination exists => move entities from A to B and insert new component data for moved entities
-                # 2. an archetype with the new component combination does not exist yet => create new archetype B = A + component_ids and move entities + component data from A to B
+                # Two cases per matching archetype A:
+                # 1. An archetype B with the new component combination exists, move entities from A to B
+                #    and insert new component data for moved entities.
+                # 2. An archetype with the new component combination does not exist yet,
+                #    create new archetype B = A + component_ids and move entities and component data from A to B.
                 new_archetype_index = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
                 )
@@ -866,10 +872,10 @@ struct World[*component_types: ComponentType](
                 arch_start_idx = len(new_archetype[])
                 new_archetype[].reserve(arch_start_idx + len(old_archetype[]))
 
-                # save arch_start_idx for the iterator
-                arch_start_idxs.append(arch_start_idx)
+                # Save arch_start_idx for the iterator.
+                arch_start_idcs.append(arch_start_idx)
 
-                # move component data from old archetype to new archetype
+                # Move component data from old archetype to new archetype.
                 for i in range(old_archetype[]._component_count):
                     id = old_archetype[]._ids[i]
 
@@ -880,7 +886,7 @@ struct World[*component_types: ComponentType](
                         len(old_archetype[]),
                     )
 
-                # add new components to the new archetype
+                # Add new components to the new archetype.
                 @parameter
                 for comp_idx in range(add_components.__len__()):
                     alias comp_id = component_ids[comp_idx]
@@ -905,11 +911,11 @@ struct World[*component_types: ComponentType](
 
                 old_archetype[].clear()
 
-        # return iterator to iterate over the changed entities
+        # Return iterator to iterate over the changed entities.
         iterator = self._get_entity_iterator(
             with_mask,
             without_mask,
-            StaticOptional(arch_start_idxs),
+            StaticOptional(arch_start_idcs),
         )
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
