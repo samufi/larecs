@@ -13,6 +13,9 @@ def test_comptime_variant_init():
     ](UInt8(42))
     assert_equal(variant[], 42)
 
+    var var_copy = variant
+    assert_equal(variant[], 42)
+
 
 # def test_comptime_variant_copy():
 #     var variant: StaticVariant[UInt8, Int8]
