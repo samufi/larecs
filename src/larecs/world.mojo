@@ -818,7 +818,7 @@ struct World[*component_types: ComponentType](
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            has_without_mask=True,
+            arch_iter_variant_idx=1,
             has_start_indices=True,
         ],
     ) raises:
@@ -885,12 +885,10 @@ struct World[*component_types: ComponentType](
             )
 
         arch_start_idcs = List[UInt, True]()
-        with_mask = query.mask
-        without_mask = query.without_mask[]
+        changed_archetype_idcs = List[Int, True]()
 
         # Search for the archetype that matches the query mask
         with self._locked():
-            # TODO: Find out if _ArchetypeMaskIterator produces archetypes in a stable order analogous to _EntityIterator.
             for old_archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
@@ -899,8 +897,19 @@ struct World[*component_types: ComponentType](
                 #    and insert new component data for moved entities.
                 # 2. An archetype with the new component combination does not exist yet,
                 #    create new archetype B = A + component_ids and move entities and component data from A to B.
-                new_archetype_index = self._get_archetype_index(
+                new_archetype_idx = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
+                )
+
+                # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
+                # resized during the call to `_get_archetype_index`.
+                old_archetype_index_after_archetypes_resize = (
+                    self._archetype_map[old_archetype[].get_node_index()]
+                )
+                old_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(
+                        index(old_archetype_index_after_archetypes_resize)
+                    )
                 )
 
                 # DEBUG START:
@@ -910,7 +919,7 @@ struct World[*component_types: ComponentType](
                         self._archetype_map[old_archetype[].get_node_index()]
                     )
                     + " -> Archetype "
-                    + String(new_archetype_index)
+                    + String(new_archetype_idx)
                 )
 
                 @parameter
@@ -919,7 +928,7 @@ struct World[*component_types: ComponentType](
                 # DEBUG END:
 
                 new_archetype = Pointer(
-                    to=self._archetypes.unsafe_get(new_archetype_index)
+                    to=self._archetypes.unsafe_get(new_archetype_idx)
                 )
 
                 arch_start_idx = len(new_archetype[])
@@ -927,6 +936,7 @@ struct World[*component_types: ComponentType](
 
                 # Save arch_start_idx for the iterator.
                 arch_start_idcs.append(arch_start_idx)
+                changed_archetype_idcs.append(new_archetype_idx)
 
                 # Move component data from old archetype to new archetype.
                 for i in range(old_archetype[]._component_count):
@@ -943,8 +953,6 @@ struct World[*component_types: ComponentType](
                 @parameter
                 for comp_idx in range(add_components.__len__()):
                     alias comp_id = component_ids[comp_idx]
-                    with_mask.set(comp_id, True)
-                    without_mask.set(comp_id, False)
                     for idx in range(len(old_archetype[])):
                         new_idx = new_archetype[].add(
                             old_archetype[].get_entity(idx)
@@ -959,15 +967,26 @@ struct World[*component_types: ComponentType](
                         )
                         self._entities[entity.get_id()] = EntityIndex(
                             new_idx,
-                            new_archetype_index,
+                            new_archetype_idx,
                         )
 
                 old_archetype[].clear()
 
         # Return iterator to iterate over the changed entities.
-        iterator = self._get_entity_iterator(
-            with_mask,
-            without_mask,
+        iterator = Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=1,
+            has_start_indices=True,
+        ](
+            Pointer(to=self._locks),
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes), arch_iter_variant_idx=1
+            ](
+                Self.ArchetypeListIterator[__origin_of(self._archetypes)](
+                    Pointer(to=self._archetypes), changed_archetype_idcs
+                ),
+            ),
             StaticOptional(arch_start_idcs),
         )
 
