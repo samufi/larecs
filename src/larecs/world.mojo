@@ -14,12 +14,14 @@ from .component import (
 )
 from .bitmask import BitMask
 from .static_optional import StaticOptional
+from .static_variant import StaticVariant
 from .query import (
     Query,
     QueryInfo,
-    _EntityIterator,
-    _ArchetypeEntityIterator,
     _ArchetypeIterator,
+    _EntityIterator,
+    _ArchetypeMaskIterator,
+    _ArchetypeListIterator,
 )
 from .lock import LockMask, LockedContext
 from .resource import Resources
@@ -118,14 +120,57 @@ struct World[*component_types: ComponentType](
         has_without_mask=_,
     ]
 
-    alias Iterator = _EntityIterator[
-        _,
-        _,
+    alias Iterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        lock_origin: MutableOrigin,
+        *,
+        arch_iter_variant_idx: Int = 0,
+        has_start_indices: Bool = False,
+        has_without_mask: Bool = False,
+    ] = _EntityIterator[
+        archetype_origin,
+        lock_origin,
         *component_types,
         component_manager = Self.component_manager,
-        has_without_mask=_,
-        has_start_indices=_,
+        arch_iter_variant_idx=arch_iter_variant_idx,
+        has_start_indices=has_start_indices,
+        has_without_mask=has_without_mask,
     ]
+
+    alias ArchetypeMaskIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        has_without_mask: Bool = False,
+    ] = _ArchetypeMaskIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+        has_without_mask=has_without_mask,
+    ]
+
+    alias ArchetypeListIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+    ] = _ArchetypeListIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+    ]
+
+    alias ArchetypeIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        arch_iter_variant_idx: Int = 0,
+        has_without_mask: Bool = False,
+    ] = _ArchetypeIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+        arch_iter_variant_idx=arch_iter_variant_idx,
+        has_without_mask=has_without_mask,
+    ]
+
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
     # _tarquery bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
@@ -386,11 +431,13 @@ struct World[*component_types: ComponentType](
         mut self,
         *components: *Ts,
         count: UInt,
-        out iterator: _ArchetypeEntityIterator[
+        out iterator: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,
             component_manager = Self.component_manager,
+            arch_iter_variant_idx=1,
+            has_start_indices=True,
         ],
     ) raises:
         """Adds a batch of [..entity.Entity]s.
@@ -466,10 +513,16 @@ struct World[*component_types: ComponentType](
                 count,
             ).fill(components[i])
 
-        iterator = _ArchetypeEntityIterator(
-            archetype,
+        iterator = _EntityIterator(
             Pointer(to=self._locks),
-            first_index_in_archetype,
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes), arch_iter_variant_idx=1
+            ](
+                Self.ArchetypeListIterator[__origin_of(self._archetypes)](
+                    List(archetype)
+                ),
+            ),
+            StaticOptional(List[UInt, True](UInt(first_index_in_archetype))),
         )
 
     @always_inline
@@ -837,7 +890,7 @@ struct World[*component_types: ComponentType](
 
         # Search for the archetype that matches the query mask
         with self._locked():
-            # TODO: Find out if _ArchetypeIterator produces archetypes in a stable order analogous to _EntityIterator.
+            # TODO: Find out if _ArchetypeMaskIterator produces archetypes in a stable order analogous to _EntityIterator.
             for old_archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
@@ -1265,7 +1318,7 @@ struct World[*component_types: ComponentType](
         self._assert_unlocked()
 
         with self._locked():
-            for archetype in _ArchetypeIterator(
+            for archetype in _ArchetypeMaskIterator(
                 Pointer(to=self._archetypes),
                 query.mask,
                 query.without_mask,
@@ -1388,14 +1441,20 @@ struct World[*component_types: ComponentType](
         mut self,
         owned mask: BitMask,
         owned without_mask: StaticOptional[BitMask, has_without_mask],
-        owned start_indices: Self.Iterator[
-            has_start_indices=has_start_indices
+        owned start_indices: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+            arch_iter_variant_idx=0,
+            has_start_indices=has_start_indices,
         ].StartIndices = None,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            has_without_mask=has_without_mask,
+            arch_iter_variant_idx=0,
             has_start_indices=has_start_indices,
+            has_without_mask=has_without_mask,
         ],
     ) raises:
         """
@@ -1410,11 +1469,28 @@ struct World[*component_types: ComponentType](
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
-        iterator = _EntityIterator(
-            Pointer(to=self._archetypes),
+        iterator = Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=0,
+            has_start_indices=has_start_indices,
+            has_without_mask=has_without_mask,
+        ](
             Pointer(to=self._locks),
-            mask,
-            without_mask,
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=0,
+                has_without_mask=has_without_mask,
+            ](
+                Self.ArchetypeMaskIterator[
+                    __origin_of(self._archetypes),
+                    has_without_mask=has_without_mask,
+                ](
+                    Pointer(to=self._archetypes),
+                    mask,
+                    without_mask,
+                )
+            ),
             start_indices,
         )
 
@@ -1425,11 +1501,8 @@ struct World[*component_types: ComponentType](
         ref self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
-        out iterator: _ArchetypeIterator[
-            __origin_of(self._archetypes),
-            *component_types,
-            component_manager = Self.component_manager,
-            has_without_mask=has_without_mask,
+        out iterator: Self.ArchetypeMaskIterator[
+            __origin_of(self._archetypes), has_without_mask=has_without_mask
         ],
     ):
         """
@@ -1438,7 +1511,7 @@ struct World[*component_types: ComponentType](
         Returns:
             An iterator over all archetypes that match the query.
         """
-        iterator = _ArchetypeIterator(
+        iterator = _ArchetypeMaskIterator(
             Pointer(to=self._archetypes),
             mask,
             without_mask,

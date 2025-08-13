@@ -3,7 +3,7 @@ from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
 from larecs.component import ComponentManager
-from larecs.query import _ArchetypeIterator
+from larecs.query import _ArchetypeMaskIterator
 
 
 def test_query_length():
@@ -396,7 +396,7 @@ def test_query_archetype_iterator():
     l = List[Archetype](a, a, a)
     var count = 0
 
-    for _ in _ArchetypeIterator[
+    for _ in _ArchetypeMaskIterator[
         __origin_of(l),
         FlexibleComponent[0],
         component_manager = ComponentManager[FlexibleComponent[0]](),
