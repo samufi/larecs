@@ -912,21 +912,6 @@ struct World[*component_types: ComponentType](
                     )
                 )
 
-                # DEBUG START:
-                print(
-                    "Archetype "
-                    + String(
-                        self._archetype_map[old_archetype[].get_node_index()]
-                    )
-                    + " -> Archetype "
-                    + String(new_archetype_idx)
-                )
-
-                @parameter
-                for i in range(component_ids.__len__()):
-                    print("  + Component " + String(component_ids[i]))
-                # DEBUG END:
-
                 new_archetype = Pointer(
                     to=self._archetypes.unsafe_get(new_archetype_idx)
                 )
