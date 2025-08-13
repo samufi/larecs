@@ -519,7 +519,7 @@ struct World[*component_types: ComponentType](
                 __origin_of(self._archetypes), arch_iter_variant_idx=1
             ](
                 Self.ArchetypeListIterator[__origin_of(self._archetypes)](
-                    List(archetype)
+                    Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
             StaticOptional(List[UInt, True](UInt(first_index_in_archetype))),

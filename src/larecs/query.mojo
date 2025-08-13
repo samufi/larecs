@@ -456,30 +456,35 @@ struct _ArchetypeListIterator[
         *ComponentTypes, component_manager=component_manager
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
-    var _iteration_archetypes: List[Pointer[Self.Archetype, archetype_origin]]
+    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
+    var _archetype_indices: List[Int, hint_trivial_type=True]
     var _archetype_count: Int
     var _buffer_index: Int
 
     fn __init__(
         out self,
-        archetypes: List[Pointer[Self.Archetype, archetype_origin]],
+        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        archetype_indices: List[Int, hint_trivial_type=True],
     ):
         """
         Creates an archetype array iterator.
 
         Args:
             archetypes: A list of pointers to the archetypes that are being iterated over.
+            archetype_indices: The indices of the archetypes in the list that are being iterated over.
         """
 
-        self._iteration_archetypes = archetypes
-        self._archetype_count = len(self._iteration_archetypes)
+        self._archetypes = archetypes
+        self._archetype_indices = archetype_indices
+        self._archetype_count = len(self._archetype_indices)
         self._buffer_index = 0
 
     @doc_private
     @always_inline
     fn __init__(
         out self,
-        archetypes: List[Pointer[Self.Archetype, archetype_origin]],
+        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        archetype_indices: List[Int, hint_trivial_type=True],
         archetype_count: Int,
         buffer_index: Int,
     ):
@@ -488,10 +493,12 @@ struct _ArchetypeListIterator[
 
         Args:
             archetypes: A list of pointers to the archetypes that are being iterated over.
+            archetype_indices: The indices of the archetypes in the list that are being iterated over.
             archetype_count: The number of archetypes that are being iterated over.
             buffer_index: Current index in the archetype buffer.
         """
-        self._iteration_archetypes = archetypes
+        self._archetypes = archetypes
+        self._archetype_indices = archetype_indices
         self._archetype_count = archetype_count
         self._buffer_index = buffer_index
 
@@ -513,7 +520,11 @@ struct _ArchetypeListIterator[
         Returns:
             The next archetype as a pointer.
         """
-        archetype = self._iteration_archetypes.unsafe_get(self._buffer_index)
+        archetype = Pointer(
+            to=self._archetypes[].unsafe_get(
+                self._archetype_indices.unsafe_get(self._buffer_index)
+            )
+        )
         self._buffer_index += 1
 
     fn __len__(self) -> Int:
@@ -533,7 +544,8 @@ struct _ArchetypeListIterator[
             A copy of the iterator
         """
         other = Self(
-            self._iteration_archetypes,
+            self._archetypes,
+            self._archetype_indices,
             self._archetype_count,
             self._buffer_index,
         )
@@ -706,9 +718,11 @@ struct _EntityIterator[
                 Self.ArchetypeIterator.isa[Self.ArchetypeListIterator](),
                 "The archetype iterator must be an ArchetypeListIterator.",
             ]()
-            self._current_archetype = rebind[Self.ArchetypeListIterator](
-                self._archetype_iterator[]
-            )._iteration_archetypes[0]
+            self._current_archetype = Pointer(
+                to=rebind[Self.ArchetypeListIterator](
+                    self._archetype_iterator[]
+                )._archetypes[][0]
+            )
             is_empty = Bool(
                 rebind[Self.ArchetypeListIterator](self._archetype_iterator[])
             )
