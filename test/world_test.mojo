@@ -238,17 +238,6 @@ def test_world_batch_add():
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), 0)
 
-    # DEBUG START:
-    for entity in world.query[Position]().without[Velocity]():
-        e = entity.get_entity()
-        print(
-            "Entity "
-            + String(e.get_id())
-            + " in archetype "
-            + String(world._archetype_map[entity._archetype[]._node_index])
-        )
-    # DEBUG END:
-
     for entity in world.add(
         world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)
     ):
@@ -277,30 +266,8 @@ def test_world_batch_add():
         LargerComponent(0.3, 0.4, 0.5),
     )
 
-    # DEBUG START:
-    for entity in world.query[Position]().without[Velocity]():
-        e = entity.get_entity()
-        print(
-            "Entity "
-            + String(e.get_id())
-            + " in archetype "
-            + String(world._archetype_map[entity._archetype[]._node_index])
-        )
-    # DEBUG END:
-
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
-    assert_equal(len(world.query[Position, Velocity]()), 2)
-
-    with assert_raises(
-        contains=(
-            "Query could match archetypes that already have at least one of the"
-            " components to add."
-        )
-    ):
-        _ = world.add(
-            world.query[Position]().without[LargerComponent](),
-            Velocity(0.3, 0.4),
-        )
+    assert_equal(len(world.query[Position, Velocity]()), n)
 
 
 def test_world_remove():
@@ -334,6 +301,37 @@ def test_world_remove():
     assert_not_equal(index1, index2)
     world.remove[Position](entity1)
     assert_equal(index1, world._entities[entity2._id].index)
+
+
+def test_world_batch_remove():
+    world = SmallWorld()
+    n = 100
+    _ = world.add_entities(
+        Position(1.0, 2.0), Velocity(0.1, 0.2), count=n
+    )
+
+    assert_equal(len(world.query[Position, Velocity]()), n)
+    assert_equal(len(world.query[Position]().without[Velocity]()), 0)
+
+    for entity in world.remove[Velocity](
+        world.query[Position, Velocity]())
+    :
+        assert_false(world.has[Velocity](entity))
+        assert_equal(world.get[Position](entity).x, 1.0)
+        assert_equal(world.get[Position](entity).y, 2.0)
+
+    assert_equal(len(world.query[Position, Velocity]()), 0)
+    assert_equal(len(world.query[Position]().without[Velocity]()), n)
+
+    with assert_raises(
+        contains=(
+            "Query could match archetypes that don't have all of the"
+            " components to remove."
+        )
+    ):
+        _ = world.remove[Velocity](
+            world.query[Position](),
+        )
 
 
 def test_remove_and_add():
