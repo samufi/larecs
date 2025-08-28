@@ -232,7 +232,7 @@ def test_world_add():
 
 def test_world_batch_add():
     world = SmallWorld()
-    n = 10
+    n = 100
     _ = world.add_entities(Position(1.0, 2.0), count=n)
 
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
