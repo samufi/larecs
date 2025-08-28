@@ -300,6 +300,37 @@ def test_world_remove():
     assert_equal(index1, world._entities[entity2._id].index)
 
 
+def test_world_batch_remove():
+    world = SmallWorld()
+    n = 100
+    _ = world.add_entities(
+        Position(1.0, 2.0), Velocity(0.1, 0.2), count=n
+    )
+
+    assert_equal(len(world.query[Position, Velocity]()), n)
+    assert_equal(len(world.query[Position]().without[Velocity]()), 0)
+
+    for entity in world.remove[Velocity](
+        world.query[Position, Velocity]())
+    :
+        assert_false(world.has[Velocity](entity))
+        assert_equal(world.get[Position](entity).x, 1.0)
+        assert_equal(world.get[Position](entity).y, 2.0)
+
+    assert_equal(len(world.query[Position, Velocity]()), 0)
+    assert_equal(len(world.query[Position]().without[Velocity]()), n)
+
+    with assert_raises(
+        contains=(
+            "Query could match archetypes that don't have all of the"
+            " components to remove."
+        )
+    ):
+        _ = world.remove[Velocity](
+            world.query[Position](),
+        )
+
+
 def test_remove_and_add():
     world = SmallWorld()
     pos = Position(1.0, 2.0)
