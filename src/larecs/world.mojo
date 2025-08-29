@@ -1248,6 +1248,14 @@ struct World[*component_types: ComponentType](
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
+        print("_get_entity_iterator <before constructor call>")
+        print("+ Mask " + mask.__str__())
+
+        @parameter
+        if has_without_mask:
+            print("- Mask " + without_mask[].__str__())
+        else:
+            print("- Mask <None>")
         iterator = _EntityIterator(
             Pointer(to=self._archetypes),
             Pointer(to=self._locks),

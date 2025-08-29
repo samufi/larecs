@@ -98,6 +98,15 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
+        print("Query.__iter__ <before constructor call>")
+        print("+ Mask " + self._mask.__str__())
+
+        @parameter
+        if Self.has_without_mask:
+            print("- Mask " + self._without_mask[].__str__())
+        else:
+            print("- Mask <None>")
+
         iterator = self._world[].Iterator(
             Pointer(to=self._world[]._archetypes),
             Pointer(to=self._world[]._locks),
@@ -504,7 +513,14 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
+        print("_EntityIterator.__init__ <inside constructor call>")
+        print("+ Mask " + mask.__str__())
 
+        @parameter
+        if has_without_mask:
+            print("- Mask " + without_mask[].__str__())
+        else:
+            print("- Mask <None>")
         self._archetype_iterator = Self.ArchetypeIterator(
             archetypes, mask, without_mask
         )
