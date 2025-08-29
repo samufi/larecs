@@ -98,8 +98,11 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_entity_iterator(
-            self._mask, self._without_mask
+        iterator = self._world[].Iterator(
+            Pointer(to=self._world[]._archetypes),
+            Pointer(to=self._world[]._locks),
+            self._mask,
+            self._without_mask,
         )
 
     @always_inline
