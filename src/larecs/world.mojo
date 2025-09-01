@@ -21,7 +21,9 @@ from .query import (
     _ArchetypeIterator,
     _EntityIterator,
     _ArchetypeByMaskIterator,
-    _ArchetypeListIterator,
+    _ArchetypeByListIterator,
+    _ArchetypeByMaskIteratorIdx,
+    _ArchetypeByListIteratorIdx,
 )
 from .lock import LockMask, LockedContext
 from .resource import Resources
@@ -125,7 +127,7 @@ struct World[*component_types: ComponentType](
         archetype_origin: Origin[archetype_mutability],
         lock_origin: MutableOrigin,
         *,
-        arch_iter_variant_idx: Int = 0,
+        arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
         has_start_indices: Bool = False,
         has_without_mask: Bool = False,
     ] = _EntityIterator[
@@ -138,7 +140,7 @@ struct World[*component_types: ComponentType](
         has_without_mask=has_without_mask,
     ]
 
-    alias ArchetypeMaskIterator[
+    alias ArchetypeByMaskIterator[
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
         has_without_mask: Bool = False,
@@ -149,10 +151,10 @@ struct World[*component_types: ComponentType](
         has_without_mask=has_without_mask,
     ]
 
-    alias ArchetypeListIterator[
+    alias ArchetypeByListIterator[
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
-    ] = _ArchetypeListIterator[
+    ] = _ArchetypeByListIterator[
         archetype_origin,
         *component_types,
         component_manager = Self.component_manager,
@@ -161,7 +163,7 @@ struct World[*component_types: ComponentType](
     alias ArchetypeIterator[
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
-        arch_iter_variant_idx: Int = 0,
+        arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
         has_without_mask: Bool = False,
     ] = _ArchetypeIterator[
         archetype_origin,
@@ -436,7 +438,7 @@ struct World[*component_types: ComponentType](
             __origin_of(self._locks),
             *component_types,
             component_manager = Self.component_manager,
-            arch_iter_variant_idx=1,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             has_start_indices=True,
         ],
     ) raises:
@@ -516,9 +518,10 @@ struct World[*component_types: ComponentType](
         iterator = _EntityIterator(
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
-                __origin_of(self._archetypes), arch_iter_variant_idx=1
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
-                Self.ArchetypeListIterator[__origin_of(self._archetypes)](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
                     Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
@@ -818,7 +821,7 @@ struct World[*component_types: ComponentType](
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=1,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             has_start_indices=True,
         ],
     ) raises:
@@ -961,14 +964,15 @@ struct World[*component_types: ComponentType](
         iterator = Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=1,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             has_start_indices=True,
         ](
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
-                __origin_of(self._archetypes), arch_iter_variant_idx=1
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
-                Self.ArchetypeListIterator[__origin_of(self._archetypes)](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
                     Pointer(to=self._archetypes), changed_archetype_idcs
                 ),
             ),
@@ -1450,13 +1454,13 @@ struct World[*component_types: ComponentType](
             __origin_of(self._locks),
             *component_types,
             component_manager = Self.component_manager,
-            arch_iter_variant_idx=0,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
         ].StartIndices = None,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=0,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
             has_without_mask=has_without_mask,
         ],
@@ -1476,17 +1480,17 @@ struct World[*component_types: ComponentType](
         iterator = Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=0,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
             has_without_mask=has_without_mask,
         ](
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
                 __origin_of(self._archetypes),
-                arch_iter_variant_idx=0,
+                arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
                 has_without_mask=has_without_mask,
             ](
-                Self.ArchetypeMaskIterator[
+                Self.ArchetypeByMaskIterator[
                     __origin_of(self._archetypes),
                     has_without_mask=has_without_mask,
                 ](
@@ -1505,7 +1509,7 @@ struct World[*component_types: ComponentType](
         ref self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
-        out iterator: Self.ArchetypeMaskIterator[
+        out iterator: Self.ArchetypeByMaskIterator[
             __origin_of(self._archetypes), has_without_mask=has_without_mask
         ],
     ):

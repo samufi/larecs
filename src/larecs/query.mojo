@@ -87,7 +87,7 @@ struct Query[
         out iterator: self.World.Iterator[
             __origin_of(self._world[]._archetypes),
             __origin_of(self._world[]._locks),
-            arch_iter_variant_idx=0,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=False,
             has_without_mask=has_without_mask,
         ],
@@ -240,7 +240,7 @@ struct _ArchetypeByMaskIterator[
         owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
-        Creates an entity iterator.
+        Creates an archetype by mask iterator.
 
         Args:
             archetypes: a pointer to the world's archetypes.
@@ -433,14 +433,14 @@ struct _ArchetypeByMaskIterator[
         return self.__has_next__()
 
 
-struct _ArchetypeListIterator[
+struct _ArchetypeByListIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
 ](Boolable, ExplicitlyCopyable, Iterator, Movable, Sized):
     """
-    Iterator over non-empty archetypes corresponding to given array of Archetype IDs.
+    Iterator over non-empty archetypes corresponding to given list of Archetype IDs.
 
     Note: For internal use only! Do not expose to users. Does not lock the world.
 
@@ -467,10 +467,10 @@ struct _ArchetypeListIterator[
         archetype_indices: List[Int, hint_trivial_type=True],
     ):
         """
-        Creates an archetype array iterator.
+        Creates an archetype by list iterator.
 
         Args:
-            archetypes: A list of pointers to the archetypes that are being iterated over.
+            archetypes: a pointer to the world's archetypes.
             archetype_indices: The indices of the archetypes in the list that are being iterated over.
         """
 
@@ -587,12 +587,15 @@ alias _ArchetypeIterator[
         component_manager=component_manager,
         has_without_mask=has_without_mask,
     ],
-    _ArchetypeListIterator[
+    _ArchetypeByListIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
     ],
 ]
+
+alias _ArchetypeByMaskIteratorIdx = 0
+alias _ArchetypeByListIteratorIdx = 1
 
 
 # TODO: Use generic ArchetypeIterator trait when parameters on traits are implemented.
@@ -602,7 +605,7 @@ struct _EntityIterator[
     lock_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-    arch_iter_variant_idx: Int = 0,
+    arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
     has_start_indices: Bool = False,
     has_without_mask: Bool = False,
 ](Boolable, Movable, Sized):
@@ -638,14 +641,14 @@ struct _EntityIterator[
         has_without_mask=has_without_mask,
     ]
 
-    alias ArchetypeMaskIterator = _ArchetypeByMaskIterator[
+    alias ArchetypeByMaskIterator = _ArchetypeByMaskIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
         has_without_mask=has_without_mask,
     ]
 
-    alias ArchetypeListIterator = _ArchetypeListIterator[
+    alias ArchetypeByListIterator = _ArchetypeByListIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
@@ -704,27 +707,27 @@ struct _EntityIterator[
 
         # If the iterator is not empty
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeMaskIterator]():
+        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
             self._current_archetype = Pointer(
-                to=rebind[Self.ArchetypeMaskIterator](
+                to=rebind[Self.ArchetypeByMaskIterator](
                     self._archetype_iterator[]
                 )._archetypes[][0]
             )
             is_empty = Bool(
-                rebind[Self.ArchetypeMaskIterator](self._archetype_iterator[])
+                rebind[Self.ArchetypeByMaskIterator](self._archetype_iterator[])
             )
         else:
             constrained[
-                Self.ArchetypeIterator.isa[Self.ArchetypeListIterator](),
-                "The archetype iterator must be an ArchetypeListIterator.",
+                Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator](),
+                "The archetype iterator must be an ArchetypeByListIterator.",
             ]()
             self._current_archetype = Pointer(
-                to=rebind[Self.ArchetypeListIterator](
+                to=rebind[Self.ArchetypeByListIterator](
                     self._archetype_iterator[]
                 )._archetypes[][0]
             )
             is_empty = Bool(
-                rebind[Self.ArchetypeListIterator](self._archetype_iterator[])
+                rebind[Self.ArchetypeByListIterator](self._archetype_iterator[])
             )
 
         if is_empty:
@@ -760,12 +763,12 @@ struct _EntityIterator[
         """
 
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeMaskIterator]():
-            self._current_archetype = rebind[Self.ArchetypeMaskIterator](
+        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+            self._current_archetype = rebind[Self.ArchetypeByMaskIterator](
                 self._archetype_iterator[]
             ).__next__()
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeListIterator]():
-            self._current_archetype = rebind[Self.ArchetypeListIterator](
+        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+            self._current_archetype = rebind[Self.ArchetypeByListIterator](
                 self._archetype_iterator[]
             ).__next__()
         self._archetype_size = len(self._current_archetype[])
@@ -783,13 +786,13 @@ struct _EntityIterator[
         # reset the last entity index so that the iterator
         # stops at the last entity of the last archetype.
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeMaskIterator]():
-            if not rebind[Self.ArchetypeMaskIterator](
+        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+            if not rebind[Self.ArchetypeByMaskIterator](
                 self._archetype_iterator[]
             ):
                 self._last_entity_index = self._archetype_size - 1
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeListIterator]():
-            if not rebind[Self.ArchetypeListIterator](
+        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+            if not rebind[Self.ArchetypeByListIterator](
                 self._archetype_iterator[]
             ):
                 self._last_entity_index = self._archetype_size - 1
@@ -830,15 +833,15 @@ struct _EntityIterator[
 
         # Elements in the remaining archetypes
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeMaskIterator]():
-            if rebind[Self.ArchetypeMaskIterator](self._archetype_iterator[]):
-                for archetype in rebind[Self.ArchetypeMaskIterator](
+        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+            if rebind[Self.ArchetypeByMaskIterator](self._archetype_iterator[]):
+                for archetype in rebind[Self.ArchetypeByMaskIterator](
                     self._archetype_iterator[]
                 ).copy():
                     size += len(archetype[])
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeListIterator]():
-            if rebind[Self.ArchetypeListIterator](self._archetype_iterator[]):
-                for archetype in rebind[Self.ArchetypeListIterator](
+        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+            if rebind[Self.ArchetypeByListIterator](self._archetype_iterator[]):
+                for archetype in rebind[Self.ArchetypeByListIterator](
                     self._archetype_iterator[]
                 ).copy():
                     size += len(archetype[])
