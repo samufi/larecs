@@ -909,13 +909,11 @@ struct World[*component_types: ComponentType](
 
                 # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                 # resized during the call to `_get_archetype_index`.
-                old_archetype_index_after_archetypes_resize = (
-                    self._archetype_map[old_archetype[].get_node_index()]
-                )
+                old_archetype_idx = self._archetype_map[
+                    old_archetype[].get_node_index()
+                ]
                 old_archetype = Pointer(
-                    to=self._archetypes.unsafe_get(
-                        index(old_archetype_index_after_archetypes_resize)
-                    )
+                    to=self._archetypes.unsafe_get(index(old_archetype_idx))
                 )
 
                 new_archetype = Pointer(
