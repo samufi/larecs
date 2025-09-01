@@ -18,10 +18,10 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
         Ts: The types that the variant can hold.
     """
 
-    alias EltType = Ts[variant_idx]
-    var _data: Self.EltType
+    alias ElementType = Ts[variant_idx]
+    var _data: Self.ElementType
 
-    fn __init__(out self, owned value: Self.EltType) raises:
+    fn __init__(out self, owned value: Self.ElementType) raises:
         """
         Initializes the variant with a value of the specified type.
         """
@@ -33,7 +33,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
 
         self._data = value^
 
-    fn __getitem__(ref self) -> ref [self._data] Self.EltType:
+    fn __getitem__(ref self) -> ref [self._data] Self.ElementType:
         """
         Returns a reference to the value stored in the variant.
 
@@ -42,7 +42,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
 
     @staticmethod
     @always_inline
-    fn isa[type: AnyType]() -> Bool:
+    fn is_a[type: AnyType]() -> Bool:
         """
         Checks if the variant holds a value of the specified type.
 
@@ -52,7 +52,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
         Returns:
             True if the variant holds a value of the specified type, False otherwise.
         """
-        return _type_is_eq[type, Self.EltType]()
+        return _type_is_eq[type, Self.ElementType]()
 
 
 # BUG: Mojo crashes with these methods (see https://github.com/modular/modular/issues/5172). When fixed, we can use

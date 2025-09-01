@@ -651,7 +651,7 @@ struct _EntityIterator[
 
         # If the iterator is not empty
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
             self._current_archetype = Pointer(
                 to=rebind[Self.ArchetypeByMaskIterator](
                     self._archetype_iterator[]
@@ -662,7 +662,7 @@ struct _EntityIterator[
             )
         else:
             constrained[
-                Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator](),
+                Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator](),
                 "The archetype iterator must be an ArchetypeByListIterator.",
             ]()
             self._current_archetype = Pointer(
@@ -707,11 +707,11 @@ struct _EntityIterator[
         """
 
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
             self._current_archetype = rebind[Self.ArchetypeByMaskIterator](
                 self._archetype_iterator[]
             ).__next__()
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
             self._current_archetype = rebind[Self.ArchetypeByListIterator](
                 self._archetype_iterator[]
             ).__next__()
@@ -730,12 +730,12 @@ struct _EntityIterator[
         # reset the last entity index so that the iterator
         # stops at the last entity of the last archetype.
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
             if not rebind[Self.ArchetypeByMaskIterator](
                 self._archetype_iterator[]
             ):
                 self._last_entity_index = self._archetype_size - 1
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
             if not rebind[Self.ArchetypeByListIterator](
                 self._archetype_iterator[]
             ):
@@ -777,13 +777,13 @@ struct _EntityIterator[
 
         # Elements in the remaining archetypes
         @parameter
-        if Self.ArchetypeIterator.isa[Self.ArchetypeByMaskIterator]():
+        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
             if rebind[Self.ArchetypeByMaskIterator](self._archetype_iterator[]):
                 for archetype in rebind[Self.ArchetypeByMaskIterator](
                     self._archetype_iterator[]
                 ).copy():
                     size += len(archetype[])
-        elif Self.ArchetypeIterator.isa[Self.ArchetypeByListIterator]():
+        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
             if rebind[Self.ArchetypeByListIterator](self._archetype_iterator[]):
                 for archetype in rebind[Self.ArchetypeByListIterator](
                     self._archetype_iterator[]
