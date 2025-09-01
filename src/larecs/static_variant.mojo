@@ -57,6 +57,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
 
 # BUG: Mojo crashes with these methods (see https://github.com/modular/modular/issues/5172). When fixed, we can use
 #      these for better ergonomics when working with StaticVariant.
+#      This may also be fixable when conditional conformance with `requires` is released.
 #
 #     fn __copyinit__[
 #         T: Copyable & StaticVariantType, //
