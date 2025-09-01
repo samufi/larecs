@@ -200,7 +200,7 @@ struct QueryInfo[
         self.without_mask = query._without_mask
 
 
-struct _ArchetypeMaskIterator[
+struct _ArchetypeByMaskIterator[
     archetype_mutability: Bool, //,
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
@@ -581,7 +581,7 @@ alias _ArchetypeIterator[
     has_without_mask: Bool = False,
 ] = StaticVariant[
     arch_iter_variant_idx,
-    _ArchetypeMaskIterator[
+    _ArchetypeByMaskIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
@@ -638,7 +638,7 @@ struct _EntityIterator[
         has_without_mask=has_without_mask,
     ]
 
-    alias ArchetypeMaskIterator = _ArchetypeMaskIterator[
+    alias ArchetypeMaskIterator = _ArchetypeByMaskIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,

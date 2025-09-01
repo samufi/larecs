@@ -20,7 +20,7 @@ from .query import (
     QueryInfo,
     _ArchetypeIterator,
     _EntityIterator,
-    _ArchetypeMaskIterator,
+    _ArchetypeByMaskIterator,
     _ArchetypeListIterator,
 )
 from .lock import LockMask, LockedContext
@@ -142,7 +142,7 @@ struct World[*component_types: ComponentType](
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
         has_without_mask: Bool = False,
-    ] = _ArchetypeMaskIterator[
+    ] = _ArchetypeByMaskIterator[
         archetype_origin,
         *component_types,
         component_manager = Self.component_manager,
@@ -1322,7 +1322,7 @@ struct World[*component_types: ComponentType](
         self._assert_unlocked()
 
         with self._locked():
-            for archetype in _ArchetypeMaskIterator(
+            for archetype in _ArchetypeByMaskIterator(
                 Pointer(to=self._archetypes),
                 query.mask,
                 query.without_mask,
@@ -1515,7 +1515,7 @@ struct World[*component_types: ComponentType](
         Returns:
             An iterator over all archetypes that match the query.
         """
-        iterator = _ArchetypeMaskIterator(
+        iterator = _ArchetypeByMaskIterator(
             Pointer(to=self._archetypes),
             mask,
             without_mask,
