@@ -826,13 +826,9 @@ struct World[*component_types: ComponentType](
         ],
     ) raises:
         """
-        Adds components to multiple entities at once, specified by a [..query.Query].
-
-        Note:
-            This operation can never map multiple archetypes onto one, due to the requirement that components to add
-            must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
-            individually, without checking for edge cases where multiple archetypes get merged into one.
-            This also enables potential parallelization optimizations.
+        Adds components to multiple entities at once that are specified by a [..query.Query].
+        The provided query must ensure that matching entities do not already have one or more of the
+        components to add.
 
         Example:
 
@@ -866,15 +862,22 @@ struct World[*component_types: ComponentType](
             Ts: The types of the components to add.
 
         Args:
-            query: The query to determine which entities to modify. The query parameter `has_without_mask` must always
-                be `True`, to explicitly exclude entities that already have some of the components to add.
+            query: The query specifying which entities to modify. The query parameter `has_without_mask` must always
+                be `True` to explicitly exclude entities that already have some of the components to add.
             add_components: The components to add.
 
         Raises:
             Error: when called on a locked world. Do not use during [.World.query] iteration.
-            Error: when called with a query that could match archetypes that already have at least one of the components
+            Error: when called with a query that could match entities that already have at least one of the components
                 to add.
         """
+
+        # Note:
+        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
+        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+        #    individually without checking for edge cases where multiple archetypes get merged into one.
+        #    This also enables potential parallelization optimizations.
+
         self._assert_unlocked()
 
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
@@ -882,7 +885,7 @@ struct World[*component_types: ComponentType](
         # If query could match archetypes that already have at least one of the components, raise an error
         if not query.without_mask[].contains(BitMask(component_ids)):
             raise Error(
-                "Query could match archetypes that already have at least one of"
+                "Query could match entities that already have at least one of"
                 " the components to add. Use `Query.without(Component, ...)` to"
                 " exclude those components."
             )
@@ -896,9 +899,9 @@ struct World[*component_types: ComponentType](
                 query.mask, query.without_mask
             ):
                 # Two cases per matching archetype A:
-                # 1. An archetype B with the new component combination exists, move entities from A to B
+                # 1. If an archetype B with the new component combination exists, move entities from A to B
                 #    and insert new component data for moved entities.
-                # 2. An archetype with the new component combination does not exist yet,
+                # 2. If an archetype with the new component combination does not exist yet,
                 #    create new archetype B = A + component_ids and move entities and component data from A to B.
                 new_archetype_idx = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
