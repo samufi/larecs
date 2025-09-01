@@ -441,7 +441,7 @@ struct _ArchetypeByListIterator[
     alias Element = Pointer[Self.Archetype, archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_indices: List[Int, hint_trivial_type=True]
-    var _buffer_index: Int
+    var _index: Int
 
     fn __init__(
         out self,
@@ -458,7 +458,7 @@ struct _ArchetypeByListIterator[
 
         self._archetypes = archetypes
         self._archetype_indices = archetype_indices
-        self._buffer_index = 0
+        self._index = 0
 
     @always_inline
     fn __iter__(owned self, out iterator: Self):
@@ -480,10 +480,10 @@ struct _ArchetypeByListIterator[
         """
         archetype = Pointer(
             to=self._archetypes[].unsafe_get(
-                self._archetype_indices.unsafe_get(self._buffer_index)
+                self._archetype_indices.unsafe_get(self._index)
             )
         )
-        self._buffer_index += 1
+        self._index += 1
 
     fn __len__(self) -> Int:
         """
@@ -492,7 +492,7 @@ struct _ArchetypeByListIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
-        return len(self._archetype_indices) - self._buffer_index
+        return len(self._archetype_indices) - self._index
 
     @always_inline
     fn __has_next__(self) -> Bool:
@@ -502,7 +502,7 @@ struct _ArchetypeByListIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._buffer_index < len(self._archetype_indices)
+        return self._index < len(self._archetype_indices)
 
     @always_inline
     fn __bool__(self) -> Bool:
