@@ -432,15 +432,15 @@ struct Archetype[
         self.reserve(max(self._capacity * 2, 8))
 
     fn reserve(mut self, new_capacity: UInt):
-        """Extends the capacity of the archetype to a given number.
+        """Extends the capacity of the archetype to at least a given number.
 
         Does nothing if the new capacity is not larger than the current capacity.
 
         Note:
-            Allocates twice the requested size to avoid frequent reallocations.
+            If memory is newly allocated, reserves twice the requested memory to avoid frequent reallocations.
 
         Args:
-            new_capacity: The new capacity of the archetype.
+            new_capacity: The new minimal capacity of the archetype.
         """
         if new_capacity <= self._capacity:
             return
