@@ -1086,6 +1086,11 @@ struct World[*component_types: ComponentType](
         if not add_size and not rem_size:
             return
 
+        # Reserve space for the possibility that a new archetype gets created
+        # This ensure that no further allocations can happen in this function and
+        # therefore all pointers to the current memory space stay valid!
+        self._archetypes.reserve(len(self._archetypes) + 1)
+
         idx = self._entities[entity.get_id()]
 
         old_archetype_index = idx.archetype_index
@@ -1133,12 +1138,14 @@ struct World[*component_types: ComponentType](
                 archetype_index = self._get_archetype_index(
                     remove_ids[], start_node_index
                 )
+                # No need for Pointer revalidation due to previous memory reservation!
 
         @parameter
         if add_size:
             archetype_index = self._get_archetype_index(
                 component_ids[], start_node_index
             )
+            # No need for Pointer revalidation due to previous memory reservation!
 
         archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
         index_in_archetype = archetype[].add(entity)
