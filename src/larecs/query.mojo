@@ -206,7 +206,7 @@ struct _ArchetypeByMaskIterator[
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
-](Boolable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given include and exclude masks.
 
@@ -395,23 +395,6 @@ struct _ArchetypeByMaskIterator[
 
         return size
 
-    fn copy(self, out other: Self):
-        """
-        Copies the iterator.
-
-        Returns:
-            A copy of the iterator
-        """
-        other = Self(
-            self._archetypes,
-            self._archetype_index_buffer,
-            self._mask,
-            self._without_mask,
-            self._archetype_count,
-            self._buffer_index,
-            self._max_buffer_index,
-        )
-
     @always_inline
     fn __has_next__(self) -> Bool:
         """
@@ -438,7 +421,7 @@ struct _ArchetypeByListIterator[
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-](Boolable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given list of Archetype IDs.
 
@@ -458,7 +441,6 @@ struct _ArchetypeByListIterator[
     alias Element = Pointer[Self.Archetype, archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_indices: List[Int, hint_trivial_type=True]
-    var _archetype_count: Int
     var _buffer_index: Int
 
     fn __init__(
@@ -476,31 +458,7 @@ struct _ArchetypeByListIterator[
 
         self._archetypes = archetypes
         self._archetype_indices = archetype_indices
-        self._archetype_count = len(self._archetype_indices)
         self._buffer_index = 0
-
-    @doc_private
-    @always_inline
-    fn __init__(
-        out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_indices: List[Int, hint_trivial_type=True],
-        archetype_count: Int,
-        buffer_index: Int,
-    ):
-        """
-        Initializes the iterator based on given field values.
-
-        Args:
-            archetypes: A list of pointers to the archetypes that are being iterated over.
-            archetype_indices: The indices of the archetypes in the list that are being iterated over.
-            archetype_count: The number of archetypes that are being iterated over.
-            buffer_index: Current index in the archetype buffer.
-        """
-        self._archetypes = archetypes
-        self._archetype_indices = archetype_indices
-        self._archetype_count = archetype_count
-        self._buffer_index = buffer_index
 
     @always_inline
     fn __iter__(owned self, out iterator: Self):
@@ -534,21 +492,7 @@ struct _ArchetypeByListIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
-        return self._archetype_count - self._buffer_index
-
-    fn copy(self, out other: Self):
-        """
-        Copies the iterator.
-
-        Returns:
-            A copy of the iterator
-        """
-        other = Self(
-            self._archetypes,
-            self._archetype_indices,
-            self._archetype_count,
-            self._buffer_index,
-        )
+        return len(self._archetype_indices) - self._buffer_index
 
     @always_inline
     fn __has_next__(self) -> Bool:
@@ -558,7 +502,7 @@ struct _ArchetypeByListIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._buffer_index < self._archetype_count
+        return self._buffer_index < len(self._archetype_indices)
 
     @always_inline
     fn __bool__(self) -> Bool:
