@@ -890,8 +890,8 @@ struct World[*component_types: ComponentType](
                 " exclude those components."
             )
 
-        arch_start_idcs = List[UInt, True]()
-        changed_archetype_idcs = List[Int, True]()
+        arch_start_idcs = List[UInt, True](len(self._archetypes))
+        changed_archetype_idcs = List[Int, True](len(self._archetypes))
 
         # Search for the archetype that matches the query mask
         with self._locked():
