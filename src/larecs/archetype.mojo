@@ -544,12 +544,10 @@ struct Archetype[
             data: Pointer to the values to set the component with.
             count: The number of elements to set.
         """
-        component_size = component_manager.component_sizes[id]
-
         memcpy(
-            self._data[id] + self._size * component_size,
+            self._get_component_ptr(index(start_idx), id),
             data,
-            index(component_size) * count,
+            index(self._item_sizes[id]) * count,
         )
 
     @always_inline
