@@ -1091,18 +1091,13 @@ struct World[*component_types: ComponentType](
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=1,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             has_start_indices=True,
         ],
     ) raises:
         """
         Removes components from multiple entities at once, specified by a [..query.Query].
-
-        Note:
-            This operation can never map multiple archetypes onto one, due to the requirement that components to remove
-            must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
-            each matching archetype individually, without checking for edge cases where multiple archetypes get merged
-            into one.  This also enables potential parallelization optimizations.
+        The provided query must ensure that matching entities have all of the components that should get removed.
 
         Example:
 
@@ -1137,8 +1132,15 @@ struct World[*component_types: ComponentType](
 
         Raises:
             Error: when called on a locked world. Do not use during [.World.query] iteration.
-            Error: when called with a query that could match archetypes that don't have all of the components to remove.
+            Error: when called with a query that could match entities that don't have all of the components to remove.
         """
+
+        # Note:
+        #     This operation can never map multiple archetypes onto one, due to the requirement that components to remove
+        #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
+        #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
+        #     into one.  This also enables potential parallelization optimizations.
+
         self._assert_unlocked()
 
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
@@ -1169,9 +1171,9 @@ struct World[*component_types: ComponentType](
                 query.mask, query.without_mask
             ):
                 # Two cases per matching archetype A:
-                # 1. An archetype B with the new component combination exists, move entities from A to B
+                # 1. If an archetype B with the new component combination exists, move entities from A to B
                 #    and insert new component data for moved entities.
-                # 2. An archetype with the new component combination does not exist yet,
+                # 2. If an archetype with the new component combination does not exist yet,
                 #    create new archetype B = A - component_ids and move entities and component data from A to B.
                 new_archetype_idx = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
@@ -1216,14 +1218,15 @@ struct World[*component_types: ComponentType](
         iterator = Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            arch_iter_variant_idx=1,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             has_start_indices=True,
         ](
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
-                __origin_of(self._archetypes), arch_iter_variant_idx=1
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
-                Self.ArchetypeListIterator[__origin_of(self._archetypes)](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
                     Pointer(to=self._archetypes), changed_archetype_idcs
                 ),
             ),
