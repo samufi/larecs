@@ -232,16 +232,10 @@ def test_world_add():
 
 def test_world_batch_add():
     world = SmallWorld()
-    pos = Position(1.0, 2.0)
-    entity = world.add_entity(pos)
-    assert_true(world.has[Position](entity))
-    assert_false(world.has[Velocity](entity))
-    pos = Position(3.0, 4.0)
-    entity = world.add_entity(pos)
-    assert_true(world.has[Position](entity))
-    assert_false(world.has[Velocity](entity))
+    n = 10
+    _ = world.add_entities(Position(1.0, 2.0), count=n)
 
-    assert_equal(len(world.query[Position]().without[Velocity]()), 2)
+    assert_equal(len(world.query[Position]().without[Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), 0)
 
     for entity in world.add(
@@ -252,7 +246,7 @@ def test_world_batch_add():
         assert_equal(world.get[Velocity](entity).dy, 0.2)
 
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
-    assert_equal(len(world.query[Position, Velocity]()), 2)
+    assert_equal(len(world.query[Position, Velocity]()), n)
 
     with assert_raises(
         contains=(
