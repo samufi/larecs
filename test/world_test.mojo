@@ -318,9 +318,9 @@ def test_world_batch_remove():
     for entity in world.remove[Velocity](
         world.query[Position, Velocity]())
     :
-        assert_false(world.has[Velocity](entity))
-        assert_equal(world.get[Position](entity).x, 1.0)
-        assert_equal(world.get[Position](entity).y, 2.0)
+        assert_false(entity.has[Velocity]())
+        assert_equal(entity.get[Position]().x, 1.0)
+        assert_equal(entity.get[Position]().y, 2.0)
 
     assert_equal(len(world.query[Position, Velocity]()), 0)
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
