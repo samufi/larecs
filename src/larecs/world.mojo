@@ -1162,8 +1162,8 @@ struct World[*component_types: ComponentType](
                     " components that get removed from `Query.without(...)`."
                 )
 
-        arch_start_idcs = List[UInt, True]()
-        changed_archetype_idcs = List[Int, True]()
+        arch_start_idcs = List[UInt, True](len(self._archetypes))
+        changed_archetype_idcs = List[Int, True](len(self._archetypes))
 
         # Search for the archetype that matches the query mask
         with self._locked():
@@ -1181,25 +1181,33 @@ struct World[*component_types: ComponentType](
 
                 # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                 # resized during the call to `_get_archetype_index`.
-                old_archetype_index_after_archetypes_resize = (
-                    self._archetype_map[old_archetype[].get_node_index()]
-                )
+                old_archetype_idx = self._archetype_map[
+                    old_archetype[].get_node_index()
+                ]
                 old_archetype = Pointer(
-                    to=self._archetypes.unsafe_get(
-                        index(old_archetype_index_after_archetypes_resize)
-                    )
+                    to=self._archetypes.unsafe_get(index(old_archetype_idx))
                 )
 
                 new_archetype = Pointer(
                     to=self._archetypes.unsafe_get(new_archetype_idx)
                 )
 
-                arch_start_idx = len(new_archetype[])
-                new_archetype[].reserve(arch_start_idx + len(old_archetype[]))
+                new_archetype[].reserve(
+                    len(new_archetype[]) + len(old_archetype[])
+                )
 
                 # Save arch_start_idx for the iterator.
+                arch_start_idx = len(new_archetype[])
                 arch_start_idcs.append(arch_start_idx)
                 changed_archetype_idcs.append(new_archetype_idx)
+
+                # Move entities to the new archetype and update entity index mappings
+                for i in range(len(old_archetype[])):
+                    entity = old_archetype[].get_entity(i)
+                    new_index = new_archetype[].add(entity)
+                    self._entities[entity.get_id()] = EntityIndex(
+                        new_index, new_archetype_idx
+                    )
 
                 # Move component data from old archetype to new archetype.
                 for i in range(old_archetype[]._component_count):
