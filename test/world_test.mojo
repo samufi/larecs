@@ -250,7 +250,7 @@ def test_world_batch_add():
 
     with assert_raises(
         contains=(
-            "Query could match archetypes that already have at least one of the"
+            "Query could match entities that already have at least one of the"
             " components to add."
         )
     ):
