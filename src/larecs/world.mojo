@@ -886,8 +886,8 @@ struct World[*component_types: ComponentType](
         if not query.without_mask[].contains(BitMask(component_ids)):
             raise Error(
                 "Query could match entities that already have at least one of"
-                " the components to add. Use `Query.without(Component, ...)` to"
-                " exclude those components."
+                " the components to add. Use `Query.without[Component, ...]()`"
+                " to exclude those components."
             )
 
         arch_start_idcs = List[UInt, True](len(self._archetypes))
