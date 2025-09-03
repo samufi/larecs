@@ -520,6 +520,69 @@ fn prevent_inlining_add_remove_5_comp() raises:
     ](entity)
 
 
+fn benchmark_batch_add_1_comp_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    comp = FlexibleComponent[1](1, 42.0)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+
+        # create 1_000_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(pos, count=1_000_000)
+
+        _ = world.add[FlexibleComponent[1]](
+            world.query[Position]().without[FlexibleComponent[1]](), comp
+        )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_batch_add_5_comp_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    comp1 = FlexibleComponent[1](1, 42.0)
+    comp2 = FlexibleComponent[2](2, 42.0)
+    comp3 = FlexibleComponent[3](3, 42.0)
+    comp4 = FlexibleComponent[4](4, 42.0)
+    comp5 = FlexibleComponent[5](5, 42.0)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+
+        # create 1_000_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(pos, count=1_000_000)
+
+        _ = world.add[
+            FlexibleComponent[1],
+            FlexibleComponent[2],
+            FlexibleComponent[3],
+            FlexibleComponent[4],
+            FlexibleComponent[5],
+        ](
+            world.query[Position]().without[
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+                FlexibleComponent[5],
+            ](),
+            comp1,
+            comp2,
+            comp3,
+            comp4,
+            comp5,
+        )
+
+    bencher.iter[bench_fn]()
+
+
 fn benchmark_replace_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
@@ -627,6 +690,12 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     )
     bench.bench_function[benchmark_add_remove_5_comp_1_000_000](
         BenchId("10^6 * add & remove 5 components")
+    )
+    bench.bench_function[benchmark_batch_add_1_comp_1_000_000](
+        BenchId("10^6 * batch add 1 component")
+    )
+    bench.bench_function[benchmark_batch_add_5_comp_1_000_000](
+        BenchId("10^6 * batch add 5 component")
     )
     bench.bench_function[benchmark_replace_1_comp_1_000_000](
         BenchId("10^6 * replace 1 component")
