@@ -90,3 +90,7 @@ pixi run mojo test -I src/ test/
 ```
 Ensure all tests pass (100% success rate) before submitting pull requests.
 
+Always run the mojo formatter:
+```bash
+pixi run mojo format src test benchmark
+```
