@@ -594,7 +594,7 @@ fn benchmark_batch_add_remove_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_batch_add_remove_5_comp_1_000_000(
+fn benchmark_add_remove_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -642,6 +642,59 @@ fn benchmark_batch_add_remove_5_comp_1_000_000(
                 FlexibleComponent[5],
             ]()
         )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_add_remove_5_comp_1_000_batch_1000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    comp1 = FlexibleComponent[1](1.0, 42.0)
+    comp2 = FlexibleComponent[2](1.0, 42.0)
+    comp3 = FlexibleComponent[3](1.0, 42.0)
+    comp4 = FlexibleComponent[4](1.0, 42.0)
+    comp5 = FlexibleComponent[5](1.0, 42.0)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+
+        # create 1_000 entities that initially do not have FlexibleComponent[1...5]
+        _ = world.add_entities(pos, count=1_000)
+        # then 1_000 x add components and remove them afterwards
+        for _ in range(1000):
+            _ = world.add(
+                world.query[Position]().without[
+                    FlexibleComponent[1],
+                    FlexibleComponent[2],
+                    FlexibleComponent[3],
+                    FlexibleComponent[4],
+                    FlexibleComponent[5],
+                ](),
+                comp1,
+                comp2,
+                comp3,
+                comp4,
+                comp5,
+            )
+            _ = world.remove[
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+                FlexibleComponent[5],
+            ](
+                world.query[
+                    Position,
+                    FlexibleComponent[1],
+                    FlexibleComponent[2],
+                    FlexibleComponent[3],
+                    FlexibleComponent[4],
+                    FlexibleComponent[5],
+                ]()
+            )
 
     bencher.iter[bench_fn]()
 
@@ -751,14 +804,20 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_remove_1_comp_1_000_000](
         BenchId("10^6 * add & remove 1 component")
     )
-    bench.bench_function[benchmark_batch_add_remove_1_comp_1_000_000](
-        BenchId("10^6 * add & remove 1 component batch")
+    bench.bench_function[benchmark_add_remove_1_comp_batch_1_000_000](
+        BenchId("10^0 * add & remove 1 component 10^6 batch")
+    )
+    bench.bench_function[benchmark_add_remove_1_comp_1_000_batch_1000](
+        BenchId("10^3 * add & remove 1 component 10^3 batch")
     )
     bench.bench_function[benchmark_add_remove_5_comp_1_000_000](
         BenchId("10^6 * add & remove 5 components")
     )
-    bench.bench_function[benchmark_batch_add_remove_5_comp_1_000_000](
-        BenchId("10^6 * add & remove 5 component batch")
+    bench.bench_function[benchmark_add_remove_5_comp_batch_1_000_000](
+        BenchId("10^0 * add & remove 5 component 10^6 batch")
+    )
+    bench.bench_function[benchmark_add_remove_5_comp_1_000_batch_1000](
+        BenchId("10^3 * add & remove 5 component 10^3 batch")
     )
     bench.bench_function[benchmark_replace_1_comp_1_000_000](
         BenchId("10^6 * replace 1 component")
