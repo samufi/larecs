@@ -938,25 +938,28 @@ struct World[*component_types: ComponentType](
                         len(old_archetype[]),
                     )
 
-                # Add new components to the new archetype.
-                @parameter
-                for comp_idx in range(add_components.__len__()):
-                    alias comp_id = component_ids[comp_idx]
-                    for idx in range(len(old_archetype[])):
-                        new_idx = new_archetype[].add(
-                            old_archetype[].get_entity(idx)
-                        )
-                        entity = new_archetype[].get_entity(new_idx)
+                # Move entities from old archetype to new archetype.
+                for idx in range(len(old_archetype[])):
+                    new_idx = new_archetype[].add(
+                        old_archetype[].get_entity(idx)
+                    )
+                    entity = new_archetype[].get_entity(new_idx)
+                    self._entities[entity.get_id()] = EntityIndex(
+                        new_idx,
+                        new_archetype_idx,
+                    )
+
+                    # Set new component data
+                    @parameter
+                    for comp_idx in range(add_components.__len__()):
+                        alias comp_id = component_ids[comp_idx]
+
                         new_archetype[].unsafe_set(
                             new_idx,
                             comp_id,
                             UnsafePointer(to=add_components[comp_idx]).bitcast[
                                 UInt8
                             ](),
-                        )
-                        self._entities[entity.get_id()] = EntityIndex(
-                            new_idx,
-                            new_archetype_idx,
                         )
 
                 old_archetype[].clear()
