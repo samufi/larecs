@@ -488,9 +488,6 @@ struct _ArchetypeByListIterator[
     fn __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
-
-        Note that this requires iterating over all archetypes
-        and may be a complex operation.
         """
         return len(self._archetype_indices) - self._index
 
