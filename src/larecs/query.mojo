@@ -199,6 +199,21 @@ struct QueryInfo[
         self.mask = query._mask
         self.without_mask = query._without_mask
 
+    fn matches(self, archetype_mask: BitMask) -> Bool:
+        """
+        Checks whether the given archetype mask matches the query.
+        Args:
+            archetype_mask: The mask of the archetype to check.
+        Returns:
+            Whether the archetype matches the query.
+        """
+        is_valid = archetype_mask.contains(self.mask)
+
+        if Self.has_without_mask:
+            is_valid &= not archetype_mask.contains_any(self.without_mask[])
+
+        return is_valid
+
 
 struct _ArchetypeByMaskIterator[
     archetype_mutability: Bool, //,
