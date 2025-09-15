@@ -1,4 +1,5 @@
 from memory import UnsafePointer
+import math
 
 
 @always_inline
@@ -22,3 +23,24 @@ fn unsafe_take[T: Movable](mut arg: T, out result: T):
         Result: The moved value.
     """
     result = UnsafePointer.take_pointee(UnsafePointer(to=arg))
+
+
+@always_inline
+fn next_pow2(value: UInt) -> UInt:
+    """Returns the next power of two greater than or equal to the given value.
+        See https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2.
+
+    Args:
+        value: The value to find the next power of two for.
+
+    Returns:
+        The next power of two greater than or equal to the given value.
+    """
+    if value == 0:
+        return 1
+
+    @parameter
+    for i in range(math.log2(sizeof(UInt) * 8)):
+        value |= value >> (2**i)
+
+    return value + 1
