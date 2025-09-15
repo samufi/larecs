@@ -323,18 +323,10 @@ struct _ArchetypeByMaskIterator[
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
-
-            @parameter
-            if has_without_mask:
-                is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
-                    .get_mask()
-                    .contains_any(self._without_mask[])
-                )
+            is_valid = self._archetypes[].unsafe_get(i) and QueryInfo(
+                mask=self._mask,
+                without_mask=self._without_mask,
+            ).matches(self._archetypes[].unsafe_get(i).get_mask())
 
             if is_valid:
                 self._archetype_index_buffer[buffer_index] = i
