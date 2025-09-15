@@ -257,7 +257,14 @@ def test_world_batch_add():
         _ = world.add(
             world.query[Position]().without[LargerComponent](),
             Velocity(0.3, 0.4),
+            FlexibleComponent[0](1.0, 2.0),
         )
+
+    # Check that this raises no error, despite there is no `without_mask`
+    _ = world.add(
+        world.query[Position](),
+        LargerComponent(0.3, 0.4, 0.5),
+    )
 
 
 def test_world_remove():
