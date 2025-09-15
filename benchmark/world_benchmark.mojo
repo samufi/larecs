@@ -524,7 +524,7 @@ fn benchmark_batch_add_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
-    comp = FlexibleComponent[1](1, 42.0)
+    comp = FlexibleComponent[1](1.0, 42.0)
 
     @always_inline
     @parameter
@@ -534,7 +534,7 @@ fn benchmark_batch_add_1_comp_1_000_000(
         # create 1_000_000 entities that initially do not have FlexibleComponent[1]
         _ = world.add_entities(pos, count=1_000_000)
 
-        _ = world.add[FlexibleComponent[1]](
+        _ = world.add(
             world.query[Position]().without[FlexibleComponent[1]](), comp
         )
 
@@ -545,11 +545,11 @@ fn benchmark_batch_add_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
-    comp1 = FlexibleComponent[1](1, 42.0)
-    comp2 = FlexibleComponent[2](2, 42.0)
-    comp3 = FlexibleComponent[3](3, 42.0)
-    comp4 = FlexibleComponent[4](4, 42.0)
-    comp5 = FlexibleComponent[5](5, 42.0)
+    comp1 = FlexibleComponent[1](1.0, 42.0)
+    comp2 = FlexibleComponent[2](2.0, 42.0)
+    comp3 = FlexibleComponent[3](3.0, 42.0)
+    comp4 = FlexibleComponent[4](4.0, 42.0)
+    comp5 = FlexibleComponent[5](5.0, 42.0)
 
     @always_inline
     @parameter
@@ -559,13 +559,7 @@ fn benchmark_batch_add_5_comp_1_000_000(
         # create 1_000_000 entities that initially do not have FlexibleComponent[1]
         _ = world.add_entities(pos, count=1_000_000)
 
-        _ = world.add[
-            FlexibleComponent[1],
-            FlexibleComponent[2],
-            FlexibleComponent[3],
-            FlexibleComponent[4],
-            FlexibleComponent[5],
-        ](
+        _ = world.add(
             world.query[Position]().without[
                 FlexibleComponent[1],
                 FlexibleComponent[2],
