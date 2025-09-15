@@ -814,10 +814,11 @@ struct World[*component_types: ComponentType](
         self._remove_and_add(entity, add_components)
 
     fn add[
-        *Ts: ComponentType
+        has_without_mask: Bool, //,
+        *Ts: ComponentType,
     ](
         mut self,
-        query: QueryInfo[has_without_mask=True],
+        query: QueryInfo[has_without_mask=has_without_mask],
         owned *add_components: *Ts,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
@@ -860,17 +861,18 @@ struct World[*component_types: ComponentType](
         ```
 
         Parameters:
+            has_without_mask: Whether the query has a without mask.
             Ts: The types of the components to add.
 
         Args:
-            query: The query specifying which entities to modify. The query parameter `has_without_mask` must always
-                be `True` to explicitly exclude entities that already have some of the components to add.
+            query: The query specifying which entities to modify. The query must explicitly exclude existing entities
+                that already have some of the components to add.
             add_components: The components to add.
 
         Raises:
             Error: when called on a locked world. Do not use during [.World.query] iteration.
-            Error: when called with a query that could match entities that already have at least one of the components
-                to add.
+            Error: when called with a query that could match existing entities that already have at least one of the
+                components to add.
         """
 
         # Note:
@@ -884,13 +886,22 @@ struct World[*component_types: ComponentType](
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
 
         # If query could match archetypes that already have at least one of the components, raise an error
-        for archetype in self._archetypes:
-            if query.matches(archetype.get_mask()):
-                raise Error(
-                    "Query could match entities that already have at least one"
-                    " of the components to add. Use `Query.without[Component,"
-                    " ...]()` to exclude those components."
-                )
+
+        for archetype in self._get_archetype_iterator(
+            query.mask, query.without_mask
+        ):
+            if query.matches(archetype[].get_mask()):
+                if not archetype[].get_mask().contains(
+                    BitMask(component_ids)
+                ) and archetype[].get_mask().contains_any(
+                    BitMask(component_ids)
+                ):
+                    raise Error(
+                        "Query could match entities that already have at least"
+                        " one of the components to add. Use"
+                        " `Query.without[Component, ...]()` to exclude those"
+                        " components."
+                    )
 
         alias _2kb = (1024 * 2) // sizeof[UInt]()
         arch_start_idcs = List[UInt, True](min(len(self._archetypes), _2kb))
