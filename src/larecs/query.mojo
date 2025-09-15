@@ -202,14 +202,17 @@ struct QueryInfo[
     fn matches(self, archetype_mask: BitMask) -> Bool:
         """
         Checks whether the given archetype mask matches the query.
+
         Args:
             archetype_mask: The mask of the archetype to check.
+
         Returns:
             Whether the archetype matches the query.
         """
         is_valid = archetype_mask.contains(self.mask)
 
-        if Self.has_without_mask:
+        @parameter
+        if has_without_mask:
             is_valid &= not archetype_mask.contains_any(self.without_mask[])
 
         return is_valid
@@ -240,6 +243,7 @@ struct _ArchetypeByMaskIterator[
         *ComponentTypes, component_manager=component_manager
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
+    alias QueryInfo = QueryInfo[has_without_mask=has_without_mask]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _mask: BitMask
@@ -318,15 +322,19 @@ struct _ArchetypeByMaskIterator[
         Fills the _archetype_index_buffer with the
         archetypes' indices.
         """
+        query_info = Self.QueryInfo(
+            mask=self._mask,
+            without_mask=self._without_mask,
+        )
+
         buffer_index = 0
         for i in range(
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            is_valid = self._archetypes[].unsafe_get(i) and QueryInfo(
-                mask=self._mask,
-                without_mask=self._without_mask,
-            ).matches(self._archetypes[].unsafe_get(i).get_mask())
+            is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
+                self._archetypes[].unsafe_get(i).get_mask()
+            )
 
             if is_valid:
                 self._archetype_index_buffer[buffer_index] = i
@@ -379,24 +387,19 @@ struct _ArchetypeByMaskIterator[
 
         size = Self.buffer_size
 
+        query_info = Self.QueryInfo(
+            mask=self._mask,
+            without_mask=self._without_mask,
+        )
         # If there are more archetypes than the buffer size, we
         # need to iterate over the remaining archetypes.
         for i in range(
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-            is_valid = self._archetypes[].unsafe_get(i).get_mask().contains(
-                self._mask
-            ) and self._archetypes[].unsafe_get(i)
-
-            @parameter
-            if has_without_mask:
-                is_valid &= (
-                    not self._archetypes[]
-                    .unsafe_get(i)
-                    .get_mask()
-                    .contains_any(self._without_mask[])
-                )
+            is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
+                self._archetypes[].unsafe_get(i).get_mask()
+            )
 
             size += is_valid
 
