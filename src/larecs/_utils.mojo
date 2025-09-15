@@ -25,8 +25,15 @@ fn unsafe_take[T: Movable](mut arg: T, out result: T):
     result = UnsafePointer.take_pointee(UnsafePointer(to=arg))
 
 
+# Implementing a function generically over all integral types is not currently possible in Mojo.
+# For details see: https://github.com/modular/modular/issues/2776.
 @always_inline
-fn next_pow2(value: UInt) -> UInt:
+fn next_pow2(var value: UInt) -> UInt:
+    return UInt(next_pow2[DType.index](value))
+
+
+@always_inline
+fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
     """Returns the next power of two greater than or equal to the given value.
         See https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2.
 
@@ -36,11 +43,13 @@ fn next_pow2(value: UInt) -> UInt:
     Returns:
         The next power of two greater than or equal to the given value.
     """
+    constrained[dtype.is_integral(), "expected integral dtype"]()
+
     if value == 0:
         return 1
 
     @parameter
-    for i in range(math.log2(sizeof(UInt) * 8)):
+    for i in range(Scalar[dtype](math.log2(Float32(dtype.bitwidth())))):
         value |= value >> (2**i)
 
     return value + 1
