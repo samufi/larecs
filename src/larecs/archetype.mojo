@@ -5,6 +5,7 @@ from .entity import Entity
 from .bitmask import BitMask
 from .pool import EntityPool
 from .types import get_max_size
+from ._utils import next_pow2
 
 alias DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
@@ -437,7 +438,8 @@ struct Archetype[
         Does nothing if the new capacity is not larger than the current capacity.
 
         Note:
-            If memory is newly allocated, reserves twice the requested memory to avoid frequent reallocations.
+            If memory is newly allocated, reserves the next power of 2 greater than the requested memory to avoid
+            frequent reallocations.
 
         Args:
             new_capacity: The new minimal capacity of the archetype.
@@ -445,10 +447,12 @@ struct Archetype[
         if new_capacity <= self._capacity:
             return
 
+        new_pow2_capacity = next_pow2(new_capacity)
+
         for i in range(self._component_count):
             id = self._ids[i]
             old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_capacity * 2
+            new_size = index(self._item_sizes[id]) * new_pow2_capacity
             new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
@@ -458,7 +462,7 @@ struct Archetype[
             self._data[id].free()
             self._data[id] = new_memory
 
-        self._capacity = new_capacity
+        self._capacity = new_pow2_capacity
 
     @always_inline
     fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
