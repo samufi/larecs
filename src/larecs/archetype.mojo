@@ -733,9 +733,12 @@ struct Archetype[
             `count` indices.
         """
         if self._size + count >= self._capacity:
-            new_capacity = max(self._size + count, UInt(2) * self._capacity)
-            self.reserve(new_capacity)
-            self._entities.reserve(new_capacity)
+            self.reserve(
+                self._size + count
+            )  # `reserve` handles calculating a good capacity to use
+            self._entities.reserve(
+                self._capacity
+            )  # use the capacity calculated by `reserve` for the entities list as well
 
         start_index = self._size
         for _ in range(count):
