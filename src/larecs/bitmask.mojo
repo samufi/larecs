@@ -208,6 +208,11 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
         """Returns the indices of the bits that are set."""
         result = _BitMaskIndexIter(self._bytes)
 
+    @always_inline
+    fn __or__(self, other: Self) -> BitMask:
+        """Returns the bitwise OR of this mask and another mask."""
+        return BitMask(bytes=self._bytes | other._bytes)
+
     fn __str__(self) -> String:
         """Implements String(...)."""
         var result: String = "["
