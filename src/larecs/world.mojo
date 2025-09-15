@@ -1,5 +1,6 @@
 from memory import UnsafePointer, Span
 from algorithm import vectorize
+from sys.info import sizeof
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
@@ -890,8 +891,11 @@ struct World[*component_types: ComponentType](
                 " to exclude those components."
             )
 
-        arch_start_idcs = List[UInt, True](len(self._archetypes))
-        changed_archetype_idcs = List[Int, True](len(self._archetypes))
+        alias _2kb = (1024 * 2) // sizeof[UInt]()
+        arch_start_idcs = List[UInt, True](min(len(self._archetypes), _2kb))
+        changed_archetype_idcs = List[Int, True](
+            min(len(self._archetypes), _2kb)
+        )
 
         # Search for the archetype that matches the query mask
         with self._locked():
