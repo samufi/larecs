@@ -5,6 +5,7 @@ from .entity import Entity
 from .bitmask import BitMask
 from .pool import EntityPool
 from .types import get_max_size
+from ._utils import next_pow2
 
 alias DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
@@ -428,24 +429,62 @@ struct Archetype[
 
     @always_inline
     fn reserve(mut self):
-        """Extends the capacity of the archetype by factor 2."""
+        """Extends the capacity of the archetype by factor 2 using power-of-2 allocation strategy.
+
+        Doubles the current capacity (minimum 8) to provide exponential growth that minimizes
+        the frequency of memory reallocations while maintaining reasonable memory usage.
+        This follows standard container growth patterns optimized for amortized performance.
+
+        **Performance Impact:**
+        - Amortized O(1) insertion cost through exponential growth
+        - Reduces memory fragmentation via power-of-2 alignment
+        - Minimizes reallocation frequency in high-throughput scenarios
+        """
         self.reserve(max(self._capacity * 2, 8))
 
     fn reserve(mut self, new_capacity: UInt):
-        """Extends the capacity of the archetype to a given number.
+        """Extends the capacity of the archetype to at least the specified number of entities.
 
-        Does nothing if the new capacity is not larger than the current capacity.
+        Uses a power-of-2 allocation strategy to ensure optimal memory alignment and reduce
+        fragmentation. The actual allocated capacity will be the next power of 2 greater than
+        or equal to the requested capacity.
+
+        **Power-of-2 Allocation Benefits:**
+        - **Memory Alignment**: Improves cache performance and reduces fragmentation
+        - **Allocator Efficiency**: Most allocators are optimized for power-of-2 sizes
+        - **Predictable Growth**: Enables efficient memory planning and reduces allocations
+        - **SIMD Optimization**: Power-of-2 sizes are optimal for vectorized operations
+
+        Does nothing if the requested capacity is not larger than the current capacity,
+        avoiding unnecessary work and maintaining existing memory layout.
 
         Args:
-            new_capacity: The new capacity of the archetype.
+            new_capacity: The minimum required capacity. The actual allocated capacity
+                         will be `next_pow2(new_capacity)` to maintain power-of-2 growth.
+
+        **Example:**
+        ```mojo
+        # Requesting 100 entities will allocate capacity for 128 (next power of 2)
+        archetype.reserve(100)  # Actually reserves 128
+
+        # Requesting 64 entities allocates exactly 64 (already power of 2)
+        archetype.reserve(64)   # Actually reserves 64
+        ```
+
+        **Performance Notes:**
+        - Memory copying is performed for existing components during reallocation
+        - All component arrays are resized simultaneously to maintain alignment
+        - Reallocation cost is amortized across multiple entity insertions
         """
         if new_capacity <= self._capacity:
             return
 
+        new_pow2_capacity = next_pow2(new_capacity)
+
         for i in range(self._component_count):
             id = self._ids[i]
             old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_capacity
+            new_size = index(self._item_sizes[id]) * new_pow2_capacity
             new_memory = UnsafePointer[UInt8].alloc(new_size)
             memcpy(
                 new_memory,
@@ -455,7 +494,7 @@ struct Archetype[
             self._data[id].free()
             self._data[id] = new_memory
 
-        self._capacity = new_capacity
+        self._capacity = new_pow2_capacity
 
     @always_inline
     fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
@@ -521,6 +560,33 @@ struct Archetype[
         )
 
     @always_inline
+    fn unsafe_set[
+        T: Indexer,
+    ](
+        mut self,
+        start_idx: T,
+        id: Self.Id,
+        data: UnsafePointer[UInt8],
+        count: UInt,
+    ):
+        """Sets the data of the component with the given id for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the index.
+
+        Args:
+            start_idx: The index of the first entity to set.
+            id: The id of the component.
+            data: Pointer to the values to set the component with.
+            count: The number of elements to set.
+        """
+        memcpy(
+            self._get_component_ptr(index(start_idx), id),
+            data,
+            index(self._item_sizes[id]) * count,
+        )
+
+    @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index.
 
@@ -545,7 +611,7 @@ struct Archetype[
         """Returns the component with the given id at the given index.
 
         Args:
-            idx:    The index of the entity.
+            idx: The index of the entity.
 
         Parameters:
             IndexType: The type of the index.
@@ -554,7 +620,7 @@ struct Archetype[
                     contains the component.
 
         Raises:
-            Error:  If assert_has_component and the archetype does not contain the component.
+            Error: If assert_has_component and the archetype does not contain the component.
 
         Returns:
             A reference to the component.
@@ -699,9 +765,12 @@ struct Archetype[
             `count` indices.
         """
         if self._size + count >= self._capacity:
-            new_capacity = max(self._size + count, UInt(2) * self._capacity)
-            self.reserve(new_capacity)
-            self._entities.reserve(new_capacity)
+            self.reserve(
+                self._size + count
+            )  # `reserve` handles calculating a good capacity to use
+            self._entities.reserve(
+                self._capacity
+            )  # use the capacity calculated by `reserve` for the entities list as well
 
         start_index = self._size
         for _ in range(count):
