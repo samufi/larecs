@@ -429,20 +429,52 @@ struct Archetype[
 
     @always_inline
     fn reserve(mut self):
-        """Extends the capacity of the archetype by factor 2."""
+        """Extends the capacity of the archetype by factor 2 using power-of-2 allocation strategy.
+
+        Doubles the current capacity (minimum 8) to provide exponential growth that minimizes
+        the frequency of memory reallocations while maintaining reasonable memory usage.
+        This follows standard container growth patterns optimized for amortized performance.
+
+        **Performance Impact:**
+        - Amortized O(1) insertion cost through exponential growth
+        - Reduces memory fragmentation via power-of-2 alignment
+        - Minimizes reallocation frequency in high-throughput scenarios
+        """
         self.reserve(max(self._capacity * 2, 8))
 
     fn reserve(mut self, new_capacity: UInt):
-        """Extends the capacity of the archetype to at least a given number.
+        """Extends the capacity of the archetype to at least the specified number of entities.
 
-        Does nothing if the new capacity is not larger than the current capacity.
+        Uses a power-of-2 allocation strategy to ensure optimal memory alignment and reduce
+        fragmentation. The actual allocated capacity will be the next power of 2 greater than
+        or equal to the requested capacity.
 
-        Note:
-            If memory is newly allocated, reserves the next power of 2 greater than the requested memory to avoid
-            frequent reallocations.
+        **Power-of-2 Allocation Benefits:**
+        - **Memory Alignment**: Improves cache performance and reduces fragmentation
+        - **Allocator Efficiency**: Most allocators are optimized for power-of-2 sizes
+        - **Predictable Growth**: Enables efficient memory planning and reduces allocations
+        - **SIMD Optimization**: Power-of-2 sizes are optimal for vectorized operations
+
+        Does nothing if the requested capacity is not larger than the current capacity,
+        avoiding unnecessary work and maintaining existing memory layout.
 
         Args:
-            new_capacity: The new minimal capacity of the archetype.
+            new_capacity: The minimum required capacity. The actual allocated capacity
+                         will be `next_pow2(new_capacity)` to maintain power-of-2 growth.
+
+        **Example:**
+        ```mojo
+        # Requesting 100 entities will allocate capacity for 128 (next power of 2)
+        archetype.reserve(100)  # Actually reserves 128
+
+        # Requesting 64 entities allocates exactly 64 (already power of 2)
+        archetype.reserve(64)   # Actually reserves 64
+        ```
+
+        **Performance Notes:**
+        - Memory copying is performed for existing components during reallocation
+        - All component arrays are resized simultaneously to maintain alignment
+        - Reallocation cost is amortized across multiple entity insertions
         """
         if new_capacity <= self._capacity:
             return

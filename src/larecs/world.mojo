@@ -140,6 +140,25 @@ struct World[*component_types: ComponentType](
         has_start_indices=has_start_indices,
         has_without_mask=has_without_mask,
     ]
+    """
+    Primary entity iterator type alias for the World.
+
+    This flexible iterator supports different archetype iteration strategies via the 
+    `arch_iter_variant_idx` parameter, enabling optimized iteration patterns for
+    different use cases:
+
+    - **ByMask iteration** (default): Efficient for component-based queries
+    - **ByList iteration**: Optimized for batch operations on known archetype sets
+    
+    Parameters:
+        arch_iter_variant_idx: Selects iteration strategy (ByMask=0, ByList=1)
+        has_start_indices: Enables iteration from specific entity ranges (batch ops)
+        has_without_mask: Includes exclusion filtering capabilities for complex queries
+
+    **Performance Considerations:**
+    The iterator variant significantly affects performance - choose ByMask for general
+    queries and ByList for batch operations where archetype sets are predetermined.
+    """
 
     alias ArchetypeByMaskIterator[
         archetype_mutability: Bool, //,
@@ -151,6 +170,23 @@ struct World[*component_types: ComponentType](
         component_manager = Self.component_manager,
         has_without_mask=has_without_mask,
     ]
+    """
+    Archetype iterator optimized for component mask-based queries.
+
+    Efficiently iterates over archetypes by using bitmask operations to determine
+    archetype matches. This is the preferred iterator for general ECS queries where
+    you're filtering entities based on component presence/absence.
+
+    **Optimizations:**
+    - Uses SIMD-optimized bitmask operations for fast archetype matching
+    - Skips empty archetypes automatically to reduce iteration overhead  
+    - Supports exclusion masks via `has_without_mask` for complex filtering
+
+    **Best Use Cases:**
+    - Standard component-based entity queries (e.g., entities with Position + Velocity)
+    - Complex queries with include/exclude component requirements
+    - Systems that iterate over entities matching specific component patterns
+    """
 
     alias ArchetypeByListIterator[
         archetype_mutability: Bool, //,
@@ -160,6 +196,24 @@ struct World[*component_types: ComponentType](
         *component_types,
         component_manager = Self.component_manager,
     ]
+    """
+    Archetype iterator optimized for iteration over predetermined archetype sets.
+
+    Iterates through a specific list of archetype indices without mask-based filtering.
+    This iterator provides optimal performance when the set of archetypes to iterate
+    is known in advance, such as during batch operations or cached query results.
+
+    **Performance Benefits:**
+    - Direct archetype access without bitmask matching overhead
+    - Optimal for batch operations where archetype set is predetermined  
+    - Cache-friendly iteration pattern for contiguous archetype ranges
+    - Minimal branching during iteration for maximum throughput
+
+    **Primary Use Cases:**
+    - Batch entity creation (add_entities) where all entities use same archetype
+    - Cached query results where archetype set is pre-computed
+    - High-performance systems iterating over specific, known entity groups
+    """
 
     alias ArchetypeIterator[
         archetype_mutability: Bool, //,
@@ -832,7 +886,7 @@ struct World[*component_types: ComponentType](
         The provided query must ensure that matching entities do not already have one or more of the
         components to add.
 
-        Example:
+        **Example:**
 
         ```mojo {doctest="add_query_comps" global=true}
         from larecs import World
