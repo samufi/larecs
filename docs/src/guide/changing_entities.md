@@ -132,3 +132,53 @@ any other number of new components.
 > Replacing components in one go is significantly 
 > more efficient than removing and adding components separately. 
 
+### Batch operations
+
+Sometimes you need to add or remove components from multiple entities at once.
+Larecs🌲 provides batch operations that are more efficient than performing
+individual operations on each entity.
+
+#### Batch adding components
+
+You can add components to multiple entities that match a query using the
+{{< api World.add add >}} method with a query:
+
+```mojo {doctest="guide_change_entities"}
+# Add 10 entities with only Position components
+_ = world.add_entities(Position(0, 0), count=10)
+
+# Add Velocity component to all entities that have Position but not Velocity
+world.add(
+    world.query[Position]().without[Velocity](),
+    Velocity(1.0, 0.5)
+)
+
+# You can also add multiple components at once to multiple entities
+world.add(
+    world.query[Position]().without[Velocity](),
+    Velocity(2.0, 1.0),
+    # Additional components can be added here
+)
+```
+
+This is significantly more efficient than adding components to entities one by one:
+
+```mojo {doctest="guide_change_entities"}
+# Less efficient approach (avoid this for large numbers of entities)
+entities = List[Entity]()
+for entity in world.query[Position]().without[Velocity]():
+    entities.append(entity)
+
+for entity in entities:
+    world.add(entity, Velocity(1.0, 0.5))  # Individual operations
+```
+
+> [!Note]
+> Currently, only batch adding of components is supported. 
+> Batch removal and replacement operations are planned for future releases.
+> See the [roadmap](../../../README.md#next-steps) for more information.
+
+> [!Tip]
+> Batch operations are significantly more efficient than individual operations
+> when working with large numbers of entities, as they minimize memory
+> reorganization and improve cache locality.
