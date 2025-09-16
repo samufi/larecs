@@ -940,21 +940,18 @@ struct World[*component_types: ComponentType](
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
 
         # If query could match archetypes that already have at least one of the components, raise an error
-
-        for archetype in self._get_archetype_iterator(
-            query.mask, query.without_mask
+        if not query.without_mask.or_else(BitMask()).contains(
+            BitMask(component_ids)
         ):
-            if query.matches(archetype[].get_mask()):
-                if not archetype[].get_mask().contains(
-                    BitMask(component_ids)
-                ) and archetype[].get_mask().contains_any(
-                    BitMask(component_ids)
-                ):
+            for archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
+            ):
+                if archetype[].get_mask().contains_any(BitMask(component_ids)):
                     raise Error(
-                        "Query could match entities that already have at least"
+                        "Query matches entities that already have at least"
                         " one of the components to add. Use"
-                        " `Query.without[Component, ...]()` to exclude those"
-                        " components."
+                        " `Query.without[Component, ...]()` to exclude"
+                        " those components."
                     )
 
         alias _2kb = (1024 * 2) // sizeof[UInt]()
