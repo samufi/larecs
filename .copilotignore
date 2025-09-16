@@ -1,0 +1,34 @@
+# Ignore binary and generated files
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+*.pyc
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+
+# Ignore lock files and package management
+pixi.lock
+*.lock
+
+# Ignore build artifacts
+build/
+dist/
+.build/
+
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Ignore IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Ignore log files
+*.log
