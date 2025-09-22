@@ -141,8 +141,8 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
 
         Returns False for bit >= Self.total_bits.
         """
-        var idx: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * idx)
+        var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
+        var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
         mask = 1 << offset
         return (self._bytes[index(idx)] & mask) == mask
 
@@ -157,8 +157,8 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn set[value: Bool](mut self, bit: Self.IndexType):
         """Sets the state of bit at the given index."""
-        var idx: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * idx)
+        var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
+        var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
 
         @parameter
         if value:
@@ -169,8 +169,8 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn flip(mut self, bit: Self.IndexType):
         """Flips the state of bit at the given index."""
-        var idx: Self.IndexType = bit // 8
-        var offset: Self.IndexType = bit - (8 * idx)
+        var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
+        var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
         self._bytes[index(idx)] ^= 1 << offset
 
     @always_inline
