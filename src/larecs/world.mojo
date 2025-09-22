@@ -941,9 +941,18 @@ struct World[*component_types: ComponentType](
 
         # If query could match archetypes that already have at least one of the components, raise an error
         # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
-        if not query.without_mask.or_else(BitMask()).contains(
-            BitMask(component_ids)
-        ):
+
+        var strict_check_needed: Bool
+
+        @parameter
+        if has_without_mask:
+            strict_check_needed = not query.without_mask[].contains(
+                BitMask(component_ids)
+            )
+        else:
+            strict_check_needed = True
+
+        if strict_check_needed:
             for archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
