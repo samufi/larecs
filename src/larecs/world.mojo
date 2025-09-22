@@ -940,6 +940,7 @@ struct World[*component_types: ComponentType](
         alias component_ids = Self.component_manager.get_id_arr[*Ts]()
 
         # If query could match archetypes that already have at least one of the components, raise an error
+        # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
         if not query.without_mask.or_else(BitMask()).contains(
             BitMask(component_ids)
         ):
