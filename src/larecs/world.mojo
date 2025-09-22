@@ -955,10 +955,12 @@ struct World[*component_types: ComponentType](
                         " those components."
                     )
 
-        alias _2kb = (1024 * 2) // sizeof[UInt]()
-        arch_start_idcs = List[UInt, True](min(len(self._archetypes), _2kb))
+        alias _2Kilobytes = (1024 * 2) // sizeof[UInt]()
+        arch_start_idcs = List[UInt, True](
+            min(len(self._archetypes), _2Kilobytes)
+        )
         changed_archetype_idcs = List[Int, True](
-            min(len(self._archetypes), _2kb)
+            min(len(self._archetypes), _2Kilobytes)
         )
 
         # Search for the archetype that matches the query mask
