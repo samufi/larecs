@@ -1,5 +1,5 @@
 from memory import UnsafePointer
-from sys.info import sizeof
+from sys import size_of
 
 
 fn _destructor[T: Copyable & Movable](box_storage: UnsafeBox.data_type):
@@ -49,7 +49,7 @@ fn _copy_initializer[
     """
 
     @parameter
-    if sizeof[T]() == 0:
+    if size_of[T]() == 0:
         ptr = UnsafePointer[T]()
     else:
         ptr = UnsafePointer[T].alloc(1)
@@ -115,7 +115,7 @@ struct UnsafeBox(Copyable, Movable):
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
 
-    fn __init__[T: Copyable & Movable](out self, owned data: T):
+    fn __init__[T: Copyable & Movable](out self, var data: T):
         """
         Constructor for the UnsafeBox.
 
@@ -127,7 +127,7 @@ struct UnsafeBox(Copyable, Movable):
         """
 
         @parameter
-        if sizeof[T]() == 0:
+        if size_of[T]() == 0:
             ptr = UnsafePointer[T]()
         else:
             ptr = UnsafePointer[T].alloc(1)
@@ -150,7 +150,7 @@ struct UnsafeBox(Copyable, Movable):
         self._copy_initializer = other._copy_initializer
 
     @always_inline
-    fn __del__(owned self):
+    fn __del__(deinit self):
         """
         Destructor for the UnsafeBox.
 

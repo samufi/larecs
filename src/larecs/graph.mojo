@@ -24,7 +24,7 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
     # The mask of the node.
     var bit_mask: BitMask
 
-    fn __init__(out self, bit_mask: BitMask, owned value: DataType):
+    fn __init__(out self, bit_mask: BitMask, var value: DataType):
         """Initializes the node with the given mask and value.
 
         Args:
@@ -55,8 +55,6 @@ struct BitMaskGraph[
     Parameters:
         DataType:   The type of the value stored in the nodes.
         null_value: The place holder stored in nodes by default.
-        hint_trivial_type: Hint to the compiler whether the type
-                    is trivially copyable.
     """
 
     # The node index indicating a non-established link.

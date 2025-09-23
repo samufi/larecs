@@ -88,7 +88,7 @@ struct EntityAccessor[
         *Ts: ComponentType
     ](
         mut self: EntityAccessor[archetype_mutability=True],
-        owned *components: *Ts,
+        var *components: *Ts,
     ) raises:
         """
         Overwrites components for an [..entity.Entity], using the given content.
@@ -382,7 +382,7 @@ struct Archetype[
                 size,
             )
 
-    fn __del__(owned self):
+    fn __del__(deinit self):
         """Frees the memory of the archetype."""
         for i in range(self._component_count):
             self._data[self._ids[i]].free()

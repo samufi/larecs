@@ -28,7 +28,7 @@ def test_comptime_optional_copy():
 
 def test_comptime_optional_move_del():
     fn factory(
-        owned val: MemTestStruct,
+        var val: MemTestStruct,
         out result: StaticOptional[MemTestStruct, True],
     ):
         result = __type_of(result)(val^)

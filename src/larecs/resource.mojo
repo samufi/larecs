@@ -47,7 +47,7 @@ struct Resources(Copyable, Movable, Sized):
         """
         resources = Resources(self._storage.copy())
 
-    fn add[*Ts: ResourceType](mut self, owned *resources: *Ts) raises:
+    fn add[*Ts: ResourceType](mut self, var *resources: *Ts) raises:
         """Adds resources.
 
         Parameters:
@@ -68,7 +68,7 @@ struct Resources(Copyable, Movable, Sized):
     @always_inline
     fn _add[
         T: Copyable & Movable
-    ](mut self, id: Self.IdType, owned resource: Pointer[T]) raises:
+    ](mut self, id: Self.IdType, var resource: Pointer[T]) raises:
         """Adds a resource by ID.
 
         Parameters:
@@ -88,7 +88,7 @@ struct Resources(Copyable, Movable, Sized):
     @always_inline
     fn _add[
         T: Copyable & Movable
-    ](mut self, id: Self.IdType, owned resource: T) raises:
+    ](mut self, id: Self.IdType, var resource: T) raises:
         """Adds a resource by ID.
 
         Parameters:
@@ -107,7 +107,7 @@ struct Resources(Copyable, Movable, Sized):
 
     fn set[
         *Ts: ResourceType, add_if_not_found: Bool = False
-    ](mut self: Resources, owned *resources: *Ts) raises:
+    ](mut self: Resources, var *resources: *Ts) raises:
         """Sets the values of resources.
 
         Parameters:
@@ -132,7 +132,7 @@ struct Resources(Copyable, Movable, Sized):
     @always_inline
     fn _set[
         T: Copyable & Movable, add_if_not_found: Bool
-    ](mut self, id: Self.IdType, owned resource: T) raises:
+    ](mut self, id: Self.IdType, var resource: T) raises:
         """Sets the values of the resources
 
         Parameters:

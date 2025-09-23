@@ -409,7 +409,7 @@ struct MemTestStruct(Copyable, Movable):
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]
 
-    fn __moveinit__(out self, owned other: Self):
+    fn __moveinit__(out self, var other: Self):
         self.move_counter = other.move_counter
         self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
@@ -421,13 +421,13 @@ struct MemTestStruct(Copyable, Movable):
         self.copy_counter = other.copy_counter
         self.copy_counter[] += 1
 
-    fn __del__(owned self):
+    fn __del__(deinit self):
         self.del_counter[] += 1
 
 
 fn test_copy_move_del[
     Container: Copyable & Movable, //,
-    container_factory: fn (owned val: MemTestStruct) -> Container,
+    container_factory: fn (var val: MemTestStruct) -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 

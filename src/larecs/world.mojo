@@ -1,6 +1,6 @@
 from memory import UnsafePointer, Span
 from algorithm import vectorize
-from sys.info import sizeof
+from sys import size_of
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
@@ -287,7 +287,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._locks = other._locks
         self.resources = other.resources.copy()
 
-    fn __moveinit__(out self, owned other: Self):
+    fn __moveinit__(out self, var other: Self):
         """
         Moves the contents of another [.World] into a new one.
 
@@ -770,9 +770,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ).get_component[T=T](entity_index.index)
 
     @always_inline
-    fn set[
-        T: ComponentType
-    ](mut self, entity: Entity, owned component: T) raises:
+    fn set[T: ComponentType](mut self, entity: Entity, var component: T) raises:
         """
         Overwrites a component for an [..entity.Entity], using the given content.
 
@@ -869,7 +867,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        owned *add_components: *Ts,
+        var *add_components: *Ts,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -962,7 +960,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         " those components."
                     )
 
-        alias _2kb_of_UInt_or_Int = (1024 * 2) // sizeof[UInt]()
+        alias _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
         arch_start_idcs = List[UInt](
             min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
@@ -1693,9 +1691,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask],
-        owned start_indices: _EntityIterator[
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask],
+        var start_indices: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,

@@ -84,7 +84,7 @@ struct S:
         self.l = List[Node[Int]]()
         self.add(BitMask(), -1)
 
-    fn add(mut self, owned node_mask: BitMask, owned value: Int):
+    fn add(mut self, var node_mask: BitMask, var value: Int):
         self.l.append(Node(node_mask, value))
 
 

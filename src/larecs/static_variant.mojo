@@ -93,7 +93,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
     alias ElementType = Ts[variant_idx]
     var _data: Self.ElementType
 
-    fn __init__(out self, owned value: Self.ElementType) raises:
+    fn __init__(out self, var value: Self.ElementType) raises:
         """
         Initializes the variant with a value of the specified type.
 

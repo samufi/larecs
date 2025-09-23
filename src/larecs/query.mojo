@@ -54,8 +54,8 @@ struct Query[
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates a new query.
@@ -106,9 +106,7 @@ struct Query[
         )
 
     @always_inline
-    fn without[
-        *Ts: ComponentType
-    ](owned self, out query: Self.QueryWithWithout):
+    fn without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -139,7 +137,7 @@ struct Query[
         )
 
     @always_inline
-    fn exclusive(owned self, out query: Self.QueryWithWithout):
+    fn exclusive(var self, out query: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
@@ -255,8 +253,8 @@ struct _ArchetypeByMaskIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates an archetype by mask iterator.
@@ -289,8 +287,8 @@ struct _ArchetypeByMaskIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask],
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask],
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -347,7 +345,7 @@ struct _ArchetypeByMaskIterator[
         self._max_buffer_index = buffer_index - 1
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -471,7 +469,7 @@ struct _ArchetypeByListIterator[
         self._index = 0
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -580,9 +578,7 @@ struct _EntityIterator[
     alias Archetype = _Archetype[
         *ComponentTypes, component_manager=component_manager
     ]
-    alias StartIndices = StaticOptional[
-        List[UInt], has_start_indices
-    ]
+    alias StartIndices = StaticOptional[List[UInt], has_start_indices]
 
     alias ArchetypeIterator = _ArchetypeIterator[
         archetype_origin,
@@ -618,8 +614,8 @@ struct _EntityIterator[
     fn __init__(
         out self,
         lock_ptr: Pointer[LockMask, lock_origin],
-        owned archetype_iterator: Self.ArchetypeIterator,
-        owned start_indices: Self.StartIndices = None,
+        var archetype_iterator: Self.ArchetypeIterator,
+        var start_indices: Self.StartIndices = None,
     ) raises:
         """
         Creates an entity iterator with or without excluded components.
@@ -688,7 +684,7 @@ struct _EntityIterator[
             # first call to __next__ will increment it.
             self._entity_index -= 1
 
-    fn __del__(owned self):
+    fn __del__(deinit self):
         """
         Releases the lock.
         """
@@ -698,7 +694,7 @@ struct _EntityIterator[
             debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
