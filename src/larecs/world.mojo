@@ -102,9 +102,7 @@ struct Replacer[
         )
 
 
-struct World[*component_types: ComponentType](
-    ExplicitlyCopyable, Movable, Sized
-):
+struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -239,10 +237,10 @@ struct World[*component_types: ComponentType](
     # _stats          _stats.World               # Cached world statistics.
     var _entity_pool: EntityPool  # Pool for entities.
     var _entities: List[
-        EntityIndex, hint_trivial_type=True
+        EntityIndex
     ]  # Mapping from entities to archetype and index.
     var _archetype_map: BitMaskGraph[
-        -1, hint_trivial_type=True
+        -1
     ]  # Mapping from component masks to archetypes.
     var _locks: LockMask  # World _locks.
 
@@ -256,11 +254,9 @@ struct World[*component_types: ComponentType](
         """
         Creates a new [.World].
         """
-        self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
+        self._archetype_map = BitMaskGraph[-1](0)
         self._archetypes = List[Self.Archetype](Self.Archetype())
-        self._entities = List[EntityIndex, hint_trivial_type=True](
-            EntityIndex(0, 0)
-        )
+        self._entities = List[EntityIndex](EntityIndex(0, 0))
         self._entity_pool = EntityPool()
         self._locks = LockMask()
         self.resources = Resources()
@@ -580,7 +576,7 @@ struct World[*component_types: ComponentType](
                     Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
-            StaticOptional(List[UInt, True](UInt(first_index_in_archetype))),
+            StaticOptional(List[UInt](UInt(first_index_in_archetype))),
         )
 
     @always_inline
@@ -967,10 +963,10 @@ struct World[*component_types: ComponentType](
                     )
 
         alias _2kb_of_UInt_or_Int = (1024 * 2) // sizeof[UInt]()
-        arch_start_idcs = List[UInt, True](
+        arch_start_idcs = List[UInt](
             min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
-        changed_archetype_idcs = List[Int, True](
+        changed_archetype_idcs = List[Int](
             min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
 
@@ -1162,8 +1158,8 @@ struct World[*component_types: ComponentType](
                     " components that get removed from `Query.without(...)`."
                 )
 
-        arch_start_idcs = List[UInt, True](len(self._archetypes))
-        changed_archetype_idcs = List[Int, True](len(self._archetypes))
+        arch_start_idcs = List[UInt](len(self._archetypes))
+        changed_archetype_idcs = List[Int](len(self._archetypes))
 
         # Search for the archetype that matches the query mask
         with self._locked():

@@ -101,23 +101,20 @@ fn assert_equal_lists[
         assert_equal(a[i], b[i], msg)
 
 
-alias ExplicitlyCopyableComponentType = ComponentType & ExplicitlyCopyable
-
-
 @fieldwise_init
-struct Position(ExplicitlyCopyableComponentType):
+struct Position(ComponentType):
     var x: Float64
     var y: Float64
 
 
 @fieldwise_init
-struct Velocity(ExplicitlyCopyableComponentType):
+struct Velocity(ComponentType):
     var dx: Float64
     var dy: Float64
 
 
 @fieldwise_init
-struct LargerComponent(ExplicitlyCopyableComponentType):
+struct LargerComponent(ComponentType):
     var x: Float64
     var y: Float64
     var z: Float64

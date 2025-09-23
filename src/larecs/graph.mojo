@@ -3,7 +3,7 @@ from .bitmask import BitMask
 
 
 @fieldwise_init
-struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
+struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
     """Node in a BitMaskGraph.
 
     Parameters:
@@ -42,7 +42,6 @@ struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
 struct BitMaskGraph[
     DataType: KeyElement, //,
     null_value: DataType,
-    hint_trivial_type: Bool = False,
 ](Copyable, Movable):
     """A graph where each node is identified by a BitMask.
 
@@ -64,13 +63,13 @@ struct BitMaskGraph[
     alias null_index = Node[DataType].null_index
 
     # The list of nodes in the graph.
-    var _nodes: List[Node[DataType], hint_trivial_type=hint_trivial_type]
+    var _nodes: List[Node[DataType]]
 
     # A mapping for random lookup of nodes by their mask.
     # Used for slow lookup of nodes.
     var _map: Dict[BitMask, Int]
 
-    fn __init__(out self, owned first_value: DataType = Self.null_value):
+    fn __init__(out self, var first_value: DataType = Self.null_value):
         """Initializes the graph.
 
         Args:
@@ -78,7 +77,7 @@ struct BitMaskGraph[
                          corresponding to an empty bitmask.
         """
         self._nodes = List[
-            Node[DataType], hint_trivial_type=hint_trivial_type
+            Node[DataType]
         ]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value^)
@@ -87,7 +86,7 @@ struct BitMaskGraph[
     fn add_node(
         mut self,
         node_mask: BitMask,
-        owned value: DataType = Self.null_value,
+        var value: DataType = Self.null_value,
     ) -> Int:
         """Adds a node to the graph.
 

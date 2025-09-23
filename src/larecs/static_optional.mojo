@@ -1,8 +1,8 @@
 @fieldwise_init
 struct StaticOptional[
-    ElementType: Copyable & Movable,
+    ElementType: ImplicitlyCopyable & Movable,
     has_value: Bool = True,
-](Boolable, Copyable, ExplicitlyCopyable, Movable):
+](Boolable, Copyable, ImplicitlyCopyable, Movable):
     """An optional type that can potentially hold a value of ElementType.
 
     In contrast to the built-in optional, it is decided at
@@ -36,7 +36,7 @@ struct StaticOptional[
 
     @always_inline
     @implicit
-    fn __init__(out self, owned value: Self.ElementType):
+    fn __init__(out self, var value: Self.ElementType):
         """Constructs an optional type holding the provided value.
 
         Args:

@@ -13,7 +13,7 @@ struct Query[
     world_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
-](Copyable, ExplicitlyCopyable, Movable, SizedRaising):
+](Copyable, Movable, SizedRaising):
     """Query builder for entities with and without specific components.
 
     This type should not be used directly, but through the [..world.World.query] method:
@@ -170,7 +170,7 @@ struct Query[
 @fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
-](Copyable, ExplicitlyCopyable, Movable):
+](Copyable, Movable):
     """
     Class that holds the same information as a query but no reference to the world.
 
@@ -224,7 +224,7 @@ struct _ArchetypeByMaskIterator[
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
-](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given include and exclude masks.
 
@@ -431,7 +431,7 @@ struct _ArchetypeByListIterator[
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given list of Archetype IDs.
 
@@ -450,13 +450,13 @@ struct _ArchetypeByListIterator[
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _archetype_indices: List[Int, hint_trivial_type=True]
+    var _archetype_indices: List[Int]
     var _index: Int
 
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_indices: List[Int, hint_trivial_type=True],
+        archetype_indices: List[Int],
     ):
         """
         Creates an archetype by list iterator.
@@ -581,7 +581,7 @@ struct _EntityIterator[
         *ComponentTypes, component_manager=component_manager
     ]
     alias StartIndices = StaticOptional[
-        List[UInt, hint_trivial_type=True], has_start_indices
+        List[UInt], has_start_indices
     ]
 
     alias ArchetypeIterator = _ArchetypeIterator[
