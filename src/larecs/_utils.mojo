@@ -1,5 +1,5 @@
 from memory import UnsafePointer
-import math
+from math import log2
 
 
 @always_inline
@@ -40,7 +40,7 @@ fn next_pow2(var value: UInt) -> UInt:
     Returns:
         The next power of two greater than or equal to the given value.
     """
-    return UInt(next_pow2[DType.index](value))
+    return UInt(next_pow2[DType.uint](value))
 
 
 @always_inline
@@ -100,7 +100,7 @@ fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
         return 1
 
     @parameter
-    for i in range(Scalar[dtype](math.log2(Float32(dtype.bitwidth())))):
+    for i in range(Scalar[dtype](log2(Float32(dtype.bit_width())))):
         value |= value >> (2**i)
 
     return value + 1
