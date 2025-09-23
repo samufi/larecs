@@ -121,7 +121,7 @@ struct LargerComponent(ComponentType):
 
 
 @fieldwise_init
-struct FlexibleComponent[i: Int](ExplicitlyCopyableComponentType):
+struct FlexibleComponent[i: Int](ComponentType):
     var x: Float64
     var y: Float32
 
@@ -409,7 +409,7 @@ struct MemTestStruct(Copyable, Movable):
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]
 
-    fn __moveinit__(out self, var other: Self):
+    fn __moveinit__(out self, deinit other: Self):
         self.move_counter = other.move_counter
         self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter

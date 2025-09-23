@@ -287,7 +287,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._locks = other._locks
         self.resources = other.resources.copy()
 
-    fn __moveinit__(out self, var other: Self):
+    fn __moveinit__(out self, deinit other: Self):
         """
         Moves the contents of another [.World] into a new one.
 
