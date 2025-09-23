@@ -155,7 +155,7 @@ struct Archetype[
 
     # Pointers to the component data.
     var _data: InlineArray[
-        UnsafePointer[UInt8], Self.max_size, run_destructors=True
+        UnsafePointer[UInt8], Self.max_size
     ]
 
     # Current number of entities.
@@ -168,7 +168,7 @@ struct Archetype[
     var _component_count: UInt
 
     # Sizes of the component types by column
-    var _item_sizes: InlineArray[UInt32, Self.max_size, run_destructors=True]
+    var _item_sizes: InlineArray[UInt32, Self.max_size]
 
     # The indices of the present components
     var _ids: SIMD[Self.dType, Self.max_size]
@@ -227,10 +227,10 @@ struct Archetype[
         self._capacity = capacity
         self._ids = SIMD[Self.dType, Self.max_size]()
         self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+            UnsafePointer[UInt8], Self.max_size
         ](fill=UnsafePointer[UInt8]())
         self._item_sizes = InlineArray[
-            UInt32, Self.max_size, run_destructors=True
+            UInt32, Self.max_size
         ](fill=0)
         self._entities = List[Entity]()
         self._node_index = node_index
@@ -373,7 +373,7 @@ struct Archetype[
 
         # Copy the data
         self._data = InlineArray[
-            UnsafePointer[UInt8], Self.max_size, run_destructors=True
+            UnsafePointer[UInt8], Self.max_size
         ](fill=UnsafePointer[UInt8]())
 
         for i in range(existing._component_count):

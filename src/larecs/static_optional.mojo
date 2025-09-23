@@ -15,7 +15,7 @@ struct StaticOptional[
     """
 
     # Fields
-    var _value: InlineArray[ElementType, Int(has_value), run_destructors=True]
+    var _value: InlineArray[ElementType, Int(has_value)]
     """The underlying storage for the optional."""
 
     # ===------------------------------------------------------------------===#
