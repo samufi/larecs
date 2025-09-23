@@ -956,9 +956,9 @@ struct World[*component_types: ComponentType](
             for archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
-                if len(archetype[]) == 0:
-                    continue
-                if archetype[].get_mask().contains_any(BitMask(component_ids)):
+                if archetype[] and archetype[].get_mask().contains_any(
+                    BitMask(component_ids)
+                ):
                     raise Error(
                         "Query matches entities that already have at least"
                         " one of the components to add. Use"
