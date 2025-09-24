@@ -8,7 +8,6 @@ from .component import (
     contains_type,
 )
 from .unsafe_box import UnsafeBox
-from ._utils import unsafe_take
 
 alias ResourceType = Copyable & Movable
 """The trait that resources must conform to."""
@@ -57,52 +56,52 @@ struct Resources(Copyable, Movable, Sized):
             resources: The resources to add.
 
         Raises:
-            Error: If the resource already exists.
+            Error: If some resource already exists.
         """
+
+        conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
 
         @parameter
-        for i in range(resources.__len__()):
-            self._add(get_type_name[Ts[i]](), unsafe_take(resources[i]))
-        __disable_del resources
+        for idx in range(resources.__len__()):
+            alias id = get_type_name[Ts[idx]]()
+            if id in self._storage:
+                conflicting_ids.append(id)
+
+        if len(conflicting_ids) > 0:
+            raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
+
+        @parameter
+        fn take_resource[idx: Int](var resource: Ts[idx]) -> None:
+            self._add(get_type_name[Ts[idx]](), resource^)
+
+        resources^.consume_elements[take_resource]()
 
     @always_inline
     fn _add[
         T: Copyable & Movable
-    ](mut self, id: Self.IdType, var resource: Pointer[T]) raises:
+    ](mut self, id: Self.IdType, var resource: Pointer[T]):
         """Adds a resource by ID.
 
         Parameters:
             T: The type of the resource to add.
 
         Args:
-            id: The ID of the resource to add.
+            id: The ID of the resource to add. It has to be not used already.
             resource: The resource to add.
-
-        Raises:
-            Error: If the resource already exists.
         """
-        if id in self._storage:
-            raise Error("Resource already exists.")
-        self._storage[id] = UnsafeBox(resource[])
+        self._storage[id] = UnsafeBox(resource[].copy())
 
     @always_inline
-    fn _add[
-        T: Copyable & Movable
-    ](mut self, id: Self.IdType, var resource: T) raises:
+    fn _add[T: Copyable & Movable](mut self, id: Self.IdType, var resource: T):
         """Adds a resource by ID.
 
         Parameters:
             T: The type of the resource to add.
 
         Args:
-            id: The ID of the resource to add.
+            id: The ID of the resource to add. It has to be not used already.
             resource: The resource to add.
-
-        Raises:
-            Error: If the resource already exists.
         """
-        if id in self._storage:
-            raise Error("Resource already exists.")
         self._storage[id] = UnsafeBox(resource^)
 
     fn set[
@@ -122,17 +121,31 @@ struct Resources(Copyable, Movable, Sized):
         """
 
         @parameter
-        for i in range(resources.__len__()):
+        if not add_if_not_found:
+            conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
+
+            @parameter
+            for idx in range(resources.__len__()):
+                alias id = get_type_name[Ts[idx]]()
+                if id not in self._storage:
+                    conflicting_ids.append(id)
+
+            if len(conflicting_ids) > 0:
+                raise Error("Unknown resource: " + ", ".join(conflicting_ids))
+
+        @parameter
+        fn take_resource[idx: Int](var resource: Ts[idx]) -> None:
             self._set[add_if_not_found=add_if_not_found](
-                get_type_name[Ts[i]](),
-                unsafe_take(resources[i]),
+                get_type_name[Ts[idx]](),
+                resource^,
             )
-        __disable_del resources
+
+        resources^.consume_elements[take_resource]()
 
     @always_inline
     fn _set[
         T: Copyable & Movable, add_if_not_found: Bool
-    ](mut self, id: Self.IdType, var resource: T) raises:
+    ](mut self, id: Self.IdType, var resource: T):
         """Sets the values of the resources
 
         Parameters:
@@ -140,7 +153,7 @@ struct Resources(Copyable, Movable, Sized):
             add_if_not_found: If true, adds resources that do not exist.
 
         Args:
-            id: The ID of the resource to set.
+            id: The ID of the resource to set. If add_if_not_found is false, the resource ID must be already known.
             resource: The resource to set.
 
         Raises:
@@ -154,8 +167,6 @@ struct Resources(Copyable, Movable, Sized):
             @parameter
             if add_if_not_found:
                 self._add(id, resource^)
-            else:
-                raise Error("Resource " + String(id) + " not found.")
 
     fn remove[*Ts: ResourceType](mut self: Resources) raises:
         """Removes resources.
