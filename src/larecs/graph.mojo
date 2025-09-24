@@ -36,10 +36,7 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
         self.bit_mask = bit_mask
 
     fn __copyinit__(out self, other: Self):
-        self = other.copy()
-
-    fn copy(self, out other: Self):
-        other = Self(self.bit_mask, self.value.copy())
+        self = Self(other.bit_mask, other.value.copy())
 
 
 struct BitMaskGraph[

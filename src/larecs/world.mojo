@@ -272,41 +272,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         # var node = self.createArchetypeNode(Mask, ID, false)
 
-    @always_inline
-    fn __init__(out self, other: Self):
-        """
-        Initializes a [.World] by copying another instance.
-
-        Args:
-            other: The other instance to copy.
-        """
-        self._archetype_map = other._archetype_map.copy()
-        self._archetypes = other._archetypes.copy()
-        self._entities = other._entities.copy()
-        self._entity_pool = other._entity_pool.copy()
-        self._locks = other._locks.copy()
-        self.resources = other.resources.copy()
-
-    fn __moveinit__(out self, deinit other: Self):
-        """
-        Moves the contents of another [.World] into a new one.
-
-        Args:
-            other: The instance to move.
-        """
-        self._archetype_map = other._archetype_map^
-        self._archetypes = other._archetypes^
-        self._entities = other._entities^
-        self._entity_pool = other._entity_pool^
-        self._locks = other._locks^
-        self.resources = other.resources^
-
-    fn copy(self, out other: Self):
-        """
-        Copies the contents of another [.World] into a new one.
-        """
-        other = Self(self)
-
     fn __len__(self) -> Int:
         """
         Returns the number of entities in the world.

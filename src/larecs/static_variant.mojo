@@ -183,28 +183,6 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
 # BUG: Mojo crashes with these methods (see https://github.com/modular/modular/issues/5172). When fixed, we can use
 #      these for better ergonomics when working with StaticVariant.
 #      This may also be fixable when conditional conformance with `requires` is released.
-#
-#     fn __copyinit__[
-#         T: Copyable & StaticVariantType, //
-#     ](out self: Self[variant_idx, T], read other: Self[variant_idx, T]):
-#         """
-#         Initializes the variant by copying the value from another variant.
-
-#         Args:
-#             other: The variant to copy from.
-#         """
-#         self._data = other._data
-
-#     fn copy[
-#         T: ExplicitlyCopyable & StaticVariantType, //
-#     ](read self: Self[variant_idx, T], out copy: Self[variant_idx, T]):
-#         """
-#         Initializes the variant by copying the value from another variant.
-
-#         Args:
-#             other: The variant to copy from.
-#         """
-#         copy = Self(self._data.copy())
 
 #     fn __bool__[
 #         T: Boolable & StaticVariantType, //

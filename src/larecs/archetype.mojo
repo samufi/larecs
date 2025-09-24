@@ -342,14 +342,6 @@ struct Archetype[
                 )
                 self._component_count += 1
 
-    fn copy(self, out other: Self):
-        """Returns a copy of the archetype.
-
-        Returns:
-            A copy of the current archetype.
-        """
-        other = self
-
     fn __copyinit__(out self, existing: Self):
         """Copies the data from an existing archetype to a new one.
 

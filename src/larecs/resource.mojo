@@ -38,14 +38,6 @@ struct Resources(Copyable, Movable, Sized):
         """
         return len(self._storage)
 
-    fn copy(self, out resources: Self):
-        """Creates a copy of the resources.
-
-        Returns:
-            A copy of the resources.
-        """
-        resources = Resources(self._storage.copy())
-
     fn add[*Ts: ResourceType](mut self, var *resources: *Ts) raises:
         """Adds resources.
 
