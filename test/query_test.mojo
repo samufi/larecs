@@ -393,7 +393,7 @@ def test_query_archetype_iterator():
 
     a = Archetype(0, BitMask(0))
     _ = a.add(Entity(0, 0))
-    l = List[Archetype](a, a, a)
+    l = List[Archetype](a.copy(), a.copy(), a.copy())
     var count = 0
 
     for _ in _ArchetypeByMaskIterator[
