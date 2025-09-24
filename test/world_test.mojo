@@ -236,7 +236,6 @@ def test_world_batch_add():
     _ = world.add_entities(Position(1.0, 2.0), count=n)
 
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
-    assert_equal(len(world.query[Position]().without[Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), 0)
 
     for entity in world.add(
@@ -247,7 +246,6 @@ def test_world_batch_add():
         assert_equal(entity.get[Velocity]().dy, 0.2)
 
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
-    assert_equal(len(world.query[Position, Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), n)
 
     with assert_raises(
