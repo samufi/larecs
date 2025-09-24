@@ -699,7 +699,7 @@ struct Archetype[
 
         self._size -= 1
 
-        var swapped = Int(idx) != self._size
+        var swapped = index(idx) != self._size
 
         if swapped:
             self._entities[idx] = self._entities.pop()

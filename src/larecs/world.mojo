@@ -462,7 +462,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             @parameter
             for i in range(size):
                 archetype[].get_component[
-                    T = Ts[i.value], assert_has_component=False
+                    T = Ts[i], assert_has_component=False
                 ](index_in_archetype) = components[i]
 
         # TODO
@@ -560,7 +560,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Span(
                 UnsafePointer(
                     to=archetype[].get_component[
-                        T = Ts[i.value], assert_has_component=False
+                        T = Ts[i], assert_has_component=False
                     ](first_index_in_archetype)
                 ),
                 count,
@@ -817,7 +817,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         @parameter
         for i in range(components.__len__()):
-            archetype[].get_component[T = Ts[i.value]](
+            archetype[].get_component[T = Ts[i]](
                 entity_index.index
             ) = components[i]
 
