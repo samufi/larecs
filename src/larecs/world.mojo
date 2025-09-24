@@ -428,7 +428,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             for i in range(size):
                 archetype[].get_component[
                     T = Ts[i], assert_has_component=False
-                ](index_in_archetype) = components[i]
+                ](index_in_archetype) = components[i].copy()
 
         # TODO
         # if self._listener != nil:
@@ -784,7 +784,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         for i in range(components.__len__()):
             archetype[].get_component[T = Ts[i]](
                 entity_index.index
-            ) = components[i]
+            ) = components[i].copy()
 
     fn add[
         *Ts: ComponentType

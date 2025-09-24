@@ -108,7 +108,7 @@ struct EntityAccessor[
         for i in range(components.__len__()):
             self._archetype[].get_component[T = Ts[i]](
                 self._index_in_archetype
-            ) = components[i]
+            ) = components[i].copy()
 
     @always_inline
     fn has[T: ComponentType](self) -> Bool:

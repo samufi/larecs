@@ -102,26 +102,26 @@ fn assert_equal_lists[
 
 
 @fieldwise_init
-struct Position(ComponentType):
+struct Position(ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float64
 
 
 @fieldwise_init
-struct Velocity(ComponentType):
+struct Velocity(ComponentType & ImplicitlyCopyable):
     var dx: Float64
     var dy: Float64
 
 
 @fieldwise_init
-struct LargerComponent(ComponentType):
+struct LargerComponent(ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float64
     var z: Float64
 
 
 @fieldwise_init
-struct FlexibleComponent[i: Int](ComponentType):
+struct FlexibleComponent[i: Int](ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float32
 
