@@ -147,9 +147,6 @@ struct Resources(Copyable, Movable, Sized):
         Args:
             id: The ID of the resource to set. If add_if_not_found is false, the resource ID must be already known.
             resource: The resource to set.
-
-        Raises:
-            Error: If one of the resources does not exist.
         """
 
         try:
