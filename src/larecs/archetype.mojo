@@ -106,7 +106,7 @@ struct EntityAccessor[
 
         @parameter
         for i in range(components.__len__()):
-            self._archetype[].get_component[T = Ts[i.value]](
+            self._archetype[].get_component[T = Ts[i]](
                 self._index_in_archetype
             ) = components[i]
 

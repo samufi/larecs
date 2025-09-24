@@ -35,8 +35,11 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
         self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
         self.bit_mask = bit_mask
 
+    fn __copyinit__(out self, other: Self):
+        self = other.copy()
+
     fn copy(self, out other: Self):
-        other = Self(self.bit_mask, self.value)
+        other = Self(self.bit_mask, self.value.copy())
 
 
 struct BitMaskGraph[
@@ -200,4 +203,4 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
-        return self[node_index] != Self.null_value
+        return self[node_index] != materialize[Self.null_value]()
