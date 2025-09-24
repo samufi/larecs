@@ -71,6 +71,17 @@ struct Query[
         self._mask = mask^
         self._without_mask = without_mask^
 
+    fn __copyinit__(out self, other: Self):
+        """
+        Copy constructor.
+
+        Args:
+            other: The query to copy.
+        """
+        self._world = other._world
+        self._mask = other._mask
+        self._without_mask = other._without_mask.copy()
+
     fn __len__(self) raises -> Int:
         """
         Returns the number of entities matching the query.
@@ -102,7 +113,7 @@ struct Query[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         iterator = self._world[]._get_entity_iterator(
-            self._mask, self._without_mask
+            self._mask, self._without_mask.copy()
         )
 
     @always_inline
@@ -195,7 +206,17 @@ struct QueryInfo[
             query: The query the information should be taken from.
         """
         self.mask = query._mask
-        self.without_mask = query._without_mask
+        self.without_mask = query._without_mask.copy()
+
+    fn __copyinit__(out self, other: Self):
+        """
+        Copy constructor.
+
+        Args:
+            other: The query to copy.
+        """
+        self.mask = other.mask
+        self.without_mask = other.without_mask.copy()
 
     fn matches(self, archetype_mask: BitMask) -> Bool:
         """
@@ -322,7 +343,7 @@ struct _ArchetypeByMaskIterator[
         """
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask,
+            without_mask=self._without_mask.copy(),
         )
 
         buffer_index = 0
@@ -387,7 +408,7 @@ struct _ArchetypeByMaskIterator[
 
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask,
+            without_mask=self._without_mask.copy(),
         )
         # If there are more archetypes than the buffer size, we
         # need to iterate over the remaining archetypes.

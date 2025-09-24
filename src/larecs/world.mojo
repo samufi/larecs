@@ -664,7 +664,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._assert_unlocked()
 
         for archetype in self._get_archetype_iterator(
-            query.mask, query.without_mask
+            query.mask, query.without_mask.copy()
         ):
             for entity in archetype[].get_entities():
                 self._entity_pool.recycle(entity)
@@ -913,7 +913,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         if strict_check_needed:
             for archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
+                query.mask, query.without_mask.copy()
             ):
                 if archetype[] and archetype[].get_mask().contains_any(
                     BitMask(component_ids)
@@ -936,7 +936,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         # Search for the archetype that matches the query mask
         with self._locked():
             for old_archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
+                query.mask, query.without_mask.copy()
             ):
                 # Two cases per matching archetype A:
                 # 1. If an archetype B with the new component combination exists, move entities from A to B
@@ -1127,7 +1127,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         # Search for the archetype that matches the query mask
         with self._locked():
             for old_archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
+                query.mask, query.without_mask.copy()
             ):
                 # Two cases per matching archetype A:
                 # 1. If an archetype B with the new component combination exists, move entities from A to B
@@ -1538,7 +1538,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             for archetype in _ArchetypeByMaskIterator(
                 Pointer(to=self._archetypes),
                 query.mask,
-                query.without_mask,
+                query.without_mask.copy(),
             ):
 
                 @always_inline
@@ -1705,10 +1705,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 ](
                     Pointer(to=self._archetypes),
                     mask,
-                    without_mask,
+                    without_mask.copy(),
                 )
             ),
-            start_indices,
+            start_indices.copy(),
         )
 
     @always_inline
@@ -1731,7 +1731,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         iterator = _ArchetypeByMaskIterator(
             Pointer(to=self._archetypes),
             mask,
-            without_mask,
+            without_mask.copy(),
         )
 
     @always_inline

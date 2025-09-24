@@ -3,7 +3,7 @@ from sys.intrinsics import _type_is_eq
 from .static_optional import StaticOptional
 
 
-alias StaticVariantType = Movable
+alias StaticVariantType = Movable & Copyable
 """
 A trait that defines the requirements for types that can be used in StaticVariant.
 
@@ -12,7 +12,9 @@ and ownership transfer semantics.
 """
 
 
-struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
+struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](
+    Copyable, Movable
+):
     """
     A compile-time variant type that can hold exactly one of the provided types.
 

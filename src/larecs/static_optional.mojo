@@ -2,7 +2,7 @@
 struct StaticOptional[
     ElementType: Copyable & Movable,
     has_value: Bool = True,
-](Boolable, Copyable, ImplicitlyCopyable, Movable):
+](Boolable, Copyable, Movable):
     """An optional type that can potentially hold a value of ElementType.
 
     In contrast to the built-in optional, it is decided at

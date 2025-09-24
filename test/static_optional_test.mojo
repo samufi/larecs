@@ -23,8 +23,6 @@ def test_comptime_optional_copy():
     opt_without_value = StaticOptional[Int, False]()
     opt_copy_without = opt_without_value.copy()
     _ = opt_copy_without._value
-    opt_copy_without = opt_without_value
-    _ = opt_copy_without
 
 
 def test_comptime_optional_move_del():
