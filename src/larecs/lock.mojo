@@ -3,7 +3,7 @@ from .pool import BitPool
 
 
 @fieldwise_init
-struct LockMask(ImplicitlyCopyable, Movable):
+struct LockManager(Copyable, Movable):
     """
     Manages locks by mask bits.
 
@@ -76,19 +76,19 @@ struct LockedContext[origin: MutableOrigin](ImplicitlyCopyable, Movable):
     A context manager for locking and unlocking the world.
 
     Parameters:
-        origin: The origin of the LockMask to handle.
+        origin: The origin of the LockManager to handle.
     """
 
-    var _locks: Pointer[LockMask, origin]
+    var _locks: Pointer[LockManager, origin]
     var _lock: UInt8
 
     @always_inline
-    fn __init__(out self, locks: Pointer[LockMask, origin]):
+    fn __init__(out self, locks: Pointer[LockManager, origin]):
         """
         Initializes the LockedContext.
 
         Args:
-            locks: The LockMask to handle.
+            locks: The LockManager to handle.
         """
         self._locks = locks
         self._lock = 0

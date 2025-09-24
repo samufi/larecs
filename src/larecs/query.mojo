@@ -3,7 +3,7 @@ from .bitmask import BitMask
 from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
-from .lock import LockMask
+from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
 from .static_variant import StaticVariant
@@ -586,7 +586,7 @@ struct _EntityIterator[
     Parameters:
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
-        lock_origin: The origin of the LockMask.
+        lock_origin: The origin of the LockManager.
         ComponentTypes: The types of the components.
         component_manager: The component manager.
         arch_iter_variant_idx: The index of the variant that holds the archetype iterator.
@@ -623,7 +623,7 @@ struct _EntityIterator[
     ]
 
     var _current_archetype: Pointer[Self.Archetype, archetype_origin]
-    var _lock_ptr: Pointer[LockMask, lock_origin]
+    var _lock_ptr: Pointer[LockManager, lock_origin]
     var _lock: UInt8
     var _entity_index: Int
     var _last_entity_index: Int
@@ -634,7 +634,7 @@ struct _EntityIterator[
 
     fn __init__(
         out self,
-        lock_ptr: Pointer[LockMask, lock_origin],
+        lock_ptr: Pointer[LockManager, lock_origin],
         var archetype_iterator: Self.ArchetypeIterator,
         var start_indices: Self.StartIndices = None,
     ) raises:

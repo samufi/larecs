@@ -26,7 +26,7 @@ from .query import (
     _ArchetypeByMaskIteratorIdx,
     _ArchetypeByListIteratorIdx,
 )
-from .lock import LockMask, LockedContext
+from .lock import LockManager, LockedContext
 from .resource import Resources
 
 
@@ -242,7 +242,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     var _archetype_map: BitMaskGraph[
         -1
     ]  # Mapping from component masks to archetypes.
-    var _locks: LockMask  # World _locks.
+    var _locks: LockManager  # World _locks.
 
     var _archetypes: List[
         Self.Archetype
@@ -258,7 +258,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._archetypes = List[Self.Archetype](Self.Archetype())
         self._entities = List[EntityIndex](EntityIndex(0, 0))
         self._entity_pool = EntityPool()
-        self._locks = LockMask()
+        self._locks = LockManager()
         self.resources = Resources()
 
         # TODO
