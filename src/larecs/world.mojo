@@ -1052,7 +1052,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
                 Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
-                    Pointer(to=self._archetypes), changed_archetype_idcs
+                    Pointer(to=self._archetypes), changed_archetype_idcs^
                 ),
             ),
             StaticOptional(arch_start_idcs^),
@@ -1229,7 +1229,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
                 Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
-                    Pointer(to=self._archetypes), changed_archetype_idcs
+                    Pointer(to=self._archetypes), changed_archetype_idcs^
                 ),
             ),
             StaticOptional(arch_start_idcs^),

@@ -454,7 +454,7 @@ struct _ArchetypeByListIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_indices: List[Int],
+        var archetype_indices: List[Int],
     ):
         """
         Creates an archetype by list iterator.
@@ -465,7 +465,7 @@ struct _ArchetypeByListIterator[
         """
 
         self._archetypes = archetypes
-        self._archetype_indices = archetype_indices
+        self._archetype_indices = archetype_indices^
         self._index = 0
 
     @always_inline
