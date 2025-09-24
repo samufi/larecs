@@ -15,7 +15,7 @@
 - Add helper `QueryInfo.matches` to encapsulate query matching logic
 - Add `BitMask.__or__` 
 
-## [Unreleased](https://github.com/samufi/larecs/compare/v0.3.0...v0.4.0)
+## [v0.4.0 (2025-08-06)](https://github.com/samufi/larecs/compare/v0.3.0...v0.4.0)
 
 ### Breaking changes
 - Update the utilized Mojo version to 25.5 and adjust the code accordingly.
