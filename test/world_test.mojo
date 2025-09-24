@@ -230,6 +230,43 @@ def test_world_add():
         world.add(entity, Velocity(0.3, 0.4))
 
 
+def test_world_batch_add():
+    world = SmallWorld()
+    n = 10
+    _ = world.add_entities(Position(1.0, 2.0), count=n)
+
+    assert_equal(len(world.query[Position]().without[Velocity]()), n)
+    assert_equal(len(world.query[Position, Velocity]()), 0)
+
+    for entity in world.add(
+        world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)
+    ):
+        assert_true(entity.has[Velocity]())
+        assert_equal(entity.get[Velocity]().dx, 0.1)
+        assert_equal(entity.get[Velocity]().dy, 0.2)
+
+    assert_equal(len(world.query[Position]().without[Velocity]()), 0)
+    assert_equal(len(world.query[Position, Velocity]()), n)
+
+    with assert_raises(
+        contains=(
+            "Query matches entities that already have at least one of the"
+            " components to add."
+        )
+    ):
+        _ = world.add(
+            world.query[Position]().without[LargerComponent](),
+            Velocity(0.3, 0.4),
+            FlexibleComponent[0](1.0, 2.0),
+        )
+
+    # Check that this raises no error, despite there is no `without_mask`
+    _ = world.add(
+        world.query[Position](),
+        LargerComponent(0.3, 0.4, 0.5),
+    )
+
+
 def test_world_remove():
     world = SmallWorld()
     pos = Position(1.0, 2.0)
@@ -437,6 +474,7 @@ def main():
     test_remove_archetype()
     test_world_has_component()
     test_world_add()
+    test_world_batch_add()
     test_world_remove()
     test_remove_and_add()
     test_world_resource_access()

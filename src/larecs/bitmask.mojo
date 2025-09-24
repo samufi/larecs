@@ -208,6 +208,25 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
         """Returns the indices of the bits that are set."""
         result = _BitMaskIndexIter(self._bytes)
 
+    @always_inline
+    fn __or__(self, other: Self) -> BitMask:
+        """Returns the bitwise OR of this mask and another mask.
+
+        Performs element-wise bitwise OR operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in either operand.
+
+        Args:
+            other: The other BitMask to OR with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise OR of both masks.
+
+        **Performance Note:**
+        This operation is highly optimized using SIMD instructions for fast parallel
+        bitwise operations across all 256 bits simultaneously.
+        """
+        return BitMask(bytes=self._bytes | other._bytes)
+
     fn __str__(self) -> String:
         """Implements String(...)."""
         var result: String = "["

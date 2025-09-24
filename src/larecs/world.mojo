@@ -1,5 +1,6 @@
 from memory import UnsafePointer, Span
 from algorithm import vectorize
+from sys.info import sizeof
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
@@ -14,12 +15,16 @@ from .component import (
 )
 from .bitmask import BitMask
 from .static_optional import StaticOptional
+from .static_variant import StaticVariant
 from .query import (
     Query,
     QueryInfo,
-    _EntityIterator,
-    _ArchetypeEntityIterator,
     _ArchetypeIterator,
+    _EntityIterator,
+    _ArchetypeByMaskIterator,
+    _ArchetypeByListIterator,
+    _ArchetypeByMaskIteratorIdx,
+    _ArchetypeByListIteratorIdx,
 )
 from .lock import LockMask, LockedContext
 from .resource import Resources
@@ -118,14 +123,111 @@ struct World[*component_types: ComponentType](
         has_without_mask=_,
     ]
 
-    alias Iterator = _EntityIterator[
-        _,
-        _,
+    alias Iterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        lock_origin: MutableOrigin,
+        *,
+        arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
+        has_start_indices: Bool = False,
+        has_without_mask: Bool = False,
+    ] = _EntityIterator[
+        archetype_origin,
+        lock_origin,
         *component_types,
         component_manager = Self.component_manager,
-        has_without_mask=_,
-        has_start_indices=_,
+        arch_iter_variant_idx=arch_iter_variant_idx,
+        has_start_indices=has_start_indices,
+        has_without_mask=has_without_mask,
     ]
+    """
+    Primary entity iterator type alias for the World.
+
+    This flexible iterator supports different archetype iteration strategies via the 
+    `arch_iter_variant_idx` parameter, enabling optimized iteration patterns for
+    different use cases:
+
+    - **ByMask iteration** (default): Efficient for component-based queries
+    - **ByList iteration**: Optimized for batch operations on known archetype sets
+    
+    Parameters:
+        arch_iter_variant_idx: Selects iteration strategy (ByMask=0, ByList=1)
+        has_start_indices: Enables iteration from specific entity ranges (batch ops)
+        has_without_mask: Includes exclusion filtering capabilities for complex queries
+
+    **Performance Considerations:**
+    The iterator variant significantly affects performance - choose ByMask for general
+    queries and ByList for batch operations where archetype sets are predetermined.
+    """
+
+    alias ArchetypeByMaskIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        has_without_mask: Bool = False,
+    ] = _ArchetypeByMaskIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+        has_without_mask=has_without_mask,
+    ]
+    """
+    Archetype iterator optimized for component mask-based queries.
+
+    Efficiently iterates over archetypes by using bitmask operations to determine
+    archetype matches. This is the preferred iterator for general ECS queries where
+    you're filtering entities based on component presence/absence.
+
+    **Optimizations:**
+    - Uses SIMD-optimized bitmask operations for fast archetype matching
+    - Skips empty archetypes automatically to reduce iteration overhead  
+    - Supports exclusion masks via `has_without_mask` for complex filtering
+
+    **Best Use Cases:**
+    - Standard component-based entity queries (e.g., entities with Position + Velocity)
+    - Complex queries with include/exclude component requirements
+    - Systems that iterate over entities matching specific component patterns
+    """
+
+    alias ArchetypeByListIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+    ] = _ArchetypeByListIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+    ]
+    """
+    Archetype iterator optimized for iteration over predetermined archetype sets.
+
+    Iterates through a specific list of archetype indices without mask-based filtering.
+    This iterator provides optimal performance when the set of archetypes to iterate
+    is known in advance, such as during batch operations or cached query results.
+
+    **Performance Benefits:**
+    - Direct archetype access without bitmask matching overhead
+    - Optimal for batch operations where archetype set is predetermined  
+    - Cache-friendly iteration pattern for contiguous archetype ranges
+    - Minimal branching during iteration for maximum throughput
+
+    **Primary Use Cases:**
+    - Batch entity creation (add_entities) where all entities use same archetype
+    - Cached query results where archetype set is pre-computed
+    - High-performance systems iterating over specific, known entity groups
+    """
+
+    alias ArchetypeIterator[
+        archetype_mutability: Bool, //,
+        archetype_origin: Origin[archetype_mutability],
+        arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
+        has_without_mask: Bool = False,
+    ] = _ArchetypeIterator[
+        archetype_origin,
+        *component_types,
+        component_manager = Self.component_manager,
+        arch_iter_variant_idx=arch_iter_variant_idx,
+        has_without_mask=has_without_mask,
+    ]
+
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
     # _tarquery bitSet                    # Whether entities are potential relation targets. Used for archetype cleanup.
@@ -386,11 +488,13 @@ struct World[*component_types: ComponentType](
         mut self,
         *components: *Ts,
         count: UInt,
-        out iterator: _ArchetypeEntityIterator[
+        out iterator: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,
             component_manager = Self.component_manager,
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
         ],
     ) raises:
         """Adds a batch of [..entity.Entity]s.
@@ -466,10 +570,17 @@ struct World[*component_types: ComponentType](
                 count,
             ).fill(components[i])
 
-        iterator = _ArchetypeEntityIterator(
-            archetype,
+        iterator = _EntityIterator(
             Pointer(to=self._locks),
-            first_index_in_archetype,
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            ](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
+                    Pointer(to=self._archetypes), [archetype_index]
+                ),
+            ),
+            StaticOptional(List[UInt, True](UInt(first_index_in_archetype))),
         )
 
     @always_inline
@@ -756,6 +867,203 @@ struct World[*component_types: ComponentType](
         """
         self._remove_and_add(entity, add_components)
 
+    fn add[
+        has_without_mask: Bool, //,
+        *Ts: ComponentType,
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        owned *add_components: *Ts,
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Adds components to multiple entities at once that are specified by a [..query.Query].
+        The provided query must ensure that matching entities do not already have one or more of the
+        components to add.
+
+        **Example:**
+
+        ```mojo {doctest="add_query_comps" global=true}
+        from larecs import World
+
+        @fieldwise_init
+        struct Position(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        @fieldwise_init
+        struct Velocity(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        world = World[Position, Velocity]()
+        _ = world.add_entities(Position(0, 0), 100)
+
+        for entity in world.add[Velocity](
+            world.query[Position]().without_mask[Velocity](),
+            Velocity(0.5, -0.5),
+        ):
+            velocity = entity.get[Velocity]()
+            position = entity.get[Position]()
+            entity.set[Position](Position(position.x + velocity.x, position.y + velocity.y))
+            entity.set[Velocity](Velocity(velocity.x - 0.05, velocity.y - 0.05))
+        ```
+
+        Parameters:
+            has_without_mask: Whether the query has a without mask.
+            Ts: The types of the components to add.
+
+        Args:
+            query: The query specifying which entities to modify. The query must explicitly exclude existing entities
+                that already have some of the components to add.
+            add_components: The components to add.
+
+        Raises:
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+            Error: when called with a query that could match existing entities that already have at least one of the
+                components to add.
+        """
+
+        # Note:
+        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
+        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+        #    individually without checking for edge cases where multiple archetypes get merged into one.
+        #    This also enables potential parallelization optimizations.
+
+        self._assert_unlocked()
+
+        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
+
+        # If query could match archetypes that already have at least one of the components, raise an error
+        # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
+
+        var strict_check_needed: Bool
+
+        @parameter
+        if has_without_mask:
+            strict_check_needed = not query.without_mask[].contains(
+                BitMask(component_ids)
+            )
+        else:
+            strict_check_needed = True
+
+        if strict_check_needed:
+            for archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
+            ):
+                if archetype[] and archetype[].get_mask().contains_any(
+                    BitMask(component_ids)
+                ):
+                    raise Error(
+                        "Query matches entities that already have at least"
+                        " one of the components to add. Use"
+                        " `Query.without[Component, ...]()` to exclude"
+                        " those components."
+                    )
+
+        alias _2kb_of_UInt_or_Int = (1024 * 2) // sizeof[UInt]()
+        arch_start_idcs = List[UInt, True](
+            min(len(self._archetypes), _2kb_of_UInt_or_Int)
+        )
+        changed_archetype_idcs = List[Int, True](
+            min(len(self._archetypes), _2kb_of_UInt_or_Int)
+        )
+
+        # Search for the archetype that matches the query mask
+        with self._locked():
+            for old_archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
+            ):
+                # Two cases per matching archetype A:
+                # 1. If an archetype B with the new component combination exists, move entities from A to B
+                #    and insert new component data for moved entities.
+                # 2. If an archetype with the new component combination does not exist yet,
+                #    create new archetype B = A + component_ids and move entities and component data from A to B.
+                new_archetype_idx = self._get_archetype_index(
+                    component_ids, old_archetype[].get_node_index()
+                )
+
+                # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
+                # resized during the call to `_get_archetype_index`.
+                old_archetype_idx = self._archetype_map[
+                    old_archetype[].get_node_index()
+                ]
+                old_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(index(old_archetype_idx))
+                )
+
+                new_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(new_archetype_idx)
+                )
+
+                arch_start_idx = len(new_archetype[])
+                new_archetype[].reserve(arch_start_idx + len(old_archetype[]))
+
+                # Save arch_start_idx for the iterator.
+                arch_start_idcs.append(arch_start_idx)
+                changed_archetype_idcs.append(new_archetype_idx)
+
+                # Move component data from old archetype to new archetype.
+                for i in range(old_archetype[]._component_count):
+                    id = old_archetype[]._ids[i]
+
+                    new_archetype[].unsafe_set(
+                        arch_start_idx,
+                        id,
+                        old_archetype[]._data[id],
+                        len(old_archetype[]),
+                    )
+
+                # Move entities from old archetype to new archetype.
+                for idx in range(len(old_archetype[])):
+                    new_idx = new_archetype[].add(
+                        old_archetype[].get_entity(idx)
+                    )
+                    entity = new_archetype[].get_entity(new_idx)
+                    self._entities[entity.get_id()] = EntityIndex(
+                        new_idx,
+                        new_archetype_idx,
+                    )
+
+                    # Set new component data
+                    @parameter
+                    for comp_idx in range(add_components.__len__()):
+                        alias comp_id = component_ids[comp_idx]
+
+                        new_archetype[].unsafe_set(
+                            new_idx,
+                            comp_id,
+                            UnsafePointer(to=add_components[comp_idx]).bitcast[
+                                UInt8
+                            ](),
+                        )
+
+                old_archetype[].clear()
+
+        # Return iterator to iterate over the changed entities.
+        iterator = Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ](
+            Pointer(to=self._locks),
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            ](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
+                    Pointer(to=self._archetypes), changed_archetype_idcs
+                ),
+            ),
+            StaticOptional(arch_start_idcs),
+        )
+
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
         """
         Removes components from an [..entity.Entity].
@@ -862,6 +1170,11 @@ struct World[*component_types: ComponentType](
         if not add_size and not rem_size:
             return
 
+        # Reserve space for the possibility that a new archetype gets created
+        # This ensure that no further allocations can happen in this function and
+        # therefore all pointers to the current memory space stay valid!
+        self._archetypes.reserve(len(self._archetypes) + 1)
+
         idx = self._entities[entity.get_id()]
 
         old_archetype_index = idx.archetype_index
@@ -909,12 +1222,14 @@ struct World[*component_types: ComponentType](
                 archetype_index = self._get_archetype_index(
                     remove_ids[], start_node_index
                 )
+                # No need for Pointer revalidation due to previous memory reservation!
 
         @parameter
         if add_size:
             archetype_index = self._get_archetype_index(
                 component_ids[], start_node_index
             )
+            # No need for Pointer revalidation due to previous memory reservation!
 
         archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
         index_in_archetype = archetype[].add(entity)
@@ -1103,7 +1418,7 @@ struct World[*component_types: ComponentType](
         self._assert_unlocked()
 
         with self._locked():
-            for archetype in _ArchetypeIterator(
+            for archetype in _ArchetypeByMaskIterator(
                 Pointer(to=self._archetypes),
                 query.mask,
                 query.without_mask,
@@ -1226,14 +1541,20 @@ struct World[*component_types: ComponentType](
         mut self,
         owned mask: BitMask,
         owned without_mask: StaticOptional[BitMask, has_without_mask],
-        owned start_indices: Self.Iterator[
-            has_start_indices=has_start_indices
+        owned start_indices: _EntityIterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            *component_types,
+            component_manager = Self.component_manager,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
+            has_start_indices=has_start_indices,
         ].StartIndices = None,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
-            has_without_mask=has_without_mask,
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
+            has_without_mask=has_without_mask,
         ],
     ) raises:
         """
@@ -1248,11 +1569,28 @@ struct World[*component_types: ComponentType](
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
-        iterator = _EntityIterator(
-            Pointer(to=self._archetypes),
+        iterator = Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
+            has_start_indices=has_start_indices,
+            has_without_mask=has_without_mask,
+        ](
             Pointer(to=self._locks),
-            mask,
-            without_mask,
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
+                has_without_mask=has_without_mask,
+            ](
+                Self.ArchetypeByMaskIterator[
+                    __origin_of(self._archetypes),
+                    has_without_mask=has_without_mask,
+                ](
+                    Pointer(to=self._archetypes),
+                    mask,
+                    without_mask,
+                )
+            ),
             start_indices,
         )
 
@@ -1263,11 +1601,8 @@ struct World[*component_types: ComponentType](
         ref self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
-        out iterator: _ArchetypeIterator[
-            __origin_of(self._archetypes),
-            *component_types,
-            component_manager = Self.component_manager,
-            has_without_mask=has_without_mask,
+        out iterator: Self.ArchetypeByMaskIterator[
+            __origin_of(self._archetypes), has_without_mask=has_without_mask
         ],
     ):
         """
@@ -1276,7 +1611,7 @@ struct World[*component_types: ComponentType](
         Returns:
             An iterator over all archetypes that match the query.
         """
-        iterator = _ArchetypeIterator(
+        iterator = _ArchetypeByMaskIterator(
             Pointer(to=self._archetypes),
             mask,
             without_mask,
