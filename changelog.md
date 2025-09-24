@@ -3,10 +3,17 @@
 ## [Unreleased](https://github.com/samufi/larecs/compare/v0.4.0...main)
 
 ### Breaking changes
-- ...
+- Rename `_ArchetypeIterator` to `_ArchetypeByMaskIterator`
 
 ### Other changes
-- ...
+- Implement batch component addition as overload of `world.add`
+- Implement batch component removal as overload of `world.remove`
+- Add `StaticVariant`
+- Add `_ArchetypeByListIterator` to iterate over a given list of archetypes
+- Optimize `archetype.reserve` to reduce frequent reallocations
+- Add function `_utils.next_pow2` to calculate next power of 2 fast
+- Add helper `QueryInfo.matches` to encapsulate query matching logic
+- Add `BitMask.__or__` 
 
 ## [Unreleased](https://github.com/samufi/larecs/compare/v0.3.0...v0.4.0)
 
