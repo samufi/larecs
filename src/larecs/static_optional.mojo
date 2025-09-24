@@ -1,6 +1,6 @@
 @fieldwise_init
 struct StaticOptional[
-    ElementType: ImplicitlyCopyable & Movable,
+    ElementType: Copyable & Movable,
     has_value: Bool = True,
 ](Boolable, Copyable, ImplicitlyCopyable, Movable):
     """An optional type that can potentially hold a value of ElementType.

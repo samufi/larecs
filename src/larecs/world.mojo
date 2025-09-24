@@ -280,11 +280,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             other: The other instance to copy.
         """
-        self._archetype_map = other._archetype_map
-        self._archetypes = other._archetypes
-        self._entities = other._entities
-        self._entity_pool = other._entity_pool
-        self._locks = other._locks
+        self._archetype_map = other._archetype_map.copy()
+        self._archetypes = other._archetypes.copy()
+        self._entities = other._entities.copy()
+        self._entity_pool = other._entity_pool.copy()
+        self._locks = other._locks.copy()
         self.resources = other.resources.copy()
 
     fn __moveinit__(out self, deinit other: Self):
@@ -1055,7 +1055,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), changed_archetype_idcs
                 ),
             ),
-            StaticOptional(arch_start_idcs),
+            StaticOptional(arch_start_idcs^),
         )
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
@@ -1232,7 +1232,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), changed_archetype_idcs
                 ),
             ),
-            StaticOptional(arch_start_idcs),
+            StaticOptional(arch_start_idcs^),
         )
 
     @always_inline

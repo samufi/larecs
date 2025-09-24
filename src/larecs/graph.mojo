@@ -74,9 +74,7 @@ struct BitMaskGraph[
             first_value: The value stored in the first node,
                          corresponding to an empty bitmask.
         """
-        self._nodes = List[
-            Node[DataType]
-        ]()
+        self._nodes = List[Node[DataType]]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value^)
 

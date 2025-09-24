@@ -471,7 +471,7 @@ fn test_copy_move_del[
     assert_equal(copy_counter, test_copy_counter)
 
     # Copy
-    container2 = container
+    container2 = container.copy()
     test_copy_counter += 1
     test_move_counter += copy_moves
     assert_equal(del_counter, test_del_counter)

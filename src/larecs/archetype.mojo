@@ -362,7 +362,7 @@ struct Archetype[
         self._capacity = existing._capacity
         self._component_count = existing._component_count
         self._item_sizes = existing._item_sizes
-        self._entities = existing._entities
+        self._entities = existing._entities.copy()
         self._ids = existing._ids
         self._node_index = existing._node_index
         self._mask = existing._mask
