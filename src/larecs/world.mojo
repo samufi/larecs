@@ -1148,7 +1148,7 @@ struct World[*component_types: ComponentType](
         # If query could match archetypes that don't have all of the components, raise an error
         if not query.mask.contains(BitMask(component_ids)):
             raise Error(
-                "Query could match archetypes that don't have all of the"
+                "Query matches entities that don't have all of the"
                 " components to remove. Use `Query(Component, ...)` to include"
                 " those components."
             )
@@ -1157,7 +1157,7 @@ struct World[*component_types: ComponentType](
         if has_without_mask:
             if query.without_mask[].contains_any(BitMask(component_ids)):
                 raise Error(
-                    "Query excludes archetypes that have a component which"
+                    "Query excludes entities that have a component which"
                     " should be removed in the without mask. Remove all"
                     " components that get removed from `Query.without(...)`."
                 )

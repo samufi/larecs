@@ -327,7 +327,7 @@ def test_world_batch_remove():
 
     with assert_raises(
         contains=(
-            "Query could match archetypes that don't have all of the"
+            "Query matches entities that don't have all of the"
             " components to remove."
         )
     ):
