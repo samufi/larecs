@@ -101,6 +101,113 @@ struct Replacer[
             self._remove_ids,
         )
 
+    fn by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        *components: *AddTs,
+        out iterator: World[*component_types].Iterator[
+            __origin_of(self._world[]._archetypes),
+            __origin_of(self._world[]._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            query:     The query to determine which entities to modify.
+            components: The components to add.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        return self._by(
+            components,
+            query=query,
+        )
+
+    fn by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        *components: *AddTs,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        out iterator: World[*component_types].Iterator[
+            __origin_of(self._world[]._archetypes),
+            __origin_of(self._world[]._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            components: The components to add.
+            query:     The query to determine which entities to modify.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        return self._by(
+            components,
+            query=query,
+        )
+
+    fn _by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        components: VariadicPack[_, _, ComponentType, *AddTs],
+        query: QueryInfo[has_without_mask=has_without_mask],
+        out iterator: World[*component_types].Iterator[
+            __origin_of(self._world[]._archetypes),
+            __origin_of(self._world[]._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Private helper to remove and add components to multiple [..entity.Entity] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            components: The components to add.
+            query:     The query to determine which entities to modify.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+
+        return self._world[]._batch_remove_and_add(
+            query,
+            components,
+            self._remove_ids,
+        )
+
 
 struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
@@ -888,43 +995,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 components to add.
         """
 
-        # Note:
-        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
-        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
-        #    individually without checking for edge cases where multiple archetypes get merged into one.
-        #    This also enables potential parallelization optimizations.
-
-        self._assert_unlocked()
-
-        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
-
-        # If query could match archetypes that already have at least one of the components, raise an error
-        # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
-
-        var strict_check_needed: Bool
-
-        @parameter
-        if has_without_mask:
-            strict_check_needed = not query.without_mask[].contains(
-                BitMask(component_ids)
-            )
-        else:
-            strict_check_needed = True
-
-        if strict_check_needed:
-            for archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
-            ):
-                if archetype[] and archetype[].get_mask().contains_any(
-                    BitMask(component_ids)
-                ):
-                    raise Error(
-                        "Query matches entities that already have at least"
-                        " one of the components to add. Use"
-                        " `Query.without[Component, ...]()` to exclude"
-                        " those components."
-                    )
-
         return self._batch_remove_and_add(
             query,
             add_components,
@@ -1007,28 +1077,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
         #     into one.  This also enables potential parallelization optimizations.
 
-        self._assert_unlocked()
-
-        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
-
-        # If query could match archetypes that don't have all of the components, raise an error
-        if not query.mask.contains(BitMask(component_ids)):
-            raise Error(
-                "Query matches entities that don't have all of the"
-                " components to remove. Use `Query(Component, ...)` to include"
-                " those components."
-            )
-
-        @parameter
-        if has_without_mask:
-            if query.without_mask[].contains_any(BitMask(component_ids)):
-                raise Error(
-                    "Query excludes entities that have a component which"
-                    " should be removed in the without mask. Remove all"
-                    " components that get removed from `Query.without(...)`."
-                )
-
-        return self._batch_remove_and_add(query, remove_ids=component_ids)
+        return self._batch_remove_and_add(
+            query, remove_ids=Self.component_manager.get_id_arr[*Ts]()
+        )
 
     @always_inline
     fn replace[
@@ -1261,6 +1312,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Raises:
             Error: when called with nothing to do (i.e. no components to add or remove).
+            Error: when called with a query that could match existing entities that already have at least one of the
+                components to add.
+            Error: when called with a query that could match entities that don't have all of the components to remove.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         return self._batch_remove_and_add(query, add_components, remove_ids)
@@ -1289,9 +1343,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Adds and removes components to a multiple [..entity.Entity] specified by a [..query.QueryInfo].
 
         Parameters:
-            is_mut:      Whether the components to add are mutable.
-            is_owned:    Whether the components to add are owned.
-            origin:      The origin of the components to add.
             Ts:          The types of the components to add.
             rem_size:    The number of components to remove.
             remove_some: Whether to remove some components.
@@ -1316,25 +1367,96 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         var component_ids: ComponentIdsType
 
+        # Note:
+        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
+        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+        #    individually without checking for edge cases where multiple archetypes get merged into one.
+        #    This also enables potential parallelization optimizations.
+
+        @parameter
+        if add_size:
+            # If query could match archetypes that already have at least one of the components, raise an error
+            # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
+
+            var strict_check_needed: Bool
+
+            @parameter
+            if has_without_mask:
+                strict_check_needed = not query.without_mask[].contains(
+                    BitMask(add_ids)
+                )
+            else:
+                strict_check_needed = True
+
+            if strict_check_needed:
+                for archetype in self._get_archetype_iterator(
+                    query.mask, query.without_mask.copy()
+                ):
+                    if archetype[] and archetype[].get_mask().contains_any(
+                        BitMask(add_ids)
+                    ):
+                        raise Error(
+                            "Query matches entities that already have at least"
+                            " one of the components to add. Use"
+                            " `Query.without[Component, ...]()` to exclude"
+                            " those components."
+                        )
+
+        @parameter
+        if rem_size:
+            # If query could match archetypes that don't have all of the components, raise an error
+            if not query.mask.contains(BitMask(remove_ids[])):
+                raise Error(
+                    "Query matches entities that don't have all of the"
+                    " components to remove. Use `Query(Component, ...)` to"
+                    " include those components."
+                )
+
+            @parameter
+            if has_without_mask:
+                if query.without_mask[].contains_any(BitMask(remove_ids[])):
+                    raise Error(
+                        "Query excludes entities that have a component which"
+                        " should be removed in the without mask. Remove all"
+                        " components that get removed from"
+                        " `Query.without(...)`."
+                    )
+
         @parameter
         if add_size and rem_size:
-            component_ids = ComponentIdsType()
+            component_ids = ComponentIdsType(uninitialized=True)
             memcpy(
                 component_ids.unsafe_ptr(),
-                add_ids.unsafe_ptr(),
-                add_size,
-            )
-            memcpy(
-                component_ids.unsafe_ptr() + add_size,
                 remove_ids[].unsafe_ptr(),
                 rem_size,
+            )
+            memcpy(
+                component_ids.unsafe_ptr() + rem_size * size_of[Self.Id](),
+                add_ids.unsafe_ptr(),
+                add_size,
             )
         elif Bool(add_size) and not rem_size:
             component_ids = rebind[ComponentIdsType](add_ids)
         elif not add_size and Bool(rem_size):
             component_ids = rebind[ComponentIdsType](remove_ids[])
         else:
-            raise Error("No components to add or remove.")
+            return Self.Iterator[
+                __origin_of(self._archetypes),
+                __origin_of(self._locks),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+                has_start_indices=True,
+            ](
+                Pointer(to=self._locks),
+                Self.ArchetypeIterator[
+                    __origin_of(self._archetypes),
+                    arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+                ](
+                    Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
+                        Pointer(to=self._archetypes), List[Int]()
+                    ),
+                ),
+                StaticOptional(List[UInt]()),
+            )
 
         self._assert_unlocked()
 
