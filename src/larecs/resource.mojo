@@ -150,7 +150,7 @@ struct Resources(Copyable, Movable, Sized):
         """
 
         try:
-            self._storage._find_ref(id).unsafe_get[T]() = resource^
+            self._storage[id].unsafe_get[T]() = resource^
         except:
 
             @parameter
@@ -190,7 +190,7 @@ struct Resources(Copyable, Movable, Sized):
     fn get[
         T: ResourceType
     ](mut self) raises -> ref [
-        __origin_of(self._storage._find_ref("").unsafe_get[T]())
+        __origin_of(self._storage[""].unsafe_get[T]())
     ] T:
         """Gets a resource.
 
@@ -200,7 +200,7 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             A reference to the resource.
         """
-        return self._storage._find_ref(get_type_name[T]()).unsafe_get[T]()
+        return self._storage[get_type_name[T]()].unsafe_get[T]()
 
     @always_inline
     fn has[T: ResourceType](mut self) -> Bool:
