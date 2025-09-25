@@ -32,7 +32,7 @@ def test_comptime_variant_init():
 
 # def test_comptime_variant_move_del():
 #     fn factory(
-#         owned val: MemTestStruct,
+#         var val: MemTestStruct,
 #         out result: StaticVariant[MemTestStruct, True],
 #     ):
 #         result = __type_of(result)(val^)

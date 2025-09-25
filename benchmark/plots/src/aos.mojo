@@ -15,7 +15,7 @@ alias TARGET_ITERATIONS = 10**9
 
 
 @fieldwise_init
-struct BenchResult(Copyable, Movable):
+struct BenchResult(ImplicitlyCopyable, Movable):
     var components: Int
     var entities: Int
     var nanos_ecs: Float64
@@ -23,7 +23,7 @@ struct BenchResult(Copyable, Movable):
 
 
 @fieldwise_init
-struct BenchConfig[max_comp_exp: Int](Copyable, Movable):
+struct BenchConfig[max_comp_exp: Int](ImplicitlyCopyable, Movable):
     var max_entity_exp: Int
     var target_iters: Int
 
@@ -210,7 +210,7 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
             result = benchmark[compExp](rounds, entities)
             results.append(result)
 
-    return results
+    return results^
 
 
 fn benchmark[
@@ -271,7 +271,7 @@ struct AosWorld[components_exp: Int](Copyable, Movable):
 
 
 @fieldwise_init
-struct AosEntity[components_exp: Int](Copyable, Movable):
+struct AosEntity[components_exp: Int](ImplicitlyCopyable, Movable):
     var comps: InlineArray[Position, 2**components_exp]
 
     fn __init__(out self):

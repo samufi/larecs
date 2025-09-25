@@ -12,7 +12,7 @@ fn DefaultConfig() raises -> BenchConfig_:
     """Returns the default configuration for benchmarking."""
     config = BenchConfig_(min_runtime_secs=2, max_batch_size=50)
     config.verbose_timing = True
-    return config
+    return config^
 
 
 fn DefaultBench() raises -> Bench_:

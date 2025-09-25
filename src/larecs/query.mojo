@@ -3,7 +3,7 @@ from .bitmask import BitMask
 from .component import ComponentType, ComponentManager
 from .archetype import Archetype as _Archetype
 from .world import World
-from .lock import LockMask
+from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
 from .static_variant import StaticVariant
@@ -13,7 +13,7 @@ struct Query[
     world_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
-](Copyable, ExplicitlyCopyable, Movable, SizedRaising):
+](ImplicitlyCopyable, Movable, SizedRaising):
     """Query builder for entities with and without specific components.
 
     This type should not be used directly, but through the [..world.World.query] method:
@@ -54,8 +54,8 @@ struct Query[
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates a new query.
@@ -70,6 +70,17 @@ struct Query[
         self._world = world
         self._mask = mask^
         self._without_mask = without_mask^
+
+    fn __copyinit__(out self, other: Self):
+        """
+        Copy constructor.
+
+        Args:
+            other: The query to copy.
+        """
+        self._world = other._world
+        self._mask = other._mask
+        self._without_mask = other._without_mask.copy()
 
     fn __len__(self) raises -> Int:
         """
@@ -102,13 +113,11 @@ struct Query[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         iterator = self._world[]._get_entity_iterator(
-            self._mask, self._without_mask
+            self._mask, self._without_mask.copy()
         )
 
     @always_inline
-    fn without[
-        *Ts: ComponentType
-    ](owned self, out query: Self.QueryWithWithout):
+    fn without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -139,7 +148,7 @@ struct Query[
         )
 
     @always_inline
-    fn exclusive(owned self, out query: Self.QueryWithWithout):
+    fn exclusive(var self, out query: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
@@ -170,7 +179,7 @@ struct Query[
 @fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
-](Copyable, ExplicitlyCopyable, Movable):
+](ImplicitlyCopyable, Movable):
     """
     Class that holds the same information as a query but no reference to the world.
 
@@ -197,7 +206,17 @@ struct QueryInfo[
             query: The query the information should be taken from.
         """
         self.mask = query._mask
-        self.without_mask = query._without_mask
+        self.without_mask = query._without_mask.copy()
+
+    fn __copyinit__(out self, other: Self):
+        """
+        Copy constructor.
+
+        Args:
+            other: The query to copy.
+        """
+        self.mask = other.mask
+        self.without_mask = other.without_mask.copy()
 
     fn matches(self, archetype_mask: BitMask) -> Bool:
         """
@@ -224,7 +243,7 @@ struct _ArchetypeByMaskIterator[
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
-](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given include and exclude masks.
 
@@ -255,8 +274,8 @@ struct _ArchetypeByMaskIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates an archetype by mask iterator.
@@ -289,8 +308,8 @@ struct _ArchetypeByMaskIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask],
+        var mask: BitMask,
+        var without_mask: StaticOptional[BitMask, has_without_mask],
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -324,7 +343,7 @@ struct _ArchetypeByMaskIterator[
         """
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask,
+            without_mask=self._without_mask.copy(),
         )
 
         buffer_index = 0
@@ -347,7 +366,7 @@ struct _ArchetypeByMaskIterator[
         self._max_buffer_index = buffer_index - 1
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -389,7 +408,7 @@ struct _ArchetypeByMaskIterator[
 
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask,
+            without_mask=self._without_mask.copy(),
         )
         # If there are more archetypes than the buffer size, we
         # need to iterate over the remaining archetypes.
@@ -431,7 +450,7 @@ struct _ArchetypeByListIterator[
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-](Boolable, Copyable, ExplicitlyCopyable, Iterator, Movable, Sized):
+](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given list of Archetype IDs.
 
@@ -450,13 +469,13 @@ struct _ArchetypeByListIterator[
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _archetype_indices: List[Int, hint_trivial_type=True]
+    var _archetype_indices: List[Int]
     var _index: Int
 
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_indices: List[Int, hint_trivial_type=True],
+        var archetype_indices: List[Int],
     ):
         """
         Creates an archetype by list iterator.
@@ -467,11 +486,11 @@ struct _ArchetypeByListIterator[
         """
 
         self._archetypes = archetypes
-        self._archetype_indices = archetype_indices
+        self._archetype_indices = archetype_indices^
         self._index = 0
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -567,7 +586,7 @@ struct _EntityIterator[
     Parameters:
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
-        lock_origin: The origin of the LockMask.
+        lock_origin: The origin of the LockManager.
         ComponentTypes: The types of the components.
         component_manager: The component manager.
         arch_iter_variant_idx: The index of the variant that holds the archetype iterator.
@@ -580,9 +599,7 @@ struct _EntityIterator[
     alias Archetype = _Archetype[
         *ComponentTypes, component_manager=component_manager
     ]
-    alias StartIndices = StaticOptional[
-        List[UInt, hint_trivial_type=True], has_start_indices
-    ]
+    alias StartIndices = StaticOptional[List[UInt], has_start_indices]
 
     alias ArchetypeIterator = _ArchetypeIterator[
         archetype_origin,
@@ -606,7 +623,7 @@ struct _EntityIterator[
     ]
 
     var _current_archetype: Pointer[Self.Archetype, archetype_origin]
-    var _lock_ptr: Pointer[LockMask, lock_origin]
+    var _lock_ptr: Pointer[LockManager, lock_origin]
     var _lock: UInt8
     var _entity_index: Int
     var _last_entity_index: Int
@@ -617,9 +634,9 @@ struct _EntityIterator[
 
     fn __init__(
         out self,
-        lock_ptr: Pointer[LockMask, lock_origin],
-        owned archetype_iterator: Self.ArchetypeIterator,
-        owned start_indices: Self.StartIndices = None,
+        lock_ptr: Pointer[LockManager, lock_origin],
+        var archetype_iterator: Self.ArchetypeIterator,
+        var start_indices: Self.StartIndices = None,
     ) raises:
         """
         Creates an entity iterator with or without excluded components.
@@ -688,7 +705,7 @@ struct _EntityIterator[
             # first call to __next__ will increment it.
             self._entity_index -= 1
 
-    fn __del__(owned self):
+    fn __del__(deinit self):
         """
         Releases the lock.
         """
@@ -698,7 +715,7 @@ struct _EntityIterator[
             debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    fn __iter__(owned self, out iterator: Self):
+    fn __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 

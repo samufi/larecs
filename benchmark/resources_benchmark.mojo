@@ -20,7 +20,7 @@ fn benchmark_add_remove_resource_1_000(mut bencher: Bencher) raises capturing:
         test_resource = TestResource()
         for _ in range(1_000):
             try:
-                resources.add(test_resource)
+                resources.add(test_resource.copy())
                 resources.remove[TestResource]()
             except:
                 pass
