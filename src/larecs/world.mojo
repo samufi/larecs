@@ -1392,7 +1392,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 for archetype in self._get_archetype_iterator(
                     query.mask, query.without_mask.copy()
                 ):
-                    if archetype[] and archetype[].get_mask().contains_any(
+                    archetype_mask = archetype[].get_mask()
+
+                    @parameter
+                    if remove_some:
+                        archetype_mask = archetype_mask.without(remove_ids[])
+
+                    if archetype[] and archetype_mask.contains_any(
                         BitMask(add_ids)
                     ):
                         raise Error(
