@@ -1477,7 +1477,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 # 1. If an archetype B with the new component combination exists, move entities from A to B
                 #    and insert new component data for moved entities.
                 # 2. If an archetype with the new component combination does not exist yet,
-                #    create new archetype B = A - component_ids and move entities and component data from A to B.
+                #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
                 new_archetype_idx = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
                 )
