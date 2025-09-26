@@ -173,10 +173,51 @@ for entity in entities:
     world.add(entity, Velocity(1.0, 0.5))  # Individual operations
 ```
 
-> [!Note]
-> Currently, only batch adding of components is supported. 
-> Batch removal and replacement operations are planned for future releases.
-> See the [roadmap](../../../README.md#next-steps) for more information.
+#### Batch removing components
+
+You can remove components from multiple entities that match a query using the
+{{< api World.remove remove >}} method with a query:
+
+```mojo {doctest="guide_change_entities"}
+# Add 10 entities with Position and Velocity components
+_ = world.add_entities(Position(0, 0), Velocity(1.0, 1.0), count=10)
+
+# Remove Velocity component from all entities that have both Position and Velocity
+world.remove[Velocity](
+    world.query[Position, Velocity]()
+)
+
+# You can also remove multiple components at once from multiple entities
+world.remove[Position, Velocity](
+    world.query[Position, Velocity]()
+)
+```
+
+The query must ensure that all matching entities have the components you want to remove,
+otherwise an error will be raised.
+
+#### Batch replacing components
+
+You can replace components on multiple entities that match a query using the
+{{< api World.replace replace >}} method in combination with {{< api Replacer.by by >}}:
+
+```mojo {doctest="guide_change_entities"}
+# Add 10 entities with Position components
+_ = world.add_entities(Position(0, 0), count=10)
+
+# Replace Position with Velocity for all entities that have Position
+world.replace[Position]().by(
+    world.query[Position](),
+    Velocity(2.0, 2.0)
+)
+
+# You can also replace multiple components with multiple other components
+world.replace[Position, Velocity]().by(
+    world.query[Position, Velocity](),
+    Direction(0.0, 5.0),
+    Acceleration(0.2, 0.4)
+)
+```
 
 > [!Tip]
 > Batch operations are significantly more efficient than individual operations
