@@ -118,24 +118,6 @@ struct BitMask(
         return bits.contains(self)
 
     @always_inline
-    fn without(self, *comps: Self.IndexType) -> Self:
-        """Modifies the [BitMask] to unset
-        the components given as arguments.
-        """
-        return self.without(BitMask(comps))
-
-    @always_inline
-    fn without(self, comps: InlineArray[Self.IndexType]) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
-        return self.without(BitMask(comps))
-
-    @always_inline
-    fn without(self, other: BitMask) -> Self:
-        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
-        """
-        return self & ~other
-
-    @always_inline
     fn exclusive(self) -> MaskFilter:
         """Creates a [..filter.MaskFilter] which filters for exactly the mask's components.
         matches only entities that have exactly the given components, and no other.
@@ -175,6 +157,46 @@ struct BitMask(
             self._bytes[index(idx)] |= 1 << offset
         else:
             self._bytes[index(idx)] &= ~(1 << offset)
+
+    @always_inline
+    fn set(self, *comps: Self.IndexType, value: Bool) -> Self:
+        """Modifies the [BitMask] to unset the components given as arguments."""
+        return self.set(BitMask(comps), value)
+
+    @always_inline
+    fn set[value: Bool](self, *comps: Self.IndexType) -> Self:
+        """Modifies the [BitMask] to unset the components given as arguments."""
+        return self.set[value](BitMask(comps))
+
+    @always_inline
+    fn set(self, comps: InlineArray[Self.IndexType], value: Bool) -> Self:
+        """Modifies the [BitMask] to unset the components given as arguments."""
+        return self.set(BitMask(comps), value)
+
+    @always_inline
+    fn set[value: Bool](self, comps: InlineArray[Self.IndexType]) -> Self:
+        """Modifies the [BitMask] to unset the components given as arguments."""
+        return self.set[value](BitMask(comps))
+
+    @always_inline
+    fn set(self, other: BitMask, value: Bool) -> Self:
+        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
+        """
+        if value:
+            return self.set[True](other)
+        else:
+            return self.set[False](other)
+
+    @always_inline
+    fn set[value: Bool](self, other: BitMask) -> Self:
+        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
+        """
+
+        @parameter
+        if value:
+            return self | other
+        else:
+            return self & ~other
 
     @always_inline
     fn flip(mut self, bit: Self.IndexType):
