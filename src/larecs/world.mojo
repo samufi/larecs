@@ -1396,7 +1396,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
                     @parameter
                     if remove_some:
-                        archetype_mask = archetype_mask.without(remove_ids[])
+                        archetype_mask = archetype_mask.set(remove_ids[], False)
 
                     if archetype[] and archetype_mask.contains_any(
                         BitMask(add_ids)
