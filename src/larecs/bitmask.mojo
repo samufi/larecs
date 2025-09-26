@@ -118,14 +118,22 @@ struct BitMask(
         return bits.contains(self)
 
     @always_inline
-    fn without(self, *comps: Self.IndexType) -> MaskFilter:
-        """Creates a [..filter.MaskFilter] which filters for including the mask's components
-        and excludes the components given as arguments.
+    fn without(self, *comps: Self.IndexType) -> Self:
+        """Modifies the [BitMask] to unset
+        the components given as arguments.
         """
-        return MaskFilter(
-            include=self,
-            exclude=BitMask(comps),
-        )
+        return self.without(BitMask(comps))
+
+    @always_inline
+    fn without(self, comps: InlineArray[Self.IndexType]) -> Self:
+        """Modifies the [BitMask] to unset the components given as arguments."""
+        return self.without(BitMask(comps))
+
+    @always_inline
+    fn without(self, other: BitMask) -> Self:
+        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
+        """
+        return self & ~other
 
     @always_inline
     fn exclusive(self) -> MaskFilter:
@@ -178,7 +186,7 @@ struct BitMask(
     @always_inline
     fn invert(self) -> BitMask:
         """Returns the inversion of this mask."""
-        return BitMask(bytes=bit_not(self._bytes))
+        return ~self
 
     @always_inline
     fn is_zero(self) -> Bool:
@@ -211,6 +219,11 @@ struct BitMask(
         result = _BitMaskIndexIter(self._bytes)
 
     @always_inline
+    fn __invert__(self) -> BitMask:
+        """Returns the inversion of this mask."""
+        return BitMask(bytes=~self._bytes)
+
+    @always_inline
     fn __or__(self, other: Self) -> BitMask:
         """Returns the bitwise OR of this mask and another mask.
 
@@ -227,7 +240,64 @@ struct BitMask(
         This operation is highly optimized using SIMD instructions for fast parallel
         bitwise operations across all 256 bits simultaneously.
         """
-        return BitMask(bytes=self._bytes | other._bytes)
+        copy = self.copy()
+        copy |= other
+        return copy
+
+    @always_inline
+    fn __ior__(mut self, other: Self):
+        """Performs in-place bitwise OR with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise OR operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in either the current BitMask or the provided BitMask.
+
+        Args:
+            other: The BitMask to perform the bitwise OR operation with.
+
+        **Performance Note:**
+        This operation is optimized using SIMD instructions for efficient parallel
+        processing of all 256 bits.
+        """
+        self._bytes |= other._bytes
+
+    @always_inline
+    fn __and__(self, other: Self) -> BitMask:
+        """Returns the bitwise AND of this mask and another mask.
+
+        Performs element-wise bitwise AND operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in both operands.
+
+        Args:
+            other: The other BitMask to AND with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise AND of both masks.
+
+        **Performance Note:**
+        This operation is highly optimized using SIMD instructions for fast parallel
+        bitwise operations across all 256 bits simultaneously.
+        """
+        copy = self.copy()
+        copy &= other
+        return copy
+
+    @always_inline
+    fn __iand__(mut self, other: Self):
+        """Performs in-place bitwise AND with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise AND operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in both the current BitMask and the provided BitMask.
+
+        Args:
+            other: The BitMask to perform the bitwise AND operation with.
+
+        **Performance Note:**
+        This operation is optimized using SIMD instructions for efficient parallel
+        processing of all 256 bits.
+        """
+        self._bytes &= other._bytes
 
     fn __str__(self) -> String:
         """Implements String(...)."""
