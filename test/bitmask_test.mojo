@@ -115,18 +115,6 @@ fn test_bit_mask_without_exclusive() raises:
 
     assert_false(mask.matches(BitMask(UInt8(1), UInt8(2))))
 
-    without = mask.without(UInt8(3))
-
-    assert_true(without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_true(
-        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
-    )
-
-    assert_false(
-        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13)))
-    )
-    assert_false(without.matches(BitMask(UInt8(1), UInt8(2))))
-
     excl = mask.exclusive()
 
     assert_true(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))

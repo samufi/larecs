@@ -75,19 +75,6 @@ fn benchmark_bitmask_contains_any_1_000_000(mut bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_mask_filter_1_000_000(mut bencher: Bencher) capturing:
-    mask = BitMask(0, 1, 2).without()
-    bits = BitMask(0, 1, 2)
-
-    @always_inline
-    @parameter
-    fn bench_fn() capturing:
-        for _ in range(1_000_000):
-            keep(mask.matches(bits))
-
-    bencher.iter[bench_fn]()
-
-
 fn benchmark_bitmask_eq_1_000_000(mut bencher: Bencher) capturing:
     mask1 = get_random_bitmask()
     mask2 = mask1
@@ -201,9 +188,6 @@ fn run_all_bitmask_benchmarks(mut bench: Bench) raises:
     )
     bench.bench_function[benchmark_bitmask_eq_1_000_000](
         BenchId("10^6 * bitmask_eq")
-    )
-    bench.bench_function[benchmark_mask_filter_1_000_000](
-        BenchId("10^6 * mask_filter")
     )
     # bench.bench_function[benchmark_bitmask_get_indices_1_000_000](
     #     BenchId("10^6 * get_indices")
