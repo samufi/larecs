@@ -379,7 +379,12 @@ def test_batch_remove_and_add():
     assert_equal(len(world.query[Position, Velocity]()), 0)
     assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), n)
 
-    with assert_raises():
+    with assert_raises(
+        contains=(
+            "Query matches entities that already have at least"
+            " one of the components to add."
+        )
+    ):
         _ = world.replace[Velocity]().by(Position(5.0, 6.0), query=world.query[Position]())
 
     for entity in world.replace[Position]().by(Position(42.0, 6.0), query=world.query[Position]()):
