@@ -1504,6 +1504,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 arch_start_idcs.append(arch_start_idx)
                 changed_archetype_idcs.append(new_archetype_idx)
 
+                # Move component data from old archetype to new archetype.
+                for i in range(old_archetype[]._component_count):
+                    id = old_archetype[]._ids[i]
+
+                    new_archetype[].unsafe_set(
+                        arch_start_idx,
+                        id,
+                        old_archetype[]._data[id],
+                        len(old_archetype[]),
+                    )
+
                 # Move entities to the new archetype and update entity index mappings
                 for i in range(len(old_archetype[])):
                     entity = old_archetype[].get_entity(i)
@@ -1524,17 +1535,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                                 to=add_components[add_comp_idx]
                             ).bitcast[UInt8](),
                         )
-
-                # Move component data from old archetype to new archetype.
-                for i in range(old_archetype[]._component_count):
-                    id = old_archetype[]._ids[i]
-
-                    new_archetype[].unsafe_set(
-                        arch_start_idx,
-                        id,
-                        old_archetype[]._data[id],
-                        len(old_archetype[]),
-                    )
 
                 old_archetype[].clear()
 
