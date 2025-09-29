@@ -1708,7 +1708,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     without_mask,
                 )
             ),
-            start_indices.copy(),
+            start_indices^,
         )
 
     @always_inline
