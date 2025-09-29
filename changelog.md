@@ -4,7 +4,7 @@
 
 ### Breaking changes
 - Update the utilized Mojo version to 25.6 and adjust the code accordingly.
-- Revisit what structs are only `Copyable` and which can be also `ImplicitlyCopyable`
+- Revisit which structs are only `Copyable` and which can be also `ImplicitlyCopyable`
   #### Copyable
   - _ArchetypeByListIterator
   - _ArchetypeByMaskIterator
@@ -13,6 +13,8 @@
   - BitPool
   - _EntityIterator
   - EntityPool
+  - LockMask -> LockManager
+
   - Resources
   - StaticOptional
   - StaticVariant
@@ -25,7 +27,6 @@
   - Entity
   - EntityIndex
   - LockedContext
-  - LockMask -> LockManager
   - Node
   - Query
   - QueryInfo
@@ -38,7 +39,7 @@
 ### Other changes
 - Implement batch component addition as overload of `world.add`
 - Implement batch component removal as overload of `world.remove`
-- Remove `unsafe_take`
+- Remove `unsafe_take` from the `_utils` module
 - Add `StaticVariant`
 - Add `_ArchetypeByListIterator` to iterate over a given list of archetypes
 - Optimize `archetype.reserve` to reduce frequent reallocations
