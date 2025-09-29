@@ -121,7 +121,7 @@ struct Resources(Copyable, Movable, Sized):
 
     @always_inline
     fn _set[
-        T: Copyable & Movable, add_if_not_found: Bool
+        T: Copyable & Movable, //, add_if_not_found: Bool
     ](mut self, id: Self.IdType, var resource: T):
         """Sets the values of the resources
 
