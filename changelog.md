@@ -3,11 +3,43 @@
 ## [Unreleased](https://github.com/samufi/larecs/compare/v0.4.0...main)
 
 ### Breaking changes
+- Update the utilized Mojo version to 25.6 and adjust the code accordingly.
+- Revisit which structs are only `Copyable` and which can be also `ImplicitlyCopyable`
+  #### Copyable
+  - _ArchetypeByListIterator
+  - _ArchetypeByMaskIterator
+  - Archetype
+  - BitMaskGraph
+  - BitPool
+  - _EntityIterator
+  - EntityPool
+  - LockMask -> LockManager
+
+  - Resources
+  - StaticOptional
+  - StaticVariant
+  - UnsafeBox
+  - World
+
+  #### ImplicitlyCopyable
+  - BitMask
+  - Component
+  - Entity
+  - EntityIndex
+  - LockedContext
+  - Node
+  - Query
+  - QueryInfo
+
 - Rename `_ArchetypeIterator` to `_ArchetypeByMaskIterator`
+- Rename `LockMask` to `LockManager`
+- Remove all `hint_trivial_type` and `run_destructors` parameters from containers that leaked them from their underlying
+  List attribute
 
 ### Other changes
 - Implement batch component addition as overload of `world.add`
 - Implement batch component removal as overload of `world.remove`
+- Remove `unsafe_take` from the `_utils` module
 - Add `StaticVariant`
 - Add `_ArchetypeByListIterator` to iterate over a given list of archetypes
 - Optimize `archetype.reserve` to reduce frequent reallocations

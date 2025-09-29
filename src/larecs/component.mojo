@@ -1,4 +1,4 @@
-from sys.info import sizeof
+from sys import size_of
 from sys.intrinsics import _type_is_eq
 
 # from collections import Dict
@@ -39,7 +39,7 @@ fn get_sizes[
 
     @parameter
     for i in range(len(VariadicList(Ts))):
-        sizes[i] = sizeof[Ts[i]]()
+        sizes[i] = size_of[Ts[i]]()
 
     return sizes
 
@@ -190,7 +190,7 @@ struct ComponentManager[
         Returns:
             The size of the component type.
         """
-        return sizeof[ComponentTypes[i]]()
+        return size_of[ComponentTypes[i]]()
 
     @staticmethod
     @always_inline

@@ -146,7 +146,7 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         ]()
         self.world = Self.World()
 
-    fn __init__(out self, owned world: Self.World):
+    fn __init__(out self, var world: Self.World):
         """
         Initializes the scheduler with a given world.
 
@@ -163,7 +163,7 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         ]()
         self.world = world^
 
-    fn add_system[S: System](mut self, owned system: S):
+    fn add_system[S: System](mut self, var system: S):
         """Adds a system to the scheduler.
 
         Args:

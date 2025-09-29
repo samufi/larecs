@@ -4,7 +4,7 @@ from hashlib import Hasher
 
 
 @fieldwise_init
-struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
+struct _BitMaskIndexIter(ImplicitlyCopyable, Movable, Sized):
     """Iterator for BitMask indices."""
 
     alias DataContainerType = SIMD[DType.uint8, BitMask.total_bytes]
@@ -17,7 +17,7 @@ struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
     var _index: UInt8
     var _size: Int
 
-    fn __init__(out self, owned bytes: Self.DataContainerType):
+    fn __init__(out self, var bytes: Self.DataContainerType):
         self._bytes = bytes
         self._mask = Self.DataContainerType(1)
         self._compare = self._bytes & self._mask
@@ -54,7 +54,9 @@ struct _BitMaskIndexIter(Copyable, ExplicitlyCopyable, Movable, Sized):
 
 
 @register_passable
-struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
+struct BitMask(
+    EqualityComparable, ImplicitlyCopyable, KeyElement, Movable, Stringable
+):
     """BitMask is a 256 bit bitmask."""
 
     alias IndexDType = DType.uint8
@@ -103,7 +105,7 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
         """Compares two masks for equality."""
-        return (self._bytes == other._bytes).reduce_and()
+        return self._bytes == other._bytes
 
     @always_inline
     fn __ne__(self, other: Self) -> Bool:
@@ -191,12 +193,12 @@ struct BitMask(Copyable, EqualityComparable, KeyElement, Movable, Stringable):
     @always_inline
     fn contains(self, other: Self) -> Bool:
         """Reports if the other mask is a subset of this mask."""
-        return ((self._bytes & other._bytes) == other._bytes).reduce_and()
+        return (self._bytes & other._bytes) == other._bytes
 
     @always_inline
     fn contains_any(self, other: Self) -> Bool:
         """Reports if any bit of the other mask is in this mask."""
-        return ((self._bytes & other._bytes) != 0).reduce_or()
+        return (self._bytes & other._bytes) != 0
 
     @always_inline
     fn total_bits_set(self) -> Int:

@@ -11,7 +11,7 @@ permissions:
   pages: write
 
 env:
-  MODO_VERSION: v0.11.10
+  MODO_VERSION: v0.11.12
   HUGO_VERSION: 0.148.2
 
 jobs:

@@ -165,14 +165,14 @@ struct IntPool:
     Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
     """
 
-    var _pool: List[Int, True]
+    var _pool: List[Int]
     var _next: Int
     var _available: UInt32
 
     @always_inline
     fn __init__(out self):
         """Creates a new, initialized entity pool."""
-        self._pool = List[Int, True]()
+        self._pool = List[Int]()
         self._next = 0
         self._available = 0
 

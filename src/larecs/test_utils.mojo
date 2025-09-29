@@ -8,15 +8,27 @@ from .world import World
 from .resource import Resources
 
 
+# TODO: Revisit the function parameters of `load` and `store` when crash report: https://github.com/modular/modular/issues/5361 is resolved.
 @always_inline
 fn load[
-    dType: DType, //, simd_width: Int, stride: Int = 1
-](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width]):
+    dType: DType,
+    is_mut: Bool,
+    origin: Origin[is_mut],
+    address_space: AddressSpace, //,
+    simd_width: Int,
+    stride: Int = 1,
+](
+    ref [origin, address_space]val: SIMD[dType, 1],
+    out simd: SIMD[dType, simd_width],
+):
     """
     Load multiple values from a SIMD.
 
     Parameters:
         dType: The data type of the SIMD.
+        is_mut: Whether the value is mutable.
+        origin: The origin of the value.
+        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
@@ -28,13 +40,24 @@ fn load[
 
 @always_inline
 fn store[
-    dType: DType, //, simd_width: Int, stride: Int = 1
-](ref val: SIMD[dType, 1], simd: SIMD[dType, simd_width]):
+    dType: DType,
+    is_mut: Bool,
+    origin: Origin[is_mut],
+    address_space: AddressSpace, //,
+    simd_width: Int,
+    stride: Int = 1,
+](
+    ref [origin, address_space]val: SIMD[dType, 1],
+    simd: SIMD[dType, simd_width],
+):
     """
     Store the values of a SIMD into memory with a given start SIMD value.
 
     Parameters:
         dType: The data type of the SIMD.
+        is_mut: Whether the value is mutable.
+        origin: The origin of the value.
+        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
@@ -101,30 +124,27 @@ fn assert_equal_lists[
         assert_equal(a[i], b[i], msg)
 
 
-alias ExplicitlyCopyableComponentType = ComponentType & ExplicitlyCopyable
-
-
 @fieldwise_init
-struct Position(ExplicitlyCopyableComponentType):
+struct Position(ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float64
 
 
 @fieldwise_init
-struct Velocity(ExplicitlyCopyableComponentType):
+struct Velocity(ComponentType & ImplicitlyCopyable):
     var dx: Float64
     var dy: Float64
 
 
 @fieldwise_init
-struct LargerComponent(ExplicitlyCopyableComponentType):
+struct LargerComponent(ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float64
     var z: Float64
 
 
 @fieldwise_init
-struct FlexibleComponent[i: Int](ExplicitlyCopyableComponentType):
+struct FlexibleComponent[i: Int](ComponentType & ImplicitlyCopyable):
     var x: Float64
     var y: Float32
 
@@ -412,7 +432,7 @@ struct MemTestStruct(Copyable, Movable):
     var move_counter: UnsafePointer[Int]
     var del_counter: UnsafePointer[Int]
 
-    fn __moveinit__(out self, owned other: Self):
+    fn __moveinit__(out self, deinit other: Self):
         self.move_counter = other.move_counter
         self.del_counter = other.del_counter
         self.copy_counter = other.copy_counter
@@ -424,13 +444,13 @@ struct MemTestStruct(Copyable, Movable):
         self.copy_counter = other.copy_counter
         self.copy_counter[] += 1
 
-    fn __del__(owned self):
+    fn __del__(deinit self):
         self.del_counter[] += 1
 
 
 fn test_copy_move_del[
     Container: Copyable & Movable, //,
-    container_factory: fn (owned val: MemTestStruct) -> Container,
+    container_factory: fn (var val: MemTestStruct) -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
@@ -474,7 +494,7 @@ fn test_copy_move_del[
     assert_equal(copy_counter, test_copy_counter)
 
     # Copy
-    container2 = container
+    container2 = container.copy()
     test_copy_counter += 1
     test_move_counter += copy_moves
     assert_equal(del_counter, test_del_counter)

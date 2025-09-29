@@ -15,7 +15,14 @@ from .archetype import Archetype, EntityAccessor
 
 
 @register_passable("trivial")
-struct Entity(Boolable, EqualityComparable, Hashable, KeyElement, Stringable):
+struct Entity(
+    Boolable,
+    EqualityComparable,
+    Hashable,
+    ImplicitlyCopyable,
+    KeyElement,
+    Stringable,
+):
     """Entity identifier.
     Holds an entity ID and it's generation for recycling.
 
@@ -108,7 +115,7 @@ struct Entity(Boolable, EqualityComparable, Hashable, KeyElement, Stringable):
 
 @fieldwise_init
 @register_passable("trivial")
-struct EntityIndex:
+struct EntityIndex(ImplicitlyCopyable, Movable):
     """Indicates where an entity is currently stored."""
 
     # Entity's current index in the archetype
