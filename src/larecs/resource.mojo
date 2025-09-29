@@ -69,21 +69,6 @@ struct Resources(Copyable, Movable, Sized):
         resources^.consume_elements[take_resource]()
 
     @always_inline
-    fn _add[
-        T: Copyable & Movable
-    ](mut self, id: Self.IdType, var resource: Pointer[T]):
-        """Adds a resource by ID.
-
-        Parameters:
-            T: The type of the resource to add.
-
-        Args:
-            id: The ID of the resource to add. It has to be not used already.
-            resource: The resource to add.
-        """
-        self._storage[id] = UnsafeBox(resource[].copy())
-
-    @always_inline
     fn _add[T: Copyable & Movable](mut self, id: Self.IdType, var resource: T):
         """Adds a resource by ID.
 
