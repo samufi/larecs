@@ -113,7 +113,7 @@ struct Query[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         iterator = self._world[]._get_entity_iterator(
-            self._mask, self._without_mask.copy()
+            self._mask, self._without_mask
         )
 
     @always_inline
@@ -176,7 +176,6 @@ struct Query[
         )
 
 
-@fieldwise_init
 struct QueryInfo[
     has_without_mask: Bool = False,
 ](ImplicitlyCopyable, Movable):
@@ -207,6 +206,26 @@ struct QueryInfo[
         """
         self.mask = query._mask
         self.without_mask = query._without_mask.copy()
+
+    fn __init__(
+        out self,
+        var mask: BitMask,
+        without_mask: StaticOptional[BitMask, has_without_mask] = None,
+    ):
+        """
+        Takes the query info from an existing query.
+
+        Args:
+            mask: The mask of the components to include.
+            without_mask: The optional mask of the components to exclude.
+        """
+        self.mask = mask
+
+        @parameter
+        if has_without_mask:
+            self.without_mask = without_mask.copy()
+        else:
+            self.without_mask = None
 
     fn __copyinit__(out self, other: Self):
         """
@@ -275,7 +294,7 @@ struct _ArchetypeByMaskIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         var mask: BitMask,
-        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
         Creates an archetype by mask iterator.
@@ -289,7 +308,7 @@ struct _ArchetypeByMaskIterator[
         self._archetypes = archetypes
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask^
+        self._without_mask = without_mask.copy()
 
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
@@ -309,7 +328,7 @@ struct _ArchetypeByMaskIterator[
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
         var mask: BitMask,
-        var without_mask: StaticOptional[BitMask, has_without_mask],
+        without_mask: StaticOptional[BitMask, has_without_mask],
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -329,7 +348,7 @@ struct _ArchetypeByMaskIterator[
         self._archetypes = archetypes
         self._archetype_index_buffer = archetype_index_buffer
         self._mask = mask^
-        self._without_mask = without_mask^
+        self._without_mask = without_mask.copy()
         self._archetype_count = archetype_count
         self._buffer_index = buffer_index
         self._max_buffer_index = max_buffer_index
@@ -343,7 +362,7 @@ struct _ArchetypeByMaskIterator[
         """
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask.copy(),
+            without_mask=self._without_mask,
         )
 
         buffer_index = 0
@@ -408,7 +427,7 @@ struct _ArchetypeByMaskIterator[
 
         query_info = Self.QueryInfo(
             mask=self._mask,
-            without_mask=self._without_mask.copy(),
+            without_mask=self._without_mask,
         )
         # If there are more archetypes than the buffer size, we
         # need to iterate over the remaining archetypes.
