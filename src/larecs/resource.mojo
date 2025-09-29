@@ -59,7 +59,7 @@ struct Resources(Copyable, Movable, Sized):
             if id in self._storage:
                 conflicting_ids.append(id)
 
-        if len(conflicting_ids) > 0:
+        if conflicting_ids:
             raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
 
         @parameter
