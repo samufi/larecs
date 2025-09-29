@@ -1157,99 +1157,87 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         See documentation of overloaded function for details.
         """
         alias add_size = add_components.__len__()
-        alias ComponentIdsType = StaticOptional[
-            __type_of(Self.component_manager.get_id_arr[*Ts]()), add_size
-        ]
+        alias add_ids = Self.component_manager.get_id_arr[*Ts]()
 
         self._assert_unlocked()
         self._assert_alive(entity)
-
-        @parameter
-        if not add_size and not rem_size:
-            return
 
         # Reserve space for the possibility that a new archetype gets created
         # This ensure that no further allocations can happen in this function and
         # therefore all pointers to the current memory space stay valid!
         self._archetypes.reserve(len(self._archetypes) + 1)
 
-        idx = self._entities[entity.get_id()]
+        entity_index = self._entities[entity.get_id()]
 
-        old_archetype_index = idx.archetype_index
+        old_archetype_idx = entity_index.archetype_index
         old_archetype = Pointer(
-            to=self._archetypes.unsafe_get(index(old_archetype_index))
+            to=self._archetypes.unsafe_get(index(old_archetype_idx))
         )
-
-        index_in_old_archetype = idx.index
-
-        var component_ids: ComponentIdsType
-
-        @parameter
-        if add_size:
-            component_ids = ComponentIdsType(
-                Self.component_manager.get_id_arr[*Ts]()
-            )
-        else:
-            component_ids = None
-
-        start_node_index = old_archetype[].get_node_index()
-
-        var archetype_index: Int = -1
-        compare_mask = old_archetype[].get_mask()
-
-        alias add_error_msg = "Entity already has one of the components to add."
-        alias remove_error_msg = "Entity does not have one of the components to remove."
+        old_archetype_mask = old_archetype[].get_mask()
 
         @parameter
         if rem_size:
 
             @parameter
-            if add_size:
-                start_node_index = self._archetype_map.get_node_index(
-                    remove_ids[], start_node_index
-                )
-                if not compare_mask.contains(
-                    self._archetype_map.get_node_mask(start_node_index)
-                ):
-                    raise Error(remove_error_msg)
-
-                compare_mask = self._archetype_map.get_node_mask(
-                    start_node_index
-                )
-            else:
-                archetype_index = self._get_archetype_index(
-                    remove_ids[], start_node_index
-                )
-                # No need for Pointer revalidation due to previous memory reservation!
+            if remove_some:
+                if not old_archetype_mask.contains(BitMask(remove_ids[])):
+                    raise Error(
+                        "Entity does not have one of the components to remove."
+                    )
 
         @parameter
         if add_size:
-            archetype_index = self._get_archetype_index(
-                component_ids[], start_node_index
+            compare_mask = old_archetype_mask
+
+            @parameter
+            if remove_some:
+                compare_mask = compare_mask.set(remove_ids[], False)
+            if compare_mask.contains(BitMask(add_ids)):
+                raise Error("Entity already has one of the components to add.")
+
+        alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
+        var component_ids: ComponentIdsType
+
+        @parameter
+        if add_size and rem_size:
+            component_ids = ComponentIdsType(uninitialized=True)
+            memcpy(
+                component_ids.unsafe_ptr(),
+                remove_ids[].unsafe_ptr(),
+                rem_size,
             )
-            # No need for Pointer revalidation due to previous memory reservation!
-
-        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
-        index_in_archetype = archetype[].add(entity)
-
-        @parameter
-        if add_size:
-            if not archetype[].get_mask().contains(compare_mask):
-                raise Error(add_error_msg)
+            memcpy(
+                component_ids.unsafe_ptr() + rem_size * size_of[Self.Id](),
+                add_ids.unsafe_ptr(),
+                add_size,
+            )
+        elif Bool(add_size) and not rem_size:
+            component_ids = rebind[ComponentIdsType](add_ids)
+        elif not add_size and Bool(rem_size):
+            component_ids = rebind[ComponentIdsType](remove_ids[])
         else:
-            if not compare_mask.contains(archetype[].get_mask()):
-                raise Error(remove_error_msg)
+            return
 
+        index_in_old_archetype = entity_index.index
+        new_archetype_idx = self._get_archetype_index(
+            component_ids, old_archetype[].get_node_index()
+        )
+        new_archetype = Pointer(
+            to=self._archetypes.unsafe_get(new_archetype_idx)
+        )
+        index_in_new_archetype = new_archetype[].add(entity)
+
+        # Move component data from old archetype to new archetype.
         for i in range(old_archetype[]._component_count):
             id = old_archetype[]._ids[i]
 
             @parameter
             if rem_size:
-                if not archetype[].has_component(id):
+                if not new_archetype[].has_component(id):
                     continue
 
-            archetype[].unsafe_set(
-                index_in_archetype,
+            new_archetype[].unsafe_set(
+                index_in_new_archetype,
                 id,
                 old_archetype[]._get_component_ptr(
                     index(index_in_old_archetype), id
@@ -1258,19 +1246,19 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         @parameter
         for i in range(add_size):
-            archetype[].unsafe_set(
-                index_in_archetype,
-                component_ids[][i],
+            new_archetype[].unsafe_set(
+                index_in_new_archetype,
+                add_ids[i],
                 UnsafePointer(to=add_components[i]).bitcast[UInt8](),
             )
 
         swapped = old_archetype[].remove(index_in_old_archetype)
         if swapped:
-            var swapEntity = old_archetype[].get_entity(idx.index)
-            self._entities[swapEntity.get_id()].index = idx.index
+            var swapEntity = old_archetype[].get_entity(entity_index.index)
+            self._entities[swapEntity.get_id()].index = entity_index.index
 
         self._entities[entity.get_id()] = EntityIndex(
-            index_in_archetype, archetype_index
+            index_in_new_archetype, new_archetype_idx
         )
 
     @always_inline
