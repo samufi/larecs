@@ -1656,7 +1656,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
-        var mask: BitMask,
+        mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask],
         var start_indices: _EntityIterator[
             __origin_of(self._archetypes),

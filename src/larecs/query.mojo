@@ -209,7 +209,7 @@ struct QueryInfo[
 
     fn __init__(
         out self,
-        var mask: BitMask,
+        mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
