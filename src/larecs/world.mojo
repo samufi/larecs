@@ -1468,10 +1468,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         alias _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
         arch_start_idcs = List[UInt](
-            min(len(self._archetypes), _2kb_of_UInt_or_Int)
+            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
         changed_archetype_idcs = List[Int](
-            min(len(self._archetypes), _2kb_of_UInt_or_Int)
+            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
 
         # Search for the archetype that matches the query mask
