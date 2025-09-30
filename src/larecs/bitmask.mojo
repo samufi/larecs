@@ -156,7 +156,7 @@ struct BitMask(
         Returns:
             A new BitMask with the specified bits set or unset.
         """
-        return self.set(comps, value)
+        return self.set(BitMask(comps), value)
 
     @always_inline
     fn set[value: Bool](self, *comps: Self.IndexType) -> Self:
@@ -171,7 +171,7 @@ struct BitMask(
         Returns:
             A new BitMask with the specified bits set or unset.
         """
-        return self.set[value](comps)
+        return self.set[value](BitMask(comps))
 
     @always_inline
     fn set(self, comps: InlineArray[Self.IndexType], value: Bool) -> Self:
@@ -184,7 +184,7 @@ struct BitMask(
         Returns:
             A new BitMask with the specified bits set or unset.
         """
-        return self.set(comps, value)
+        return self.set(BitMask(comps), value)
 
     @always_inline
     fn set[value: Bool](self, comps: InlineArray[Self.IndexType]) -> Self:
@@ -199,7 +199,7 @@ struct BitMask(
         Returns:
             A new BitMask with the specified bits set or unset.
         """
-        return self.set[value](comps)
+        return self.set[value](BitMask(comps))
 
     @always_inline
     fn set(self, other: BitMask, value: Bool) -> Self:
@@ -249,7 +249,7 @@ struct BitMask(
         """Flips the state of bit at the given index."""
         var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
         var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
-        self._bytes[index(bit)] ^= 1 << offset
+        self._bytes[index(idx)] ^= 1 << offset
 
     @always_inline
     fn is_zero(self) -> Bool:
