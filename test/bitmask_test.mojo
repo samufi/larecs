@@ -51,7 +51,6 @@ fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
 fn run_all_bitmask_tests() raises:
     print("Running all bitmask tests...")
     test_bit_mask()
-    test_bit_mask_without_exclusive()
     test_bit_mask_256()
     test_bit_mask_eq()
     test_bitmask_get_indices()
@@ -82,14 +81,14 @@ fn test_bit_mask() raises:
     assert_true(mask.get(0))
     assert_false(mask.get(1))
 
-    mask.flip(UInt8(0))
-    mask.flip(UInt8(1))
+    mask.flip_mut(UInt8(0))
+    mask.flip_mut(UInt8(1))
 
     assert_false(mask.get(0))
     assert_true(mask.get(1))
 
-    mask.flip(UInt8(0))
-    mask.flip(UInt8(1))
+    mask.flip_mut(UInt8(0))
+    mask.flip_mut(UInt8(1))
 
     var other1 = BitMask(UInt8(1), UInt8(2), UInt8(32))
     var other2 = BitMask(UInt8(0), UInt8(2))
@@ -108,29 +107,13 @@ fn test_bit_mask() raises:
     assert_false(mask.contains_any(other2))
 
 
-fn test_bit_mask_without_exclusive() raises:
-    mask = BitMask(UInt8(1), UInt8(2), UInt8(13))
-    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
-
-    assert_false(mask.matches(BitMask(UInt8(1), UInt8(2))))
-
-    excl = mask.exclusive()
-
-    assert_true(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_false(
-        excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
-    )
-    assert_false(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
-
-
 fn test_bit_mask_eq() raises:
     mask1 = get_random_bitmask()
     mask2 = mask1
 
     assert_true(mask1 == mask2)
 
-    mask2.flip(3)
+    mask2.flip_mut(3)
 
     assert_false(mask1 == mask2)
 

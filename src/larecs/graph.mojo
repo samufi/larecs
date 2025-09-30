@@ -115,8 +115,7 @@ struct BitMaskGraph[
         Returns:
             The index of the node to which the link is created.
         """
-        new_mask = self._nodes[from_node_index].bit_mask
-        new_mask.flip(changed_bit)
+        new_mask = self._nodes[from_node_index].bit_mask.flip(changed_bit)
         optional_to_index = self._map.get(new_mask)
         if optional_to_index:
             to_node_index = optional_to_index.value()

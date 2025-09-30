@@ -14,11 +14,11 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
+from .filter import MaskFilter
 from .static_optional import StaticOptional
 from .static_variant import StaticVariant
 from .query import (
     Query,
-    QueryInfo,
     _ArchetypeIterator,
     _EntityIterator,
     _ArchetypeByMaskIterator,
@@ -103,10 +103,10 @@ struct Replacer[
 
     fn by[
         *AddTs: ComponentType,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ](
         self,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         *components: *AddTs,
         out iterator: World[*component_types].Iterator[
             __origin_of(self._world[]._archetypes),
@@ -116,14 +116,14 @@ struct Replacer[
         ],
     ) raises:
         """
-        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+        Removes and adds the components to a multiple [..entity.Entity] specified by a [..filter.MaskFilter].
 
         Parameters:
             AddTs: The types of the components to add.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
 
         Args:
-            query:     The query to determine which entities to modify.
+            filter:     The filter to determine which entities to modify.
             components: The components to add.
 
         Raises:
@@ -133,16 +133,16 @@ struct Replacer[
         """
         return self._by(
             components,
-            query=query,
+            filter=filter,
         )
 
     fn by[
         *AddTs: ComponentType,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ](
         self,
         *components: *AddTs,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         out iterator: World[*component_types].Iterator[
             __origin_of(self._world[]._archetypes),
             __origin_of(self._world[]._locks),
@@ -151,15 +151,15 @@ struct Replacer[
         ],
     ) raises:
         """
-        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+        Removes and adds the components to a multiple [..entity.Entity] specified by a [..filter.MaskFilter].
 
         Parameters:
             AddTs: The types of the components to add.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
 
         Args:
             components: The components to add.
-            query:     The query to determine which entities to modify.
+            filter:     The filter to determine which entities to modify.
 
         Raises:
             Error: when called with components that can't be added because they are already present.
@@ -168,16 +168,16 @@ struct Replacer[
         """
         return self._by(
             components,
-            query=query,
+            filter=filter,
         )
 
     fn _by[
         *AddTs: ComponentType,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ](
         self,
         components: VariadicPack[_, _, ComponentType, *AddTs],
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         out iterator: World[*component_types].Iterator[
             __origin_of(self._world[]._archetypes),
             __origin_of(self._world[]._locks),
@@ -186,15 +186,15 @@ struct Replacer[
         ],
     ) raises:
         """
-        Private helper to remove and add components to multiple [..entity.Entity] specified by a [..query.Query].
+        Private helper to remove and add components to multiple [..entity.Entity] specified by a [..filter.MaskFilter].
 
         Parameters:
             AddTs: The types of the components to add.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
 
         Args:
             components: The components to add.
-            query:     The query to determine which entities to modify.
+            filter:     The filter to determine which entities to modify.
 
         Raises:
             Error: when called with components that can't be added because they are already present.
@@ -203,7 +203,7 @@ struct Replacer[
         """
 
         return self._world[]._batch_remove_and_add(
-            query,
+            filter,
             components,
             self._remove_ids,
         )
@@ -225,7 +225,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     alias Query = Query[
         _,
         *component_types,
-        has_without_mask=_,
+        has_exclude=_,
     ]
 
     alias Iterator[
@@ -235,7 +235,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *,
         arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
         has_start_indices: Bool = False,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ] = _EntityIterator[
         archetype_origin,
         lock_origin,
@@ -243,7 +243,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         component_manager = Self.component_manager,
         arch_iter_variant_idx=arch_iter_variant_idx,
         has_start_indices=has_start_indices,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ]
     """
     Primary entity iterator type alias for the World.
@@ -258,7 +258,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     Parameters:
         arch_iter_variant_idx: Selects iteration strategy (ByMask=0, ByList=1)
         has_start_indices: Enables iteration from specific entity ranges (batch ops)
-        has_without_mask: Includes exclusion filtering capabilities for complex queries
+        has_exclude: Includes exclusion filtering capabilities for complex queries
 
     **Performance Considerations:**
     The iterator variant significantly affects performance - choose ByMask for general
@@ -268,12 +268,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     alias ArchetypeByMaskIterator[
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ] = _ArchetypeByMaskIterator[
         archetype_origin,
         *component_types,
         component_manager = Self.component_manager,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ]
     """
     Archetype iterator optimized for component mask-based queries.
@@ -285,7 +285,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     **Optimizations:**
     - Uses SIMD-optimized bitmask operations for fast archetype matching
     - Skips empty archetypes automatically to reduce iteration overhead  
-    - Supports exclusion masks via `has_without_mask` for complex filtering
+    - Supports exclusion masks via `has_exclude` for complex filtering
 
     **Best Use Cases:**
     - Standard component-based entity queries (e.g., entities with Position + Velocity)
@@ -324,13 +324,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         archetype_mutability: Bool, //,
         archetype_origin: Origin[archetype_mutability],
         arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ] = _ArchetypeIterator[
         archetype_origin,
         *component_types,
         component_manager = Self.component_manager,
         arch_iter_variant_idx=arch_iter_variant_idx,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ]
 
     # _listener       Listener                  # EntityEvent _listener.
@@ -740,7 +740,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             swap_entity = old_archetype[].get_entity(idx.index)
             self._entities[swap_entity.get_id()].index = idx.index
 
-    fn remove_entities(mut self, query: QueryInfo) raises:
+    fn remove_entities(mut self, filter: MaskFilter) raises:
         """
         Removes multiple entities based on the provided query, making them eligible for recycling.
 
@@ -762,17 +762,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         Args:
-            query: The query to determine which entities to remove. Note, you can
-                   either use [..query.Query] or [..query.QueryInfo].
+            filter: The filter to determine which entities to remove. Note, you can
+                   either use [..filter.MaskFilter] or [..query.Query] because [..filter.MaskFilter]
+                   can be implicitly constructed from [..query.Query].
 
         Raises:
             Error: If the world is locked.
         """
         self._assert_unlocked()
 
-        for archetype in self._get_archetype_iterator(
-            query.mask, query.without_mask
-        ):
+        for archetype in self._get_archetype_iterator(filter):
             for entity in archetype[].get_entities():
                 self._entity_pool.recycle(entity)
             archetype[].clear()
@@ -934,11 +933,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._remove_and_add(entity, add_components)
 
     fn add[
-        has_without_mask: Bool, //,
+        has_exclude: Bool, //,
         *Ts: ComponentType,
     ](
         mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         var *add_components: *Ts,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
@@ -948,8 +947,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Adds components to multiple entities at once that are specified by a [..query.Query].
-        The provided query must ensure that matching entities do not already have one or more of the
+        Adds components to multiple entities at once that are specified by a [..filter.MaskFilter].
+        The provided filter must ensure that matching entities do not already have one or more of the
         components to add.
 
         **Example:**
@@ -981,12 +980,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         Parameters:
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
             Ts: The types of the components to add.
 
         Args:
-            query: The query specifying which entities to modify. The query must explicitly exclude existing entities
-                that already have some of the components to add.
+            filter: The [..filter.MaskFilter] specifying which entities to modify. The filter must explicitly exclude
+                existing entities that already have some of the components to add.
             add_components: The components to add.
 
         Raises:
@@ -996,7 +995,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
 
         return self._batch_remove_and_add(
-            query,
+            filter,
             add_components,
         )
 
@@ -1020,10 +1019,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         )
 
     fn remove[
-        *Ts: ComponentType, has_without_mask: Bool = False
+        *Ts: ComponentType, has_exclude: Bool = False
     ](
         mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -1032,8 +1031,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Removes components from multiple entities at once, specified by a [..query.Query].
-        The provided query must ensure that matching entities have all of the components that should get removed.
+        Removes components from multiple entities at once, specified by a [..filter.MaskFilter].
+        The provided filter must ensure that matching entities have all of the components that should get removed.
 
         Example:
 
@@ -1061,24 +1060,24 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Parameters:
             Ts: The types of the components to remove.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the query has a without mask.
 
         Args:
-            query: The query to determine which entities to modify.
+            filter: The [..filter.MaskFilter] to determine which entities to modify.
 
         Raises:
             Error: when called on a locked world. Do not use during [.World.query] iteration.
-            Error: when called with a query that could match entities that don't have all of the components to remove.
+            Error: when called with a filter that could match entities that don't have all of the components to remove.
         """
 
         # Note:
         #     This operation can never map multiple archetypes onto one, due to the requirement that components to remove
-        #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
+        #     must be already present on archetypes matched by the filter. Therefore, we can apply the transformation to
         #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
         #     into one.  This also enables potential parallelization optimizations.
 
         return self._batch_remove_and_add(
-            query, remove_ids=Self.component_manager.get_id_arr[*Ts]()
+            filter, remove_ids=Self.component_manager.get_id_arr[*Ts]()
         )
 
     @always_inline
@@ -1266,10 +1265,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType,
         rem_size: Int = 0,
         remove_some: Bool = False,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ](
         mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         *add_components: *Ts,
         remove_ids: StaticOptional[
             InlineArray[Self.Id, rem_size], remove_some
@@ -1282,16 +1281,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Adds and removes components to a multiple [..entity.Entity] specified by a [..query.QueryInfo].
+        Adds and removes components to a multiple [..entity.Entity] specified by a [..filter.MaskFilter].
 
         Parameters:
             Ts:          The types of the components to add.
             rem_size:    The number of components to remove.
             remove_some: Whether to remove some components.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
 
         Args:
-            query:          The query to determine which entities to modify.
+            filter:        The filter to determine which entities to modify.
             add_components: The components to add.
             remove_ids:     The IDs of the components to remove.
 
@@ -1300,22 +1299,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Raises:
             Error: when called with nothing to do (i.e. no components to add or remove).
-            Error: when called with a query that could match existing entities that already have at least one of the
+            Error: when called with a filter that could match existing entities that already have at least one of the
                 components to add.
-            Error: when called with a query that could match entities that don't have all of the components to remove.
+            Error: when called with a filter that could match entities that don't have all of the components to remove.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        return self._batch_remove_and_add(query, add_components, remove_ids)
+        return self._batch_remove_and_add(filter, add_components, remove_ids)
 
     @always_inline
     fn _batch_remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
         remove_some: Bool = False,
-        has_without_mask: Bool = False,
+        has_exclude: Bool = False,
     ](
         mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
+        filter: MaskFilter[has_exclude=has_exclude],
         add_components: VariadicPack[_, _, ComponentType, *Ts],
         remove_ids: StaticOptional[
             InlineArray[Self.Id, rem_size], remove_some
@@ -1328,16 +1327,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Adds and removes components to a multiple [..entity.Entity] specified by a [..query.QueryInfo].
+        Adds and removes components to a multiple [..entity.Entity] specified by a [..filter.MaskFilter].
 
         Parameters:
             Ts:          The types of the components to add.
             rem_size:    The number of components to remove.
             remove_some: Whether to remove some components.
-            has_without_mask: Whether the query has a without mask.
+            has_exclude: Whether the filter has an exclude mask.
 
         Args:
-            query:          The query to determine which entities to modify.
+            filter:        The filter to determine which entities to modify.
             add_components: The components to add.
             remove_ids:     The IDs of the components to remove.
 
@@ -1369,17 +1368,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             var strict_check_needed: Bool
 
             @parameter
-            if has_without_mask:
-                strict_check_needed = not query.without_mask[].contains(
+            if has_exclude:
+                strict_check_needed = not filter.exclude[].contains(
                     BitMask(add_ids)
                 )
             else:
                 strict_check_needed = True
 
             if strict_check_needed:
-                for archetype in self._get_archetype_iterator(
-                    query.mask, query.without_mask.copy()
-                ):
+                for archetype in self._get_archetype_iterator(filter):
                     archetype_mask = archetype[].get_mask()
 
                     @parameter
@@ -1390,30 +1387,30 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         BitMask(add_ids)
                     ):
                         raise Error(
-                            "Query matches entities that already have at least"
+                            "Filter matches entities that already have at least"
                             " one of the components to add. Use"
-                            " `Query.without[Component, ...]()` to exclude"
+                            " `Filter.without[Component, ...]()` to exclude"
                             " those components."
                         )
 
         @parameter
         if rem_size:
-            # If query could match archetypes that don't have all of the components, raise an error
-            if not query.mask.contains(BitMask(remove_ids[])):
+            # If filter could match archetypes that don't have all of the components, raise an error
+            if not filter.include.contains(BitMask(remove_ids[])):
                 raise Error(
-                    "Query matches entities that don't have all of the"
-                    " components to remove. Use `Query(Component, ...)` to"
+                    "Filter matches entities that don't have all of the"
+                    " components to remove. Use `Filter(Component, ...)` to"
                     " include those components."
                 )
 
             @parameter
-            if has_without_mask:
-                if query.without_mask[].contains_any(BitMask(remove_ids[])):
+            if has_exclude:
+                if filter.exclude[].contains_any(BitMask(remove_ids[])):
                     raise Error(
-                        "Query excludes entities that have a component which"
+                        "Filter excludes entities that have a component which"
                         " should be removed in the without mask. Remove all"
                         " components that get removed from"
-                        " `Query.without(...)`."
+                        " `Filter.without(...)`."
                     )
 
         @parameter
@@ -1464,9 +1461,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         # Search for the archetype that matches the query mask
         with self._locked():
-            for old_archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
-            ):
+            for old_archetype in self._get_archetype_iterator(filter):
                 # Two cases per matching archetype A:
                 # 1. If an archetype B with the new component combination exists, move entities from A to B
                 #    and insert new component data for moved entities.
@@ -1581,7 +1576,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         operation: fn (accessor: MutableEntityAccessor) capturing -> None,
         *,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo) raises:
+    ](mut self, filter: MaskFilter) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1591,7 +1586,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
 
         Args:
-            query: The query to determine which entities to apply the operation to.
+            filter: The [..filter.MaskFilter] to determine which entities to apply the operation to.
 
         Raises:
             Error: If the world is locked.
@@ -1602,7 +1597,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         fn operation_wrapper[simd_width: Int](accessor: MutableEntityAccessor):
             operation(accessor)
 
-        self.apply[operation_wrapper, unroll_factor=unroll_factor](query)
+        self.apply[operation_wrapper, unroll_factor=unroll_factor](filter)
 
     fn apply[
         operation: fn[simd_width: Int] (
@@ -1611,7 +1606,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo) raises:
+    ](mut self, filter: MaskFilter) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1683,7 +1678,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
 
         Args:
-            query: The query to determine which entities to apply the operation to.
+            filter: The [..filter.MaskFilter] to determine which entities to apply the operation to.
 
         Constraints:
             The simd_width must be a power of 2.
@@ -1695,9 +1690,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         with self._locked():
             for archetype in _ArchetypeByMaskIterator(
-                Pointer(to=self._archetypes),
-                query.mask,
-                query.without_mask,
+                Pointer(to=self._archetypes), filter
             ):
 
                 @always_inline
@@ -1786,7 +1779,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType
     ](
         mut self,
-        out iterator: Self.Query[__origin_of(self), has_without_mask=False],
+        out iterator: Self.Query[__origin_of(self), has_exclude=False],
     ):
         """
         Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
@@ -1797,11 +1790,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A [..query.Query] for all entities with the given components.
         """
+
+        iterator = Self.Query(Pointer(to=self), self.filter[*Ts]())
+
+    @always_inline
+    fn filter[
+        *Ts: ComponentType
+    ](mut self, out mask_filter: MaskFilter[has_exclude=False]):
+        """
+        Returns a [..filter.MaskFilter] for all [..entity.Entity Entities] with the given components.
+
+        Parameters:
+            Ts: The types of the components.
+
+        Returns:
+            A [..filter.MaskFilter] for all entities with the given components.
+        """
         alias size = VariadicPack[
             True, MutableAnyOrigin, ComponentType, *Ts
         ].__len__()
-
-        var bitmask: BitMask
 
         @parameter
         if not size:
@@ -1809,14 +1816,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         else:
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
-        iterator = Self.Query(Pointer(to=self), bitmask)
+        mask_filter = MaskFilter(bitmask)
 
     fn _get_entity_iterator[
-        has_without_mask: Bool = False, has_start_indices: Bool = False
+        has_exclude: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
-        mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask],
+        mask_filter: MaskFilter[has_exclude=has_exclude],
         var start_indices: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -1830,19 +1836,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             __origin_of(self._locks),
             arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
-            has_without_mask=has_without_mask,
+            has_exclude=has_exclude,
         ],
     ) raises:
         """
         Creates an iterator over all entities that have / do not have the components in the provided masks.
 
         Parameters:
-            has_without_mask: Whether a without_mask is provided.
+            has_exclude: Whether a without_mask is provided.
             has_start_indices: Whether start_indices are provided.
 
         Args:
-            mask:          The mask of components to include.
-            without_mask:  The mask of components to exclude.
+            mask_filter: The mask filter to use for selecting archetypes.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
         iterator = Self.Iterator[
@@ -1850,21 +1855,20 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             __origin_of(self._locks),
             arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=has_start_indices,
-            has_without_mask=has_without_mask,
+            has_exclude=has_exclude,
         ](
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
                 __origin_of(self._archetypes),
                 arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
-                has_without_mask=has_without_mask,
+                has_exclude=has_exclude,
             ](
                 Self.ArchetypeByMaskIterator[
                     __origin_of(self._archetypes),
-                    has_without_mask=has_without_mask,
+                    has_exclude=has_exclude,
                 ](
                     Pointer(to=self._archetypes),
-                    mask,
-                    without_mask,
+                    mask_filter,
                 )
             ),
             start_indices^,
@@ -1872,13 +1876,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     fn _get_archetype_iterator[
-        has_without_mask: Bool = False
+        has_exclude: Bool = False
     ](
         ref self,
-        mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        mask_filter: MaskFilter[has_exclude=has_exclude],
         out iterator: Self.ArchetypeByMaskIterator[
-            __origin_of(self._archetypes), has_without_mask=has_without_mask
+            __origin_of(self._archetypes), has_exclude=has_exclude
         ],
     ):
         """
@@ -1889,8 +1892,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         iterator = _ArchetypeByMaskIterator(
             Pointer(to=self._archetypes),
-            mask,
-            without_mask,
+            mask_filter,
         )
 
     @always_inline
