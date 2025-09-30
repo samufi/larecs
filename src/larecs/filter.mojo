@@ -14,7 +14,7 @@ from .static_optional import StaticOptional
 #     matches(bits BitMask): Bool
 
 
-struct MaskFilter[is_excluding: Bool = False](ImplicitlyCopyable, Movable):
+struct MaskFilter[has_exclude: Bool = False](ImplicitlyCopyable, Movable):
     """MaskFilter is a filter for including and excluding certain components.
 
     This struct can be constructed implicitly from a [.Query] instance.
@@ -22,16 +22,16 @@ struct MaskFilter[is_excluding: Bool = False](ImplicitlyCopyable, Movable):
     arguments.
 
     Parameters:
-        is_excluding: If True, the filter excludes components given in the exclude mask.
+        has_exclude: If True, the filter excludes components given in the exclude mask.
     """
 
     var include: BitMask  # Components to include.
-    var exclude: StaticOptional[BitMask, is_excluding]  # Components to exclude.
+    var exclude: StaticOptional[BitMask, has_exclude]  # Components to exclude.
 
     fn __init__(
         out self,
         include: BitMask,
-        exclude: StaticOptional[BitMask, is_excluding] = None,
+        exclude: StaticOptional[BitMask, has_exclude] = None,
     ):
         self.include = include
         self.exclude = exclude.copy()
@@ -39,7 +39,7 @@ struct MaskFilter[is_excluding: Bool = False](ImplicitlyCopyable, Movable):
     @implicit
     fn __init__(
         out self,
-        query: Query[has_without_mask=is_excluding],
+        query: Query[has_exclude=has_exclude],
     ):
         """
         Takes the filter from an existing query.
@@ -49,42 +49,40 @@ struct MaskFilter[is_excluding: Bool = False](ImplicitlyCopyable, Movable):
         """
         self = query._mask_filter
 
-    fn __copyinit__(out self, other: MaskFilter[is_excluding]):
+    fn __copyinit__(out self, other: MaskFilter[has_exclude]):
         self.include = other.include
         self.exclude = other.exclude.copy()
 
     fn matches(self, bits: BitMask) -> Bool:
         """Matches the filter against a mask."""
 
-        include_matches = bits.contains(self.include)
+        is_matching = bits.contains(self.include)
 
         @parameter
-        if is_excluding:
-            return (
-                include_matches
-                and self.exclude[].is_zero()
-                or bits.contains_any(self.exclude[])
+        if has_exclude:
+            is_matching &= self.exclude[].is_zero() or not bits.contains_any(
+                self.exclude[]
             )
 
-        return include_matches
+        return is_matching
 
-    fn without(self, exclude: BitMask) -> MaskFilter[is_excluding=True]:
+    fn without(self, exclude: BitMask) -> MaskFilter[has_exclude=True]:
         """Returns a new MaskFilter that excludes the given components in addition to the existing ones.
         """
 
         new_exclude = exclude.copy()
 
         @parameter
-        if is_excluding:
+        if has_exclude:
             new_exclude |= self.exclude[]
 
-        return MaskFilter[is_excluding=True](self.include, new_exclude)
+        return MaskFilter[has_exclude=True](self.include, new_exclude)
 
-    fn exclusive(self) -> MaskFilter[is_excluding=True]:
+    fn exclusive(self) -> MaskFilter[has_exclude=True]:
         """Returns a new MaskFilter that includes only the currently set components and excludes all others.
         """
 
-        return MaskFilter[is_excluding=True](self.include, ~self.include)
+        return MaskFilter[has_exclude=True](self.include, ~self.include)
 
 
 # # RelationFilter is a [Filter] for a [Relation] target, in addition to components.

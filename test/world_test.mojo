@@ -250,7 +250,7 @@ def test_world_batch_add():
 
     with assert_raises(
         contains=(
-            "Query matches entities that already have at least one of the"
+            "Filter matches entities that already have at least one of the"
             " components to add."
         )
     ):
@@ -325,7 +325,7 @@ def test_world_batch_remove():
 
     with assert_raises(
         contains=(
-            "Query matches entities that don't have all of the"
+            "Filter matches entities that don't have all of the"
             " components to remove."
         )
     ):
@@ -370,7 +370,7 @@ def test_batch_remove_and_add():
     assert_equal(len(world.query[Position, Velocity]()), n)
     assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), 0)
 
-    for entity in world.replace[Velocity]().by(FlexibleComponent[1](3.0, 4.0), query=
+    for entity in world.replace[Velocity]().by(FlexibleComponent[1](3.0, 4.0), filter=
         world.query[Position, Velocity]()):
         assert_false(entity.has[Velocity]())
         assert_true(entity.has[Position]())
@@ -385,13 +385,13 @@ def test_batch_remove_and_add():
 
     with assert_raises(
         contains=(
-            "Query matches entities that already have at least"
+            "Filter matches entities that already have at least"
             " one of the components to add."
         )
     ):
-        _ = world.replace[Velocity]().by(Position(5.0, 6.0), query=world.query[Position]())
+        _ = world.replace[Velocity]().by(Position(5.0, 6.0), filter=world.query[Position]())
 
-    for entity in world.replace[Position]().by(Position(42.0, 6.0), query=world.query[Position]()):
+    for entity in world.replace[Position]().by(Position(42.0, 6.0), filter=world.query[Position]()):
         assert_true(entity.has[Position]())
         assert_equal(entity.get[Position]().x, 42.0)
         assert_equal(entity.get[Position]().y, 6.0)
@@ -445,7 +445,7 @@ def test_world_apply():
         except:
             pass
 
-    world.apply[operation, unroll_factor=3](world.query[Position, Velocity]())
+    world.apply[operation, unroll_factor=3](world.filter[Position, Velocity]())
 
     for entity in world.query[Position, Velocity]():
         assert_equal(entity.get[Position]().x, new_pos.x)

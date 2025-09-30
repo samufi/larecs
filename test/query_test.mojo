@@ -4,6 +4,7 @@ from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
 from larecs.component import ComponentManager
 from larecs.query import _ArchetypeByMaskIterator
+from larecs.filter import MaskFilter
 
 
 def test_query_length():
@@ -400,7 +401,7 @@ def test_query_archetype_iterator():
         __origin_of(l),
         FlexibleComponent[0],
         component_manager = ComponentManager[FlexibleComponent[0]](),
-    ](Pointer(to=l), BitMask(0)):
+    ](Pointer(to=l), MaskFilter(BitMask(0))):
         count += 1
 
     assert_equal(count, 3)

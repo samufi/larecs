@@ -13,7 +13,7 @@ from .static_variant import StaticVariant
 struct Query[
     world_origin: MutableOrigin,
     *ComponentTypes: ComponentType,
-    has_without_mask: Bool = False,
+    has_exclude: Bool = False,
 ](ImplicitlyCopyable, Movable, SizedRaising):
     """Query builder for entities with and without specific components.
 
@@ -36,7 +36,7 @@ struct Query[
     Parameters:
         world_origin: The origin of the world.
         ComponentTypes: The types of the components to include in the query.
-        has_without_mask: Whether the query has excluded components.
+        has_exclude: Whether the query has excluded components.
     """
 
     alias World = World[*ComponentTypes]
@@ -44,9 +44,9 @@ struct Query[
     alias QueryWithWithout = Query[
         world_origin,
         *ComponentTypes,
-        has_without_mask=True,
+        has_exclude=True,
     ]
-    alias MaskFilter = MaskFilter[is_excluding=has_without_mask]
+    alias MaskFilter = MaskFilter[has_exclude=has_exclude]
 
     var _world: Pointer[Self.World, world_origin]
     var _mask_filter: Self.MaskFilter
@@ -97,7 +97,7 @@ struct Query[
             __origin_of(self._world[]._locks),
             arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
             has_start_indices=False,
-            has_without_mask=has_without_mask,
+            has_exclude=has_exclude,
         ],
     ) raises:
         """
@@ -176,7 +176,7 @@ struct _ArchetypeByMaskIterator[
     archetype_origin: Origin[archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-    has_without_mask: Bool = False,
+    has_exclude: Bool = False,
 ](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given include and exclude masks.
@@ -188,7 +188,7 @@ struct _ArchetypeByMaskIterator[
         archetype_origin: The origin of the archetypes.
         ComponentTypes: The types of the components.
         component_manager: The component manager.
-        has_without_mask: Whether the iterator has excluded components.
+        has_exclude: Whether the iterator has excluded components.
     """
 
     alias buffer_size = 8
@@ -196,7 +196,7 @@ struct _ArchetypeByMaskIterator[
         *ComponentTypes, component_manager=component_manager
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
-    alias MaskFilter = MaskFilter[is_excluding=has_without_mask]
+    alias MaskFilter = MaskFilter[has_exclude=has_exclude]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
     var _mask_filter: Self.MaskFilter
@@ -207,21 +207,19 @@ struct _ArchetypeByMaskIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        mask_filter: Self.MaskFilter,
     ):
         """
         Creates an archetype by mask iterator.
 
         Args:
             archetypes: a pointer to the world's archetypes.
-            mask: The mask of the archetypes to iterate over.
-            without_mask: An optional mask for archetypes to exclude.
+            mask_filter: The mask filter to use.
         """
 
         self._archetypes = archetypes
         self._archetype_count = len(self._archetypes[])
-        self._mask_filter = MaskFilter(mask, without_mask)
+        self._mask_filter = mask_filter
 
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
@@ -473,14 +471,14 @@ alias _ArchetypeIterator[
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     arch_iter_variant_idx: Int,
-    has_without_mask: Bool = False,
+    has_exclude: Bool = False,
 ] = StaticVariant[
     arch_iter_variant_idx,
     _ArchetypeByMaskIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ],
     _ArchetypeByListIterator[
         archetype_origin,
@@ -502,7 +500,7 @@ struct _EntityIterator[
     component_manager: ComponentManager[*ComponentTypes],
     arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
     has_start_indices: Bool = False,
-    has_without_mask: Bool = False,
+    has_exclude: Bool = False,
 ](Boolable, Movable, Sized):
     """Iterator over all entities corresponding to a mask.
 
@@ -517,7 +515,7 @@ struct _EntityIterator[
         arch_iter_variant_idx: The index of the variant that holds the archetype iterator.
         has_start_indices: Whether the iterator starts iterating the
                            archetypes at given indices.
-        has_without_mask: Whether the iterator has excluded components.
+        has_exclude: Whether the iterator has excluded components.
     """
 
     alias buffer_size = 8
@@ -531,14 +529,14 @@ struct _EntityIterator[
         *ComponentTypes,
         component_manager=component_manager,
         arch_iter_variant_idx=arch_iter_variant_idx,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ]
 
     alias ArchetypeByMaskIterator = _ArchetypeByMaskIterator[
         archetype_origin,
         *ComponentTypes,
         component_manager=component_manager,
-        has_without_mask=has_without_mask,
+        has_exclude=has_exclude,
     ]
 
     alias ArchetypeByListIterator = _ArchetypeByListIterator[
