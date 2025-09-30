@@ -14,6 +14,7 @@ from .component import (
     constrain_components_unique,
 )
 from .bitmask import BitMask
+from .filter import MaskFilter
 from .static_optional import StaticOptional
 from .static_variant import StaticVariant
 from .query import (
@@ -1815,8 +1816,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
-        mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask],
+        mask_filter: MaskFilter[is_excluding=has_without_mask],
         var start_indices: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -1841,8 +1841,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             has_start_indices: Whether start_indices are provided.
 
         Args:
-            mask:          The mask of components to include.
-            without_mask:  The mask of components to exclude.
+            mask_filter: The mask filter to use for selecting archetypes.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
         iterator = Self.Iterator[
@@ -1863,8 +1862,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     has_without_mask=has_without_mask,
                 ](
                     Pointer(to=self._archetypes),
-                    mask,
-                    without_mask,
+                    mask_filter,
                 )
             ),
             start_indices^,

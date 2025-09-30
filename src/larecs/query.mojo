@@ -5,6 +5,7 @@ from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockManager
 from .debug_utils import debug_warn
+from .filter import MaskFilter
 from .static_optional import StaticOptional
 from .static_variant import StaticVariant
 
@@ -45,17 +46,16 @@ struct Query[
         *ComponentTypes,
         has_without_mask=True,
     ]
+    alias MaskFilter = MaskFilter[is_excluding=has_without_mask]
 
     var _world: Pointer[Self.World, world_origin]
-    var _mask: BitMask
-    var _without_mask: StaticOptional[BitMask, has_without_mask]
+    var _mask_filter: Self.MaskFilter
 
     @doc_private
     fn __init__(
         out self,
         world: Pointer[Self.World, world_origin],
-        var mask: BitMask,
-        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        mask_filter: Self.MaskFilter,
     ):
         """
         Creates a new query.
@@ -64,12 +64,10 @@ struct Query[
 
         Args:
             world: A pointer to the world.
-            mask: The mask of the components to iterate over.
-            without_mask: The mask for components to exclude.
+            mask_filter: The mask filter to use.
         """
         self._world = world
-        self._mask = mask^
-        self._without_mask = without_mask^
+        self._mask_filter = mask_filter
 
     fn __copyinit__(out self, other: Self):
         """
@@ -79,8 +77,7 @@ struct Query[
             other: The query to copy.
         """
         self._world = other._world
-        self._mask = other._mask
-        self._without_mask = other._without_mask.copy()
+        self._mask_filter = other._mask_filter
 
     fn __len__(self) raises -> Int:
         """
@@ -112,9 +109,7 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_entity_iterator(
-            self._mask, self._without_mask
-        )
+        iterator = self._world[]._get_entity_iterator(self._mask_filter)
 
     @always_inline
     fn without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
@@ -143,8 +138,9 @@ struct Query[
         """
         query = Self.QueryWithWithout(
             self._world,
-            self._mask,
-            BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
+            self._mask_filter.without(
+                Self.World.component_manager.get_id_arr[*Ts]()
+            ),
         )
 
     @always_inline
@@ -171,89 +167,8 @@ struct Query[
         """
         query = Self.QueryWithWithout(
             self._world,
-            self._mask,
-            self._mask.invert(),
+            self._mask_filter.exclusive(),
         )
-
-
-struct QueryInfo[
-    has_without_mask: Bool = False,
-](ImplicitlyCopyable, Movable):
-    """
-    Class that holds the same information as a query but no reference to the world.
-
-    This struct can be constructed implicitly from a [.Query] instance.
-    Therefore, [.Query] instances can be used instead of QueryInfo in function
-    arguments.
-
-    Parameters:
-        has_without_mask: Whether the query has excluded components.
-    """
-
-    var mask: BitMask
-    var without_mask: StaticOptional[BitMask, has_without_mask]
-
-    @implicit
-    fn __init__(
-        out self,
-        query: Query[has_without_mask=has_without_mask],
-    ):
-        """
-        Takes the query info from an existing query.
-
-        Args:
-            query: The query the information should be taken from.
-        """
-        self.mask = query._mask
-        self.without_mask = query._without_mask.copy()
-
-    fn __init__(
-        out self,
-        mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask] = None,
-    ):
-        """
-        Takes the query info from an existing query.
-
-        Args:
-            mask: The mask of the components to include.
-            without_mask: The optional mask of the components to exclude.
-        """
-        self.mask = mask
-
-        @parameter
-        if has_without_mask:
-            self.without_mask = without_mask.copy()
-        else:
-            self.without_mask = None
-
-    fn __copyinit__(out self, other: Self):
-        """
-        Copy constructor.
-
-        Args:
-            other: The query to copy.
-        """
-        self.mask = other.mask
-        self.without_mask = other.without_mask.copy()
-
-    fn matches(self, archetype_mask: BitMask) -> Bool:
-        """
-        Checks whether the given archetype mask matches the query.
-
-        Args:
-            archetype_mask: The mask of the archetype to check.
-
-        Returns:
-            Whether the archetype matches the query.
-        """
-        is_valid = archetype_mask.contains(self.mask)
-
-        @parameter
-        if has_without_mask:
-            is_valid &= not archetype_mask.contains_any(self.without_mask[])
-
-        return is_valid
 
 
 struct _ArchetypeByMaskIterator[
@@ -281,11 +196,10 @@ struct _ArchetypeByMaskIterator[
         *ComponentTypes, component_manager=component_manager
     ]
     alias Element = Pointer[Self.Archetype, archetype_origin]
-    alias QueryInfo = QueryInfo[has_without_mask=has_without_mask]
+    alias MaskFilter = MaskFilter[is_excluding=has_without_mask]
     var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
     var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
-    var _mask: BitMask
-    var _without_mask: StaticOptional[BitMask, has_without_mask]
+    var _mask_filter: Self.MaskFilter
     var _archetype_count: Int
     var _buffer_index: Int
     var _max_buffer_index: Int
@@ -293,7 +207,7 @@ struct _ArchetypeByMaskIterator[
     fn __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        var mask: BitMask,
+        mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
     ):
         """
@@ -307,8 +221,7 @@ struct _ArchetypeByMaskIterator[
 
         self._archetypes = archetypes
         self._archetype_count = len(self._archetypes[])
-        self._mask = mask^
-        self._without_mask = without_mask.copy()
+        self._mask_filter = MaskFilter(mask, without_mask)
 
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
@@ -327,8 +240,7 @@ struct _ArchetypeByMaskIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], archetype_origin],
         archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
-        var mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask],
+        mask_filter: Self.MaskFilter,
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -339,16 +251,14 @@ struct _ArchetypeByMaskIterator[
         Args:
             archetypes: A pointer to the world's archetypes.
             archetype_index_buffer: The buffer of valid archetypes indices.
-            mask: The mask of the archetypes to iterate over.
-            without_mask: An optional mask for archetypes to exclude.
+            mask_filter: The mask filter to use.
             archetype_count: The number of archetypes in the world.
             buffer_index: Current index in the archetype buffer.
             max_buffer_index: Maximal valid index in the archetype buffer.
         """
         self._archetypes = archetypes
         self._archetype_index_buffer = archetype_index_buffer
-        self._mask = mask^
-        self._without_mask = without_mask.copy()
+        self._mask_filter = mask_filter
         self._archetype_count = archetype_count
         self._buffer_index = buffer_index
         self._max_buffer_index = max_buffer_index
@@ -360,17 +270,15 @@ struct _ArchetypeByMaskIterator[
         Fills the _archetype_index_buffer with the
         archetypes' indices.
         """
-        query_info = Self.QueryInfo(
-            mask=self._mask,
-            without_mask=self._without_mask,
-        )
 
         buffer_index = 0
         for i in range(
             self._archetype_index_buffer[self._buffer_index] + 1,
             self._archetype_count,
         ):
-            is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
+            is_valid = self._archetypes[].unsafe_get(
+                i
+            ) and self._mask_filter.matches(
                 self._archetypes[].unsafe_get(i).get_mask()
             )
 
@@ -425,17 +333,15 @@ struct _ArchetypeByMaskIterator[
 
         size = Self.buffer_size
 
-        query_info = Self.QueryInfo(
-            mask=self._mask,
-            without_mask=self._without_mask,
-        )
         # If there are more archetypes than the buffer size, we
         # need to iterate over the remaining archetypes.
         for i in range(
             self._archetype_index_buffer[Self.buffer_size - 1] + 1,
             len(self._archetypes[]),
         ):
-            is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
+            is_valid = self._archetypes[].unsafe_get(
+                i
+            ) and self._mask_filter.matches(
                 self._archetypes[].unsafe_get(i).get_mask()
             )
 
