@@ -43,7 +43,7 @@ fn benchmark_bitmask_flip_1_000_000(mut bencher: Bencher) capturing:
     @parameter
     fn bench_fn() capturing:
         for _ in range(1_000_000):
-            mask.flip(val)
+            mask.flip_mut(val)
             keep(mask._bytes)
 
     bencher.iter[bench_fn]()

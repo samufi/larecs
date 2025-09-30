@@ -72,6 +72,13 @@ struct BitMask(
         self._bytes = bytes
 
     @always_inline
+    fn __init__(out self, *bits: Self.IndexType):
+        """Initializes the mask with the bits at the given indices set to True.
+        """
+        self = Self(bits)
+
+    @implicit
+    @always_inline
     fn __init__(out self, bits: VariadicList[BitMask.IndexType]):
         """Initializes the mask with the bits at the given indices set to True.
         """
@@ -79,6 +86,7 @@ struct BitMask(
         for bit in bits:
             self.set[True](bit)
 
+    @implicit
     @always_inline
     fn __init__[
         size: Int
@@ -90,12 +98,6 @@ struct BitMask(
         @parameter
         for i in range(size):
             self.set[True](bits[i])
-
-    @always_inline
-    fn __init__(out self, *bits: Self.IndexType):
-        """Initializes the mask with the bits at the given indices set to True.
-        """
-        self = Self(bits)
 
     @always_inline
     fn __hash__[H: Hasher](self, mut hasher: H):
@@ -111,21 +113,6 @@ struct BitMask(
     fn __ne__(self, other: Self) -> Bool:
         """Compares two masks for inequality."""
         return not self.__eq__(other)
-
-    @always_inline
-    fn matches(self, bits: Self) -> Bool:
-        """Matches the mask as filter against another mask."""
-        return bits.contains(self)
-
-    @always_inline
-    fn exclusive(self) -> MaskFilter:
-        """Creates a [..filter.MaskFilter] which filters for exactly the mask's components.
-        matches only entities that have exactly the given components, and no other.
-        """
-        return MaskFilter(
-            include=self,
-            exclude=self.invert(),
-        )
 
     @always_inline
     fn get(self, bit: Self.IndexType) -> Bool:
@@ -160,27 +147,70 @@ struct BitMask(
 
     @always_inline
     fn set(self, *comps: Self.IndexType, value: Bool) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
-        return self.set(BitMask(comps), value)
+        """Returns a BitMask where the bits given as indices are set/unset according to the given value.
+
+        Arguments:
+            comps: The InlineArray containing the bits to be set or unset.
+            value: If True, the bits in `comps` will be set in the resulting BitMask; if False, they will be unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
+        """
+        return self.set(comps, value)
 
     @always_inline
     fn set[value: Bool](self, *comps: Self.IndexType) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
-        return self.set[value](BitMask(comps))
+        """Returns a BitMask where the bits given as indices are set/unset according to the given value.
+
+        Parameters:
+            value: If True, the bits in `comps` will be set in the resulting BitMask; if False, they will be unset.
+
+        Arguments:
+            comps: The InlineArray containing the bits to be set or unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
+        """
+        return self.set[value](comps)
 
     @always_inline
     fn set(self, comps: InlineArray[Self.IndexType], value: Bool) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
-        return self.set(BitMask(comps), value)
+        """Returns a BitMask where the bits set in the given InlineArray are set/unset according to the given value.
+
+        Arguments:
+            comps: The InlineArray containing the bits to be set or unset.
+            value: If True, the bits in `comps` will be set in the resulting BitMask; if False, they will be unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
+        """
+        return self.set(comps, value)
 
     @always_inline
     fn set[value: Bool](self, comps: InlineArray[Self.IndexType]) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
-        return self.set[value](BitMask(comps))
+        """Returns a BitMask where the bits set in the given InlineArray are set/unset according to the given value.
+
+        Parameters:
+            value: If True, the bits in `comps` will be set in the resulting BitMask; if False, they will be unset.
+
+        Arguments:
+            comps: The InlineArray containing the bits to be set or unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
+        """
+        return self.set[value](comps)
 
     @always_inline
     fn set(self, other: BitMask, value: Bool) -> Self:
-        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
+        """Returns a BitMask where the bits set in the other BitMask are set/unset according to the given value.
+
+        Arguments:
+            other: The BitMask containing the bits to be set or unset.
+            value: If True, the bits in 'other' will be set in the resulting BitMask; if False, they will be unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
         """
         if value:
             return self.set[True](other)
@@ -189,7 +219,16 @@ struct BitMask(
 
     @always_inline
     fn set[value: Bool](self, other: BitMask) -> Self:
-        """Modifies the [BitMask] to unset the components set in the BitMask given as argument.
+        """Returns a BitMask where the bits set in the other BitMask are set/unset according to the given value.
+
+        Parameters:
+            value: If True, the bits in 'other' will be set in the resulting BitMask; if False, they will be unset.
+
+        Arguments:
+            other: The BitMask containing the bits to be set or unset.
+
+        Returns:
+            A new BitMask with the specified bits set or unset.
         """
 
         @parameter
@@ -199,16 +238,18 @@ struct BitMask(
             return self & ~other
 
     @always_inline
-    fn flip(mut self, bit: Self.IndexType):
+    fn flip(self, bit: Self.IndexType) -> Self:
+        """Flips the state of bit at the given index."""
+        copy = self.copy()
+        copy.flip_mut(bit)
+        return copy
+
+    @always_inline
+    fn flip_mut(mut self, bit: Self.IndexType):
         """Flips the state of bit at the given index."""
         var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
         var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
-        self._bytes[index(idx)] ^= 1 << offset
-
-    @always_inline
-    fn invert(self) -> BitMask:
-        """Returns the inversion of this mask."""
-        return ~self
+        self._bytes[index(bit)] ^= 1 << offset
 
     @always_inline
     fn is_zero(self) -> Bool:
@@ -320,6 +361,44 @@ struct BitMask(
         processing of all 256 bits.
         """
         self._bytes &= other._bytes
+
+    @always_inline
+    fn __xor__(self, other: Self) -> BitMask:
+        """Returns the bitwise XOR of this mask and another mask.
+
+        Performs element-wise bitwise XOR operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in one operand but not both.
+
+        Args:
+            other: The other BitMask to XOR with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise XOR of both masks.
+
+        **Performance Note:**
+        This operation is highly optimized using SIMD instructions for fast parallel
+        bitwise operations across all 256 bits simultaneously.
+        """
+        copy = self.copy()
+        copy ^= other
+        return copy
+
+    @always_inline
+    fn __ixor__(mut self, other: Self):
+        """Performs in-place bitwise XOR with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise XOR operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in one operand but not both.
+
+        Args:
+            other: The BitMask to perform the bitwise XOR operation with.
+
+        **Performance Note:**
+        This operation is optimized using SIMD instructions for efficient parallel
+        processing of all 256 bits.
+        """
+        self._bytes ^= other._bytes
 
     fn __str__(self) -> String:
         """Implements String(...)."""
