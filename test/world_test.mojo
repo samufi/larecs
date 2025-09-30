@@ -349,12 +349,52 @@ def test_remove_and_add():
     world.replace[Position]().by(entity, vel)
     assert_false(world.has[Position](entity))
     assert_true(world.has[Velocity](entity))
+    assert_equal(world.get[Velocity](entity).dx, vel.dx)
+    assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
     with assert_raises():
         world.replace[Position]().by(entity, vel)
 
+    assert_false(world.has[Position](entity))
+    assert_true(world.has[Velocity](entity))
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
+
+def test_batch_remove_and_add():
+    world = SmallWorld()
+    n = 100
+    _ = world.add_entities(
+        Position(1.0, 2.0), Velocity(0.1, 0.2), count=n
+    )
+
+    assert_equal(len(world.query[Position, Velocity]()), n)
+    assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), 0)
+
+    for entity in world.replace[Velocity]().by(FlexibleComponent[1](3.0, 4.0), query=
+        world.query[Position, Velocity]()):
+        assert_false(entity.has[Velocity]())
+        assert_true(entity.has[Position]())
+        assert_true(entity.has[FlexibleComponent[1]]())
+        assert_equal(entity.get[Position]().x, 1.0)
+        assert_equal(entity.get[Position]().y, 2.0)
+        assert_equal(entity.get[FlexibleComponent[1]]().x, 3.0)
+        assert_equal(entity.get[FlexibleComponent[1]]().y, 4.0)
+
+    assert_equal(len(world.query[Position, Velocity]()), 0)
+    assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), n)
+
+    with assert_raises(
+        contains=(
+            "Query matches entities that already have at least"
+            " one of the components to add."
+        )
+    ):
+        _ = world.replace[Velocity]().by(Position(5.0, 6.0), query=world.query[Position]())
+
+    for entity in world.replace[Position]().by(Position(42.0, 6.0), query=world.query[Position]()):
+        assert_true(entity.has[Position]())
+        assert_equal(entity.get[Position]().x, 42.0)
+        assert_equal(entity.get[Position]().y, 6.0)
 
 
 @fieldwise_init

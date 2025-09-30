@@ -35,17 +35,20 @@
 - Rename `LockMask` to `LockManager`
 - Remove all `hint_trivial_type` and `run_destructors` parameters from containers that leaked them from their underlying
   List attribute
+- Remove `BitMask.without` method
+- Add `BitMask.set` overloads that work with multiple component IDs at once
 
 ### Other changes
 - Implement batch component addition as overload of `world.add`
 - Implement batch component removal as overload of `world.remove`
+- Implement batch component replacing as overload of `world.Replacer.by`
 - Remove `unsafe_take` from the `_utils` module
 - Add `StaticVariant`
 - Add `_ArchetypeByListIterator` to iterate over a given list of archetypes
 - Optimize `archetype.reserve` to reduce frequent reallocations
 - Add function `_utils.next_pow2` to calculate next power of 2 fast
 - Add helper `QueryInfo.matches` to encapsulate query matching logic
-- Add `BitMask.__or__` 
+- Add bit-wise operations for `BitMask` 
 
 ## [v0.4.0 (2025-08-06)](https://github.com/samufi/larecs/compare/v0.3.0...v0.4.0)
 
