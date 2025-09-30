@@ -3,11 +3,13 @@ import world_benchmark
 import component_benchmark
 import query_benchmark
 import resources_benchmark
-from custom_benchmark import DefaultBench
+from benchmark import Bench
+from custom_benchmark import config_from_args
+from sys import argv
 
 
 def main():
-    bench = DefaultBench()
+    bench = Bench(config_from_args(argv()))
     world_benchmark.run_all_world_benchmarks(bench)
     query_benchmark.run_all_query_benchmarks(bench)
     bitmask_benchmark.run_all_bitmask_benchmarks(bench)
