@@ -197,7 +197,7 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
     return pd.DataFrame(data)
 
 
-fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
+fn run_benchmarks(config: BenchConfig, out results: List[BenchResult]) raises:
     results = List[BenchResult]()
 
     for ent_exp in range(2, config.max_entity_exp + 1):
@@ -209,8 +209,6 @@ fn run_benchmarks(config: BenchConfig) raises -> List[BenchResult]:
         for compExp in range(1, config.max_comp_exp + 1):
             result = benchmark[compExp](rounds, entities)
             results.append(result)
-
-    return results^
 
 
 fn benchmark[
