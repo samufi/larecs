@@ -51,7 +51,7 @@ struct Resources(Copyable, Movable, Sized):
             Error: If some resource already exists.
         """
 
-        conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
+        conflicting_ids = List[StringSlice[StaticConstantOrigin]](capacity=0)
 
         @parameter
         for idx in range(resources.__len__()):
