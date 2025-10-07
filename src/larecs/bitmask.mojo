@@ -113,6 +113,101 @@ struct BitMask(
         return not self.__eq__(other)
 
     @always_inline
+    fn __invert__(self) -> Self:
+        """Returns the inversion of this mask."""
+        return Self(bytes=~self._bytes)
+
+    @always_inline
+    fn __or__(self, other: Self, out result: Self):
+        """Returns the bitwise OR of this mask and another mask.
+
+        Performs element-wise bitwise OR operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in either operand.
+
+        Args:
+            other: The other BitMask to OR with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise OR of both masks.
+
+        **Performance Note:**
+        This operation is highly optimized using SIMD instructions for fast parallel
+        bitwise operations across all 256 bits simultaneously.
+        """
+        result = self.copy()
+        result |= other
+
+    @always_inline
+    fn __ior__(mut self, other: Self):
+        """Performs in-place bitwise OR with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise OR operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in either the current BitMask or the provided BitMask.
+
+        Args:
+            other: The BitMask to perform the bitwise OR operation with.
+
+        **Performance Note:**
+        This operation is optimized using SIMD instructions for efficient parallel
+        processing of all 256 bits.
+        """
+        self._bytes |= other._bytes
+
+    @always_inline
+    fn __and__(self, other: Self, out result: Self):
+        """Returns the bitwise AND of this mask and another mask.
+
+        Performs element-wise bitwise AND operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in both operands.
+
+        Args:
+            other: The other BitMask to AND with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise AND of both masks.
+
+        **Performance Note:**
+        This operation is highly optimized using SIMD instructions for fast parallel
+        bitwise operations across all 256 bits simultaneously.
+        """
+        result = self.copy()
+        result &= other
+
+    @always_inline
+    fn __iand__(mut self, other: Self):
+        """Performs in-place bitwise AND with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise AND operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in both the current BitMask and the provided BitMask.
+
+        Args:
+            other: The BitMask to perform the bitwise AND operation with.
+
+        **Performance Note:**
+        This operation is optimized using SIMD instructions for efficient parallel
+        processing of all 256 bits.
+        """
+        self._bytes &= other._bytes
+
+    fn __str__(self) -> String:
+        """Implements String(...)."""
+        var result: String = "["
+        for i in range(len(self._bytes) * 8):
+            if self.get(i):
+                result += "1"
+            else:
+                result += "0"
+        result += "]"
+        return result
+
+    @always_inline
+    fn __repr__(self) -> String:
+        """Representation string of the Mask."""
+        return "BitMask(" + String(self._bytes) + ")"
+
+    @always_inline
     fn matches(self, bits: Self) -> Bool:
         """Matches the mask as filter against another mask."""
         return bits.contains(self)
@@ -241,98 +336,3 @@ struct BitMask(
     fn get_indices(self, out result: _BitMaskIndexIter):
         """Returns the indices of the bits that are set."""
         result = _BitMaskIndexIter(self._bytes)
-
-    @always_inline
-    fn __invert__(self) -> Self:
-        """Returns the inversion of this mask."""
-        return Self(bytes=~self._bytes)
-
-    @always_inline
-    fn __or__(self, other: Self, out result: Self):
-        """Returns the bitwise OR of this mask and another mask.
-
-        Performs element-wise bitwise OR operation between this mask and another mask,
-        creating a new mask where a bit is set if it's set in either operand.
-
-        Args:
-            other: The other BitMask to OR with this mask.
-
-        Returns:
-            A new BitMask containing the bitwise OR of both masks.
-
-        **Performance Note:**
-        This operation is highly optimized using SIMD instructions for fast parallel
-        bitwise operations across all 256 bits simultaneously.
-        """
-        result = self.copy()
-        result |= other
-
-    @always_inline
-    fn __ior__(mut self, other: Self):
-        """Performs in-place bitwise OR with another BitMask.
-
-        This method modifies the current BitMask by performing a bitwise OR operation
-        with another BitMask. Each bit in the resulting BitMask is set if it is set
-        in either the current BitMask or the provided BitMask.
-
-        Args:
-            other: The BitMask to perform the bitwise OR operation with.
-
-        **Performance Note:**
-        This operation is optimized using SIMD instructions for efficient parallel
-        processing of all 256 bits.
-        """
-        self._bytes |= other._bytes
-
-    @always_inline
-    fn __and__(self, other: Self, out result: Self):
-        """Returns the bitwise AND of this mask and another mask.
-
-        Performs element-wise bitwise AND operation between this mask and another mask,
-        creating a new mask where a bit is set if it's set in both operands.
-
-        Args:
-            other: The other BitMask to AND with this mask.
-
-        Returns:
-            A new BitMask containing the bitwise AND of both masks.
-
-        **Performance Note:**
-        This operation is highly optimized using SIMD instructions for fast parallel
-        bitwise operations across all 256 bits simultaneously.
-        """
-        result = self.copy()
-        result &= other
-
-    @always_inline
-    fn __iand__(mut self, other: Self):
-        """Performs in-place bitwise AND with another BitMask.
-
-        This method modifies the current BitMask by performing a bitwise AND operation
-        with another BitMask. Each bit in the resulting BitMask is set if it is set
-        in both the current BitMask and the provided BitMask.
-
-        Args:
-            other: The BitMask to perform the bitwise AND operation with.
-
-        **Performance Note:**
-        This operation is optimized using SIMD instructions for efficient parallel
-        processing of all 256 bits.
-        """
-        self._bytes &= other._bytes
-
-    fn __str__(self) -> String:
-        """Implements String(...)."""
-        var result: String = "["
-        for i in range(len(self._bytes) * 8):
-            if self.get(i):
-                result += "1"
-            else:
-                result += "0"
-        result += "]"
-        return result
-
-    @always_inline
-    fn __repr__(self) -> String:
-        """Representation string of the Mask."""
-        return "BitMask(" + String(self._bytes) + ")"
