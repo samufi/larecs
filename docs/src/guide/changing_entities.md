@@ -138,7 +138,7 @@ Sometimes you need to add or remove components from multiple entities at once.
 Larecs🌲 provides batch operations that are more efficient than performing
 individual operations on each entity.
 
-#### Batch adding components
+#### Batch-adding components
 
 You can add components to multiple entities that match a query using the
 {{< api World.add add >}} method with a query:
@@ -173,7 +173,7 @@ for entity in entities:
     world.add(entity, Velocity(1.0, 0.5))  # Individual operations
 ```
 
-#### Batch removing components
+#### Batch-removing components
 
 You can remove components from multiple entities that match a query using the
 {{< api World.remove remove >}} method with a query:
@@ -196,9 +196,9 @@ world.remove[Position, Velocity](
 The query must ensure that all matching entities have the components you want to remove,
 otherwise an error will be raised.
 
-#### Batch replacing components
+#### Batch-replacing components
 
-You can replace components on multiple entities that match a query using the
+You can replace components of multiple entities that match a query using the
 {{< api World.replace replace >}} method in combination with {{< api Replacer.by by >}}:
 
 ```mojo {doctest="guide_change_entities"}
@@ -207,8 +207,8 @@ _ = world.add_entities(Position(0, 0), count=10)
 
 # Replace Position with Velocity for all entities that have Position
 world.replace[Position]().by(
-    world.query[Position](),
     Velocity(2.0, 2.0)
+    query=world.query[Position](),
 )
 
 # You can also replace multiple components with multiple other components
