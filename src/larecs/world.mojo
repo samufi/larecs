@@ -30,6 +30,33 @@ from .lock import LockManager, LockedContext
 from .resource import Resources
 
 
+struct WorldErrors:
+    alias non_existent_entity_msg = "The considered entity does not exist anymore."
+    alias world_is_locked_msg = "Attempt to modify a locked world."
+    alias missing_components_for_removal_entity_msg = "Entity does not have all the components to remove."
+    alias missing_components_for_removal_query_msg = "Query matches entities that do not have all the components to remove. Use `Query(Component, ...)` to include those components."
+    alias duplicate_components_for_addition_entity_msg = "Entity already has one of the components to add."
+    alias duplicate_components_for_addition_query_msg = "Query matches entities that already have some of the components to add. Use `Query.without[Component, ...]()` to exclude those components."
+    alias inconsistent_remove_some_and_rem_size_msg[
+        fn_name: StringLiteral
+    ] = "Invalid use of `world." + fn_name + "`: `rem_size` must be zero when `remove_some` is False."
+
+    alias non_existent_entity = Error(Self.non_existent_entity_msg)
+    alias world_is_locked = Error(Self.world_is_locked_msg)
+    alias missing_components_for_removal_entity = Error(
+        Self.missing_components_for_removal_entity_msg
+    )
+    alias missing_components_for_removal_query = Error(
+        Self.missing_components_for_removal_query_msg
+    )
+    alias duplicate_components_for_addition_entity = Error(
+        Self.duplicate_components_for_addition_entity_msg
+    )
+    alias duplicate_components_for_addition_query = Error(
+        Self.duplicate_components_for_addition_query_msg
+    )
+
+
 @fieldwise_init
 struct Replacer[
     world_origin: MutableOrigin,
@@ -108,12 +135,7 @@ struct Replacer[
         self,
         query: QueryInfo[has_without_mask=has_without_mask],
         *components: *AddTs,
-        out iterator: World[*component_types].Iterator[
-            __origin_of(self._world[]._archetypes),
-            __origin_of(self._world[]._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(self._by(components, query=query)),
     ) raises:
         """
         Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
@@ -143,12 +165,7 @@ struct Replacer[
         self,
         *components: *AddTs,
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: World[*component_types].Iterator[
-            __origin_of(self._world[]._archetypes),
-            __origin_of(self._world[]._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(self._by(components, query=query)),
     ) raises:
         """
         Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
@@ -178,12 +195,11 @@ struct Replacer[
         self,
         components: VariadicPack[_, _, ComponentType, *AddTs],
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: World[*component_types].Iterator[
-            __origin_of(self._world[]._archetypes),
-            __origin_of(self._world[]._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(
+            self._world[]._batch_remove_and_add(
+                query, components, self._remove_ids
+            )
+        ),
     ) raises:
         """
         Private helper to remove and add components to multiple [..entity.Entity] specified by a [..query.Query].
@@ -648,7 +664,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
-            StaticOptional(List[UInt](UInt(first_index_in_archetype))),
+            List[UInt](UInt(first_index_in_archetype)),
         )
 
     @always_inline
@@ -940,12 +956,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         var *add_components: *Ts,
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(
+            self._batch_remove_and_add(query, add_components)
+        ),
     ) raises:
         """
         Adds components to multiple entities at once that are specified by a [..query.Query].
@@ -1024,12 +1037,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(
+            self._batch_remove_and_add(
+                query, remove_ids=Self.component_manager.get_id_arr[*Ts]()
+            )
+        ),
     ) raises:
         """
         Removes components from multiple entities at once, specified by a [..query.Query].
@@ -1099,14 +1111,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts: The types of the components to remove.
         """
-        return Replacer[
-            __origin_of(self),
-            VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
-            *component_types,
-        ](
+        return {
             Pointer(to=self),
             Self.component_manager.get_id_arr[*Ts](),
-        )
+        }
 
     @always_inline
     fn _remove_and_add[
@@ -1159,6 +1167,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         alias add_size = add_components.__len__()
         alias add_ids = Self.component_manager.get_id_arr[*Ts]()
 
+        constrained[
+            remove_some or not rem_size,
+            WorldErrors.inconsistent_remove_some_and_rem_size_msg[
+                "_remove_and_add"
+            ],
+        ]()
+
         self._assert_unlocked()
         self._assert_alive(entity)
 
@@ -1176,14 +1191,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         old_archetype_mask = old_archetype[].get_mask()
 
         @parameter
-        if rem_size:
-
-            @parameter
-            if remove_some:
-                if not old_archetype_mask.contains(BitMask(remove_ids[])):
-                    raise Error(
-                        "Entity does not have one of the components to remove."
-                    )
+        if remove_some:
+            if not old_archetype_mask.contains(BitMask(remove_ids[])):
+                raise WorldErrors.missing_components_for_removal_entity
 
         @parameter
         if add_size:
@@ -1193,7 +1203,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             if remove_some:
                 compare_mask = compare_mask.set(remove_ids[], False)
             if compare_mask.contains(BitMask(add_ids)):
-                raise Error("Entity already has one of the components to add.")
+                raise WorldErrors.duplicate_components_for_addition_entity
 
         alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
         var component_ids: ComponentIdsType
@@ -1353,6 +1363,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
 
+        constrained[
+            remove_some or not rem_size,
+            WorldErrors.inconsistent_remove_some_and_rem_size_msg[
+                "_batch_remove_and_add"
+            ],
+        ]()
+
         var component_ids: ComponentIdsType
 
         # Note:
@@ -1378,7 +1395,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             if strict_check_needed:
                 for archetype in self._get_archetype_iterator(
-                    query.mask, query.without_mask.copy()
+                    query.mask, query.without_mask
                 ):
                     archetype_mask = archetype[].get_mask()
 
@@ -1389,32 +1406,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     if archetype[] and archetype_mask.contains_any(
                         BitMask(add_ids)
                     ):
-                        raise Error(
-                            "Query matches entities that already have at least"
-                            " one of the components to add. Use"
-                            " `Query.without[Component, ...]()` to exclude"
-                            " those components."
-                        )
+                        raise WorldErrors.duplicate_components_for_addition_query
 
         @parameter
         if rem_size:
             # If query could match archetypes that don't have all of the components, raise an error
             if not query.mask.contains(BitMask(remove_ids[])):
-                raise Error(
-                    "Query matches entities that don't have all of the"
-                    " components to remove. Use `Query(Component, ...)` to"
-                    " include those components."
-                )
+                raise WorldErrors.missing_components_for_removal_query
 
             @parameter
             if has_without_mask:
                 if query.without_mask[].contains_any(BitMask(remove_ids[])):
-                    raise Error(
-                        "Query excludes entities that have a component which"
-                        " should be removed in the without mask. Remove all"
-                        " components that get removed from"
-                        " `Query.without(...)`."
-                    )
+                    raise WorldErrors.duplicate_components_for_addition_query
 
         @parameter
         if add_size and rem_size:
@@ -1434,12 +1437,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         elif not add_size and Bool(rem_size):
             component_ids = rebind[ComponentIdsType](remove_ids[])
         else:
-            return Self.Iterator[
-                __origin_of(self._archetypes),
-                __origin_of(self._locks),
-                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-                has_start_indices=True,
-            ](
+            return {
                 Pointer(to=self._locks),
                 Self.ArchetypeIterator[
                     __origin_of(self._archetypes),
@@ -1449,8 +1447,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         Pointer(to=self._archetypes), List[Int]()
                     ),
                 ),
-                StaticOptional(List[UInt]()),
-            )
+                List[UInt](),
+            }
 
         self._assert_unlocked()
 
@@ -1533,12 +1531,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 old_archetype[].clear()
 
         # Return iterator to iterate over the changed entities.
-        iterator = Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ](
+        iterator = {
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
                 __origin_of(self._archetypes),
@@ -1548,8 +1541,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), changed_archetype_idcs^
                 ),
             ),
-            StaticOptional(arch_start_idcs^),
-        )
+            arch_start_idcs^,
+        }
 
     @always_inline
     fn _assert_unlocked(self) raises:
@@ -1560,7 +1553,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the world is locked.
         """
         if self.is_locked():
-            raise Error("Attempt to modify a locked world.")
+            raise WorldErrors.world_is_locked
 
     @always_inline
     fn _assert_alive(self, entity: Entity) raises:
@@ -1574,7 +1567,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the entity does not exist.
         """
         if not self._entity_pool.is_alive(entity):
-            raise Error("The considered entity does not exist anymore.")
+            raise WorldErrors.non_existent_entity
 
     @always_inline
     fn apply[

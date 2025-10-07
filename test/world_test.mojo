@@ -1,6 +1,6 @@
 from testing import *
 
-from larecs.world import World
+from larecs.world import World, WorldErrors
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import ResourceType
@@ -249,10 +249,7 @@ def test_world_batch_add():
     assert_equal(len(world.query[Position, Velocity]()), n)
 
     with assert_raises(
-        contains=(
-            "Query matches entities that already have at least one of the"
-            " components to add."
-        )
+        contains=WorldErrors.duplicate_components_for_addition_query_msg
     ):
         _ = world.add(
             world.query[Position]().without[LargerComponent](),
@@ -324,10 +321,7 @@ def test_world_batch_remove():
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
 
     with assert_raises(
-        contains=(
-            "Query matches entities that don't have all of the"
-            " components to remove."
-        )
+        contains=WorldErrors.missing_components_for_removal_query_msg
     ):
         _ = world.remove[Velocity](
             world.query[Position](),
@@ -384,10 +378,7 @@ def test_batch_remove_and_add():
     assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), n)
 
     with assert_raises(
-        contains=(
-            "Query matches entities that already have at least"
-            " one of the components to add."
-        )
+        contains=WorldErrors.duplicate_components_for_addition_query_msg
     ):
         _ = world.replace[Velocity]().by(Position(5.0, 6.0), query=world.query[Position]())
 
