@@ -160,12 +160,14 @@ struct BitMask(
 
     @always_inline
     fn set(self, *comps: Self.IndexType, value: Bool) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
+        """Modifies the [BitMask] to set the components given as arguments to the provided value.
+        """
         return self.set(BitMask(comps), value)
 
     @always_inline
     fn set[value: Bool](self, *comps: Self.IndexType) -> Self:
-        """Modifies the [BitMask] to unset the components given as arguments."""
+        """Modifies the [BitMask] to set the components given as arguments to the provided value.
+        """
         return self.set[value](BitMask(comps))
 
     @always_inline
@@ -241,12 +243,12 @@ struct BitMask(
         result = _BitMaskIndexIter(self._bytes)
 
     @always_inline
-    fn __invert__(self) -> BitMask:
+    fn __invert__(self) -> Self:
         """Returns the inversion of this mask."""
-        return BitMask(bytes=~self._bytes)
+        return Self(bytes=~self._bytes)
 
     @always_inline
-    fn __or__(self, other: Self) -> BitMask:
+    fn __or__(self, other: Self, out result: Self):
         """Returns the bitwise OR of this mask and another mask.
 
         Performs element-wise bitwise OR operation between this mask and another mask,
@@ -262,9 +264,8 @@ struct BitMask(
         This operation is highly optimized using SIMD instructions for fast parallel
         bitwise operations across all 256 bits simultaneously.
         """
-        copy = self.copy()
-        copy |= other
-        return copy
+        result = self.copy()
+        result |= other
 
     @always_inline
     fn __ior__(mut self, other: Self):
@@ -284,7 +285,7 @@ struct BitMask(
         self._bytes |= other._bytes
 
     @always_inline
-    fn __and__(self, other: Self) -> BitMask:
+    fn __and__(self, other: Self, out result: Self):
         """Returns the bitwise AND of this mask and another mask.
 
         Performs element-wise bitwise AND operation between this mask and another mask,
@@ -300,9 +301,8 @@ struct BitMask(
         This operation is highly optimized using SIMD instructions for fast parallel
         bitwise operations across all 256 bits simultaneously.
         """
-        copy = self.copy()
-        copy &= other
-        return copy
+        result = self.copy()
+        result &= other
 
     @always_inline
     fn __iand__(mut self, other: Self):
