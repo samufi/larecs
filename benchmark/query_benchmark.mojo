@@ -56,6 +56,7 @@ fn benchmark_vel_pos_add_1_000_000(
 
     bencher.iter[bench_fn]()
 
+
 fn benchmark_vel_pos_add_aos_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
