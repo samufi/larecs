@@ -35,6 +35,48 @@ fn benchmark_query_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
+fn benchmark_vel_pos_add_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+        for _ in range(1000):
+            _ = world.add_entity(pos, vel)
+        for _ in range(1000):
+            for entity in world.query[Position]():
+                ref pos = entity.get[Position]()
+                ref vel = entity.get[Velocity]()
+                pos.x += vel.dx
+                pos.y += vel.dy
+
+    bencher.iter[bench_fn]()
+
+fn benchmark_vel_pos_add_aos_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        l1 = List[Position](length=1000, fill=pos)
+        l2 = List[Velocity](length=1000, fill=vel)
+        for _ in range(1000):
+            for i in range(len(l1)):
+                ref pos = l1[i]
+                ref vel = l2[i]
+                pos.x += vel.dx
+                pos.y += vel.dy
+
+    bencher.iter[bench_fn]()
+
+
 fn benchmark_query_2_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
@@ -135,6 +177,12 @@ fn run_all_query_benchmarks() raises:
 
 
 fn run_all_query_benchmarks(mut bench: Bench) raises:
+    bench.bench_function[benchmark_vel_pos_add_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add")
+    )
+    bench.bench_function[benchmark_vel_pos_add_aos_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add aos")
+    )
     bench.bench_function[benchmark_query_has_1_000_000](
         BenchId("10^6 * query has")
     )
