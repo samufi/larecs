@@ -210,7 +210,7 @@ fn benchmark_vel_pos_add_vec_optimized_1_000_000(
             Position(1.0, 2.0), Velocity(0.1, 0.2), count=1000
         )
         for _ in range(1000):
-            world.apply[move, simd_width=simd_width](
+            world.apply[move, simd_width = simd_width // 2](
                 world.query[Position, Velocity]()
             )
 
@@ -223,24 +223,18 @@ fn benchmark_vel_pos_add_vec_1_000_000(
     @parameter
     fn move[simd_width: Int](entity: MutableEntityAccessor):
         try:
-            var posX_ptr = UnsafePointer(to=entity.get[PosX]()).bitcast[
-                Float64
-            ]()
-            var velX_ptr = UnsafePointer(to=entity.get[VelX]()).bitcast[
-                Float64
-            ]()
+            var posX_ptr = UnsafePointer(to=entity.get[PosX]().x)
             var posX = posX_ptr.load[width=simd_width]()
-            var velX = velX_ptr.load[width=simd_width]()
+            var velX = UnsafePointer(to=entity.get[VelX]().dx).load[
+                width=simd_width
+            ]()
             posX_ptr.store(posX + velX)
 
-            var posY_ptr = UnsafePointer(to=entity.get[PosY]()).bitcast[
-                Float64
-            ]()
-            var velY_ptr = UnsafePointer(to=entity.get[VelY]()).bitcast[
-                Float64
-            ]()
+            var posY_ptr = UnsafePointer(to=entity.get[PosY]().y)
             var posY = posY_ptr.load[width=simd_width]()
-            var velY = velY_ptr.load[width=simd_width]()
+            var velY = UnsafePointer(to=entity.get[VelY]().dy).load[
+                width=simd_width
+            ]()
             posY_ptr.store(posY + velY)
 
         except:
@@ -363,21 +357,6 @@ fn run_all_query_benchmarks() raises:
 
 
 fn run_all_query_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_vel_pos_add_aos_vec_1_000_000](
-        BenchId("10^3 * 10^3 * pos vel add aos vec")
-    )
-    bench.bench_function[benchmark_vel_pos_add_vec_optimized_1_000_000](
-        BenchId("10^3 * 10^3 * pos vel add aos vec optimized")
-    )
-    bench.bench_function[benchmark_vel_pos_add_vec_1_000_000](
-        BenchId("10^3 * 10^3 * pos vel add vec")
-    )
-    bench.bench_function[benchmark_vel_pos_add_1_000_000](
-        BenchId("10^3 * 10^3 * pos vel add")
-    )
-    bench.bench_function[benchmark_vel_pos_add_aos_1_000_000](
-        BenchId("10^3 * 10^3 * pos vel add aos")
-    )
     bench.bench_function[benchmark_query_has_1_000_000](
         BenchId("10^6 * query has")
     )
@@ -392,6 +371,21 @@ fn run_all_query_benchmarks(mut bench: Bench) raises:
     )
     bench.bench_function[benchmark_query_get_iter_1_000_000](
         BenchId("10^6 * get query iter")
+    )
+    bench.bench_function[benchmark_vel_pos_add_aos_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add aos")
+    )
+    bench.bench_function[benchmark_vel_pos_add_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add")
+    )
+    bench.bench_function[benchmark_vel_pos_add_aos_vec_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add aos vec optimized")
+    )
+    bench.bench_function[benchmark_vel_pos_add_vec_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add vec")
+    )
+    bench.bench_function[benchmark_vel_pos_add_vec_optimized_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add vec optimized")
     )
 
 
