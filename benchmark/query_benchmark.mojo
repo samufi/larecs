@@ -157,23 +157,23 @@ fn benchmark_vel_pos_add_aos_vec_1_000_000(
 
 
 @fieldwise_init
-struct PosX(Copyable, Movable):
-    var x: Float64
+struct PosX(Copyable & Movable):
+    var value: Float64
 
 
 @fieldwise_init
-struct PosY(Copyable, Movable):
-    var y: Float64
+struct PosY(Copyable & Movable):
+    var value: Float64
 
 
 @fieldwise_init
-struct VelX(Copyable, Movable):
-    var dx: Float64
+struct VelX(Copyable & Movable):
+    var value: Float64
 
 
 @fieldwise_init
-struct VelY(Copyable, Movable):
-    var dy: Float64
+struct VelY(Copyable & Movable):
+    var value: Float64
 
 
 fn benchmark_vel_pos_add_vec_optimized_1_000_000(
@@ -218,16 +218,16 @@ fn benchmark_vel_pos_add_vec_1_000_000(
     @parameter
     fn move[simd_width: Int](entity: MutableEntityAccessor):
         try:
-            var posX_ptr = UnsafePointer(to=entity.get[PosX]().x)
+            var posX_ptr = UnsafePointer(to=entity.get[PosX]().value)
             var posX = posX_ptr.load[width=simd_width]()
-            var velX = UnsafePointer(to=entity.get[VelX]().dx).load[
+            var velX = UnsafePointer(to=entity.get[VelX]().value).load[
                 width=simd_width
             ]()
             posX_ptr.store(posX + velX)
 
-            var posY_ptr = UnsafePointer(to=entity.get[PosY]().y)
+            var posY_ptr = UnsafePointer(to=entity.get[PosY]().value)
             var posY = posY_ptr.load[width=simd_width]()
-            var velY = UnsafePointer(to=entity.get[VelY]().dy).load[
+            var velY = UnsafePointer(to=entity.get[VelY]().value).load[
                 width=simd_width
             ]()
             posY_ptr.store(posY + velY)
@@ -246,6 +246,53 @@ fn benchmark_vel_pos_add_vec_1_000_000(
         )
         for _ in range(1000):
             world.apply[move, simd_width=simd_width](
+                world.query[PosX, VelX, PosY, VelY]()
+            )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_vel_pos_add_vec_split_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @parameter
+    fn move_x[simd_width: Int](entity: MutableEntityAccessor):
+        try:
+            var pos_ptr = UnsafePointer(to=entity.get[PosX]().value)
+            var pos = pos_ptr.load[width=simd_width]()
+            var vel = UnsafePointer(to=entity.get[VelX]().value).load[
+                width=simd_width
+            ]()
+            pos_ptr.store(pos + vel)
+        except:
+            return
+
+    @parameter
+    fn move_y[simd_width: Int](entity: MutableEntityAccessor):
+        try:
+            var pos_ptr = UnsafePointer(to=entity.get[PosY]().value)
+            var pos = pos_ptr.load[width=simd_width]()
+            var vel = UnsafePointer(to=entity.get[VelY]().value).load[
+                width=simd_width
+            ]()
+            pos_ptr.store(pos + vel)
+        except:
+            return
+
+    alias simd_width = simdwidthof[Float64]()
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = World[PosX, VelX, PosY, VelY]()
+        _ = world.add_entities(
+            PosX(1.0), VelX(0.1), PosY(2.0), VelY(0.2), count=1000
+        )
+        for _ in range(1000):
+            world.apply[move_x, simd_width=simd_width](
+                world.query[PosX, VelX, PosY, VelY]()
+            )
+            world.apply[move_y, simd_width=simd_width](
                 world.query[PosX, VelX, PosY, VelY]()
             )
 
@@ -378,6 +425,9 @@ fn run_all_query_benchmarks(mut bench: Bench) raises:
     )
     bench.bench_function[benchmark_vel_pos_add_vec_1_000_000](
         BenchId("10^3 * 10^3 * pos vel add vec")
+    )
+    bench.bench_function[benchmark_vel_pos_add_vec_split_1_000_000](
+        BenchId("10^3 * 10^3 * pos vel add vec split")
     )
     bench.bench_function[benchmark_vel_pos_add_vec_optimized_1_000_000](
         BenchId("10^3 * 10^3 * pos vel add vec optimized")
