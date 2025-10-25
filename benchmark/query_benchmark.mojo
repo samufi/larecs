@@ -23,14 +23,11 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
 fn benchmark_query_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
-    pos = Position(1.0, 2.0)
-
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
         world = SmallWorld()
-        for _ in range(1000):
-            _ = world.add_entity(pos)
+        _ = world.add_entities(Position(1.0, 2.0), count=1000)
         for _ in range(1000):
             for entity in world.query[Position]():
                 keep(entity.get[Position]().x)
@@ -41,15 +38,13 @@ fn benchmark_query_1_comp_1_000_000(
 fn benchmark_vel_pos_add_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-
     @always_inline
     @parameter
     fn bench_fn() capturing raises:
         world = SmallWorld()
-        for _ in range(1000):
-            _ = world.add_entity(pos, vel)
+        _ = world.add_entities(
+            Position(1.0, 2.0), Velocity(0.1, 0.2), count=1000
+        )
         for _ in range(1000):
             for entity in world.query[Position]():
                 ref pos = entity.get[Position]()
@@ -145,12 +140,12 @@ fn benchmark_vel_pos_add_aos_vec_1_000_000(
         fn move[simd_width: Int](i: Int):
             # var pos_ptr = l1.unsafe_ptr().offset(i).bitcast[Float64]()
             var pos_ptr = UnsafePointer(to=l1[i]).bitcast[Float64]()
-            var pos = pos_ptr.load[width=simd_width]()
+            var pos = pos_ptr.load[width = simd_width * 2]()
             var vel = (
                 l2.unsafe_ptr()
                 .offset(i)
                 .bitcast[Float64]()
-                .load[width=simd_width]()
+                .load[width = simd_width * 2]()
             )
 
             pos_ptr.store(pos + vel)
@@ -193,9 +188,9 @@ fn benchmark_vel_pos_add_vec_optimized_1_000_000(
             var vel = (
                 UnsafePointer(to=entity.get[Velocity]())
                 .bitcast[Float64]()
-                .load[width=simd_width]()
+                .load[width = simd_width * 2]()
             )
-            var pos = pos_ptr.load[width=simd_width]()
+            var pos = pos_ptr.load[width = simd_width * 2]()
             pos_ptr.store(pos + vel)
         except:
             return
