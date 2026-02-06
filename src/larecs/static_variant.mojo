@@ -3,7 +3,7 @@ from sys.intrinsics import _type_is_eq
 from .static_optional import StaticOptional
 
 
-alias StaticVariantType = Movable
+alias StaticVariantType = Movable & Copyable
 """
 A trait that defines the requirements for types that can be used in StaticVariant.
 
@@ -12,7 +12,9 @@ and ownership transfer semantics.
 """
 
 
-struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
+struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](
+    Copyable, Movable
+):
     """
     A compile-time variant type that can hold exactly one of the provided types.
 
@@ -93,7 +95,7 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
     alias ElementType = Ts[variant_idx]
     var _data: Self.ElementType
 
-    fn __init__(out self, owned value: Self.ElementType) raises:
+    fn __init__(out self, var value: Self.ElementType) raises:
         """
         Initializes the variant with a value of the specified type.
 
@@ -183,28 +185,6 @@ struct StaticVariant[variant_idx: Int, *Ts: StaticVariantType](Movable):
 # BUG: Mojo crashes with these methods (see https://github.com/modular/modular/issues/5172). When fixed, we can use
 #      these for better ergonomics when working with StaticVariant.
 #      This may also be fixable when conditional conformance with `requires` is released.
-#
-#     fn __copyinit__[
-#         T: Copyable & StaticVariantType, //
-#     ](out self: Self[variant_idx, T], read other: Self[variant_idx, T]):
-#         """
-#         Initializes the variant by copying the value from another variant.
-
-#         Args:
-#             other: The variant to copy from.
-#         """
-#         self._data = other._data
-
-#     fn copy[
-#         T: ExplicitlyCopyable & StaticVariantType, //
-#     ](read self: Self[variant_idx, T], out copy: Self[variant_idx, T]):
-#         """
-#         Initializes the variant by copying the value from another variant.
-
-#         Args:
-#             other: The variant to copy from.
-#         """
-#         copy = Self(self._data.copy())
 
 #     fn __bool__[
 #         T: Boolable & StaticVariantType, //

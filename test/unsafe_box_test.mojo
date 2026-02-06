@@ -12,7 +12,7 @@ struct TestStruct:
 
 def test_unsafe_box_copy_move_del():
     fn factory(
-        owned val: MemTestStruct,
+        var val: MemTestStruct,
         out result: UnsafeBox,
     ):
         result = __type_of(result)(val^)

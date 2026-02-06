@@ -1,4 +1,5 @@
 from testing import *
+from sys import size_of
 
 from larecs.test_utils import *
 from larecs.static_optional import StaticOptional
@@ -9,7 +10,7 @@ def test_comptime_optional_init():
     assert_false(opt.has_value)
     _ = opt._value
     l = List[Int](42)
-    opt_with_value = StaticOptional(l)
+    opt_with_value = StaticOptional(l^)
     assert_true(opt_with_value.has_value)
     assert_equal(opt_with_value[][0], 42)
 
@@ -22,13 +23,11 @@ def test_comptime_optional_copy():
     opt_without_value = StaticOptional[Int, False]()
     opt_copy_without = opt_without_value.copy()
     _ = opt_copy_without._value
-    opt_copy_without = opt_without_value
-    _ = opt_copy_without
 
 
 def test_comptime_optional_move_del():
     fn factory(
-        owned val: MemTestStruct,
+        var val: MemTestStruct,
         out result: StaticOptional[MemTestStruct, True],
     ):
         result = __type_of(result)(val^)
@@ -42,8 +41,8 @@ def test_comptime_optional_value():
 
 
 def test_comptime_optional_size():
-    assert_equal(sizeof[StaticOptional[UInt16, True]](), 2)
-    assert_equal(sizeof[StaticOptional[UInt16, False]](), 0)
+    assert_equal(size_of[StaticOptional[UInt16, True]](), 2)
+    assert_equal(size_of[StaticOptional[UInt16, False]](), 0)
 
 
 fn optional_argument_application[

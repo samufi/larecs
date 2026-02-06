@@ -1,5 +1,5 @@
 @fieldwise_init
-struct Parameters(Copyable & Movable):
+struct Parameters(ImplicitlyCopyable & Movable):
     var dt: Float64
     var mass: Float64
 

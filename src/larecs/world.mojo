@@ -1,6 +1,6 @@
 from memory import UnsafePointer, Span
 from algorithm import vectorize
-from sys.info import sizeof
+from sys import size_of
 
 from .pool import EntityPool
 from .entity import Entity, EntityIndex
@@ -26,7 +26,7 @@ from .query import (
     _ArchetypeByMaskIteratorIdx,
     _ArchetypeByListIteratorIdx,
 )
-from .lock import LockMask, LockedContext
+from .lock import LockManager, LockedContext
 from .resource import Resources
 
 
@@ -102,9 +102,7 @@ struct Replacer[
         )
 
 
-struct World[*component_types: ComponentType](
-    ExplicitlyCopyable, Movable, Sized
-):
+struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
     World is the central type holding entity and component data, as well as resources.
 
@@ -239,12 +237,12 @@ struct World[*component_types: ComponentType](
     # _stats          _stats.World               # Cached world statistics.
     var _entity_pool: EntityPool  # Pool for entities.
     var _entities: List[
-        EntityIndex, hint_trivial_type=True
+        EntityIndex
     ]  # Mapping from entities to archetype and index.
     var _archetype_map: BitMaskGraph[
-        -1, hint_trivial_type=True
+        -1
     ]  # Mapping from component masks to archetypes.
-    var _locks: LockMask  # World _locks.
+    var _locks: LockManager  # World _locks.
 
     var _archetypes: List[
         Self.Archetype
@@ -256,13 +254,11 @@ struct World[*component_types: ComponentType](
         """
         Creates a new [.World].
         """
-        self._archetype_map = BitMaskGraph[-1, hint_trivial_type=True](0)
+        self._archetype_map = BitMaskGraph[-1](0)
         self._archetypes = List[Self.Archetype](Self.Archetype())
-        self._entities = List[EntityIndex, hint_trivial_type=True](
-            EntityIndex(0, 0)
-        )
+        self._entities = List[EntityIndex](EntityIndex(0, 0))
         self._entity_pool = EntityPool()
-        self._locks = LockMask()
+        self._locks = LockManager()
         self.resources = Resources()
 
         # TODO
@@ -275,41 +271,6 @@ struct World[*component_types: ComponentType](
         # self._filter_cache:    newCache(),
 
         # var node = self.createArchetypeNode(Mask, ID, false)
-
-    @always_inline
-    fn __init__(out self, other: Self):
-        """
-        Initializes a [.World] by copying another instance.
-
-        Args:
-            other: The other instance to copy.
-        """
-        self._archetype_map = other._archetype_map
-        self._archetypes = other._archetypes
-        self._entities = other._entities
-        self._entity_pool = other._entity_pool
-        self._locks = other._locks
-        self.resources = other.resources.copy()
-
-    fn __moveinit__(out self, owned other: Self):
-        """
-        Moves the contents of another [.World] into a new one.
-
-        Args:
-            other: The instance to move.
-        """
-        self._archetype_map = other._archetype_map^
-        self._archetypes = other._archetypes^
-        self._entities = other._entities^
-        self._entity_pool = other._entity_pool^
-        self._locks = other._locks^
-        self.resources = other.resources^
-
-    fn copy(self, out other: Self):
-        """
-        Copies the contents of another [.World] into a new one.
-        """
-        other = Self(self)
 
     fn __len__(self) -> Int:
         """
@@ -466,8 +427,8 @@ struct World[*component_types: ComponentType](
             @parameter
             for i in range(size):
                 archetype[].get_component[
-                    T = Ts[i.value], assert_has_component=False
-                ](index_in_archetype) = components[i]
+                    T = Ts[i], assert_has_component=False
+                ](index_in_archetype) = components[i].copy()
 
         # TODO
         # if self._listener != nil:
@@ -564,7 +525,7 @@ struct World[*component_types: ComponentType](
             Span(
                 UnsafePointer(
                     to=archetype[].get_component[
-                        T = Ts[i.value], assert_has_component=False
+                        T = Ts[i], assert_has_component=False
                     ](first_index_in_archetype)
                 ),
                 count,
@@ -580,7 +541,7 @@ struct World[*component_types: ComponentType](
                     Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
-            StaticOptional(List[UInt, True](UInt(first_index_in_archetype))),
+            StaticOptional(List[UInt](UInt(first_index_in_archetype))),
         )
 
     @always_inline
@@ -774,9 +735,7 @@ struct World[*component_types: ComponentType](
         ).get_component[T=T](entity_index.index)
 
     @always_inline
-    fn set[
-        T: ComponentType
-    ](mut self, entity: Entity, owned component: T) raises:
+    fn set[T: ComponentType](mut self, entity: Entity, var component: T) raises:
         """
         Overwrites a component for an [..entity.Entity], using the given content.
 
@@ -823,9 +782,9 @@ struct World[*component_types: ComponentType](
 
         @parameter
         for i in range(components.__len__()):
-            archetype[].get_component[T = Ts[i.value]](
+            archetype[].get_component[T = Ts[i]](
                 entity_index.index
-            ) = components[i]
+            ) = components[i].copy()
 
     fn add[
         *Ts: ComponentType
@@ -873,7 +832,7 @@ struct World[*component_types: ComponentType](
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        owned *add_components: *Ts,
+        var *add_components: *Ts,
         out iterator: Self.Iterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
@@ -966,11 +925,11 @@ struct World[*component_types: ComponentType](
                         " those components."
                     )
 
-        alias _2kb_of_UInt_or_Int = (1024 * 2) // sizeof[UInt]()
-        arch_start_idcs = List[UInt, True](
+        alias _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
+        arch_start_idcs = List[UInt](
             min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
-        changed_archetype_idcs = List[Int, True](
+        changed_archetype_idcs = List[Int](
             min(len(self._archetypes), _2kb_of_UInt_or_Int)
         )
 
@@ -1058,10 +1017,10 @@ struct World[*component_types: ComponentType](
                 arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
             ](
                 Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
-                    Pointer(to=self._archetypes), changed_archetype_idcs
+                    Pointer(to=self._archetypes), changed_archetype_idcs^
                 ),
             ),
-            StaticOptional(arch_start_idcs),
+            StaticOptional(arch_start_idcs^),
         )
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
@@ -1081,6 +1040,164 @@ struct World[*component_types: ComponentType](
         """
         self._remove_and_add(
             entity, remove_ids=Self.component_manager.get_id_arr[*Ts]()
+        )
+
+    fn remove[
+        *Ts: ComponentType, has_without_mask: Bool = False
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Removes components from multiple entities at once, specified by a [..query.Query].
+        The provided query must ensure that matching entities have all of the components that should get removed.
+
+        Example:
+
+        ```mojo {doctest="remove_query_comps" global=true}
+        from larecs import World
+
+        @fieldwise_init
+        struct Position(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        @fieldwise_init
+        struct Velocity(Copyable, Movable):
+            var x: Float64
+            var y: Float64
+
+        world = World[Position, Velocity]()
+        _ = world.add_entities(Position(0, 0), Velocity(1, 0), 100)
+
+        for entity in world.remove[Velocity](
+            world.query[Position, Velocity]()
+        ):
+            position = entity.get[Position]()
+        ```
+
+        Parameters:
+            Ts: The types of the components to remove.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            query: The query to determine which entities to modify.
+
+        Raises:
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+            Error: when called with a query that could match entities that don't have all of the components to remove.
+        """
+
+        # Note:
+        #     This operation can never map multiple archetypes onto one, due to the requirement that components to remove
+        #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
+        #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
+        #     into one.  This also enables potential parallelization optimizations.
+
+        self._assert_unlocked()
+
+        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
+
+        # If query could match archetypes that don't have all of the components, raise an error
+        if not query.mask.contains(BitMask(component_ids)):
+            raise Error(
+                "Query matches entities that don't have all of the"
+                " components to remove. Use `Query(Component, ...)` to include"
+                " those components."
+            )
+
+        @parameter
+        if has_without_mask:
+            if query.without_mask[].contains_any(BitMask(component_ids)):
+                raise Error(
+                    "Query excludes entities that have a component which"
+                    " should be removed in the without mask. Remove all"
+                    " components that get removed from `Query.without(...)`."
+                )
+
+        arch_start_idcs = List[UInt](len(self._archetypes))
+        changed_archetype_idcs = List[Int](len(self._archetypes))
+
+        # Search for the archetype that matches the query mask
+        with self._locked():
+            for old_archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
+            ):
+                # Two cases per matching archetype A:
+                # 1. If an archetype B with the new component combination exists, move entities from A to B
+                #    and insert new component data for moved entities.
+                # 2. If an archetype with the new component combination does not exist yet,
+                #    create new archetype B = A - component_ids and move entities and component data from A to B.
+                new_archetype_idx = self._get_archetype_index(
+                    component_ids, old_archetype[].get_node_index()
+                )
+
+                # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
+                # resized during the call to `_get_archetype_index`.
+                old_archetype_idx = self._archetype_map[
+                    old_archetype[].get_node_index()
+                ]
+                old_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(index(old_archetype_idx))
+                )
+
+                new_archetype = Pointer(
+                    to=self._archetypes.unsafe_get(new_archetype_idx)
+                )
+
+                new_archetype[].reserve(
+                    len(new_archetype[]) + len(old_archetype[])
+                )
+
+                # Save arch_start_idx for the iterator.
+                arch_start_idx = len(new_archetype[])
+                arch_start_idcs.append(arch_start_idx)
+                changed_archetype_idcs.append(new_archetype_idx)
+
+                # Move entities to the new archetype and update entity index mappings
+                for i in range(len(old_archetype[])):
+                    entity = old_archetype[].get_entity(i)
+                    new_index = new_archetype[].add(entity)
+                    self._entities[entity.get_id()] = EntityIndex(
+                        new_index, new_archetype_idx
+                    )
+
+                # Move component data from old archetype to new archetype.
+                for i in range(old_archetype[]._component_count):
+                    id = old_archetype[]._ids[i]
+
+                    new_archetype[].unsafe_set(
+                        arch_start_idx,
+                        id,
+                        old_archetype[]._data[id],
+                        len(old_archetype[]),
+                    )
+
+                old_archetype[].clear()
+
+        # Return iterator to iterate over the changed entities.
+        iterator = Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ](
+            Pointer(to=self._locks),
+            Self.ArchetypeIterator[
+                __origin_of(self._archetypes),
+                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            ](
+                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
+                    Pointer(to=self._archetypes), changed_archetype_idcs^
+                ),
+            ),
+            StaticOptional(arch_start_idcs^),
         )
 
     @always_inline
@@ -1539,9 +1656,9 @@ struct World[*component_types: ComponentType](
         has_without_mask: Bool = False, has_start_indices: Bool = False
     ](
         mut self,
-        owned mask: BitMask,
-        owned without_mask: StaticOptional[BitMask, has_without_mask],
-        owned start_indices: _EntityIterator[
+        mask: BitMask,
+        without_mask: StaticOptional[BitMask, has_without_mask],
+        var start_indices: _EntityIterator[
             __origin_of(self._archetypes),
             __origin_of(self._locks),
             *component_types,
@@ -1591,7 +1708,7 @@ struct World[*component_types: ComponentType](
                     without_mask,
                 )
             ),
-            start_indices,
+            start_indices^,
         )
 
     @always_inline

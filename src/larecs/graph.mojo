@@ -3,7 +3,7 @@ from .bitmask import BitMask
 
 
 @fieldwise_init
-struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
+struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
     """Node in a BitMaskGraph.
 
     Parameters:
@@ -24,7 +24,7 @@ struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
     # The mask of the node.
     var bit_mask: BitMask
 
-    fn __init__(out self, bit_mask: BitMask, owned value: DataType):
+    fn __init__(out self, bit_mask: BitMask, var value: DataType):
         """Initializes the node with the given mask and value.
 
         Args:
@@ -35,14 +35,13 @@ struct Node[DataType: KeyElement](Copyable, ExplicitlyCopyable, Movable):
         self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
         self.bit_mask = bit_mask
 
-    fn copy(self, out other: Self):
-        other = Self(self.bit_mask, self.value)
+    fn __copyinit__(out self, other: Self):
+        self = Self(other.bit_mask, other.value.copy())
 
 
 struct BitMaskGraph[
     DataType: KeyElement, //,
     null_value: DataType,
-    hint_trivial_type: Bool = False,
 ](Copyable, Movable):
     """A graph where each node is identified by a BitMask.
 
@@ -56,30 +55,26 @@ struct BitMaskGraph[
     Parameters:
         DataType:   The type of the value stored in the nodes.
         null_value: The place holder stored in nodes by default.
-        hint_trivial_type: Hint to the compiler whether the type
-                    is trivially copyable.
     """
 
     # The node index indicating a non-established link.
     alias null_index = Node[DataType].null_index
 
     # The list of nodes in the graph.
-    var _nodes: List[Node[DataType], hint_trivial_type=hint_trivial_type]
+    var _nodes: List[Node[DataType]]
 
     # A mapping for random lookup of nodes by their mask.
     # Used for slow lookup of nodes.
     var _map: Dict[BitMask, Int]
 
-    fn __init__(out self, owned first_value: DataType = Self.null_value):
+    fn __init__(out self, var first_value: DataType = Self.null_value):
         """Initializes the graph.
 
         Args:
             first_value: The value stored in the first node,
                          corresponding to an empty bitmask.
         """
-        self._nodes = List[
-            Node[DataType], hint_trivial_type=hint_trivial_type
-        ]()
+        self._nodes = List[Node[DataType]]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value^)
 
@@ -87,7 +82,7 @@ struct BitMaskGraph[
     fn add_node(
         mut self,
         node_mask: BitMask,
-        owned value: DataType = Self.null_value,
+        var value: DataType = Self.null_value,
     ) -> Int:
         """Adds a node to the graph.
 
@@ -205,4 +200,4 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
-        return self[node_index] != Self.null_value
+        return self[node_index] != materialize[Self.null_value]()
