@@ -293,7 +293,7 @@ struct BitMask(
         """
         return MaskFilter(
             include=self,
-            exclude=self.invert(),
+            exclude=~self,
         )
 
     @always_inline
@@ -432,17 +432,6 @@ struct BitMask(
         var idx: Self.IndexType = bit >> 3  # equivalent to bit // 8
         var offset: Self.IndexType = bit & 7  # equivalent to bit - (8 * idx)
         self._bytes[index(idx)] ^= 1 << offset
-
-    @always_inline
-    fn invert(self) -> BitMask:
-        """Returns the inversion of this mask.
-
-        Creates a new mask where all bits are flipped (0 becomes 1, 1 becomes 0).
-
-        Returns:
-            A new BitMask with all bits inverted.
-        """
-        return ~self
 
     @always_inline
     fn is_zero(self) -> Bool:
