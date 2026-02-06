@@ -129,10 +129,6 @@ struct BitMask(
 
         Returns:
             A new BitMask containing the bitwise OR of both masks.
-
-        **Performance Note:**
-        This operation is highly optimized using SIMD instructions for fast parallel
-        bitwise operations across all 256 bits simultaneously.
         """
         result = self.copy()
         result |= other
@@ -147,10 +143,6 @@ struct BitMask(
 
         Args:
             other: The BitMask to perform the bitwise OR operation with.
-
-        **Performance Note:**
-        This operation is optimized using SIMD instructions for efficient parallel
-        processing of all 256 bits.
         """
         self._bytes |= other._bytes
 
@@ -166,10 +158,6 @@ struct BitMask(
 
         Returns:
             A new BitMask containing the bitwise AND of both masks.
-
-        **Performance Note:**
-        This operation is highly optimized using SIMD instructions for fast parallel
-        bitwise operations across all 256 bits simultaneously.
         """
         result = self.copy()
         result &= other
@@ -184,10 +172,6 @@ struct BitMask(
 
         Args:
             other: The BitMask to perform the bitwise AND operation with.
-
-        **Performance Note:**
-        This operation is optimized using SIMD instructions for efficient parallel
-        processing of all 256 bits.
         """
         self._bytes &= other._bytes
 
