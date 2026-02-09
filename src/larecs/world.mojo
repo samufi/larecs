@@ -38,9 +38,6 @@ struct WorldErrors:
     alias missing_components_for_removal_query_msg = "Query matches entities that do not have all the components to remove. Use `Query[Component, ...]()` to include those components."
     alias duplicate_components_for_addition_entity_msg = "Entity already has one of the components to add."
     alias duplicate_components_for_addition_query_msg = "Query matches entities that already have some of the components to add. Use `Query.without[Component, ...]()` to exclude those components."
-    alias inconsistent_remove_some_and_rem_size_msg[
-        fn_name: StringLiteral
-    ] = "Invalid use of `world." + fn_name + "`: `rem_size` must be zero when `remove_some` is False."
 
     alias non_existent_entity = Error(Self.non_existent_entity_msg)
     alias world_is_locked = Error(Self.world_is_locked_msg)
@@ -212,7 +209,6 @@ struct Replacer[
 
         self._world[]._remove_and_add[
             *AddTs,
-            remove_some=True,
             rem_size=size,
             remove_ids = Self.remove_ids,
         ](entity, components)
@@ -226,7 +222,7 @@ struct Replacer[
         query: QueryInfo[has_without_mask=has_without_mask],
         out iterator: __type_of(
             self._world[]._batch_remove_and_add[
-                remove_some=True, rem_size=size, remove_ids = Self.remove_ids
+                rem_size=size, remove_ids = Self.remove_ids
             ](query, components)
         ),
     ) raises:
@@ -248,7 +244,6 @@ struct Replacer[
         """
 
         return self._world[]._batch_remove_and_add[
-            remove_some=True,
             rem_size=size,
             remove_ids = Self.remove_ids,
         ](
@@ -270,9 +265,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     alias _components_size[*Ts: ComponentType] = VariadicPack[
         True, MutableAnyOrigin, ComponentType, *Ts
     ].__len__()
-    alias _components_is_empty[*Ts: ComponentType] = True if Self._components_size[
+    alias _components_is_empty[*Ts: ComponentType] = Self._components_size[
         *Ts
-    ] > 0 else False
+    ] > 0
 
     """
     Internal type aliases for component ID management and archetype handling.
@@ -1082,7 +1077,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add[
-            remove_some = Self._components_is_empty[*Ts],
             rem_size = Self._components_size[*Ts],
             remove_ids = Self._optional_component_ids[*Ts],
         ](
@@ -1096,7 +1090,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         query: QueryInfo[has_without_mask=has_without_mask],
         out iterator: __type_of(
             self._batch_remove_and_add[
-                remove_some = Self._components_is_empty[*Ts],
                 rem_size = Self._components_size[*Ts],
                 remove_ids = Self._optional_component_ids[*Ts],
             ](query)
@@ -1149,7 +1142,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     into one.  This also enables potential parallelization optimizations.
 
         return self._batch_remove_and_add[
-            remove_some = Self._components_is_empty[*Ts],
             rem_size = Self._components_size[*Ts],
             remove_ids = Self._optional_component_ids[*Ts],
         ](query)
@@ -1181,9 +1173,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     fn _remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_some: Bool = False,
         remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
+            InlineArray[Self.Id, rem_size], rem_size > 0
         ] = None,
     ](mut self, entity: Entity, *add_components: *Ts) raises:
         """
@@ -1192,7 +1183,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts:          The types of the components to add.
             rem_size:    The number of components to remove.
-            remove_some: Whether to remove some components.
             remove_ids:     The IDs of the components to remove.
 
         Args:
@@ -1205,17 +1195,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._remove_and_add[
-            rem_size=rem_size, remove_some=remove_some, remove_ids=remove_ids
-        ](entity, add_components)
+        self._remove_and_add[rem_size=rem_size, remove_ids=remove_ids](
+            entity, add_components
+        )
 
     @always_inline
     fn _remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_some: Bool = False,
         remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
+            InlineArray[Self.Id, rem_size], rem_size > 0
         ] = None,
     ](
         mut self,
@@ -1229,13 +1218,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         alias add_size = add_components.__len__()
         alias add_ids = Self.component_manager.get_id_arr[*Ts]()
-
-        constrained[
-            remove_some or not rem_size,
-            WorldErrors.inconsistent_remove_some_and_rem_size_msg[
-                "_remove_and_add"
-            ],
-        ]()
 
         runtime_remove_ids = materialize[remove_ids]()
 
@@ -1256,7 +1238,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         old_archetype_mask = old_archetype[].get_mask()
 
         @parameter
-        if remove_some:
+        if rem_size:
             if not old_archetype_mask.contains(BitMask(runtime_remove_ids[])):
                 raise WorldErrors.missing_components_for_removal_entity
 
@@ -1265,7 +1247,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             compare_mask = old_archetype_mask
 
             @parameter
-            if remove_some:
+            if rem_size:
                 compare_mask.set(runtime_remove_ids[], False)
             if compare_mask.contains(BitMask(add_ids)):
                 raise WorldErrors.duplicate_components_for_addition_entity
@@ -1333,9 +1315,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     fn _batch_remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_some: Bool = False,
         remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
+            InlineArray[Self.Id, rem_size], rem_size > 0
         ] = None,
         has_without_mask: Bool = False,
     ](
@@ -1355,7 +1336,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts:                 The types of the components to add.
             rem_size:           The number of components to remove.
-            remove_some:        Whether to remove some components.
             remove_ids:         The IDs of the components to remove.
             has_without_mask:   Whether the query has a without mask.
 
@@ -1374,16 +1354,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         return self._batch_remove_and_add[
-            remove_some=remove_some, rem_size=rem_size, remove_ids=remove_ids
+            rem_size=rem_size, remove_ids=remove_ids
         ](query, add_components)
 
     @always_inline
     fn _batch_remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_some: Bool = False,
         remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
+            InlineArray[Self.Id, rem_size], rem_size > 0
         ] = None,
         has_without_mask: Bool = False,
     ](
@@ -1403,7 +1382,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts:          The types of the components to add.
             rem_size:    The number of components to remove.
-            remove_some: Whether to remove some components.
             remove_ids:     The IDs of the components to remove.
             has_without_mask: Whether the query has a without mask.
 
@@ -1422,13 +1400,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         alias add_ids = Self.component_manager.get_id_arr[*Ts]()
 
         alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
-
-        constrained[
-            remove_some or not rem_size,
-            WorldErrors.inconsistent_remove_some_and_rem_size_msg[
-                "_batch_remove_and_add"
-            ],
-        ]()
 
         runtime_remove_ids = materialize[remove_ids]()
 
@@ -1462,10 +1433,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     archetype_mask = archetype[].get_mask()
 
                     @parameter
-                    if remove_some:
-                        archetype_mask.set(
-                            runtime_remove_ids[], False
-                        )
+                    if rem_size:
+                        archetype_mask.set(runtime_remove_ids[], False)
 
                     if archetype[] and archetype_mask.contains_any(
                         BitMask(add_ids)
