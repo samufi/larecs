@@ -1266,7 +1266,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             @parameter
             if remove_some:
-                compare_mask = compare_mask.set(runtime_remove_ids[], False)
+                compare_mask.set(runtime_remove_ids[], False)
             if compare_mask.contains(BitMask(add_ids)):
                 raise WorldErrors.duplicate_components_for_addition_entity
 
@@ -1463,7 +1463,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
                     @parameter
                     if remove_some:
-                        archetype_mask = archetype_mask.set(
+                        archetype_mask.set(
                             runtime_remove_ids[], False
                         )
 
