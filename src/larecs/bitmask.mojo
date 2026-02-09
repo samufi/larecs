@@ -136,11 +136,8 @@ struct BitMask(
 
         Args:
             hasher: The hasher to update with the mask's bytes.
-
-        Returns:
-            The updated hasher after processing the mask's bytes.
         """
-        return hasher.update(self._bytes)
+        hasher.update(self._bytes)
 
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
@@ -497,7 +494,7 @@ struct BitMask(
 
         Creates an iterator that yields the index of each bit set to True.
 
-        Args:
-            result: Output parameter that receives the iterator.
+        Returns:
+            An iterator over the indices of the bits that are set.
         """
         result = _BitMaskIndexIter(self._bytes)
