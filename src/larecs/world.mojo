@@ -35,7 +35,7 @@ struct WorldErrors:
     alias non_existent_entity_msg = "The considered entity does not exist anymore."
     alias world_is_locked_msg = "Attempt to modify a locked world."
     alias missing_components_for_removal_entity_msg = "Entity does not have all the components to remove."
-    alias missing_components_for_removal_query_msg = "Query matches entities that do not have all the components to remove. Use `Query(Component, ...)` to include those components."
+    alias missing_components_for_removal_query_msg = "Query matches entities that do not have all the components to remove. Use `Query[Component, ...]()` to include those components."
     alias duplicate_components_for_addition_entity_msg = "Entity already has one of the components to add."
     alias duplicate_components_for_addition_query_msg = "Query matches entities that already have some of the components to add. Use `Query.without[Component, ...]()` to exclude those components."
     alias inconsistent_remove_some_and_rem_size_msg[
