@@ -135,7 +135,7 @@ struct Replacer[
         out iterator: __type_of(self._by(components, query=query)),
     ) raises:
         """
-        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+        Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
 
         Parameters:
             AddTs: The types of the components to add.
@@ -165,7 +165,7 @@ struct Replacer[
         out iterator: __type_of(self._by(components, query=query)),
     ) raises:
         """
-        Removes and adds the components to a multiple [..entity.Entity] specified by a [..query.Query].
+        Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
 
         Parameters:
             AddTs: The types of the components to add.
@@ -231,7 +231,7 @@ struct Replacer[
         ),
     ) raises:
         """
-        Private helper to remove and add components to multiple [..entity.Entity] specified by a [..query.Query].
+        Private helper to remove and add components to multiple [..entity.Entity Entities] specified by a [..query.Query].
 
         Parameters:
             AddTs: The types of the components to add.
@@ -627,7 +627,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             has_start_indices=True,
         ],
     ) raises:
-        """Adds a batch of [..entity.Entity]s.
+        """Adds a batch of [..entity.Entity Entities].
 
         The given component types are added to the entities.
         Do not use during [.World.query] iteration!
@@ -670,7 +670,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the world is [.World.is_locked locked].
 
         Returns:
-            An iterator to the new or recycled [..entity.Entity]s.
+            An iterator to the new or recycled [..entity.Entity Entities].
 
         """
         self._assert_unlocked()
@@ -716,7 +716,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
         """
-        Creates an Entity and adds it to the given archetype.
+        Creates an [..entity.Entity] and adds it to the given archetype.
 
         Returns:
             The new entity.
@@ -731,7 +731,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     fn _create_entities(mut self, archetype_index: Int, count: Int) -> UInt:
         """
-        Creates multiple Entities and adds them to the given archetype.
+        Creates multiple [..entity.Entity Entities] and adds them to the given archetype.
 
         Returns:
             The index of the first newly created entity in the archetype.
@@ -804,7 +804,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     fn remove_entities(mut self, query: QueryInfo) raises:
         """
-        Removes multiple entities based on the provided query, making them eligible for recycling.
+        Removes multiple [..entity.Entity Entities] based on the provided query, making them eligible for recycling.
 
         Example:
 
@@ -1007,7 +1007,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ),
     ) raises:
         """
-        Adds components to multiple entities at once that are specified by a [..query.Query].
+        Adds components to multiple [..entity.Entity Entities] at once that are specified by a [..query.Query].
         The provided query must ensure that matching entities do not already have one or more of the
         components to add.
 
@@ -1157,7 +1157,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         remove_ids = Self.component_manager.get_id_arr[*Ts](),
     ]:
         """
-        Returns a [.Replacer] for removing and adding components to an Entity in one go.
+        Returns a [.Replacer] for removing and adding components to an [..entity.Entity] in one go.
 
         Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, comp5, entity=entity)`.
 
@@ -1343,7 +1343,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Adds and removes components to a multiple [..entity.Entity] specified by a [..query.QueryInfo].
+        Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
 
         Parameters:
             Ts:                 The types of the components to add.
@@ -1391,7 +1391,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Adds and removes components to a multiple [..entity.Entity] specified by a [..query.QueryInfo].
+        Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
 
         Parameters:
             Ts:          The types of the components to add.
@@ -1879,7 +1879,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Creates an iterator over all entities that have / do not have the components in the provided masks.
+        Creates an iterator over all [..entity.Entity Entities] that have / do not have the components in the provided masks.
 
         Parameters:
             has_without_mask: Whether a without_mask is provided.
