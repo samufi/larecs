@@ -1,5 +1,8 @@
-[project]
-authors = ["Samuel M. Fischer <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
+[workspace]
+authors = [
+    "Samuel M. Fischer <samufi@web.de>",
+    "Martin Lange <martin_lange_@gmx.net>",
+]
 channels = ["conda-forge", "https://repo.prefix.dev/max"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
