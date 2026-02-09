@@ -18,7 +18,7 @@ def test_concatenate_inline_arrays_uint8():
 
 
 def test_concatenate_inline_arrays_uint16():
-    left = InlineArray[UInt16, 0]()
+    left = InlineArray[UInt16, 0](uninitialized = True)
     right = InlineArray[UInt16, 2](3003, 4004)
 
     result = concatenate_inline_arrays(left, right)
