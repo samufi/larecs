@@ -1,4 +1,4 @@
-[project]
+[workspace]
 authors = ["samufi <samufi@web.de>", "Martin Lange <martin_lange_@gmx.net>"]
 channels = ["conda-forge", "https://repo.prefix.dev/max"]
 description = "Benchmarking plots for Larecs🌲"
