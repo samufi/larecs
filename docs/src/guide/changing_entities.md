@@ -138,7 +138,10 @@ Sometimes you need to add or remove components from multiple entities at once.
 Larecs🌲 provides batch operations that are more efficient than performing
 individual operations on each entity.
 
-#### Batch-adding components
+> [!Tip]
+> Batch operations are significantly more efficient than individual operations
+> when working with large numbers of entities, as they minimize memory
+> reorganization and improve cache locality.
 
 You can add components to multiple entities that match a query using the
 {{< api World.add add >}} method with a query:
@@ -168,15 +171,10 @@ This is significantly more efficient than adding components to entities one by o
 entities = List[Entity]()
 for entity in world.query[Position]().without[Velocity]():
     entities.append(entity)
-
-for entity in entities:
-    world.add(entity, Velocity(1.0, 0.5))  # Individual operations
 ```
 
-#### Batch-removing components
-
-You can remove components from multiple entities that match a query using the
-{{< api World.remove remove >}} method with a query:
+Similar methods exist also for {{< api World.remove removing >}} and
+{{< api World.replace replacing >}} components from multiple entities at once.
 
 ```mojo {doctest="guide_change_entities"}
 # Add 10 entities with Position and Velocity components
@@ -193,13 +191,8 @@ world.remove[Position, Velocity](
 )
 ```
 
-The query must ensure that all matching entities have the components you want to remove,
-otherwise an error will be raised.
-
-#### Batch-replacing components
-
-You can replace components of multiple entities that match a query using the
-{{< api World.replace replace >}} method in combination with {{< api Replacer.by by >}}:
+For batch replace operations you also have to use the {{< api Replacer.by by >}} helper method to specify which 
+components should be used as replacement.
 
 ```mojo {doctest="guide_change_entities"}
 # Add 10 entities with Position components
@@ -219,7 +212,6 @@ world.replace[Position, Velocity]().by(
 )
 ```
 
-> [!Tip]
-> Batch operations are significantly more efficient than individual operations
-> when working with large numbers of entities, as they minimize memory
-> reorganization and improve cache locality.
+> [!Important]
+> The query must ensure that all matching entities have the components you want to remove,
+> otherwise an error will be raised.
