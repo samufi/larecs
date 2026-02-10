@@ -1,6 +1,7 @@
 from bit import pop_count, bit_not
 from .filter import MaskFilter
 from hashlib import Hasher
+from io.write import Writable, Writer
 
 
 @fieldwise_init
@@ -59,7 +60,12 @@ struct _BitMaskIndexIter(ImplicitlyCopyable, Movable, Sized):
 
 @register_passable
 struct BitMask(
-    EqualityComparable, ImplicitlyCopyable, KeyElement, Movable, Stringable
+    EqualityComparable,
+    ImplicitlyCopyable,
+    KeyElement,
+    Movable,
+    Stringable,
+    Writable,
 ):
     """A 256-bit bitmask for efficient set operations."""
 
@@ -252,6 +258,26 @@ struct BitMask(
                 result += "0"
         result += "]"
         return result
+
+    fn write_to[W: Writer](self, mut writer: W):
+        """Writes the mask to a writer.
+
+        Emits the bitmask in the same format as [.__str__], as a bracketed
+        256-bit string.
+
+        Parameters:
+            W: The writer type to write into.
+
+        Args:
+            writer: The destination writer.
+        """
+        writer.write("[")
+        for i in range(len(self._bytes) * 8):
+            if self.get(i):
+                writer.write("1")
+            else:
+                writer.write("0")
+        writer.write("]")
 
     @always_inline
     fn __repr__(self) -> String:
