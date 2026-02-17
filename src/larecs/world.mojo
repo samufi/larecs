@@ -262,7 +262,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
-    alias _components_size[*Ts: ComponentType] = VariadicPack[
+    alias _component_count[*Ts: ComponentType] = VariadicPack[
         True, MutableAnyOrigin, ComponentType, *Ts
     ].__len__()
     alias _components_is_empty[*Ts: ComponentType] = Self._components_size[
