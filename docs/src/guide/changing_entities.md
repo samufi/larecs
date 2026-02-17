@@ -191,7 +191,7 @@ world.remove[Position, Velocity](
 )
 ```
 
-For batch replace operations you also have to use the {{< api Replacer.by by >}} helper method to specify which 
+For batch replace operations, you also need to use the {{< api Replacer.by by >}} helper method to specify which 
 components should be used as replacement.
 
 ```mojo {doctest="guide_change_entities"}
