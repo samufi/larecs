@@ -213,5 +213,5 @@ world.replace[Position, Velocity]().by(
 ```
 
 > [!Important]
-> The query must ensure that all matching entities have the components you want to remove,
+> The query must ensure that all matching entities have the components you want to remove;
 > otherwise an error will be raised.
