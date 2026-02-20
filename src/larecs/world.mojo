@@ -1515,25 +1515,33 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     to=self._archetypes.unsafe_get(new_archetype_idx)
                 )
 
-                new_archetype[].reserve(
-                    len(new_archetype[]) + len(old_archetype[])
-                )
-
-                # Save arch_start_idx for the iterator.
-                arch_start_idx = len(new_archetype[])
-                arch_start_idcs.append(arch_start_idx)
-                changed_archetype_idcs.append(new_archetype_idx)
-
-                # Move component data from old archetype to new archetype.
-                for i in range(old_archetype[]._component_count):
-                    id = old_archetype[]._ids[i]
-
-                    new_archetype[].unsafe_set(
-                        arch_start_idx,
-                        id,
-                        old_archetype[]._data[id],
-                        len(old_archetype[]),
+                # If the new archetype is empty, we can optimize component movement by just pointing to the component data in the old archetype without actually moving any data. We just need to make sure to properly initialize the new archetype's metadata and to reserve space for new components that get added.
+                if len(new_archetype[]) == 0:
+                    new_archetype[].move_data_from(
+                        old_archetype[]._data.copy(),
+                        old_archetype[]._item_sizes.copy(),
+                        old_archetype[]._component_count,
                     )
+                else:
+                    new_archetype[].reserve(
+                        len(new_archetype[]) + len(old_archetype[])
+                    )
+
+                    # Save arch_start_idx for the iterator.
+                    arch_start_idx = len(new_archetype[])
+                    arch_start_idcs.append(arch_start_idx)
+                    changed_archetype_idcs.append(new_archetype_idx)
+
+                    # Move component data from old archetype to new archetype.
+                    for i in range(old_archetype[]._component_count):
+                        id = old_archetype[]._ids[i]
+
+                        new_archetype[].unsafe_set(
+                            arch_start_idx,
+                            id,
+                            old_archetype[]._data[id],
+                            len(old_archetype[]),
+                        )
 
                 # Move entities to the new archetype and update entity index mappings
                 for i in range(len(old_archetype[])):
