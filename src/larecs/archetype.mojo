@@ -397,6 +397,18 @@ struct Archetype[
         """
         return Bool(self._size)
 
+    fn reinit_data(mut self):
+        """
+        Reinitializes the data pointed to by `self._data` of the archetype without changing the component layout.
+        """
+        self._capacity = DEFAULT_CAPACITY
+
+        for i in range(self._component_count):
+            id = self._ids[i]
+            self._data[id] = UnsafePointer[UInt8].alloc(
+                self._capacity * index(self._item_sizes[id])
+            )
+
     @always_inline
     fn get_node_index(self) -> UInt:
         """Returns the index of the archetype's node in the archetype graph.
