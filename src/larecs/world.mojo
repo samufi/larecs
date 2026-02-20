@@ -1517,11 +1517,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
                 # If the new archetype is empty, we can optimize component movement by just pointing to the component data in the old archetype without actually moving any data. We just need to make sure to properly initialize the new archetype's metadata and to reserve space for new components that get added.
                 if len(new_archetype[]) == 0:
-                    new_archetype[].move_data_from(
+                    new_archetype[].shallow_copy_from(
+                        old_archetype[]._ids,
                         old_archetype[]._data.copy(),
                         old_archetype[]._item_sizes.copy(),
                         old_archetype[]._component_count,
+                        old_archetype[]._capacity,
                     )
+                    old_archetype[].reinit_data()
                 else:
                     new_archetype[].reserve(
                         len(new_archetype[]) + len(old_archetype[])
