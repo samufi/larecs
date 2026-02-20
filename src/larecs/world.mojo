@@ -265,7 +265,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     alias _component_count[*Ts: ComponentType] = VariadicPack[
         True, MutableAnyOrigin, ComponentType, *Ts
     ].__len__()
-    alias _components_is_empty[*Ts: ComponentType] = Self._components_size[
+    alias _components_is_empty[*Ts: ComponentType] = Self._component_count[
         *Ts
     ] > 0
 
@@ -278,7 +278,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     alias _optional_component_ids[*Ts: ComponentType] = StaticOptional[
         InlineArray[
             Self.Id,
-            Self._components_size[*Ts],
+            Self._component_count[*Ts],
         ],
         Self._components_is_empty[*Ts],
     ](Self.component_manager.get_id_arr[*Ts]())
@@ -1077,7 +1077,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         self._remove_and_add[
-            rem_size = Self._components_size[*Ts],
+            rem_size = Self._component_count[*Ts],
             remove_ids = Self._optional_component_ids[*Ts],
         ](
             entity,
@@ -1090,7 +1090,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         query: QueryInfo[has_without_mask=has_without_mask],
         out iterator: __type_of(
             self._batch_remove_and_add[
-                rem_size = Self._components_size[*Ts],
+                rem_size = Self._component_count[*Ts],
                 remove_ids = Self._optional_component_ids[*Ts],
             ](query)
         ),
@@ -1142,7 +1142,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     into one.  This also enables potential parallelization optimizations.
 
         return self._batch_remove_and_add[
-            rem_size = Self._components_size[*Ts],
+            rem_size = Self._component_count[*Ts],
             remove_ids = Self._optional_component_ids[*Ts],
         ](query)
 
@@ -1151,7 +1151,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType
     ](mut self) -> Replacer[
         __origin_of(self),
-        Self._components_size[*Ts],
+        Self._component_count[*Ts],
         *component_types,
         remove_ids = Self.component_manager.get_id_arr[*Ts](),
     ]:
