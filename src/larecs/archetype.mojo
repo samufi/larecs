@@ -560,6 +560,57 @@ struct Archetype[
         )
 
     @always_inline
+    fn unsafe_set_data_ptr(
+        mut self,
+        data_ptrs: InlineArray[UnsafePointer[UInt8], Self.max_size],
+        component_count: Int,
+    ):
+        """
+        Sets the pointer of the component with the given id to the provided pointer.
+
+        Args:
+            data_ptrs: Pointer to the component data.
+            component_count: The amount of components pointed to by data_ptrs.
+        """
+        for i in range(component_count):
+            self._data[i] = data_ptrs[i]
+
+    @always_inline
+    fn unsafe_set_item_sizes(
+        mut self,
+        item_sizes: InlineArray[UInt32, Self.max_size],
+        component_count: Int,
+    ):
+        """
+        Sets the item sizes of the components in the archetype.
+
+        Args:
+            item_sizes: The item sizes of each component.
+            component_count: The amount of components in item_sizes.
+        """
+        for i in range(component_count):
+            self._item_sizes[i] = item_sizes[i]
+
+    @always_inline
+    fn move_data_from(
+        mut self,
+        data: InlineArray[UnsafePointer[UInt8], Self.max_size],
+        item_sizes: InlineArray[UInt32, Self.max_size],
+        component_count: Int,
+    ):
+        """
+        Copies data to the component with the given id from the provided pointer.
+
+        Args:
+            data: Pointer to the component data to copy.
+            item_sizes: The item sizes of each component.
+            component_count: The amount of components in item_sizes and data.
+        """
+        self.unsafe_set_data_ptr(data, component_count)
+        self.unsafe_set_item_sizes(item_sizes, component_count)
+        self._capacity = component_count
+
+    @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
         """Returns the component with the given id at the given index.
 
