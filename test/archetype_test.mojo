@@ -182,7 +182,7 @@ def test_archetype_shallow_copy():
     comp = LargerComponent(1.0, 2.0, 3.0)
     entity.set(comp.copy())
 
-    comp_id = archetype1._ids[1]
+    comp_id = archetype1._ids[0]
     comp_size = archetype1._item_sizes[comp_id]
     assert_equal(
         archetype1._data[comp_id]
@@ -201,7 +201,7 @@ def test_archetype_shallow_copy():
         archetype1._capacity,
     )
 
-    comp_id = archetype2._ids[1]
+    comp_id = archetype2._ids[0]
     comp_size = archetype2._item_sizes[comp_id]
     assert_equal(
         archetype2._data[comp_id]
