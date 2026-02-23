@@ -397,7 +397,7 @@ struct Archetype[
         """
         return Bool(self._size)
 
-    fn reinit_data(mut self):
+    fn reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
         """
         Reinitializes the data pointed to by `self._data` of the archetype without changing the component layout.
         """
@@ -405,9 +405,10 @@ struct Archetype[
 
         for i in range(self._component_count):
             id = self._ids[i]
-            self._data[id] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(self._item_sizes[id])
-            )
+            if id in ids:
+                self._data[id] = UnsafePointer[UInt8].alloc(
+                    self._capacity * index(self._item_sizes[id])
+                )
 
     @always_inline
     fn get_node_index(self) -> UInt:
@@ -590,18 +591,19 @@ struct Archetype[
             component_count: The amount of components in item_sizes and data.
             capacity: The capacity of the archetype after copying the data.
         """
-        self._capacity = capacity
-
         for i in range(self._component_count):
             id = self._ids[i]
-            self._data[id].free()
-            if id not in ids:
+            if id not in ids and self._capacity < capacity:
+                self._data[id].free()
                 self._data[id] = UnsafePointer[UInt8]().alloc(
-                    self._capacity * index(self._item_sizes[id])
+                    capacity * index(self._item_sizes[id])
                 )
             else:
+                self._data[id].free()
                 self._data[id] = data[id]
                 self._item_sizes[id] = item_sizes[id]
+
+        self._capacity = capacity
 
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:

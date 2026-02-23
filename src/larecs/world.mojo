@@ -1524,7 +1524,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         old_archetype[]._component_count,
                         old_archetype[]._capacity,
                     )
-                    old_archetype[].reinit_data()
+                    old_archetype[].reinit_components(new_archetype[]._ids)
                 else:
                     new_archetype[].reserve(
                         len(new_archetype[]) + len(old_archetype[])
