@@ -193,7 +193,7 @@ def test_archetype_shallow_copy():
     )
 
     var archetype2 = Archetype(0, id3Arr)
-    archetype2.shallow_copy_from(
+    archetype2.unsafe_take_data_from_parts(
         archetype1._ids,
         archetype1._data,
         archetype1._item_sizes,

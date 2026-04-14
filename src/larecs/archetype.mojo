@@ -397,9 +397,19 @@ struct Archetype[
         """
         return Bool(self._size)
 
-    fn reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
-        """
-        Reinitializes the data pointed to by `self._data` of the archetype without changing the component layout.
+    fn unsafe_reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
+        """Reinitializes owned component storage while keeping the component layout intact.
+
+        Important:
+        This is intended for internal ownership-transfer flows where another archetype has
+        taken over the old storage pointers and this archetype must regain valid, uniquely
+        owned allocations before continuing.
+
+        The component IDs themselves are not changed here; they are read from `self._ids`
+        to determine which component buffers must be reallocated.
+
+        Args:
+            ids: The IDs of the components that should get reinitialized.
         """
         self._capacity = DEFAULT_CAPACITY
 
@@ -573,7 +583,7 @@ struct Archetype[
         )
 
     @always_inline
-    fn shallow_copy_from(
+    fn unsafe_take_data_from_parts(
         mut self,
         ids: SIMD[Self.dType, Self.max_size],
         data: InlineArray[UnsafePointer[UInt8], Self.max_size],
@@ -581,15 +591,22 @@ struct Archetype[
         component_count: Int,
         capacity: UInt,
     ):
-        """
-        Copies the component data pointers and item sizes from another archetype without copying the actual component data.
+        """Unsafely takes ownership of component storage described by raw archetype parts.
+
+        This helper transfers pointer ownership into `self` without cloning the underlying
+        component buffers. It is therefore only valid for internal handoff paths where the
+        caller guarantees that the source storage will not remain managed by another
+        archetype after this call. In practice, the source archetype must either be
+        reinitialized immediately (by calling [.Archetype.unsafe_reinit_components]) or
+        otherwise prevented from freeing or mutating the same pointers.
 
         Args:
-            ids: The IDs of the components to copy.
-            data: Pointer to the component data to copy.
-            item_sizes: The item sizes of each component.
-            component_count: The amount of components in item_sizes and data.
-            capacity: The capacity of the archetype after copying the data.
+            ids: The component IDs whose metadata and storage ownership are being taken.
+            data: The component storage pointers to transfer into this archetype.
+            item_sizes: The byte width for each component ID in `ids`.
+            component_count: The number of valid component entries contained in `ids`,
+                `data`, and `item_sizes`.
+            capacity: The storage capacity that the transferred buffers were allocated for.
         """
         for i in range(self._component_count):
             id = self._ids[i]
