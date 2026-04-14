@@ -312,13 +312,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
     Primary entity iterator type alias for the World.
 
-    This flexible iterator supports different archetype iteration strategies via the 
+    This flexible iterator supports different archetype iteration strategies via the
     `arch_iter_variant_idx` parameter, enabling optimized iteration patterns for
     different use cases:
 
     - **ByMask iteration** (default): Efficient for component-based queries
     - **ByList iteration**: Optimized for batch operations on known archetype sets
-    
+
     Parameters:
         arch_iter_variant_idx: Selects iteration strategy (ByMask=0, ByList=1)
         has_start_indices: Enables iteration from specific entity ranges (batch ops)
@@ -348,7 +348,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     **Optimizations:**
     - Uses SIMD-optimized bitmask operations for fast archetype matching
-    - Skips empty archetypes automatically to reduce iteration overhead  
+    - Skips empty archetypes automatically to reduce iteration overhead
     - Supports exclusion masks via `has_without_mask` for complex filtering
 
     **Best Use Cases:**
@@ -374,7 +374,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     **Performance Benefits:**
     - Direct archetype access without bitmask matching overhead
-    - Optimal for batch operations where archetype set is predetermined  
+    - Optimal for batch operations where archetype set is predetermined
     - Cache-friendly iteration pattern for contiguous archetype ranges
     - Minimal branching during iteration for maximum throughput
 
