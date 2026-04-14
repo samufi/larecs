@@ -1304,8 +1304,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         swapped = old_archetype[].remove(index_in_old_archetype)
         if swapped:
-            var swapEntity = old_archetype[].get_entity(entity_index.index)
-            self._entities[swapEntity.get_id()].index = entity_index.index
+            var swap_entity = old_archetype[].get_entity(entity_index.index)
+            self._entities[swap_entity.get_id()].index = entity_index.index
 
         self._entities[entity.get_id()] = EntityIndex(
             index_in_new_archetype, new_archetype_idx
