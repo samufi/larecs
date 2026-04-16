@@ -138,7 +138,10 @@ Sometimes you need to add or remove components from multiple entities at once.
 Larecs🌲 provides batch operations that are more efficient than performing
 individual operations on each entity.
 
-#### Batch adding components
+> [!Tip]
+> Batch operations are significantly more efficient than individual operations
+> when working with large numbers of entities, as they minimize memory
+> reorganization and improve cache locality.
 
 You can add components to multiple entities that match a query using the
 {{< api World.add add >}} method with a query:
@@ -168,17 +171,47 @@ This is significantly more efficient than adding components to entities one by o
 entities = List[Entity]()
 for entity in world.query[Position]().without[Velocity]():
     entities.append(entity)
-
-for entity in entities:
-    world.add(entity, Velocity(1.0, 0.5))  # Individual operations
 ```
 
-> [!Note]
-> Currently, only batch adding of components is supported. 
-> Batch removal and replacement operations are planned for future releases.
-> See the [roadmap](../../../README.md#next-steps) for more information.
+Similar methods exist also for {{< api World.remove removing >}} and
+{{< api World.replace replacing >}} components from multiple entities at once.
 
-> [!Tip]
-> Batch operations are significantly more efficient than individual operations
-> when working with large numbers of entities, as they minimize memory
-> reorganization and improve cache locality.
+```mojo {doctest="guide_change_entities"}
+# Add 10 entities with Position and Velocity components
+_ = world.add_entities(Position(0, 0), Velocity(1.0, 1.0), count=10)
+
+# Remove Velocity component from all entities that have both Position and Velocity
+world.remove[Velocity](
+    world.query[Position, Velocity]()
+)
+
+# You can also remove multiple components at once from multiple entities
+world.remove[Position, Velocity](
+    world.query[Position, Velocity]()
+)
+```
+
+For batch replace operations, you also need to use the {{< api Replacer.by by >}} helper method to specify which 
+components should be used as replacement.
+
+```mojo {doctest="guide_change_entities"}
+# Add 10 entities with Position components
+_ = world.add_entities(Position(0, 0), count=10)
+
+# Replace Position with Velocity for all entities that have Position
+world.replace[Position]().by(
+    Velocity(2.0, 2.0)
+    query=world.query[Position](),
+)
+
+# You can also replace multiple components with multiple other components
+world.replace[Position, Velocity]().by(
+    world.query[Position, Velocity](),
+    Direction(0.0, 5.0),
+    Acceleration(0.2, 0.4)
+)
+```
+
+> [!Important]
+> The query must ensure that all matching entities have the components you want to remove;
+> otherwise an error will be raised.

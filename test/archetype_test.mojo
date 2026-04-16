@@ -175,6 +175,43 @@ def test_archetype_copy():
     assert_equal(archetype._ids[1], archetype2._ids[1])
 
 
+def test_archetype_shallow_copy():
+    var archetype1 = Archetype(0, id2Arr)
+    entity_idx = archetype1.add(Entity(10, 3))
+    entity = archetype1.get_entity_accessor(entity_idx)
+    comp = LargerComponent(1.0, 2.0, 3.0)
+    entity.set(comp.copy())
+
+    comp_id = archetype1._ids[0]
+    comp_size = archetype1._item_sizes[comp_id]
+    assert_equal(
+        archetype1._data[comp_id]
+        .offset(entity_idx * comp_size)
+        .bitcast[LargerComponent]()[]
+        .x,
+        comp.x,
+    )
+
+    var archetype2 = Archetype(0, id3Arr)
+    archetype2.unsafe_take_data_from_parts(
+        archetype1._ids,
+        archetype1._data,
+        archetype1._item_sizes,
+        archetype1._component_count,
+        archetype1._capacity,
+    )
+
+    comp_id = archetype2._ids[0]
+    comp_size = archetype2._item_sizes[comp_id]
+    assert_equal(
+        archetype2._data[comp_id]
+        .offset(entity_idx * comp_size)
+        .bitcast[LargerComponent]()[]
+        .x,
+        comp.x,
+    )
+
+
 def test_archetype_add():
     var archetype = Archetype(0, id2Arr)
 
@@ -233,6 +270,7 @@ def main():
     test_archetype_get_component_ptr()
     test_archetype_move()
     test_archetype_copy()
+    test_archetype_shallow_copy()
     test_archetype_add()
     test_archetype_extend()
     print("All tests passed!")

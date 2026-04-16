@@ -172,7 +172,7 @@ struct Query[
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
-            self._mask.invert(),
+            ~self._mask
         )
 
 

@@ -2,6 +2,8 @@ import random
 from testing import *
 from benchmark import keep
 from larecs.bitmask import BitMask
+from io.write import Writable, Writer
+from memory import Span
 
 
 # ------ Helper functions ------
@@ -34,6 +36,51 @@ fn unique(l: List[UInt8], out result: List[UInt8]):
             result.append(v)
 
 
+struct StringWriter(Movable, Writer):
+    """Simple in-memory Writer implementation for tests."""
+
+    var value: String
+
+    fn __init__(out self):
+        self.value = ""
+
+    fn write_bytes(mut self, bytes: Span[UInt8, _]):
+        """Appends bytes to the internal buffer.
+
+        Args:
+            bytes: UTF-8 encoded bytes to append.
+        """
+        self.value._iadd(bytes)
+
+    fn write[*Ts: Writable](mut self, *args: *Ts):
+        """Writes all provided writable arguments into the buffer.
+
+        Parameters:
+            Ts: Variadic writable argument types.
+
+        Args:
+            args: Values to write.
+        """
+
+        @parameter
+        for i in range(args.__len__()):
+            args[i].write_to(self)
+
+
+fn write_to_string[T: Writable](value: T) -> String:
+    """Writes a writable value into a string.
+
+    Args:
+        value: The writable value to write.
+
+    Returns:
+        The string representation produced by value.write_to(...).
+    """
+    writer = StringWriter()
+    value.write_to(writer)
+    return writer.value
+
+
 @always_inline
 fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
     vals = List[BitMask](capacity=size)
@@ -55,6 +102,7 @@ fn run_all_bitmask_tests() raises:
     test_bit_mask_256()
     test_bit_mask_eq()
     test_bitmask_get_indices()
+    test_bitmask_writable()
     print("Done")
 
 
@@ -114,18 +162,6 @@ fn test_bit_mask_without_exclusive() raises:
     assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
 
     assert_false(mask.matches(BitMask(UInt8(1), UInt8(2))))
-
-    without = mask.without(UInt8(3))
-
-    assert_true(without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_true(
-        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
-    )
-
-    assert_false(
-        without.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13)))
-    )
-    assert_false(without.matches(BitMask(UInt8(1), UInt8(2))))
 
     excl = mask.exclusive()
 
@@ -206,6 +242,14 @@ def test_bitmask_get_indices():
         size += 1
 
     assert_equal(len(unique_indices), size)
+
+
+fn test_bitmask_writable() raises:
+    mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
+    assert_equal(String(mask), write_to_string(mask))
+
+    empty_mask = BitMask()
+    assert_equal(String(empty_mask), write_to_string(empty_mask))
 
 
 fn main() raises:

@@ -1,5 +1,6 @@
-from memory import UnsafePointer
+from memory import UnsafePointer, memcpy
 from math import log2
+from sys import size_of
 
 
 # Implementing a function generically over all integral types is not currently possible in Mojo.
@@ -81,3 +82,22 @@ fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
         value |= value >> (2**i)
 
     return value + 1
+
+
+@always_inline
+fn concatenate_inline_arrays[
+    ElementType: Copyable & Movable, a_size: Int, b_size: Int
+](
+    a: InlineArray[ElementType, a_size],
+    b: InlineArray[ElementType, b_size],
+    out result: InlineArray[ElementType, a_size + b_size],
+):
+    result = {uninitialized = True}
+
+    memcpy(result.unsafe_ptr(), a.unsafe_ptr(), a_size)
+
+    memcpy(
+        result.unsafe_ptr().offset(a_size * size_of[ElementType]()),
+        b.unsafe_ptr(),
+        b_size,
+    )

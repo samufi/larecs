@@ -463,16 +463,44 @@ fn benchmark_add_remove_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_remove_1_comp() raises:
+fn prevent_inlining_add_remove() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = SmallWorld()
     entity = world.add_entity(pos)
     world.add(entity, vel)
     world.remove[Velocity](entity)
+    _ = world.add_entities(pos, count=1)
+    query = world.query[Position]().without[Velocity]()
+    _ = world.add(query, vel)
+    _ = world.remove[Position](query)
 
 
-fn benchmark_add_remove_1_comp_1_000_batch_1000(
+fn benchmark_add_remove_1_comp_batch_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    pos = Position(1.0, 2.0)
+    comp = FlexibleComponent[1](1, 42.0)
+
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+
+        # create 1_000_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(pos, count=1_000_000)
+
+        _ = world.add(
+            world.query[Position]().without[FlexibleComponent[1]](), comp
+        )
+        _ = world.remove[FlexibleComponent[1]](
+            world.query[Position, FlexibleComponent[1]]()
+        )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_add_remove_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -526,27 +554,59 @@ fn benchmark_add_remove_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_remove_5_comp() raises:
-    c1 = FlexibleComponent[1](1.0, 2.0)
-    c2 = FlexibleComponent[2](1.0, 2.0)
-    c3 = FlexibleComponent[3](1.0, 2.0)
-    c4 = FlexibleComponent[4](1.0, 2.0)
-    c5 = FlexibleComponent[5](1.0, 2.0)
+fn benchmark_add_remove_5_comp_batch_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
     pos = Position(1.0, 2.0)
+    comp1 = FlexibleComponent[1](1.0, 42.0)
+    comp2 = FlexibleComponent[2](2.0, 42.0)
+    comp3 = FlexibleComponent[3](3.0, 42.0)
+    comp4 = FlexibleComponent[4](4.0, 42.0)
+    comp5 = FlexibleComponent[5](5.0, 42.0)
 
-    world = SmallWorld()
-    entity = world.add_entity(pos)
-    world.add(entity, c1, c2, c3, c4, c5)
-    world.remove[
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-    ](entity)
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = SmallWorld()
+
+        # create 1_000_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(pos, count=1_000_000)
+
+        _ = world.add(
+            world.query[Position]().without[
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+                FlexibleComponent[5],
+            ](),
+            comp1,
+            comp2,
+            comp3,
+            comp4,
+            comp5,
+        )
+        _ = world.remove[
+            FlexibleComponent[1],
+            FlexibleComponent[2],
+            FlexibleComponent[3],
+            FlexibleComponent[4],
+            FlexibleComponent[5],
+        ](
+            world.query[
+                Position,
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+                FlexibleComponent[5],
+            ]()
+        )
+
+    bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_5_comp_1_000_batch_1000(
+fn benchmark_add_remove_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -599,6 +659,16 @@ fn benchmark_add_remove_5_comp_1_000_batch_1000(
     bencher.iter[bench_fn]()
 
 
+fn prevent_inlining_replace() raises:
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
+    entity = world.add_entity(pos)
+    _ = world.replace[Position]().by(entity, vel)
+    query = world.query[Position]().without[Velocity]()
+    _ = world.replace[Position]().by(query, vel)
+
+
 fn benchmark_replace_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
@@ -621,6 +691,218 @@ fn benchmark_replace_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
+fn benchmark_replace_1_comp_batch_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = FullWorld()
+        _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000_000)
+
+        _ = world.replace[FlexibleComponent[0]]().by(
+            world.query[FlexibleComponent[0]](),
+            FlexibleComponent[1](3.0, 4.0),
+        )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_replace_1_comp_1_000_batch_1_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = FullWorld()
+        _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
+
+        for i in range(500):
+            _ = world.replace[FlexibleComponent[0]]().by(
+                world.query[FlexibleComponent[0]](),
+                FlexibleComponent[1](3.0, 4.0),
+            )
+            _ = world.replace[FlexibleComponent[1]]().by(
+                world.query[FlexibleComponent[1]](),
+                FlexibleComponent[0](1.0, 2.0),
+            )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_replace_5_comp_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        for _ in range(50):
+            world = FullWorld()
+            entities = List[Entity]()
+            for _ in range(1000):
+                entities.append(
+                    world.add_entity(
+                        FlexibleComponent[0](1.0, 2.0),
+                        FlexibleComponent[1](3.0, 4.0),
+                        FlexibleComponent[2](5.0, 6.0),
+                        FlexibleComponent[3](7.0, 8.0),
+                        FlexibleComponent[4](9.0, 10.0),
+                    )
+                )
+
+            @parameter
+            for i in range(20):
+                alias base = i * 5
+                for entity in entities:
+                    world.replace[
+                        FlexibleComponent[base + 0],
+                        FlexibleComponent[base + 1],
+                        FlexibleComponent[base + 2],
+                        FlexibleComponent[base + 3],
+                        FlexibleComponent[base + 4],
+                    ]().by(
+                        entity,
+                        FlexibleComponent[base + 5](
+                            i + 11.0, Float32(i + 12.0)
+                        ),
+                        FlexibleComponent[base + 6](
+                            i + 13.0, Float32(i + 14.0)
+                        ),
+                        FlexibleComponent[base + 7](
+                            i + 15.0, Float32(i + 16.0)
+                        ),
+                        FlexibleComponent[base + 8](
+                            i + 17.0, Float32(i + 18.0)
+                        ),
+                        FlexibleComponent[base + 9](
+                            i + 19.0, Float32(i + 20.0)
+                        ),
+                    )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_replace_5_comp_batch_1_000_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = FullWorld()
+        _ = world.add_entities(
+            FlexibleComponent[0](1.0, 2.0),
+            FlexibleComponent[1](3.0, 4.0),
+            FlexibleComponent[2](5.0, 6.0),
+            FlexibleComponent[3](7.0, 8.0),
+            FlexibleComponent[4](9.0, 10.0),
+            count=1_000_000,
+        )
+
+        _ = world.replace[
+            FlexibleComponent[0],
+            FlexibleComponent[1],
+            FlexibleComponent[2],
+            FlexibleComponent[3],
+            FlexibleComponent[4],
+        ]().by(
+            world.query[
+                FlexibleComponent[0],
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+            ](),
+            FlexibleComponent[5](11.0, 12.0),
+            FlexibleComponent[6](13.0, 14.0),
+            FlexibleComponent[7](15.0, 16.0),
+            FlexibleComponent[8](17.0, 18.0),
+            FlexibleComponent[9](19.0, 20.0),
+        )
+
+    bencher.iter[bench_fn]()
+
+
+fn benchmark_replace_5_comp_1_000_batch_1_000(
+    mut bencher: Bencher,
+) raises capturing:
+    @always_inline
+    @parameter
+    fn bench_fn() capturing raises:
+        world = FullWorld()
+        _ = world.add_entities(
+            FlexibleComponent[0](1.0, 2.0),
+            FlexibleComponent[1](3.0, 4.0),
+            FlexibleComponent[2](5.0, 6.0),
+            FlexibleComponent[3](7.0, 8.0),
+            FlexibleComponent[4](9.0, 10.0),
+            count=1_000,
+        )
+
+        for _ in range(500):
+            entity56789 = world.add_entity(
+                FlexibleComponent[5](11.0, 12.0),
+                FlexibleComponent[6](13.0, 14.0),
+                FlexibleComponent[7](15.0, 16.0),
+                FlexibleComponent[8](17.0, 18.0),
+                FlexibleComponent[9](19.0, 20.0),
+            )  # make sure target archetype has already one entity to not take optimized path for empty archetype
+            _ = world.replace[
+                FlexibleComponent[0],
+                FlexibleComponent[1],
+                FlexibleComponent[2],
+                FlexibleComponent[3],
+                FlexibleComponent[4],
+            ]().by(
+                world.query[
+                    FlexibleComponent[0],
+                    FlexibleComponent[1],
+                    FlexibleComponent[2],
+                    FlexibleComponent[3],
+                    FlexibleComponent[4],
+                ](),
+                FlexibleComponent[5](11.0, 12.0),
+                FlexibleComponent[6](13.0, 14.0),
+                FlexibleComponent[7](15.0, 16.0),
+                FlexibleComponent[8](17.0, 18.0),
+                FlexibleComponent[9](19.0, 20.0),
+            )
+            world.remove_entity(
+                entity56789
+            )  # cleanup deoptimization entity to not increase amount of entities moved during replace in next iterations
+            entity01234 = world.add_entity(
+                FlexibleComponent[0](1.0, 2.0),
+                FlexibleComponent[1](3.0, 4.0),
+                FlexibleComponent[2](5.0, 6.0),
+                FlexibleComponent[3](7.0, 8.0),
+                FlexibleComponent[4](9.0, 10.0),
+            )  # make sure target archetype has already one entity to not take optimized path for empty archetype
+            _ = world.replace[
+                FlexibleComponent[5],
+                FlexibleComponent[6],
+                FlexibleComponent[7],
+                FlexibleComponent[8],
+                FlexibleComponent[9],
+            ]().by(
+                world.query[
+                    FlexibleComponent[5],
+                    FlexibleComponent[6],
+                    FlexibleComponent[7],
+                    FlexibleComponent[8],
+                    FlexibleComponent[9],
+                ](),
+                FlexibleComponent[0](1.0, 2.0),
+                FlexibleComponent[1](3.0, 4.0),
+                FlexibleComponent[2](5.0, 6.0),
+                FlexibleComponent[3](7.0, 8.0),
+                FlexibleComponent[4](9.0, 0.0),
+            )
+            world.remove_entity(
+                entity01234
+            )  # cleanup deoptimization entity to not increase amount of entities moved during replace in next iterations
+
+    bencher.iter[bench_fn]()
+
+
 fn benchmark_replace_1_comp_1_000_000_extra(
     mut bencher: Bencher,
 ) raises capturing:
@@ -635,16 +917,6 @@ fn benchmark_replace_1_comp_1_000_000_extra(
             entities.append(world.add_entity(pos))
 
     bencher.iter[bench_fn]()
-
-
-fn prevent_inlining_replace() raises:
-    world = FullWorld()
-    entity = world.add_entity(FlexibleComponent[0](1.0, 2.0))
-
-    @parameter
-    for i in range(20):
-        component = FlexibleComponent[i + 1](i, 2.0)
-        world.replace[FlexibleComponent[i]]().by(entity, component)
 
 
 fn run_all_world_benchmarks() raises:
@@ -701,34 +973,56 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_is_alive_1_000_000](
         BenchId("10^6 * is_alive")
     )
+
     bench.bench_function[benchmark_add_remove_1_comp_1_000_000](
         BenchId("10^6 * add & remove 1 component")
     )
-    bench.bench_function[benchmark_add_remove_1_comp_1_000_batch_1000](
+    bench.bench_function[benchmark_add_remove_1_comp_batch_1_000_000](
+        BenchId("10^0 * add & remove 1 component 10^6 batch")
+    )
+    bench.bench_function[benchmark_add_remove_1_comp_1_000_batch_1_000](
         BenchId("10^3 * add & remove 1 component 10^3 batch")
     )
+
     bench.bench_function[benchmark_add_remove_5_comp_1_000_000](
         BenchId("10^6 * add & remove 5 components")
     )
-    bench.bench_function[benchmark_add_remove_5_comp_1_000_batch_1000](
-        BenchId("10^3 * add & remove 5 component 10^3 batch")
+    bench.bench_function[benchmark_add_remove_5_comp_batch_1_000_000](
+        BenchId("10^0 * add & remove 5 components 10^6 batch")
     )
+    bench.bench_function[benchmark_add_remove_5_comp_1_000_batch_1_000](
+        BenchId("10^3 * add & remove 5 components 10^3 batch")
+    )
+
     bench.bench_function[benchmark_replace_1_comp_1_000_000](
         BenchId("10^6 * replace 1 component")
+    )
+    bench.bench_function[benchmark_replace_1_comp_batch_1_000_000](
+        BenchId("10^0 * replace 1 component 10^6 batch")
+    )
+    bench.bench_function[benchmark_replace_1_comp_1_000_batch_1_000](
+        BenchId("10^3 * replace 1 component 10^3 batch")
+    )
+    bench.bench_function[benchmark_replace_5_comp_1_000_000](
+        BenchId("10^6 * replace 5 components")
+    )
+    bench.bench_function[benchmark_replace_5_comp_batch_1_000_000](
+        BenchId("10^0 * replace 5 components 10^6 batch")
+    )
+    bench.bench_function[benchmark_replace_5_comp_1_000_batch_1_000](
+        BenchId("10^3 * replace 5 components 10^3 batch")
     )
 
     # Functions to prevent inlining
     prevent_inlining_add_remove_entity_1_comp()
     prevent_inlining_add_remove_entity_5_comp()
-    prevent_inlining_add_remove_1_comp()
-    prevent_inlining_add_remove_5_comp()
+    prevent_inlining_add_remove()
     prevent_inlining_add_entity_1_comp()
     prevent_inlining_add_entity_5_comp()
     prevent_inlining_get()
     prevent_inlining_set_1_comp()
     prevent_inlining_set_5_comp()
     prevent_inlining_replace()
-    prevent_inlining_add_remove_5_comp()
 
 
 def main():

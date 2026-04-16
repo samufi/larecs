@@ -1,4 +1,4 @@
-[project]
+[workspace]
 authors = ["samufi <samufi@web.de>"]
 channels = ["conda-forge", "https://repo.prefix.dev/max"]
 description = "Example for the usage of the larecs ECS"

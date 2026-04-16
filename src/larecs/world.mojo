@@ -1,4 +1,4 @@
-from memory import UnsafePointer, Span
+from memory import UnsafePointer, Span, memcpy
 from algorithm import vectorize
 from sys import size_of
 
@@ -28,6 +28,31 @@ from .query import (
 )
 from .lock import LockManager, LockedContext
 from .resource import Resources
+from ._utils import concatenate_inline_arrays
+
+
+struct WorldErrors:
+    alias non_existent_entity_msg = "The considered entity does not exist anymore."
+    alias world_is_locked_msg = "Attempt to modify a locked world."
+    alias missing_components_for_removal_entity_msg = "Entity does not have all the components to remove."
+    alias missing_components_for_removal_query_msg = "Query matches entities that do not have all the components to remove. Use `Query[Component, ...]()` to include those components."
+    alias duplicate_components_for_addition_entity_msg = "Entity already has one of the components to add."
+    alias duplicate_components_for_addition_query_msg = "Query matches entities that already have some of the components to add. Use `Query.without[Component, ...]()` to exclude those components."
+
+    alias non_existent_entity = Error(Self.non_existent_entity_msg)
+    alias world_is_locked = Error(Self.world_is_locked_msg)
+    alias missing_components_for_removal_entity = Error(
+        Self.missing_components_for_removal_entity_msg
+    )
+    alias missing_components_for_removal_query = Error(
+        Self.missing_components_for_removal_query_msg
+    )
+    alias duplicate_components_for_addition_entity = Error(
+        Self.duplicate_components_for_addition_entity_msg
+    )
+    alias duplicate_components_for_addition_query = Error(
+        Self.duplicate_components_for_addition_query_msg
+    )
 
 
 @fieldwise_init
@@ -35,6 +60,7 @@ struct Replacer[
     world_origin: MutableOrigin,
     size: Int,
     *component_types: ComponentType,
+    remove_ids: InlineArray[World[*component_types].Id, size],
 ]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
@@ -46,10 +72,10 @@ struct Replacer[
         world_origin: The mutable origin of the world.
         size: The number of components to remove.
         component_types: The types of the components.
+        remove_ids: The IDs of the components to remove.
     """
 
     var _world: Pointer[World[*component_types], world_origin]
-    var _remove_ids: InlineArray[World[*component_types].Id, size]
 
     fn by[
         *AddTs: ComponentType
@@ -70,10 +96,9 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._world[]._remove_and_add[*AddTs](
-            entity,
+        self._by(
             components,
-            self._remove_ids,
+            entity,
         )
 
     fn by[
@@ -95,10 +120,135 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._world[]._remove_and_add[*AddTs](
-            entity,
+        self._by(components, entity)
+
+    fn by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        *components: *AddTs,
+        out iterator: __type_of(self._by(components, query=query)),
+    ) raises:
+        """
+        Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            query:     The query to determine which entities to modify.
+            components: The components to add.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        return self._by(
             components,
-            self._remove_ids,
+            query=query,
+        )
+
+    fn by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        *components: *AddTs,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        out iterator: __type_of(self._by(components, query=query)),
+    ) raises:
+        """
+        Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            components: The components to add.
+            query:     The query to determine which entities to modify.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        return self._by(
+            components,
+            query=query,
+        )
+
+    fn _by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        components: VariadicPack[_, _, ComponentType, *AddTs],
+        entity: Entity,
+    ) raises:
+        """
+        Private helper to remove and add components of an [..entity.Entity].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            components: The components to add.
+            entity:     The entity to modify.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+
+        self._world[]._remove_and_add[
+            *AddTs,
+            rem_size=size,
+            remove_ids = Self.remove_ids,
+        ](entity, components)
+
+    fn _by[
+        *AddTs: ComponentType,
+        has_without_mask: Bool = False,
+    ](
+        self,
+        components: VariadicPack[_, _, ComponentType, *AddTs],
+        query: QueryInfo[has_without_mask=has_without_mask],
+        out iterator: __type_of(
+            self._world[]._batch_remove_and_add[
+                rem_size=size, remove_ids = Self.remove_ids
+            ](query, components)
+        ),
+    ) raises:
+        """
+        Private helper to remove and add components to multiple [..entity.Entity Entities] specified by a [..query.Query].
+
+        Parameters:
+            AddTs: The types of the components to add.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            components: The components to add.
+            query:     The query to determine which entities to modify.
+
+        Raises:
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+
+        return self._world[]._batch_remove_and_add[
+            rem_size=size,
+            remove_ids = Self.remove_ids,
+        ](
+            query,
+            components,
         )
 
 
@@ -112,6 +262,27 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     alias Id = BitMask.IndexType
     alias component_manager = ComponentManager[*component_types]()
+    alias _component_count[*Ts: ComponentType] = VariadicPack[
+        True, MutableAnyOrigin, ComponentType, *Ts
+    ].__len__()
+    alias _components_is_empty[*Ts: ComponentType] = Self._component_count[
+        *Ts
+    ] > 0
+
+    """
+    Internal type aliases for component ID management and archetype handling.
+
+    If *Ts is empty, this results in zero memory size (StaticOptional with zero size), else
+    this results in an InlineArray of component IDs.
+    """
+    alias _optional_component_ids[*Ts: ComponentType] = StaticOptional[
+        InlineArray[
+            Self.Id,
+            Self._component_count[*Ts],
+        ],
+        Self._components_is_empty[*Ts],
+    ](Self.component_manager.get_id_arr[*Ts]())
+
     alias Archetype = _Archetype[
         *component_types, component_manager = Self.component_manager
     ]
@@ -141,13 +312,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
     Primary entity iterator type alias for the World.
 
-    This flexible iterator supports different archetype iteration strategies via the 
+    This flexible iterator supports different archetype iteration strategies via the
     `arch_iter_variant_idx` parameter, enabling optimized iteration patterns for
     different use cases:
 
     - **ByMask iteration** (default): Efficient for component-based queries
     - **ByList iteration**: Optimized for batch operations on known archetype sets
-    
+
     Parameters:
         arch_iter_variant_idx: Selects iteration strategy (ByMask=0, ByList=1)
         has_start_indices: Enables iteration from specific entity ranges (batch ops)
@@ -177,7 +348,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     **Optimizations:**
     - Uses SIMD-optimized bitmask operations for fast archetype matching
-    - Skips empty archetypes automatically to reduce iteration overhead  
+    - Skips empty archetypes automatically to reduce iteration overhead
     - Supports exclusion masks via `has_without_mask` for complex filtering
 
     **Best Use Cases:**
@@ -203,7 +374,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     **Performance Benefits:**
     - Direct archetype access without bitmask matching overhead
-    - Optimal for batch operations where archetype set is predetermined  
+    - Optimal for batch operations where archetype set is predetermined
     - Cache-friendly iteration pattern for contiguous archetype ranges
     - Minimal branching during iteration for maximum throughput
 
@@ -458,7 +629,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             has_start_indices=True,
         ],
     ) raises:
-        """Adds a batch of [..entity.Entity]s.
+        """Adds a batch of [..entity.Entity Entities].
 
         The given component types are added to the entities.
         Do not use during [.World.query] iteration!
@@ -501,7 +672,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the world is [.World.is_locked locked].
 
         Returns:
-            An iterator to the new or recycled [..entity.Entity]s.
+            An iterator to the new or recycled [..entity.Entity Entities].
 
         """
         self._assert_unlocked()
@@ -541,13 +712,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), [archetype_index]
                 ),
             ),
-            StaticOptional(List[UInt](UInt(first_index_in_archetype))),
+            List[UInt](UInt(first_index_in_archetype)),
         )
 
     @always_inline
     fn _create_entity(mut self, archetype_index: Int, out entity: Entity):
         """
-        Creates an Entity and adds it to the given archetype.
+        Creates an [..entity.Entity] and adds it to the given archetype.
 
         Returns:
             The new entity.
@@ -562,7 +733,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     fn _create_entities(mut self, archetype_index: Int, count: Int) -> UInt:
         """
-        Creates multiple Entities and adds them to the given archetype.
+        Creates multiple [..entity.Entity Entities] and adds them to the given archetype.
 
         Returns:
             The index of the first newly created entity in the archetype.
@@ -635,7 +806,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     fn remove_entities(mut self, query: QueryInfo) raises:
         """
-        Removes multiple entities based on the provided query, making them eligible for recycling.
+        Removes multiple [..entity.Entity Entities] based on the provided query, making them eligible for recycling.
 
         Example:
 
@@ -833,15 +1004,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         var *add_components: *Ts,
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(
+            self._batch_remove_and_add(query, add_components)
+        ),
     ) raises:
         """
-        Adds components to multiple entities at once that are specified by a [..query.Query].
+        Adds components to multiple [..entity.Entity Entities] at once that are specified by a [..query.Query].
         The provided query must ensure that matching entities do not already have one or more of the
         components to add.
 
@@ -888,139 +1056,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 components to add.
         """
 
-        # Note:
-        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
-        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
-        #    individually without checking for edge cases where multiple archetypes get merged into one.
-        #    This also enables potential parallelization optimizations.
-
-        self._assert_unlocked()
-
-        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
-
-        # If query could match archetypes that already have at least one of the components, raise an error
-        # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
-
-        var strict_check_needed: Bool
-
-        @parameter
-        if has_without_mask:
-            strict_check_needed = not query.without_mask[].contains(
-                BitMask(component_ids)
-            )
-        else:
-            strict_check_needed = True
-
-        if strict_check_needed:
-            for archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
-            ):
-                if archetype[] and archetype[].get_mask().contains_any(
-                    BitMask(component_ids)
-                ):
-                    raise Error(
-                        "Query matches entities that already have at least"
-                        " one of the components to add. Use"
-                        " `Query.without[Component, ...]()` to exclude"
-                        " those components."
-                    )
-
-        alias _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
-        arch_start_idcs = List[UInt](
-            min(len(self._archetypes), _2kb_of_UInt_or_Int)
-        )
-        changed_archetype_idcs = List[Int](
-            min(len(self._archetypes), _2kb_of_UInt_or_Int)
-        )
-
-        # Search for the archetype that matches the query mask
-        with self._locked():
-            for old_archetype in self._get_archetype_iterator(
-                query.mask, query.without_mask
-            ):
-                # Two cases per matching archetype A:
-                # 1. If an archetype B with the new component combination exists, move entities from A to B
-                #    and insert new component data for moved entities.
-                # 2. If an archetype with the new component combination does not exist yet,
-                #    create new archetype B = A + component_ids and move entities and component data from A to B.
-                new_archetype_idx = self._get_archetype_index(
-                    component_ids, old_archetype[].get_node_index()
-                )
-
-                # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
-                # resized during the call to `_get_archetype_index`.
-                old_archetype_idx = self._archetype_map[
-                    old_archetype[].get_node_index()
-                ]
-                old_archetype = Pointer(
-                    to=self._archetypes.unsafe_get(index(old_archetype_idx))
-                )
-
-                new_archetype = Pointer(
-                    to=self._archetypes.unsafe_get(new_archetype_idx)
-                )
-
-                arch_start_idx = len(new_archetype[])
-                new_archetype[].reserve(arch_start_idx + len(old_archetype[]))
-
-                # Save arch_start_idx for the iterator.
-                arch_start_idcs.append(arch_start_idx)
-                changed_archetype_idcs.append(new_archetype_idx)
-
-                # Move component data from old archetype to new archetype.
-                for i in range(old_archetype[]._component_count):
-                    id = old_archetype[]._ids[i]
-
-                    new_archetype[].unsafe_set(
-                        arch_start_idx,
-                        id,
-                        old_archetype[]._data[id],
-                        len(old_archetype[]),
-                    )
-
-                # Move entities from old archetype to new archetype.
-                for idx in range(len(old_archetype[])):
-                    new_idx = new_archetype[].add(
-                        old_archetype[].get_entity(idx)
-                    )
-                    entity = new_archetype[].get_entity(new_idx)
-                    self._entities[entity.get_id()] = EntityIndex(
-                        new_idx,
-                        new_archetype_idx,
-                    )
-
-                    # Set new component data
-                    @parameter
-                    for comp_idx in range(add_components.__len__()):
-                        alias comp_id = component_ids[comp_idx]
-
-                        new_archetype[].unsafe_set(
-                            new_idx,
-                            comp_id,
-                            UnsafePointer(to=add_components[comp_idx]).bitcast[
-                                UInt8
-                            ](),
-                        )
-
-                old_archetype[].clear()
-
-        # Return iterator to iterate over the changed entities.
-        iterator = Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ](
-            Pointer(to=self._locks),
-            Self.ArchetypeIterator[
-                __origin_of(self._archetypes),
-                arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            ](
-                Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
-                    Pointer(to=self._archetypes), changed_archetype_idcs^
-                ),
-            ),
-            StaticOptional(arch_start_idcs^),
+        return self._batch_remove_and_add(
+            query,
+            add_components,
         )
 
     fn remove[*Ts: ComponentType](mut self, entity: Entity) raises:
@@ -1038,8 +1076,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._remove_and_add(
-            entity, remove_ids=Self.component_manager.get_id_arr[*Ts]()
+        self._remove_and_add[
+            rem_size = Self._component_count[*Ts],
+            remove_ids = Self._optional_component_ids[*Ts],
+        ](
+            entity,
         )
 
     fn remove[
@@ -1047,12 +1088,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ],
+        out iterator: __type_of(
+            self._batch_remove_and_add[
+                rem_size = Self._component_count[*Ts],
+                remove_ids = Self._optional_component_ids[*Ts],
+            ](query)
+        ),
     ) raises:
         """
         Removes components from multiple entities at once, specified by a [..query.Query].
@@ -1100,29 +1141,352 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
         #     into one.  This also enables potential parallelization optimizations.
 
+        return self._batch_remove_and_add[
+            rem_size = Self._component_count[*Ts],
+            remove_ids = Self._optional_component_ids[*Ts],
+        ](query)
+
+    @always_inline
+    fn replace[
+        *Ts: ComponentType
+    ](mut self) -> Replacer[
+        __origin_of(self),
+        Self._component_count[*Ts],
+        *component_types,
+        remove_ids = Self.component_manager.get_id_arr[*Ts](),
+    ]:
+        """
+        Returns a [.Replacer] for removing and adding components to an [..entity.Entity] in one go.
+
+        Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, comp5, entity=entity)`.
+
+        The number of removed components does not need to match the number of added components.
+
+        Parameters:
+            Ts: The types of the components to remove.
+        """
+        return {
+            Pointer(to=self),
+        }
+
+    @always_inline
+    fn _remove_and_add[
+        *Ts: ComponentType,
+        rem_size: Int = 0,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], rem_size > 0
+        ] = None,
+    ](mut self, entity: Entity, *add_components: *Ts) raises:
+        """
+        Adds and removes components to an [..entity.Entity].
+
+        Parameters:
+            Ts:          The types of the components to add.
+            rem_size:    The number of components to remove.
+            remove_ids:     The IDs of the components to remove.
+
+        Args:
+            entity:         The entity to modify.
+            add_components: The components to add.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be added because they are already present.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        self._remove_and_add[rem_size=rem_size, remove_ids=remove_ids](
+            entity, add_components
+        )
+
+    @always_inline
+    fn _remove_and_add[
+        *Ts: ComponentType,
+        rem_size: Int = 0,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], rem_size > 0
+        ] = None,
+    ](
+        mut self,
+        entity: Entity,
+        add_components: VariadicPack[_, _, ComponentType, *Ts],
+    ) raises:
+        """
+        Adds and removes components to an [..entity.Entity].
+
+        See documentation of overloaded function for details.
+        """
+        alias add_size = add_components.__len__()
+        alias add_ids = Self.component_manager.get_id_arr[*Ts]()
+
+        runtime_remove_ids = materialize[remove_ids]()
+
         self._assert_unlocked()
+        self._assert_alive(entity)
 
-        alias component_ids = Self.component_manager.get_id_arr[*Ts]()
+        # Reserve space for the possibility that a new archetype gets created
+        # This ensure that no further allocations can happen in this function and
+        # therefore all pointers to the current memory space stay valid!
+        self._archetypes.reserve(len(self._archetypes) + 1)
 
-        # If query could match archetypes that don't have all of the components, raise an error
-        if not query.mask.contains(BitMask(component_ids)):
-            raise Error(
-                "Query matches entities that don't have all of the"
-                " components to remove. Use `Query(Component, ...)` to include"
-                " those components."
+        entity_index = self._entities[entity.get_id()]
+
+        old_archetype_idx = entity_index.archetype_index
+        old_archetype = Pointer(
+            to=self._archetypes.unsafe_get(index(old_archetype_idx))
+        )
+        old_archetype_mask = old_archetype[].get_mask()
+
+        @parameter
+        if rem_size:
+            if not old_archetype_mask.contains(BitMask(runtime_remove_ids[])):
+                raise WorldErrors.missing_components_for_removal_entity
+
+        @parameter
+        if add_size:
+            compare_mask = old_archetype_mask
+
+            @parameter
+            if rem_size:
+                compare_mask.set(runtime_remove_ids[], False)
+            if compare_mask.contains(BitMask(add_ids)):
+                raise WorldErrors.duplicate_components_for_addition_entity
+
+        alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
+        var component_ids: ComponentIdsType
+
+        @parameter
+        if add_size and rem_size:
+            alias concatenated = concatenate_inline_arrays(
+                remove_ids[], add_ids
+            )
+            component_ids = rebind[ComponentIdsType](concatenated)
+        elif Bool(add_size) and not rem_size:
+            component_ids = rebind[ComponentIdsType](add_ids)
+        elif not add_size and Bool(rem_size):
+            component_ids = rebind[ComponentIdsType](runtime_remove_ids[])
+        else:
+            return
+
+        index_in_old_archetype = entity_index.index
+        new_archetype_idx = self._get_archetype_index(
+            component_ids, old_archetype[].get_node_index()
+        )
+        new_archetype = Pointer(
+            to=self._archetypes.unsafe_get(new_archetype_idx)
+        )
+        index_in_new_archetype = new_archetype[].add(entity)
+
+        # Move component data from old archetype to new archetype.
+        for i in range(old_archetype[]._component_count):
+            id = old_archetype[]._ids[i]
+
+            @parameter
+            if rem_size:
+                if not new_archetype[].has_component(id):
+                    continue
+
+            new_archetype[].unsafe_set(
+                index_in_new_archetype,
+                id,
+                old_archetype[]._get_component_ptr(
+                    index(index_in_old_archetype), id
+                ),
             )
 
         @parameter
-        if has_without_mask:
-            if query.without_mask[].contains_any(BitMask(component_ids)):
-                raise Error(
-                    "Query excludes entities that have a component which"
-                    " should be removed in the without mask. Remove all"
-                    " components that get removed from `Query.without(...)`."
-                )
+        for i in range(add_size):
+            new_archetype[].unsafe_set(
+                index_in_new_archetype,
+                add_ids[i],
+                UnsafePointer(to=add_components[i]).bitcast[UInt8](),
+            )
 
-        arch_start_idcs = List[UInt](len(self._archetypes))
-        changed_archetype_idcs = List[Int](len(self._archetypes))
+        swapped = old_archetype[].remove(index_in_old_archetype)
+        if swapped:
+            var swap_entity = old_archetype[].get_entity(entity_index.index)
+            self._entities[swap_entity.get_id()].index = entity_index.index
+
+        self._entities[entity.get_id()] = EntityIndex(
+            index_in_new_archetype, new_archetype_idx
+        )
+
+    @always_inline
+    fn _batch_remove_and_add[
+        *Ts: ComponentType,
+        rem_size: Int = 0,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], rem_size > 0
+        ] = None,
+        has_without_mask: Bool = False,
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        *add_components: *Ts,
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
+
+        Parameters:
+            Ts:                 The types of the components to add.
+            rem_size:           The number of components to remove.
+            remove_ids:         The IDs of the components to remove.
+            has_without_mask:   Whether the query has a without mask.
+
+        Args:
+            query:          The query to determine which entities to modify.
+            add_components: The components to add.
+
+        Returns:
+            An iterator over the modified entities.
+
+        Raises:
+            Error: when called with nothing to do (i.e. no components to add or remove).
+            Error: when called with a query that could match existing entities that already have at least one of the
+                components to add.
+            Error: when called with a query that could match entities that don't have all of the components to remove.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        return self._batch_remove_and_add[
+            rem_size=rem_size, remove_ids=remove_ids
+        ](query, add_components)
+
+    @always_inline
+    fn _batch_remove_and_add[
+        *Ts: ComponentType,
+        rem_size: Int = 0,
+        remove_ids: StaticOptional[
+            InlineArray[Self.Id, rem_size], rem_size > 0
+        ] = None,
+        has_without_mask: Bool = False,
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        add_components: VariadicPack[_, _, ComponentType, *Ts],
+        out iterator: Self.Iterator[
+            __origin_of(self._archetypes),
+            __origin_of(self._locks),
+            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+            has_start_indices=True,
+        ],
+    ) raises:
+        """
+        Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
+
+        Parameters:
+            Ts:          The types of the components to add.
+            rem_size:    The number of components to remove.
+            remove_ids:     The IDs of the components to remove.
+            has_without_mask: Whether the query has a without mask.
+
+        Args:
+            query:          The query to determine which entities to modify.
+            add_components: The components to add.
+
+        Returns:
+            An iterator over the modified entities.
+
+        Raises:
+            Error: when called with nothing to do (i.e. no components to add or remove).
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        alias add_size = add_components.__len__()
+        alias add_ids = Self.component_manager.get_id_arr[*Ts]()
+
+        alias ComponentIdsType = InlineArray[Self.Id, add_size + rem_size]
+
+        runtime_remove_ids = materialize[remove_ids]()
+
+        var component_ids: ComponentIdsType
+
+        # Note:
+        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
+        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+        #    individually without checking for edge cases where multiple archetypes get merged into one.
+        #    This also enables potential parallelization optimizations.
+
+        @parameter
+        if add_size:
+            # If query could match archetypes that already have at least one of the components, raise an error
+            # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
+
+            var strict_check_needed: Bool
+
+            @parameter
+            if has_without_mask:
+                strict_check_needed = not query.without_mask[].contains(
+                    BitMask(add_ids)
+                )
+            else:
+                strict_check_needed = True
+
+            if strict_check_needed:
+                for archetype in self._get_archetype_iterator(
+                    query.mask, query.without_mask
+                ):
+                    archetype_mask = archetype[].get_mask()
+
+                    @parameter
+                    if rem_size:
+                        archetype_mask.set(runtime_remove_ids[], False)
+
+                    if archetype[] and archetype_mask.contains_any(
+                        BitMask(add_ids)
+                    ):
+                        raise WorldErrors.duplicate_components_for_addition_query
+
+        @parameter
+        if rem_size:
+            # If query could match archetypes that don't have all of the components, raise an error
+            if not query.mask.contains(BitMask(runtime_remove_ids[])):
+                raise WorldErrors.missing_components_for_removal_query
+
+            @parameter
+            if has_without_mask:
+                if query.without_mask[].contains_any(
+                    BitMask(runtime_remove_ids[])
+                ):
+                    raise WorldErrors.duplicate_components_for_addition_query
+
+        @parameter
+        if add_size and rem_size:
+            alias concatenated = concatenate_inline_arrays(
+                remove_ids[], add_ids
+            )
+            component_ids = rebind[ComponentIdsType](concatenated)
+        elif Bool(add_size) and not rem_size:
+            component_ids = rebind[ComponentIdsType](add_ids)
+        elif not add_size and Bool(rem_size):
+            component_ids = rebind[ComponentIdsType](runtime_remove_ids[])
+        else:
+            return {
+                Pointer(to=self._locks),
+                Self.ArchetypeIterator[
+                    __origin_of(self._archetypes),
+                    arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
+                ](
+                    Self.ArchetypeByListIterator[__origin_of(self._archetypes)](
+                        Pointer(to=self._archetypes), List[Int]()
+                    ),
+                ),
+                List[UInt](),
+            }
+
+        self._assert_unlocked()
+
+        alias _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
+        arch_start_idcs = List[UInt](
+            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
+        )
+        changed_archetype_idcs = List[Int](
+            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
+        )
 
         # Search for the archetype that matches the query mask
         with self._locked():
@@ -1133,7 +1497,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 # 1. If an archetype B with the new component combination exists, move entities from A to B
                 #    and insert new component data for moved entities.
                 # 2. If an archetype with the new component combination does not exist yet,
-                #    create new archetype B = A - component_ids and move entities and component data from A to B.
+                #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
                 new_archetype_idx = self._get_archetype_index(
                     component_ids, old_archetype[].get_node_index()
                 )
@@ -1151,14 +1515,37 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     to=self._archetypes.unsafe_get(new_archetype_idx)
                 )
 
-                new_archetype[].reserve(
-                    len(new_archetype[]) + len(old_archetype[])
-                )
+                # If the new archetype is empty, we can optimize component movement by just pointing to the component data in the old archetype without actually moving any data. We just need to make sure to properly initialize the new archetype's metadata and to reserve space for new components that get added.
+                if len(new_archetype[]) == 0:
+                    # NOTE: Due to memory ownership semantics, old_archetype[] cannot be passed directly, but must be passed as separate parts.
+                    new_archetype[].unsafe_take_data_from_parts(
+                        old_archetype[]._ids,
+                        old_archetype[]._data.copy(),
+                        old_archetype[]._item_sizes.copy(),
+                        old_archetype[]._component_count,
+                        old_archetype[]._capacity,
+                    )
+                    old_archetype[].unsafe_reinit_components(new_archetype[]._ids)
+                else:
+                    new_archetype[].reserve(
+                        len(new_archetype[]) + len(old_archetype[])
+                    )
 
-                # Save arch_start_idx for the iterator.
-                arch_start_idx = len(new_archetype[])
-                arch_start_idcs.append(arch_start_idx)
-                changed_archetype_idcs.append(new_archetype_idx)
+                    # Save arch_start_idx for the iterator.
+                    arch_start_idx = len(new_archetype[])
+                    arch_start_idcs.append(arch_start_idx)
+                    changed_archetype_idcs.append(new_archetype_idx)
+
+                    # Move component data from old archetype to new archetype.
+                    for i in range(old_archetype[]._component_count):
+                        id = old_archetype[]._ids[i]
+
+                        new_archetype[].unsafe_set(
+                            arch_start_idx,
+                            id,
+                            old_archetype[]._data[id],
+                            len(old_archetype[]),
+                        )
 
                 # Move entities to the new archetype and update entity index mappings
                 for i in range(len(old_archetype[])):
@@ -1168,26 +1555,23 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         new_index, new_archetype_idx
                     )
 
-                # Move component data from old archetype to new archetype.
-                for i in range(old_archetype[]._component_count):
-                    id = old_archetype[]._ids[i]
+                    # Set new component data
+                    @parameter
+                    for add_comp_idx in range(add_components.__len__()):
+                        alias comp_id = add_ids[add_comp_idx]
 
-                    new_archetype[].unsafe_set(
-                        arch_start_idx,
-                        id,
-                        old_archetype[]._data[id],
-                        len(old_archetype[]),
-                    )
+                        new_archetype[].unsafe_set(
+                            new_index,
+                            comp_id,
+                            UnsafePointer(
+                                to=add_components[add_comp_idx]
+                            ).bitcast[UInt8](),
+                        )
 
                 old_archetype[].clear()
 
         # Return iterator to iterate over the changed entities.
-        iterator = Self.Iterator[
-            __origin_of(self._archetypes),
-            __origin_of(self._locks),
-            arch_iter_variant_idx=_ArchetypeByListIteratorIdx,
-            has_start_indices=True,
-        ](
+        iterator = {
             Pointer(to=self._locks),
             Self.ArchetypeIterator[
                 __origin_of(self._archetypes),
@@ -1197,200 +1581,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._archetypes), changed_archetype_idcs^
                 ),
             ),
-            StaticOptional(arch_start_idcs^),
-        )
-
-    @always_inline
-    fn replace[
-        *Ts: ComponentType
-    ](mut self) -> Replacer[
-        __origin_of(self),
-        VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
-        *component_types,
-    ]:
-        """
-        Returns a [.Replacer] for removing and adding components to an Entity in one go.
-
-        Use as `world.replace[Comp1, Comp2]().by(comp3, comp4, comp5, entity=entity)`.
-
-        The number of removed components does not need to match the number of added components.
-
-        Parameters:
-            Ts: The types of the components to remove.
-        """
-        return Replacer[
-            __origin_of(self),
-            VariadicPack[True, MutableAnyOrigin, ComponentType, *Ts].__len__(),
-            *component_types,
-        ](
-            Pointer(to=self),
-            Self.component_manager.get_id_arr[*Ts](),
-        )
-
-    @always_inline
-    fn _remove_and_add[
-        *Ts: ComponentType, rem_size: Int = 0, remove_some: Bool = False
-    ](
-        mut self,
-        entity: Entity,
-        *add_components: *Ts,
-        remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
-        ] = None,
-    ) raises:
-        """
-        Adds and removes components to an [..entity.Entity].
-
-        Parameters:
-            Ts:          The types of the components to add.
-            rem_size:    The number of components to remove.
-            remove_some: Whether to remove some components.
-
-        Args:
-            entity:         The entity to modify.
-            add_components: The components to add.
-            remove_ids:     The IDs of the components to remove.
-
-        Raises:
-            Error: when called for a removed (and potentially recycled) entity.
-            Error: when called with components that can't be added because they are already present.
-            Error: when called with components that can't be removed because they are not present.
-            Error: when called on a locked world. Do not use during [.World.query] iteration.
-        """
-        self._remove_and_add(entity, add_components, remove_ids)
-
-    @always_inline
-    fn _remove_and_add[
-        *Ts: ComponentType, rem_size: Int = 0, remove_some: Bool = False
-    ](
-        mut self,
-        entity: Entity,
-        add_components: VariadicPack[_, _, ComponentType, *Ts],
-        remove_ids: StaticOptional[
-            InlineArray[Self.Id, rem_size], remove_some
-        ] = None,
-    ) raises:
-        """
-        Adds and removes components to an [..entity.Entity].
-
-        See documentation of overloaded function for details.
-        """
-        alias add_size = add_components.__len__()
-        alias ComponentIdsType = StaticOptional[
-            __type_of(Self.component_manager.get_id_arr[*Ts]()), add_size
-        ]
-
-        self._assert_unlocked()
-        self._assert_alive(entity)
-
-        @parameter
-        if not add_size and not rem_size:
-            return
-
-        # Reserve space for the possibility that a new archetype gets created
-        # This ensure that no further allocations can happen in this function and
-        # therefore all pointers to the current memory space stay valid!
-        self._archetypes.reserve(len(self._archetypes) + 1)
-
-        idx = self._entities[entity.get_id()]
-
-        old_archetype_index = idx.archetype_index
-        old_archetype = Pointer(
-            to=self._archetypes.unsafe_get(index(old_archetype_index))
-        )
-
-        index_in_old_archetype = idx.index
-
-        var component_ids: ComponentIdsType
-
-        @parameter
-        if add_size:
-            component_ids = ComponentIdsType(
-                Self.component_manager.get_id_arr[*Ts]()
-            )
-        else:
-            component_ids = None
-
-        start_node_index = old_archetype[].get_node_index()
-
-        var archetype_index: Int = -1
-        compare_mask = old_archetype[].get_mask()
-
-        alias add_error_msg = "Entity already has one of the components to add."
-        alias remove_error_msg = "Entity does not have one of the components to remove."
-
-        @parameter
-        if rem_size:
-
-            @parameter
-            if add_size:
-                start_node_index = self._archetype_map.get_node_index(
-                    remove_ids[], start_node_index
-                )
-                if not compare_mask.contains(
-                    self._archetype_map.get_node_mask(start_node_index)
-                ):
-                    raise Error(remove_error_msg)
-
-                compare_mask = self._archetype_map.get_node_mask(
-                    start_node_index
-                )
-            else:
-                archetype_index = self._get_archetype_index(
-                    remove_ids[], start_node_index
-                )
-                # No need for Pointer revalidation due to previous memory reservation!
-
-        @parameter
-        if add_size:
-            archetype_index = self._get_archetype_index(
-                component_ids[], start_node_index
-            )
-            # No need for Pointer revalidation due to previous memory reservation!
-
-        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
-        index_in_archetype = archetype[].add(entity)
-
-        @parameter
-        if add_size:
-            if not archetype[].get_mask().contains(compare_mask):
-                raise Error(add_error_msg)
-        else:
-            if not compare_mask.contains(archetype[].get_mask()):
-                raise Error(remove_error_msg)
-
-        for i in range(old_archetype[]._component_count):
-            id = old_archetype[]._ids[i]
-
-            @parameter
-            if rem_size:
-                if not archetype[].has_component(id):
-                    continue
-
-            archetype[].unsafe_set(
-                index_in_archetype,
-                id,
-                old_archetype[]._get_component_ptr(
-                    index(index_in_old_archetype), id
-                ),
-            )
-
-        @parameter
-        for i in range(add_size):
-            archetype[].unsafe_set(
-                index_in_archetype,
-                component_ids[][i],
-                UnsafePointer(to=add_components[i]).bitcast[UInt8](),
-            )
-
-        swapped = old_archetype[].remove(index_in_old_archetype)
-        if swapped:
-            var swapEntity = old_archetype[].get_entity(idx.index)
-            self._entities[swapEntity.get_id()].index = idx.index
-
-        self._entities[entity.get_id()] = EntityIndex(
-            index_in_archetype, archetype_index
-        )
+            arch_start_idcs^,
+        }
 
     @always_inline
     fn _assert_unlocked(self) raises:
@@ -1401,7 +1593,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the world is locked.
         """
         if self.is_locked():
-            raise Error("Attempt to modify a locked world.")
+            raise WorldErrors.world_is_locked
 
     @always_inline
     fn _assert_alive(self, entity: Entity) raises:
@@ -1415,7 +1607,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the entity does not exist.
         """
         if not self._entity_pool.is_alive(entity):
-            raise Error("The considered entity does not exist anymore.")
+            raise WorldErrors.non_existent_entity
 
     @always_inline
     fn apply[
@@ -1675,7 +1867,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ],
     ) raises:
         """
-        Creates an iterator over all entities that have / do not have the components in the provided masks.
+        Creates an iterator over all [..entity.Entity Entities] that have / do not have the components in the provided masks.
 
         Parameters:
             has_without_mask: Whether a without_mask is provided.

@@ -397,6 +397,29 @@ struct Archetype[
         """
         return Bool(self._size)
 
+    fn unsafe_reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
+        """Reinitializes owned component storage while keeping the component layout intact.
+
+        Important:
+        This is intended for internal ownership-transfer flows where another archetype has
+        taken over the old storage pointers and this archetype must regain valid, uniquely
+        owned allocations before continuing.
+
+        The component IDs themselves are not changed here; they are read from `self._ids`
+        to determine which component buffers must be reallocated.
+
+        Args:
+            ids: The IDs of the components that should get reinitialized.
+        """
+        self._capacity = DEFAULT_CAPACITY
+
+        for i in range(self._component_count):
+            id = self._ids[i]
+            if id in ids:
+                self._data[id] = UnsafePointer[UInt8].alloc(
+                    self._capacity * index(self._item_sizes[id])
+                )
+
     @always_inline
     fn get_node_index(self) -> UInt:
         """Returns the index of the archetype's node in the archetype graph.
@@ -422,11 +445,6 @@ struct Archetype[
         Doubles the current capacity (minimum 8) to provide exponential growth that minimizes
         the frequency of memory reallocations while maintaining reasonable memory usage.
         This follows standard container growth patterns optimized for amortized performance.
-
-        **Performance Impact:**
-        - Amortized O(1) insertion cost through exponential growth
-        - Reduces memory fragmentation via power-of-2 alignment
-        - Minimizes reallocation frequency in high-throughput scenarios
         """
         self.reserve(max(self._capacity * 2, 8))
 
@@ -437,12 +455,6 @@ struct Archetype[
         fragmentation. The actual allocated capacity will be the next power of 2 greater than
         or equal to the requested capacity.
 
-        **Power-of-2 Allocation Benefits:**
-        - **Memory Alignment**: Improves cache performance and reduces fragmentation
-        - **Allocator Efficiency**: Most allocators are optimized for power-of-2 sizes
-        - **Predictable Growth**: Enables efficient memory planning and reduces allocations
-        - **SIMD Optimization**: Power-of-2 sizes are optimal for vectorized operations
-
         Does nothing if the requested capacity is not larger than the current capacity,
         avoiding unnecessary work and maintaining existing memory layout.
 
@@ -450,7 +462,8 @@ struct Archetype[
             new_capacity: The minimum required capacity. The actual allocated capacity
                          will be `next_pow2(new_capacity)` to maintain power-of-2 growth.
 
-        **Example:**
+        Example:
+
         ```mojo
         # Requesting 100 entities will allocate capacity for 128 (next power of 2)
         archetype.reserve(100)  # Actually reserves 128
@@ -458,11 +471,6 @@ struct Archetype[
         # Requesting 64 entities allocates exactly 64 (already power of 2)
         archetype.reserve(64)   # Actually reserves 64
         ```
-
-        **Performance Notes:**
-        - Memory copying is performed for existing components during reallocation
-        - All component arrays are resized simultaneously to maintain alignment
-        - Reallocation cost is amortized across multiple entity insertions
         """
         if new_capacity <= self._capacity:
             return
@@ -573,6 +581,46 @@ struct Archetype[
             data,
             index(self._item_sizes[id]) * count,
         )
+
+    @always_inline
+    fn unsafe_take_data_from_parts(
+        mut self,
+        ids: SIMD[Self.dType, Self.max_size],
+        data: InlineArray[UnsafePointer[UInt8], Self.max_size],
+        item_sizes: InlineArray[UInt32, Self.max_size],
+        component_count: Int,
+        capacity: UInt,
+    ):
+        """Unsafely takes ownership of component storage described by raw archetype parts.
+
+        This helper transfers pointer ownership into `self` without cloning the underlying
+        component buffers. It is therefore only valid for internal handoff paths where the
+        caller guarantees that the source storage will not remain managed by another
+        archetype after this call. In practice, the source archetype must either be
+        reinitialized immediately (by calling [.Archetype.unsafe_reinit_components]) or
+        otherwise prevented from freeing or mutating the same pointers.
+
+        Args:
+            ids: The component IDs whose metadata and storage ownership are being taken.
+            data: The component storage pointers to transfer into this archetype.
+            item_sizes: The byte width for each component ID in `ids`.
+            component_count: The number of valid component entries contained in `ids`,
+                `data`, and `item_sizes`.
+            capacity: The storage capacity that the transferred buffers were allocated for.
+        """
+        for i in range(self._component_count):
+            id = self._ids[i]
+            if id not in ids and self._capacity < capacity:
+                self._data[id].free()
+                self._data[id] = UnsafePointer[UInt8]().alloc(
+                    capacity * index(self._item_sizes[id])
+                )
+            else:
+                self._data[id].free()
+                self._data[id] = data[id]
+                self._item_sizes[id] = item_sizes[id]
+
+        self._capacity = capacity
 
     @always_inline
     fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
