@@ -1,37 +1,16 @@
-from memory import UnsafePointer, memcpy
-from math import log2
-from sys import size_of
+from std.memory import UnsafePointer, memcpy
+from std.math import log2
+from std.sys import bit_width_of, size_of
 
 
-# Implementing a function generically over all integral types is not currently possible in Mojo.
-# For details see: https://github.com/modular/modular/issues/2776.
 @always_inline
-fn next_pow2(var value: UInt) -> UInt:
+def next_pow2[
+    dtype: DType = DType.uint
+](var value: Scalar[dtype]) -> Scalar[dtype] where dtype.is_integral():
     """Returns the next power of two greater than or equal to the given value.
 
     Efficiently computes the smallest power of 2 that is greater than or equal to the
     input value using bit manipulation techniques.
-
-    Args:
-        value: The UInt value to find the next power of two for.
-
-    Returns:
-        The next power of two greater than or equal to the given value.
-    """
-    return UInt(next_pow2[DType.uint](value))
-
-
-@always_inline
-fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
-    """Returns the next power of two greater than or equal to the given value.
-
-    Efficiently computes the smallest power of 2 that is greater than or equal to the
-    input value using bit manipulation techniques.
-
-    **Algorithm Context:**
-    Uses the classic bit-smearing technique from "Bit Twiddling Hacks" by Sean Elers Anderson.
-    The algorithm works by propagating the highest set bit to all lower positions,
-    then adding 1 to get the next power of 2.
 
     **Example:**
     ```mojo
@@ -47,12 +26,6 @@ fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
     var data_size = 200
     var aligned_size = next_pow2(data_size)  # Returns 256
     ```
-
-    **Performance Benefits in ECS:**
-    - **Memory Allocators**: Most allocators are optimized for power-of-2 sizes
-    - **Cache Alignment**: Power-of-2 sizes align with CPU cache line boundaries
-    - **SIMD Vectorization**: Enables efficient vectorized operations on component data
-    - **Fragmentation Reduction**: Reduces memory fragmentation in long-running systems
 
     **Mathematical Properties:**
     - `next_pow2(0)` returns 1 (special case for zero input)
@@ -72,20 +45,20 @@ fn next_pow2[dtype: DType](var value: Scalar[dtype]) -> Scalar[dtype]:
     Based on the bit-smearing algorithm from Stanford Graphics Lab's bit manipulation
     reference: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2.
     """
-    constrained[dtype.is_integral(), "expected integral dtype"]()
-
     if value == 0:
         return 1
 
-    @parameter
-    for i in range(Scalar[dtype](log2(Float32(dtype.bit_width())))):
-        value |= value >> (2**i)
+    value -= 1
+    comptime exp = Scalar[dtype](log2(Float32(bit_width_of[dtype]())))
+    comptime for i in range(exp):
+        comptime shift = 2**i
+        value |= value >> shift
 
     return value + 1
 
 
 @always_inline
-fn concatenate_inline_arrays[
+def concatenate_inline_arrays[
     ElementType: Copyable & Movable, a_size: Int, b_size: Int
 ](
     a: InlineArray[ElementType, a_size],
@@ -94,10 +67,10 @@ fn concatenate_inline_arrays[
 ):
     result = {uninitialized = True}
 
-    memcpy(result.unsafe_ptr(), a.unsafe_ptr(), a_size)
+    memcpy(dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size)
 
     memcpy(
-        result.unsafe_ptr().offset(a_size * size_of[ElementType]()),
-        b.unsafe_ptr(),
-        b_size,
+        dest=result.unsafe_ptr() + a_size * size_of[ElementType](),
+        src=b.unsafe_ptr(),
+        count=b_size,
     )
