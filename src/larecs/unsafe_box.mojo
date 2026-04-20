@@ -1,8 +1,8 @@
-from memory import UnsafePointer
-from sys import size_of
+from std.memory import UnsafePointer
+from std.sys import size_of
 
 
-fn _destructor[T: Copyable & Movable](box_storage: UnsafeBox.data_type):
+def _destructor[T: ImplicitlyDestructible](box_storage: UnsafeBox.data_type):
     """
     Destructor for the UnsafeBox.
 
@@ -18,7 +18,7 @@ fn _destructor[T: Copyable & Movable](box_storage: UnsafeBox.data_type):
     box_storage.free()
 
 
-fn _dummy_destructor(box: UnsafeBox.data_type):
+def _dummy_destructor(box: UnsafeBox.data_type):
     """
     No-op destructor for the UnsafeBox.
 
@@ -29,9 +29,9 @@ fn _dummy_destructor(box: UnsafeBox.data_type):
     pass
 
 
-fn _copy_initializer[
-    T: Copyable & Movable
-](existing_box: UnsafeBox.data_type) -> UnsafePointer[Byte]:
+def _copy_initializer[T: Copyable](
+    existing_box: UnsafeBox.data_type,
+) -> UnsafeBox.data_type:
     """
     Copy initializer for the data in the UnsafeBox.
 
@@ -48,31 +48,31 @@ fn _copy_initializer[
         A pointer to the newly allocated data.
     """
 
-    @parameter
-    if size_of[T]() == 0:
-        ptr = UnsafePointer[T]()
+    comptime if size_of[T]() == 0:
+        ptr = UnsafePointer[T, MutExternalOrigin]()
     else:
-        ptr = UnsafePointer[T].alloc(1)
-        ptr.init_pointee_copy(existing_box.bitcast[T]()[])
+        _ptr = alloc[T](1)
+        _ptr.init_pointee_copy(existing_box.bitcast[T]()[])
+        ptr = _ptr
 
     return ptr.bitcast[Byte]()
 
 
-fn _dummy_copy_initializer(
+def _dummy_copy_initializer(
     existing_box: UnsafeBox.data_type,
-) -> UnsafePointer[Byte]:
+) -> UnsafeBox.data_type:
     """
     No-op copy initializer for the data in the UnsafeBox.
 
     Returns a dummy pointer.
 
     Args:
-        existing_box: The UnsafeBox.data_type instance to be copied.
+        existing_box: The UnsafeBox instance to be copied.
 
     Returns:
         A null pointer.
     """
-    return UnsafePointer[Byte]()
+    return UnsafePointer[Byte, MutExternalOrigin]()
 
 
 struct UnsafeBox(Copyable, Movable):
@@ -87,16 +87,18 @@ struct UnsafeBox(Copyable, Movable):
     wrong type is used, it can lead to undefined behavior.
     """
 
-    alias data_type = UnsafePointer[Byte]
+    comptime data_type = UnsafePointer[Byte, MutExternalOrigin]
     """The type of the data stored in the box."""
 
-    var _data: Self.data_type
-    var _destructor: fn (self: Self.data_type)
-    var _copy_initializer: fn (
-        existing_box: UnsafeBox.data_type
-    ) -> UnsafePointer[Byte]
+    comptime EltType = Copyable & Movable & ImplicitlyDestructible
 
-    fn __init__[used_internally: Bool = False](out self):
+    var _data: Self.data_type
+    var _destructor: def(self: Self.data_type) thin
+    var _copy_initializer: def(
+        existing_box: Self.data_type
+    ) thin -> Self.data_type
+
+    def __init__[used_internally: Bool = False](out self):
         """
         Trivial constructor for the UnsafeBox used only internally.
 
@@ -107,15 +109,14 @@ struct UnsafeBox(Copyable, Movable):
         Constraints:
             `used_internally` must be `True` to use this constructor.
         """
-        constrained[
-            used_internally,
-            "This constructor is meant for internal use only.",
-        ]()
-        self._data = UnsafePointer[Byte]()
+        comptime assert (
+            used_internally
+        ), "This constructor is meant for internal use only."
+        self._data = UnsafePointer[Byte, MutExternalOrigin]()
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
 
-    fn __init__[T: Copyable & Movable](out self, var data: T):
+    def __init__[T: Self.EltType](out self, var data: T):
         """
         Constructor for the UnsafeBox.
 
@@ -126,31 +127,30 @@ struct UnsafeBox(Copyable, Movable):
             data: The value to be stored in the box.
         """
 
-        @parameter
-        if size_of[T]() == 0:
-            ptr = UnsafePointer[T]()
+        comptime if size_of[T]() == 0:
+            ptr = UnsafePointer[T, MutExternalOrigin]()
         else:
-            ptr = UnsafePointer[T].alloc(1)
+            ptr = alloc[T](1)
             ptr.init_pointee_move(data^)
 
         self._data = ptr.bitcast[Byte]()
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
 
-    fn __copyinit__(out self, other: Self):
+    def __init__(out self, *, copy: Self):
         """
         Copy constructor for the UnsafeBox.
 
         Args:
-            other: The UnsafeBox instance to be copied from.
+            copy: The UnsafeBox instance to be copied from.
         """
         self = Self.__init__[used_internally=True]()
-        self._data = other._copy_initializer(other._data)
-        self._destructor = other._destructor
-        self._copy_initializer = other._copy_initializer
+        self._data = copy._copy_initializer(copy._data)
+        self._destructor = copy._destructor
+        self._copy_initializer = copy._copy_initializer
 
     @always_inline
-    fn __del__(deinit self):
+    def __del__(deinit self):
         """
         Destructor for the UnsafeBox.
 
@@ -160,7 +160,7 @@ struct UnsafeBox(Copyable, Movable):
         self._destructor(self._data)
 
     @always_inline
-    fn unsafe_get[T: Copyable & Movable](ref self) -> ref [self._data] T:
+    def unsafe_get[T: Self.EltType](ref self) -> ref[self] T:
         """
         Returns a reference to the data stored in the box.
 

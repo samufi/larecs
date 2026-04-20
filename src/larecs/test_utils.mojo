@@ -1,7 +1,6 @@
-from testing import assert_true, assert_false, assert_equal
-from random import random
-from memory import UnsafePointer
-from sys.info import sizeof
+from std.testing import assert_true, assert_false, assert_equal
+from std.random import random
+from std.memory import UnsafePointer
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
@@ -10,15 +9,16 @@ from .resource import Resources
 
 # TODO: Revisit the function parameters of `load` and `store` when crash report: https://github.com/modular/modular/issues/5361 is resolved.
 @always_inline
-fn load[
+def load[
     dType: DType,
     is_mut: Bool,
-    origin: Origin[is_mut],
-    address_space: AddressSpace, //,
+    origin: Origin[mut=is_mut],
+    address_space: AddressSpace,
+    //,
     simd_width: Int,
     stride: Int = 1,
 ](
-    ref [origin, address_space]val: SIMD[dType, 1],
+    ref[origin, address_space] val: SIMD[dType, 1],
     out simd: SIMD[dType, simd_width],
 ):
     """
@@ -39,15 +39,15 @@ fn load[
 
 
 @always_inline
-fn store[
+def store[
     dType: DType,
-    is_mut: Bool,
-    origin: Origin[is_mut],
-    address_space: AddressSpace, //,
+    origin: MutOrigin,
+    address_space: AddressSpace,
+    //,
     simd_width: Int,
     stride: Int = 1,
 ](
-    ref [origin, address_space]val: SIMD[dType, 1],
+    ref[origin, address_space] val: SIMD[dType, 1],
     simd: SIMD[dType, simd_width],
 ):
     """
@@ -55,7 +55,6 @@ fn store[
 
     Parameters:
         dType: The data type of the SIMD.
-        is_mut: Whether the value is mutable.
         origin: The origin of the value.
         address_space: The address space of the value.
         simd_width: The number of values to load.
@@ -68,13 +67,13 @@ fn store[
     return UnsafePointer(to=val).strided_store[width=simd_width](simd, stride)
 
 
-alias load2 = load[_, 2]
-alias store2 = store[_, 2]
+comptime load2 = load[_, 2]
+comptime store2 = store[_, 2]
 
 
-fn is_mutable[
-    mut: Bool, //, T: AnyType, origin: Origin[mut]
-](ref [origin]val: T) -> Bool:
+def is_mutable[
+    mut: Bool, //, T: AnyType, origin: Origin[mut=mut]
+](ref[origin] val: T) -> Bool:
     """
     Check if the value is mutable.
 
@@ -89,7 +88,7 @@ fn is_mutable[
     return mut
 
 
-fn get_random_bitmask_list(
+def get_random_bitmask_list(
     count: Int,
     range_start: Int = 0,
     range_end: Int = 1000,
@@ -102,26 +101,20 @@ fn get_random_bitmask_list(
         bytes[0] = Int(random.random_ui64(range_start, range_end))
         list.append(
             BitMask(
-                bytes=UnsafePointer(to=bytes).bitcast[SIMD[DType.uint8, 32]]()[]
+                bytes=LegacyUnsafePointer(to=bytes).bitcast[
+                    SIMD[DType.uint8, 32]
+                ]()[]
             )
         )
 
 
 @always_inline
-fn get_random_bitmask() -> BitMask:
+def get_random_bitmask() -> BitMask:
     mask = BitMask()
     for i in range(BitMask.total_bits):
         if random.random_float64() < 0.5:
             mask.set(UInt8(i), True)
     return mask
-
-
-fn assert_equal_lists[
-    T: EqualityComparable & Copyable & Movable & Stringable
-](a: List[T], b: List[T], msg: String = "") raises:
-    assert_equal(len(a), len(b), msg)
-    for i in range(len(a)):
-        assert_equal(a[i], b[i], msg)
 
 
 @fieldwise_init
@@ -149,7 +142,7 @@ struct FlexibleComponent[i: Int](ComponentType & ImplicitlyCopyable):
     var y: Float32
 
 
-alias SmallWorld = World[
+comptime SmallWorld = World[
     LargerComponent,
     Position,
     Velocity,
@@ -166,7 +159,7 @@ alias SmallWorld = World[
     FlexibleComponent[10],
 ]
 
-alias FullWorld = World[
+comptime FullWorld = World[
     LargerComponent,
     Position,
     Velocity,
@@ -427,30 +420,33 @@ alias FullWorld = World[
 
 
 @fieldwise_init
-struct MemTestStruct(Copyable, Movable):
-    var copy_counter: UnsafePointer[Int]
-    var move_counter: UnsafePointer[Int]
-    var del_counter: UnsafePointer[Int]
+struct MemTestStruct[
+    copy_origin: MutOrigin, move_origin: MutOrigin, del_origin: MutOrigin
+](Copyable, Movable):
+    var copy_counter: UnsafePointer[Int, Self.copy_origin]
+    var move_counter: UnsafePointer[Int, Self.move_origin]
+    var del_counter: UnsafePointer[Int, Self.del_origin]
 
-    fn __moveinit__(out self, deinit other: Self):
-        self.move_counter = other.move_counter
-        self.del_counter = other.del_counter
-        self.copy_counter = other.copy_counter
+    def __init__(out self, *, deinit take: Self):
+        self.move_counter = take.move_counter
+        self.del_counter = take.del_counter
+        self.copy_counter = take.copy_counter
         self.move_counter[] += 1
 
-    fn __copyinit__(out self, other: Self):
-        self.move_counter = other.move_counter
-        self.del_counter = other.del_counter
-        self.copy_counter = other.copy_counter
+    def __init__(out self, *, copy: Self):
+        self.move_counter = copy.move_counter
+        self.del_counter = copy.del_counter
+        self.copy_counter = copy.copy_counter
         self.copy_counter[] += 1
 
-    fn __del__(deinit self):
+    def __del__(deinit self):
         self.del_counter[] += 1
 
 
-fn test_copy_move_del[
-    Container: Copyable & Movable, //,
-    container_factory: fn (var val: MemTestStruct) -> Container,
+def test_copy_move_del[
+    Container: Copyable & Movable & ImplicitlyDestructible,
+    //,
+    container_factory: def(var val: MemTestStruct) thin -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
