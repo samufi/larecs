@@ -1,34 +1,35 @@
-import random
-from testing import *
-from benchmark import keep
+import std.random
+from std.testing import *
+from std.benchmark import keep
 from larecs.bitmask import BitMask
-from io.write import Writable, Writer
-from memory import Span
+from std.io.write import Writable, Writer
+from std.memory import Span
 
 
 # ------ Helper functions ------
 
 
 @always_inline
-fn get_random_bitmask() -> BitMask:
+def get_random_bitmask() -> BitMask:
     mask = BitMask()
     for i in range(BitMask.total_bits):
-        if random.random_float64() < 0.5:
+        if std.random.random_float64() < 0.5:
             mask.set(UInt8(i), True)
     return mask
 
 
 @always_inline
-fn get_random_uint8_list(size: Int, out vals: List[UInt8]):
+def get_random_uint8_list(size: Int, out vals: List[UInt8]):
     vals = List[UInt8](capacity=size)
-    for _ in range(size):
-        vals.append(
-            random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
-        )
+    std.random.randint(
+        vals[0:size],
+        0,
+        Int(BitMask.total_bits),
+    )
 
 
-fn unique(l: List[UInt8], out result: List[UInt8]):
-    mask = InlineArray[Bool, 256](fill=0)
+def unique(l: List[UInt8], out result: List[UInt8]):
+    mask = InlineArray[Bool, 256](fill=False)
     result = List[UInt8]()
     for v in l:
         if not mask[v]:
@@ -36,38 +37,17 @@ fn unique(l: List[UInt8], out result: List[UInt8]):
             result.append(v)
 
 
+@fieldwise_init
 struct StringWriter(Movable, Writer):
     """Simple in-memory Writer implementation for tests."""
 
     var value: String
 
-    fn __init__(out self):
-        self.value = ""
-
-    fn write_bytes(mut self, bytes: Span[UInt8, _]):
-        """Appends bytes to the internal buffer.
-
-        Args:
-            bytes: UTF-8 encoded bytes to append.
-        """
-        self.value._iadd(bytes)
-
-    fn write[*Ts: Writable](mut self, *args: *Ts):
-        """Writes all provided writable arguments into the buffer.
-
-        Parameters:
-            Ts: Variadic writable argument types.
-
-        Args:
-            args: Values to write.
-        """
-
-        @parameter
-        for i in range(args.__len__()):
-            args[i].write_to(self)
+    def write_string(mut self, s: StringSlice):
+        self.value += s
 
 
-fn write_to_string[T: Writable](value: T) -> String:
+def write_to_string[T: Writable](value: T) -> String:
     """Writes a writable value into a string.
 
     Args:
@@ -76,18 +56,20 @@ fn write_to_string[T: Writable](value: T) -> String:
     Returns:
         The string representation produced by value.write_to(...).
     """
-    writer = StringWriter()
+    writer = StringWriter("")
     value.write_to(writer)
     return writer.value
 
 
 @always_inline
-fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
+def get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
     vals = List[BitMask](capacity=size)
     for _ in range(size):
         vals.append(
             BitMask(
-                random.random_ui64(0, BitMask.total_bits).cast[DType.uint8]()
+                std.random.random_ui64(0, UInt64(BitMask.total_bits)).cast[
+                    DType.uint8
+                ]()
             )
         )
 
@@ -95,18 +77,7 @@ fn get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
 # ------ Tests ------
 
 
-fn run_all_bitmask_tests() raises:
-    print("Running all bitmask tests...")
-    test_bit_mask()
-    test_bit_mask_without_exclusive()
-    test_bit_mask_256()
-    test_bit_mask_eq()
-    test_bitmask_get_indices()
-    test_bitmask_writable()
-    print("Done")
-
-
-fn test_bit_mask() raises:
+def test_bit_mask() raises:
     var mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
 
     assert_equal(4, mask.total_bits_set())
@@ -156,7 +127,7 @@ fn test_bit_mask() raises:
     assert_false(mask.contains_any(other2))
 
 
-fn test_bit_mask_without_exclusive() raises:
+def test_bit_mask_without_exclusive() raises:
     mask = BitMask(UInt8(1), UInt8(2), UInt8(13))
     assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
     assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
@@ -172,7 +143,7 @@ fn test_bit_mask_without_exclusive() raises:
     assert_false(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
 
 
-fn test_bit_mask_eq() raises:
+def test_bit_mask_eq() raises:
     mask1 = get_random_bitmask()
     mask2 = mask1
 
@@ -183,7 +154,7 @@ fn test_bit_mask_eq() raises:
     assert_false(mask1 == mask2)
 
 
-fn test_bit_mask_256() raises:
+def test_bit_mask_256() raises:
     for i in range(BitMask.total_bits):
         mask = BitMask(UInt8(i))
         assert_equal(1, mask.total_bits_set())
@@ -218,9 +189,9 @@ fn test_bit_mask_256() raises:
     assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
 
 
-def test_bitmask_get_indices():
+def test_bitmask_get_indices() raises:
     size = 100
-    random.seed(0)
+    std.random.seed(0)
     indices = get_random_uint8_list(size)
     var mask = BitMask()
     for index in indices:
@@ -244,7 +215,7 @@ def test_bitmask_get_indices():
     assert_equal(len(unique_indices), size)
 
 
-fn test_bitmask_writable() raises:
+def test_bitmask_writable() raises:
     mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
     assert_equal(String(mask), write_to_string(mask))
 
@@ -252,5 +223,8 @@ fn test_bitmask_writable() raises:
     assert_equal(String(empty_mask), write_to_string(empty_mask))
 
 
-fn main() raises:
-    run_all_bitmask_tests()
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
