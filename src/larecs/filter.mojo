@@ -1,4 +1,4 @@
-from .bitmask import BitMask
+from .bitmask import _BitMask
 
 
 # Filter is the interface for logic filters.
@@ -14,16 +14,18 @@ from .bitmask import BitMask
 
 
 @fieldwise_init
-struct MaskFilter:
+struct MaskFilter[total_bits: Int where total_bits.is_power_of_two()]:
     """MaskFilter is a filter for including and excluding certain components.
 
     See [..bitmask.BitMask.without] and [..bitmask.BitMask.exclusive].
     """
 
-    var include: BitMask  # Components to include.
-    var exclude: BitMask  # Components to exclude.
+    comptime bitmask = _BitMask[Self.total_bits]
 
-    fn matches(self, bits: BitMask) -> Bool:
+    var include: Self.bitmask  # Components to include.
+    var exclude: Self.bitmask  # Components to exclude.
+
+    def matches(self, bits: Self.bitmask) -> Bool:
         """Matches the filter against a mask."""
         return bits.contains(self.include) and (
             self.exclude.is_zero() or not bits.contains_any(self.exclude)
@@ -39,14 +41,14 @@ struct MaskFilter:
 
 # # NewRelationFilter creates a new [RelationFilter].
 # # It is a [Filter] for a [Relation] target, in addition to components.
-# fn NewRelationFilter(filter Filter, target Entity) RelationFilter:
+# def NewRelationFilter(filter Filter, target Entity) RelationFilter:
 #     return RelationFilter{
 #         Filter: filter,
 #         Target: target,
 
 
 # # matches the filter against a mask.
-# fn (f *RelationFilter) matches(bits BitMask): Bool:
+# def (f *RelationFilter) matches(bits BitMask): Bool:
 #     return f.Filter.matches(bits)
 
 # # CachedFilter is a filter that is cached by the world.
@@ -58,5 +60,5 @@ struct MaskFilter:
 #     id     uint32
 
 # # matches the filter against a mask.
-# fn (f *CachedFilter) matches(bits BitMask): Bool:
+# def (f *CachedFilter) matches(bits BitMask): Bool:
 #     return f.filter.matches(bits)

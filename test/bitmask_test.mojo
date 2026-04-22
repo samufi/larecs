@@ -12,25 +12,25 @@ from std.memory import Span
 @always_inline
 def get_random_bitmask() -> BitMask:
     mask = BitMask()
-    for i in range(BitMask.total_bits):
+    for i in range(mask.total_bits):
         if std.random.random_float64() < 0.5:
-            mask.set(UInt8(i), True)
+            mask.set(i, True)
     return mask
 
 
 @always_inline
-def get_random_uint8_list(size: Int, out vals: List[UInt8]):
-    vals = List[UInt8](capacity=size)
+def get_random_int_list(size: Int, out vals: List[Int]):
+    vals = List[Int](capacity=size)
     std.random.randint(
-        vals[0:size],
+        Span(ptr=vals.unsafe_ptr().bitcast[Scalar[DType.int]](), length=size),
         0,
         Int(BitMask.total_bits),
     )
 
 
-def unique(l: List[UInt8], out result: List[UInt8]):
+def unique(l: List[Int], out result: List[Int]):
     mask = InlineArray[Bool, 256](fill=False)
-    result = List[UInt8]()
+    result = List[Int]()
     for v in l:
         if not mask[v]:
             mask[v] = True
@@ -66,11 +66,7 @@ def get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
     vals = List[BitMask](capacity=size)
     for _ in range(size):
         vals.append(
-            BitMask(
-                std.random.random_ui64(0, UInt64(BitMask.total_bits)).cast[
-                    DType.uint8
-                ]()
-            )
+            BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits))))
         )
 
 
@@ -78,7 +74,7 @@ def get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
 
 
 def test_bit_mask() raises:
-    var mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
+    var mask = BitMask(1, 2, 13, 27)
 
     assert_equal(4, mask.total_bits_set())
 
@@ -95,23 +91,23 @@ def test_bit_mask() raises:
     assert_false(mask.get(0))
     assert_false(mask.get(3))
 
-    mask.set(UInt8(0), True)
-    mask.set(UInt8(1), False)
+    mask.set(0, True)
+    mask.set(1, False)
 
     assert_true(mask.get(0))
     assert_false(mask.get(1))
 
-    mask.flip(UInt8(0))
-    mask.flip(UInt8(1))
+    mask.flip(0)
+    mask.flip(1)
 
     assert_false(mask.get(0))
     assert_true(mask.get(1))
 
-    mask.flip(UInt8(0))
-    mask.flip(UInt8(1))
+    mask.flip(0)
+    mask.flip(1)
 
-    var other1 = BitMask(UInt8(1), UInt8(2), UInt8(32))
-    var other2 = BitMask(UInt8(0), UInt8(2))
+    var other1 = BitMask(1, 2, 32)
+    var other2 = BitMask(0, 2)
 
     assert_false(mask.contains(other1))
     assert_true(mask.contains(other2))
@@ -119,28 +115,26 @@ def test_bit_mask() raises:
     mask.reset()
     assert_equal(0, mask.total_bits_set())
 
-    mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
-    other1 = BitMask(UInt8(1), UInt8(32))
-    other2 = BitMask(UInt8(0), UInt8(32))
+    mask = BitMask(1, 2, 13, 27)
+    other1 = BitMask(1, 32)
+    other2 = BitMask(0, 32)
 
     assert_true(mask.contains_any(other1))
     assert_false(mask.contains_any(other2))
 
 
 def test_bit_mask_without_exclusive() raises:
-    mask = BitMask(UInt8(1), UInt8(2), UInt8(13))
-    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_true(mask.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))))
+    mask = BitMask(1, 2, 13)
+    assert_true(mask.matches(BitMask(1, 2, 13)))
+    assert_true(mask.matches(BitMask(1, 2, 13, 27)))
 
-    assert_false(mask.matches(BitMask(UInt8(1), UInt8(2))))
+    assert_false(mask.matches(BitMask(1, 2)))
 
     excl = mask.exclusive()
 
-    assert_true(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13))))
-    assert_false(
-        excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27)))
-    )
-    assert_false(excl.matches(BitMask(UInt8(1), UInt8(2), UInt8(3), UInt8(13))))
+    assert_true(excl.matches(BitMask(1, 2, 13)))
+    assert_false(excl.matches(BitMask(1, 2, 13, 27)))
+    assert_false(excl.matches(BitMask(1, 2, 3, 13)))
 
 
 def test_bit_mask_eq() raises:
@@ -156,43 +150,39 @@ def test_bit_mask_eq() raises:
 
 def test_bit_mask_256() raises:
     for i in range(BitMask.total_bits):
-        mask = BitMask(UInt8(i))
+        mask = BitMask(i)
         assert_equal(1, mask.total_bits_set())
-        assert_true(mask.get(UInt8(i)))
+        assert_true(mask.get(i))
 
     mask = BitMask()
     assert_equal(0, mask.total_bits_set())
 
-    for i in range(BitMask.total_bits - 1):
-        mask.set(UInt8(i), True)
+    for i in range(mask.total_bits - 1):
+        mask.set(i, True)
         assert_equal(i + 1, mask.total_bits_set())
-        assert_true(mask.get(UInt8(i)))
+        assert_true(mask.get(i))
 
     mask = BitMask(
-        UInt8(1),
-        UInt8(2),
-        UInt8(13),
-        UInt8(27),
-        UInt8(63),
-        UInt8(64),
-        UInt8(65),
+        1,
+        2,
+        13,
+        27,
+        63,
+        64,
+        65,
     )
 
-    assert_true(
-        mask.contains(BitMask(UInt8(1), UInt8(2), UInt8(63), UInt8(64)))
-    )
-    assert_false(
-        mask.contains(BitMask(UInt8(1), UInt8(2), UInt8(63), UInt8(90)))
-    )
+    assert_true(mask.contains(BitMask(1, 2, 63, 64)))
+    assert_false(mask.contains(BitMask(1, 2, 63, 90)))
 
-    assert_true(mask.contains_any(BitMask(UInt8(6), UInt8(65), UInt8(111))))
-    assert_false(mask.contains_any(BitMask(UInt8(6), UInt8(66), UInt8(90))))
+    assert_true(mask.contains_any(BitMask(6, 65, 111)))
+    assert_false(mask.contains_any(BitMask(6, 66, 90)))
 
 
 def test_bitmask_get_indices() raises:
     size = 100
     std.random.seed(0)
-    indices = get_random_uint8_list(size)
+    indices = get_random_int_list(size)
     var mask = BitMask()
     for index in indices:
         mask.set(index, True)
@@ -216,7 +206,7 @@ def test_bitmask_get_indices() raises:
 
 
 def test_bitmask_writable() raises:
-    mask = BitMask(UInt8(1), UInt8(2), UInt8(13), UInt8(27))
+    mask = BitMask(1, 2, 13, 27)
     assert_equal(String(mask), write_to_string(mask))
 
     empty_mask = BitMask()
