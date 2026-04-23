@@ -39,7 +39,7 @@ def unique(l: List[Int], out result: List[Int]):
 
 @fieldwise_init
 struct StringWriter(Movable, Writer):
-    """Simple in-memory Writer implementation for tests."""
+    """Simple in-memory Writer implementation for functions."""
 
     var value: String
 
@@ -70,7 +70,7 @@ def get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
         )
 
 
-# ------ Tests ------
+# ------ functions ------
 
 
 def test_bit_mask() raises:
