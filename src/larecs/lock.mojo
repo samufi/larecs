@@ -14,12 +14,12 @@ struct LockManager(Copyable, Movable):
     var bit_pool: BitPool  # The bit pool for getting and recycling bits.
 
     @always_inline
-    fn __init__(out self):
+    def __init__(out self):
         self.locks = BitMask()
         self.bit_pool = BitPool()
 
     @always_inline
-    fn lock(mut self) raises -> UInt8:
+    def lock(mut self) raises -> Int:
         """
         Locks the world and gets the Lock bit for later unlocking.
 
@@ -31,7 +31,7 @@ struct LockManager(Copyable, Movable):
         return lock
 
     @always_inline
-    fn unlock(mut self, lock: UInt8) raises:
+    def unlock(mut self, lock: Int) raises:
         """
         Unlocks the given lock bit.
 
@@ -48,14 +48,14 @@ struct LockManager(Copyable, Movable):
         self.bit_pool.recycle(lock)
 
     @always_inline
-    fn is_locked(self) -> Bool:
+    def is_locked(self) -> Bool:
         """
         IsLocked returns whether the world is locked by any queries.
         """
         return not self.locks.is_zero()
 
     @always_inline
-    fn reset(mut self):
+    def reset(mut self):
         """
         Reset the locks and the pool.
         """
@@ -63,7 +63,7 @@ struct LockManager(Copyable, Movable):
         self.bit_pool.reset()
 
     @always_inline
-    fn locked(mut self) -> LockedContext[__origin_of(self)]:
+    def locked(mut self) -> LockedContext[origin_of(self)]:
         """
         Returns a locked context.
         """
@@ -71,7 +71,7 @@ struct LockManager(Copyable, Movable):
 
 
 @fieldwise_init
-struct LockedContext[origin: MutableOrigin](ImplicitlyCopyable, Movable):
+struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
     """
     A context manager for locking and unlocking the world.
 
@@ -79,11 +79,11 @@ struct LockedContext[origin: MutableOrigin](ImplicitlyCopyable, Movable):
         origin: The origin of the LockManager to handle.
     """
 
-    var _locks: Pointer[LockManager, origin]
-    var _lock: UInt8
+    var _locks: Pointer[LockManager, Self.origin]
+    var _lock: Int
 
     @always_inline
-    fn __init__(out self, locks: Pointer[LockManager, origin]):
+    def __init__(out self, locks: Pointer[LockManager, Self.origin]):
         """
         Initializes the LockedContext.
 
@@ -94,7 +94,7 @@ struct LockedContext[origin: MutableOrigin](ImplicitlyCopyable, Movable):
         self._lock = 0
 
     @always_inline
-    fn __enter__(mut self) raises -> Self:
+    def __enter__(mut self) raises -> Self:
         """
         Locks the world.
 
@@ -108,7 +108,7 @@ struct LockedContext[origin: MutableOrigin](ImplicitlyCopyable, Movable):
         return self
 
     @always_inline
-    fn __exit__(mut self) raises:
+    def __exit__(mut self) raises:
         """
         Unlocks the world.
 
