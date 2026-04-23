@@ -25,5 +25,8 @@ def test_unsafe_box_value() raises:
     assert_equal(box.unsafe_get[Int](), 42)
 
 
+comptime functions = __functions_in_module()
+
+
 def main() raises:
-    TestSuite.discover_tests[__functions_in_module()]().run()
+    TestSuite.discover_tests[functions]().run()
