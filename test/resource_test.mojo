@@ -1,5 +1,5 @@
 from larecs.resource import Resources, ResourceType
-from testing import *
+from std.testing import *
 
 
 @fieldwise_init
@@ -17,7 +17,7 @@ struct Resource3(ResourceType):
     var value: Int
 
 
-def test_reseource_init():
+def test_reseource_init() raises:
     resources = Resources()
     with assert_raises():
         _ = resources.get[Resource1]()
@@ -38,7 +38,7 @@ def test_reseource_init():
     assert_equal(resources.get[Resource3]().value, 6)
 
 
-def test_resources_add_set():
+def test_resources_add_set() raises:
     resources = Resources()
 
     with assert_raises():
@@ -63,7 +63,7 @@ def test_resources_add_set():
     assert_equal(resources.get[Resource2]().value, 60)
 
 
-def test_reseource_has():
+def test_reseource_has() raises:
     resources = Resources()
 
     assert_false(resources.has[Resource1]())
@@ -76,7 +76,7 @@ def test_reseource_has():
     assert_true(resources.has[Resource2]())
 
 
-def test_resources_get():
+def test_resources_get() raises:
     resources = Resources()
     resources.add(Resource1(value=10), Resource2(value=20))
 
@@ -96,7 +96,7 @@ def test_resources_get():
     assert_equal(resources.get[Resource1]().value, 50)
 
 
-def test_resource_remove():
+def test_resource_remove() raises:
     resources = Resources()
     resources.add(Resource1(10), Resource2(20))
     resources.remove[Resource1]()
@@ -117,10 +117,8 @@ def test_resource_remove():
     assert_false(resources.has[Resource2]())
 
 
-def main():
-    test_reseource_init()
-    test_reseource_has()
-    test_resources_add_set()
-    test_resource_remove()
-    test_resources_get()
-    print("All tests passed!")
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
