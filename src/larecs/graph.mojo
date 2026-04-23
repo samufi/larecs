@@ -11,10 +11,10 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
     """
 
     # The index indicating a non-established link.
-    alias null_index = -1
+    comptime null_index = -1
 
     # The value stored in the node.
-    var value: DataType
+    var value: Self.DataType
 
     # The indices of the neighbouring nodes.
     # The node at index i difffers from the
@@ -24,7 +24,7 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
     # The mask of the node.
     var bit_mask: BitMask
 
-    fn __init__(out self, bit_mask: BitMask, var value: DataType):
+    def __init__(out self, bit_mask: BitMask, var value: Self.DataType):
         """Initializes the node with the given mask and value.
 
         Args:
@@ -35,12 +35,13 @@ struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
         self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
         self.bit_mask = bit_mask
 
-    fn __copyinit__(out self, other: Self):
-        self = Self(other.bit_mask, other.value.copy())
+    def __init__(out self, *, copy: Self):
+        self = Self(copy.bit_mask, copy.value.copy())
 
 
 struct BitMaskGraph[
-    DataType: KeyElement, //,
+    DataType: KeyElement,
+    //,
     null_value: DataType,
 ](Copyable, Movable):
     """A graph where each node is identified by a BitMask.
@@ -58,31 +59,31 @@ struct BitMaskGraph[
     """
 
     # The node index indicating a non-established link.
-    alias null_index = Node[DataType].null_index
+    comptime null_index = Node[Self.DataType].null_index
 
     # The list of nodes in the graph.
-    var _nodes: List[Node[DataType]]
+    var _nodes: List[Node[Self.DataType]]
 
     # A mapping for random lookup of nodes by their mask.
     # Used for slow lookup of nodes.
     var _map: Dict[BitMask, Int]
 
-    fn __init__(out self, var first_value: DataType = Self.null_value):
+    def __init__(out self, var first_value: Self.DataType = Self.null_value):
         """Initializes the graph.
 
         Args:
             first_value: The value stored in the first node,
                          corresponding to an empty bitmask.
         """
-        self._nodes = List[Node[DataType]]()
+        self._nodes = List[Node[Self.DataType]]()
         self._map = Dict[BitMask, Int]()
         _ = self.add_node(BitMask(), first_value^)
 
     @always_inline
-    fn add_node(
+    def add_node(
         mut self,
         node_mask: BitMask,
-        var value: DataType = Self.null_value,
+        var value: Self.DataType = Self.null_value,
     ) -> Int:
         """Adds a node to the graph.
 
@@ -98,9 +99,7 @@ struct BitMaskGraph[
         return len(self._nodes) - 1
 
     @always_inline
-    fn create_link[
-        T: Indexer
-    ](mut self, from_node_index: T, changed_bit: BitMask.IndexType) -> Int:
+    def create_link(mut self, from_node_index: Int, changed_bit: Int) -> Int:
         """Creates a link between two nodes.
 
         Note: this does not check whether the link is already established.
@@ -109,12 +108,18 @@ struct BitMaskGraph[
             from_node_index: The index of the node from which the link is created.
             changed_bit:     The index of the bit that differs between the nodes.
 
-        Parameters:
-            T: The type of the index of the node from which the link is created.
-
         Returns:
             The index of the node to which the link is created.
         """
+        debug_assert(
+            0 <= from_node_index < len(self._nodes),
+            "Node index is out of bounds",
+        )
+        debug_assert(
+            0 <= changed_bit < BitMask.total_bits,
+            "Changed bit index is out of bounds",
+        )
+
         new_mask = self._nodes[from_node_index].bit_mask
         new_mask.flip(changed_bit)
         optional_to_index = self._map.get(new_mask)
@@ -130,12 +135,12 @@ struct BitMaskGraph[
 
         return to_node_index
 
-    fn get_node_index[
+    def get_node_index[
         size: Int
     ](
         mut self,
-        different_bits: InlineArray[BitMask.IndexType, size],
-        start_node_index: UInt = 0,
+        different_bits: InlineArray[Int, size],
+        start_node_index: Int = 0,
     ) -> Int:
         """Returns the index of the node differing from the start node
         by the given indices.
@@ -152,10 +157,20 @@ struct BitMaskGraph[
         Returns:
             The index of the node differing from the start node by the given indices.
         """
+        comptime assert 0 <= size, "Size must be non-negative"
+        debug_assert(
+            0 <= start_node_index < len(self._nodes),
+            "Node index is out of bounds",
+        )
+
         var current_node = start_node_index
 
-        @parameter
-        for i in range(size):
+        comptime for i in range(size):
+            debug_assert(
+                0 <= different_bits[i] < BitMask.total_bits,
+                "Changed bit index is out of bounds",
+            )
+
             var next_node = self._nodes[current_node].neighbours[
                 different_bits[i]
             ]
@@ -165,11 +180,9 @@ struct BitMaskGraph[
         return current_node
 
     @always_inline
-    fn get_node_mask[
-        T: Indexer
-    ](self: Self, node_index: T) -> ref [
-        self._nodes[node_index].bit_mask
-    ] BitMask:
+    def get_node_mask(
+        self: Self, node_index: Int
+    ) -> ref[self._nodes[node_index].bit_mask] BitMask:
         """Returns the mask of the node at the given index.
 
         Args:
@@ -178,14 +191,15 @@ struct BitMaskGraph[
         Returns:
             The mask of the node.
         """
+        debug_assert(
+            0 <= node_index < len(self._nodes), "Node index is out of bounds"
+        )
         return self._nodes[node_index].bit_mask
 
     @always_inline
-    fn __getitem__[
-        T: Indexer
-    ](ref [_]self: Self, node_index: T) -> ref [
-        self._nodes[node_index].value
-    ] DataType:
+    def __getitem__(
+        ref[_] self: Self, node_index: Int
+    ) -> ref[self._nodes[node_index].value] Self.DataType:
         """Returns the value stored in the node at the given index.
 
         Args:
@@ -194,10 +208,13 @@ struct BitMaskGraph[
         return self._nodes[node_index].value
 
     @always_inline
-    fn has_value[T: Indexer](self: Self, node_index: T) -> Bool:
+    def has_value(self: Self, node_index: Int) -> Bool:
         """Returns whether the node at the given index has a value.
 
         Args:
             node_index: The index of the node.
         """
+        debug_assert(
+            0 <= node_index < len(self._nodes), "Node index is out of bounds"
+        )
         return self[node_index] != materialize[Self.null_value]()

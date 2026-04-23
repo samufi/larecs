@@ -1,9 +1,9 @@
-from testing import *
+from std.testing import *
 from larecs.bitmask import BitMask
 from larecs.graph import Node, BitMaskGraph
 
 
-def test_node_initialization():
+def test_node_initialization() raises:
     bit_mask = BitMask(1, 3, 4)
     value = 42
     node = Node(bit_mask, value)
@@ -14,13 +14,13 @@ def test_node_initialization():
         assert_equal(node.neighbours[i], node.null_index)
 
 
-def test_graph_initialization():
+def test_graph_initialization() raises:
     graph = BitMaskGraph[-1]()
     assert_equal(len(graph._nodes), 1)
     assert_equal(len(graph._map), 1)
 
 
-def test_add_node():
+def test_add_node() raises:
     graph = BitMaskGraph[-1]()
     bit_mask = BitMask(0, 2)
     value = 42
@@ -32,8 +32,8 @@ def test_add_node():
     assert_equal(graph._map[bit_mask], 1)
 
 
-def test_getitem():
-    alias null_value = -1
+def test_getitem() raises:
+    comptime null_value = -1
     graph = BitMaskGraph[null_value]()
     bit_mask = BitMask(0, 2)
     value = 42
@@ -44,7 +44,7 @@ def test_getitem():
     assert_equal(graph[node_index], null_value)
 
 
-def test_create_link():
+def test_create_link() raises:
     graph = BitMaskGraph[-1]()
     bit_mask1 = BitMask(0, 2)
     bit_mask2 = BitMask(0)
@@ -57,20 +57,22 @@ def test_create_link():
     assert_equal(graph._nodes[2].bit_mask, bit_mask2)
 
 
-def test_get_node_index():
+def test_get_node_index() raises:
     graph = BitMaskGraph[-1]()
     bit_mask2 = BitMask(0, 2)
     bit_mask1 = BitMask(0)
-    node_index = graph.get_node_index(InlineArray[UInt8, 2](0, 2))
+    different_bits: InlineArray[Int, 2] = [0, 2]
+    node_index = graph.get_node_index(different_bits)
     assert_equal(node_index, 2)
     assert_equal(graph._nodes[1].bit_mask, bit_mask1)
     assert_equal(graph._nodes[node_index].bit_mask, bit_mask2)
 
-    assert_equal(graph.get_node_index(InlineArray[UInt8, 2](5, 5), 0), 0)
+    different_bits: InlineArray[Int, 2] = [5, 5]
+    assert_equal(graph.get_node_index(different_bits), 0)
     assert_equal(graph._nodes[3].bit_mask, BitMask(5))
 
 
-def test_get_node_mask():
+def test_get_node_mask() raises:
     graph = BitMaskGraph[-1]()
     bit_mask = BitMask(0, 2)
     node_index = graph.add_node(bit_mask, 42)
@@ -80,15 +82,15 @@ def test_get_node_mask():
 struct S:
     var l: List[Node[Int]]
 
-    fn __init__(mut self):
+    def __init__(out self):
         self.l = List[Node[Int]]()
         self.add(BitMask(), -1)
 
-    fn add(mut self, var node_mask: BitMask, var value: Int):
+    def add(mut self, var node_mask: BitMask, var value: Int):
         self.l.append(Node(node_mask, value))
 
 
-def test_has_value():
+def test_has_value() raises:
     graph = BitMaskGraph[-1]()
     bit_mask = BitMask(0, 2)
     value = 42
@@ -97,13 +99,8 @@ def test_has_value():
     assert_equal(graph.has_value(0), False)
 
 
-def main():
-    print("Running tests...")
-    test_node_initialization()
-    test_graph_initialization()
-    test_add_node()
-    test_getitem()
-    test_create_link()
-    test_get_node_index()
-    test_get_node_mask()
-    print("All tests passed.")
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
