@@ -3,7 +3,6 @@ from .filter import MaskFilter
 from std.hashlib import Hasher
 from std.io.write import Writable, Writer
 from std.sys import bit_width_of
-from ._utils import next_pow2
 
 
 @fieldwise_init
