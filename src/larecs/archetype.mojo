@@ -637,13 +637,14 @@ struct Archetype[
         for i in range(self._component_count):
             id = self._ids[i]
             debug_assert(0 <= id < Self.max_size, "Component ID out of bounds.")
-            if id not in ids and self._capacity < capacity:
-                self._data[id].free()
-                self._data[id] = alloc[UInt8](capacity * self._item_sizes[id])
-            else:
-                self._data[id].free()
+            if id in ids:
+                if self._data[id] != data[id]:
+                    self._data[id].free()
                 self._data[id] = data[id]
                 self._item_sizes[id] = item_sizes[id]
+            elif self._capacity < capacity:
+                self._data[id].free()
+                self._data[id] = alloc[UInt8](capacity * self._item_sizes[id])
 
         self._capacity = capacity
 

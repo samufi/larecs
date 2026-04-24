@@ -200,6 +200,16 @@ def test_archetype_shallow_copy() raises:
         archetype1._component_count,
         archetype1._capacity,
     )
+    archetype1.unsafe_reinit_components(archetype2._ids)
+
+    assert_true(
+        archetype2.has_component(3),
+        (
+            "Destination-only component storage should remain valid after"
+            " taking data"
+        ),
+    )
+    assert_equal(archetype2._item_sizes[3], 16)
 
     entity_idx = archetype2.add(Entity(10, 3))
     entity2 = archetype2.get_entity_accessor(entity_idx)
@@ -262,8 +272,4 @@ comptime functions = __functions_in_module()
 
 
 def main() raises:
-    var tests = TestSuite.discover_tests[functions]()
-    # tests.skip[test_archetype_get_entity]()  # get_entity(idx=0, size=0)
-    # tests.skip[test_archetype_remove]()  # _get_component_ptr(idx=1 size=1)
-
-    (tests^).run()
+    TestSuite.discover_tests[functions]().run()
