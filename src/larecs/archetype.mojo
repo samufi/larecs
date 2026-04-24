@@ -1,22 +1,28 @@
-from sys.intrinsics import _type_is_eq
-from memory import memcpy, UnsafePointer
-from .component import ComponentManager, constrain_components_unique
+from std.sys.intrinsics import _type_is_eq
+from std.memory import memcpy, UnsafePointer
+from std.sys import size_of
+from std.bit import next_power_of_two
 from .entity import Entity
+from .component import (
+    constrain_components_unique,
+    get_max_size,
+    ComponentManager,
+)
 from .bitmask import BitMask
 from .pool import EntityPool
 from .types import get_max_size
-from ._utils import next_pow2
 
-alias DEFAULT_CAPACITY = 32
+comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
 
-alias MutableEntityAccessor = EntityAccessor[True]
+comptime MutableEntityAccessor = EntityAccessor[archetype_mutability=True, ...]
 """An entity accessor with mutable references to the components."""
 
 
 struct EntityAccessor[
     archetype_mutability: Bool,
-    archetype_origin: Origin[archetype_mutability],
+    //,
+    archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
 ]:
@@ -29,22 +35,22 @@ struct EntityAccessor[
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List.
         ComponentTypes: The types of the components.
-        component_manager: The component manager.
+        component_manager: The component manager that provides size information about the component types.
     """
 
-    alias Archetype = Archetype[
-        *ComponentTypes, component_manager=component_manager
+    comptime Archetype = Archetype[
+        *Self.ComponentTypes, component_manager=Self.component_manager
     ]
     """The archetype of the entity."""
 
-    var _archetype: Pointer[Self.Archetype, archetype_origin]
+    var _archetype: Pointer[Self.Archetype, Self.archetype_origin]
     var _index_in_archetype: Int
 
-    @doc_private
+    @doc_hidden
     @always_inline
-    fn __init__(
+    def __init__(
         out self,
-        archetype: Pointer[Self.Archetype, archetype_origin],
+        archetype: Pointer[Self.Archetype, Self.archetype_origin],
         index_in_archetype: Int,
     ):
         """
@@ -56,7 +62,7 @@ struct EntityAccessor[
         self._index_in_archetype = index_in_archetype
 
     @always_inline
-    fn get_entity(self) -> Entity:
+    def get_entity(self) -> Entity:
         """Returns the entity of the accessor.
 
         Returns:
@@ -65,9 +71,9 @@ struct EntityAccessor[
         return self._archetype[].get_entity(self._index_in_archetype)
 
     @always_inline
-    fn get[
-        T: ComponentType
-    ](ref self) raises -> ref [self._archetype[]._data] T:
+    def get[
+        T: ComponentType where Self.component_manager._ContainsComponent[T],
+    ](ref self) raises -> ref[self.archetype_origin] T:
         """Returns a reference to the given component of the Entity.
 
         Parameters:
@@ -79,21 +85,30 @@ struct EntityAccessor[
         Raises:
             Error: If the entity does not have the component.
         """
-        return self._archetype[].get_component[T=T](
+        return self._archetype[].get_component[T](
             self._index_in_archetype,
         )
 
     @always_inline
-    fn set[
-        *Ts: ComponentType
+    def set[
+        origin: MutOrigin,
+        *Ts: ComponentType where (
+            constrain_components_unique[*Ts]()
+            and Self.component_manager._ContainsComponents[*Ts]
+        ),
     ](
-        mut self: EntityAccessor[archetype_mutability=True],
+        mut self: EntityAccessor[
+            origin,
+            *Self.ComponentTypes,
+            component_manager=Self.component_manager,
+        ],
         var *components: *Ts,
     ) raises:
         """
         Overwrites components for an [..entity.Entity], using the given content.
 
         Parameters:
+            origin: The origin of the accessor.
             Ts:        The types of the components.
 
         Args:
@@ -102,16 +117,22 @@ struct EntityAccessor[
         Raises:
             Error: If the entity does not exist or does not have the component.
         """
-        constrain_components_unique[*Ts]()
 
-        @parameter
-        for i in range(components.__len__()):
-            self._archetype[].get_component[T = Ts[i]](
-                self._index_in_archetype
-            ) = components[i].copy()
+        def set_component[id: Int](var component: Ts[id]) capturing:
+            comptime T = Ts[id]
+            comptime assert Self.component_manager._ContainsComponent[
+                T
+            ], "Component type not in component manager"
+            self._archetype[].get_component[T](self._index_in_archetype) = (
+                component^
+            )
+
+        (components^).consume_elements[set_component]()
 
     @always_inline
-    fn has[T: ComponentType](self) -> Bool:
+    def has[
+        T: ComponentType where Self.component_manager._ContainsComponent[T]
+    ](self) -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
@@ -133,54 +154,56 @@ struct Archetype[
 
     Parameters:
         Ts: The component types of the archetype.
-        component_manager: The component manager.
+        component_manager: The component manager that provides size information about the component types.
     """
 
-    alias dType = BitMask.IndexDType
-    """The DType of the component ids."""
-
-    alias Id = SIMD[Self.dType, 1]
+    comptime Id = Int
     """The type of the component ids."""
 
-    alias Index = UInt32
+    comptime Index = UInt32
     """The type of the index of entities."""
 
-    alias max_size = get_max_size[Self.dType]()
+    comptime max_size = BitMask.total_bits
     """The maximal number of components in the archetype."""
 
-    alias EntityAccessor = EntityAccessor[
-        _, _, *Ts, component_manager=component_manager
+    comptime EntityAccessor = EntityAccessor[
+        _, *Self.Ts, component_manager=Self.component_manager
     ]
     """The type of the entity accessors generated by the archetype."""
 
+    # TODO: When <insert modular issue> is resolved use TypeList.map here to get a Tuple of typed pointers
+    comptime PointerTypes = InlineArray[
+        UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
+    ]
+
     # Pointers to the component data.
-    var _data: InlineArray[UnsafePointer[UInt8], Self.max_size]
+    var _data: Self.PointerTypes
 
     # Current number of entities.
-    var _size: UInt
+    var _size: Int
 
     # Current capacity.
-    var _capacity: UInt
+    var _capacity: Int
 
     # number of components.
-    var _component_count: UInt
+    var _component_count: Int
 
     # Sizes of the component types by column
-    var _item_sizes: InlineArray[UInt32, Self.max_size]
+    var _item_sizes: InlineArray[Int, Self.max_size]
 
     # The indices of the present components
-    var _ids: SIMD[Self.dType, Self.max_size]
+    var _ids: InlineArray[Self.Id, Self.max_size]
 
     # The entities in the archetype
     var _entities: List[Entity]
 
     # Index of the the archetype's node in the archetype graph
-    var _node_index: UInt
+    var _node_index: Int
 
     # Mask of the the archetype's node in the archetype graph
     var _mask: BitMask
 
-    fn __init__(
+    def __init__(
         out self,
     ):
         """Initializes the zero archetype without any component.
@@ -190,10 +213,10 @@ struct Archetype[
         """
         self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
-    @doc_private
-    fn __init__[
-        *, used_internally: Bool
-    ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
+    @doc_hidden
+    def __init__[
+        *, used_internally: Bool where used_internally
+    ](out self, node_index: Int, mask: BitMask, capacity: Int):
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -214,33 +237,36 @@ struct Archetype[
         Returns:
             An archetype without allocated memory.
         """
-        constrained[
-            used_internally,
-            "This constructor is meant for internal use only.",
-        ]()
+
+        debug_assert(
+            0 <= capacity, "Capacity must be greater or equal to zero."
+        )
+        debug_assert(
+            0 <= node_index < Self.max_size, "Node index is out of bounds."
+        )
 
         self._size = 0
         self._mask = mask
         self._component_count = 0
         self._capacity = capacity
-        self._ids = SIMD[Self.dType, Self.max_size]()
-        self._data = InlineArray[UnsafePointer[UInt8], Self.max_size](
-            fill=UnsafePointer[UInt8]()
-        )
-        self._item_sizes = InlineArray[UInt32, Self.max_size](fill=0)
+        self._ids = InlineArray[Self.Id, Self.max_size](fill=-1)
+        self._data = InlineArray[
+            UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
+        ](fill=UnsafePointer[UInt8, MutExternalOrigin]())
+        self._item_sizes = InlineArray[Int, Self.max_size](fill=0)
         self._entities = List[Entity]()
         self._node_index = node_index
 
     @always_inline
-    fn __init__[
-        component_count: Int
+    def __init__[
+        component_count: Int where 0 <= component_count
     ](
         out self,
-        node_index: UInt,
+        node_index: Int,
         component_ids: InlineArray[Self.Id, component_count] = InlineArray[
             Self.Id, component_count
         ](fill=Self.Id(0)),
-        capacity: UInt = DEFAULT_CAPACITY,
+        capacity: Int = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with given components.
 
@@ -257,19 +283,19 @@ struct Archetype[
         """
         mask_ = BitMask()
 
-        @parameter
-        for i in range(component_count):
+        comptime for i in range(component_count):
             mask_.set[True](component_ids[i])
+
         self = Self(node_index, mask_, component_ids, capacity)
 
-    fn __init__[
-        component_count: Int
+    def __init__[
+        component_count: Int where 0 <= component_count
     ](
         out self,
-        node_index: UInt,
+        node_index: Int,
         mask: BitMask,
         component_ids: InlineArray[Self.Id, component_count],
-        capacity: UInt = DEFAULT_CAPACITY,
+        capacity: Int = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with given components and BitMask.
 
@@ -289,35 +315,22 @@ struct Archetype[
         Returns:
             The archetype with the given components and BitMask.
         """
-        constrained[
-            Self.dType.is_integral(),
-            "The component identifier type needs to be an integral type.",
-        ]()
-
-        constrained[
-            Self.max_size >= component_count,
-            "An archetype cannot have more components than "
-            + String(Self.max_size)
-            + ".",
-        ]()
-
         self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = component_count
 
-        @parameter
-        for i in range(component_count):
+        comptime for i in range(component_count):
             id = component_ids[i]
-            self._item_sizes[id] = component_manager.component_sizes[id]
+            self._item_sizes[id] = Self.component_manager.component_sizes[id]
             self._ids[i] = id
-            self._data[id] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_manager.component_sizes[id])
+            self._data[id] = alloc[UInt8](
+                self._capacity * Self.component_manager.component_sizes[id]
             )
 
-    fn __init__(
+    def __init__(
         out self,
-        node_index: UInt,
+        node_index: Int,
         mask: BitMask,
-        capacity: UInt = DEFAULT_CAPACITY,
+        capacity: Int = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype based on a given mask.
 
@@ -332,64 +345,63 @@ struct Archetype[
         self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = 0
 
-        @parameter
-        for i in range(component_manager.component_count):
+        comptime for i in range(len(Self.Ts)):
             if mask.get(i):
-                self._item_sizes[i] = component_manager.component_sizes[i]
+                self._item_sizes[i] = Self.component_manager.component_sizes[i]
                 self._ids[self._component_count] = i
-                self._data[i] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(self._item_sizes[i])
+                self._data[i] = alloc[UInt8](
+                    self._capacity * self._item_sizes[i]
                 )
                 self._component_count += 1
 
-    fn __copyinit__(out self, existing: Self):
+    def __init__(out self, *, copy: Self):
         """Copies the data from an existing archetype to a new one.
 
         Args:
-            existing: The archetype to copy from.
+            copy: The archetype to copy from.
         """
         # Copy the attributes that can be trivially
         # copied via a simple assignment
-        self._size = existing._size
-        self._capacity = existing._capacity
-        self._component_count = existing._component_count
-        self._item_sizes = existing._item_sizes
-        self._entities = existing._entities.copy()
-        self._ids = existing._ids
-        self._node_index = existing._node_index
-        self._mask = existing._mask
+        self._size = copy._size
+        self._capacity = copy._capacity
+        self._component_count = copy._component_count
+        self._item_sizes = copy._item_sizes
+        self._entities = copy._entities.copy()
+        self._ids = copy._ids
+        self._node_index = copy._node_index
+        self._mask = copy._mask
 
         # Copy the data
-        self._data = InlineArray[UnsafePointer[UInt8], Self.max_size](
-            fill=UnsafePointer[UInt8]()
-        )
+        self._data = InlineArray[
+            UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
+        ](fill=UnsafePointer[UInt8, MutExternalOrigin]())
 
-        for i in range(existing._component_count):
-            id = existing._ids[i]
-            size = existing._capacity * index(existing._item_sizes[id])
-            self._data[id] = UnsafePointer[UInt8].alloc(size)
+        for i in range(copy._component_count):
+            id = copy._ids[i]
+            size = copy._capacity * index(copy._item_sizes[id])
+            self._data[id] = alloc[UInt8](size)
             memcpy(
-                self._data[id],
-                existing._data[id],
-                size,
+                dest=self._data[id],
+                src=copy._data[id],
+                count=size,
             )
 
-    fn __del__(deinit self):
+    def __del__(deinit self):
         """Frees the memory of the archetype."""
         for i in range(self._component_count):
             self._data[self._ids[i]].free()
 
     @always_inline
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """Returns the number of entities in the archetype.
 
         Returns:
             The number of entities in the archetype.
         """
-        return self._size
+        return Int(self._size)
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """Returns whether the archetype contains entities.
 
         Returns:
@@ -397,7 +409,9 @@ struct Archetype[
         """
         return Bool(self._size)
 
-    fn unsafe_reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
+    def unsafe_reinit_components(
+        mut self, ids: InlineArray[Self.Id, Self.max_size]
+    ):
         """Reinitializes owned component storage while keeping the component layout intact.
 
         Important:
@@ -416,12 +430,12 @@ struct Archetype[
         for i in range(self._component_count):
             id = self._ids[i]
             if id in ids:
-                self._data[id] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(self._item_sizes[id])
+                self._data[id] = alloc[UInt8](
+                    self._capacity * self._item_sizes[id]
                 )
 
     @always_inline
-    fn get_node_index(self) -> UInt:
+    def get_node_index(self) -> Int:
         """Returns the index of the archetype's node in the archetype graph.
 
         Returns:
@@ -430,7 +444,7 @@ struct Archetype[
         return self._node_index
 
     @always_inline
-    fn get_mask(self) -> ref [self._mask] BitMask:
+    def get_mask(self) -> ref[self._mask] BitMask:
         """Returns the mask of the archetype's node in the archetype graph.
 
         Returns:
@@ -439,7 +453,7 @@ struct Archetype[
         return self._mask
 
     @always_inline
-    fn reserve(mut self):
+    def reserve(mut self):
         """Extends the capacity of the archetype by factor 2 using power-of-2 allocation strategy.
 
         Doubles the current capacity (minimum 8) to provide exponential growth that minimizes
@@ -448,7 +462,7 @@ struct Archetype[
         """
         self.reserve(max(self._capacity * 2, 8))
 
-    fn reserve(mut self, new_capacity: UInt):
+    def reserve(mut self, new_capacity: Int):
         """Extends the capacity of the archetype to at least the specified number of entities.
 
         Uses a power-of-2 allocation strategy to ensure optimal memory alignment and reduce
@@ -460,7 +474,7 @@ struct Archetype[
 
         Args:
             new_capacity: The minimum required capacity. The actual allocated capacity
-                         will be `next_pow2(new_capacity)` to maintain power-of-2 growth.
+                         will be `next_power_of_two(new_capacity)` to maintain power-of-2 growth.
 
         Example:
 
@@ -472,20 +486,24 @@ struct Archetype[
         archetype.reserve(64)   # Actually reserves 64
         ```
         """
+        debug_assert(
+            0 < new_capacity, "New capacity must be greater than zero."
+        )
+
         if new_capacity <= self._capacity:
             return
 
-        new_pow2_capacity = next_pow2(new_capacity)
+        new_pow2_capacity = next_power_of_two(new_capacity)
 
         for i in range(self._component_count):
             id = self._ids[i]
-            old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_pow2_capacity
-            new_memory = UnsafePointer[UInt8].alloc(new_size)
+            old_size = self._item_sizes[id] * self._capacity
+            new_size = self._item_sizes[id] * new_pow2_capacity
+            new_memory = alloc[UInt8](new_size)
             memcpy(
-                new_memory,
-                self._data[id],
-                old_size,
+                dest=new_memory,
+                src=self._data[id],
+                count=old_size,
             )
             self._data[id].free()
             self._data[id] = new_memory
@@ -493,11 +511,8 @@ struct Archetype[
         self._capacity = new_pow2_capacity
 
     @always_inline
-    fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
+    def get_entity(self, idx: Int) -> ref[self._entities] Entity:
         """Returns the entity at the given index.
-
-        Parameters:
-            T: The type of the index.
 
         Args:
             idx: The index of the entity.
@@ -505,24 +520,22 @@ struct Archetype[
         Returns:
             A reference to the entity at the given index.
         """
+        debug_assert(
+            0 <= idx < self._size,
+            "Index out of bounds: idx=",
+            idx,
+            " size=",
+            self._size,
+        )
         return self._entities[idx]
 
     @always_inline
-    fn get_entity_accessor[
-        mutability: Bool, //,
-        T: Indexer,
-        origin: Origin[mutability],
-    ](
-        ref [origin]self,
-        idx: T,
-        out accessor: Self.EntityAccessor[mutability, origin],
+    def get_entity_accessor(
+        ref self,
+        idx: Int,
+        out accessor: Self.EntityAccessor[archetype_origin=origin_of(self),],
     ):
         """Returns an accessor for the entity at the given index.
-
-        Parameters:
-            mutability: Whether the reference to the list is mutable.
-            T: The type of the index.
-            origin: The lifetime of the list.
 
         Args:
             idx: The index of the entity.
@@ -530,66 +543,79 @@ struct Archetype[
         Returns:
             An accessor for the entity at the given index.
         """
+        debug_assert(0 <= idx < self._size, "Index out of bounds.")
+
         accessor = Self.EntityAccessor(
             Pointer(to=self),
-            index(idx),
+            idx,
         )
 
     @always_inline
-    fn unsafe_set[
-        T: Indexer
-    ](mut self, idx: T, id: Self.Id, value: UnsafePointer[UInt8]):
+    def unsafe_set[
+        mut: Bool, //, origin: Origin[mut=mut]
+    ](mut self, idx: Int, id: Self.Id, value: UnsafePointer[UInt8, origin]):
         """Sets the component with the given id at the given index.
-
-        Parameters:
-            T: The type of the index.
 
         Args:
             idx: The index of the entity.
             id: The id of the component.
             value: A pointer to the value being set.
         """
+        debug_assert(0 <= idx < self._size, "Index out of bounds.")
+
         memcpy(
-            self._get_component_ptr(index(idx), id),
-            value,
-            index(self._item_sizes[id]),
+            dest=self._get_component_ptr(idx, id),
+            src=value,
+            count=self._item_sizes[id],
         )
 
     @always_inline
-    fn unsafe_set[
-        T: Indexer,
+    def unsafe_set[
+        mut: Bool,
+        //,
+        origin: Origin[mut=mut],
+        T: ComponentType where Self.component_manager._ContainsComponent[T],
     ](
         mut self,
-        start_idx: T,
-        id: Self.Id,
-        data: UnsafePointer[UInt8],
-        count: UInt,
+        start_idx: Int,
+        data: UnsafePointer[UInt8, origin],
+        count: Int,
     ):
         """Sets the data of the component with the given id for multiple consecutive entities starting with the given index.
 
         Parameters:
+            mut: Whether the data pointer is mutable.
+            origin: The lifetime of the data pointer.
             T: The type of the index.
 
         Args:
             start_idx: The index of the first entity to set.
-            id: The id of the component.
             data: Pointer to the values to set the component with.
             count: The number of elements to set.
         """
+        debug_assert(
+            0 <= start_idx and start_idx + count <= self._size,
+            "Index out of bounds.",
+        )
+
+        comptime id = Self.component_manager.get_id[T]()
+
         memcpy(
-            self._get_component_ptr(index(start_idx), id),
-            data,
-            index(self._item_sizes[id]) * count,
+            dest=self._get_component_ptr(start_idx, id),
+            src=data,
+            count=self._item_sizes[id] * count,
         )
 
     @always_inline
-    fn unsafe_take_data_from_parts(
+    def unsafe_take_data_from_parts[](
         mut self,
-        ids: SIMD[Self.dType, Self.max_size],
-        data: InlineArray[UnsafePointer[UInt8], Self.max_size],
-        item_sizes: InlineArray[UInt32, Self.max_size],
+        ids: InlineArray[Self.Id, Self.max_size],
+        data: InlineArray[
+            UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
+        ],
+        item_sizes: InlineArray[Int, Self.max_size],
         component_count: Int,
-        capacity: UInt,
+        capacity: Int,
     ):
         """Unsafely takes ownership of component storage described by raw archetype parts.
 
@@ -610,11 +636,10 @@ struct Archetype[
         """
         for i in range(self._component_count):
             id = self._ids[i]
+            debug_assert(0 <= id < Self.max_size, "Component ID out of bounds.")
             if id not in ids and self._capacity < capacity:
                 self._data[id].free()
-                self._data[id] = UnsafePointer[UInt8]().alloc(
-                    capacity * index(self._item_sizes[id])
-                )
+                self._data[id] = alloc[UInt8](capacity * self._item_sizes[id])
             else:
                 self._data[id].free()
                 self._data[id] = data[id]
@@ -623,55 +648,59 @@ struct Archetype[
         self._capacity = capacity
 
     @always_inline
-    fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
+    def _get_component_ptr(
+        self, entity_idx: Int, id: Self.Id
+    ) -> UnsafePointer[UInt8, MutExternalOrigin]:
         """Returns the component with the given id at the given index.
 
         Does not check if the archetype contains the component.
 
         Args:
-            idx: The index of the entity.
+            entity_idx: The index of the entity.
             id: The id of the component.
 
         Returns:
             A pointer to the component.
         """
-        return self._data[id] + idx * self._item_sizes[id]
+        debug_assert(
+            0 <= entity_idx < self._size,
+            "Index out of bounds: idx=",
+            entity_idx,
+            " size=",
+            self._size,
+        )
+
+        return self._data[id] + entity_idx * self._item_sizes[id]
 
     @always_inline
-    fn get_component[
-        IndexType: Indexer, //,
-        *,
-        T: ComponentType,
-        assert_has_component: Bool = True,
-    ](ref self, idx: IndexType) raises -> ref [self._data] T:
-        """Returns the component with the given id at the given index.
+    def get_component[
+        T: ComponentType where Self.component_manager._ContainsComponent[T],
+    ](ref self, idx: Int) -> ref[self] T:
+        """Returns the component with the given Type T at the given index.
+
+        Parameters:
+            T: The type of the component.
 
         Args:
             idx: The index of the entity.
 
-        Parameters:
-            IndexType: The type of the index.
-            T: The type of the component.
-            assert_has_component: Whether to assert that the archetype
-                    contains the component.
-
-        Raises:
-            Error: If assert_has_component and the archetype does not contain the component.
-
         Returns:
             A reference to the component.
         """
-        alias id = component_manager.get_id[T]()
-        alias component_size = component_manager.component_sizes[id]
+        comptime id = Self.component_manager.get_id[T]()
 
-        @parameter
-        if assert_has_component:
-            self.assert_has_component(id)
+        debug_assert(
+            0 <= idx < self._size,
+            "Index out of bounds: idx=",
+            idx,
+            " size=",
+            self._size,
+        )
 
-        return (self._data[id] + index(idx) * component_size).bitcast[T]()[]
+        return (self._data[id] + idx * size_of[T]()).bitcast[T]()[]
 
     @always_inline
-    fn get_entities(self) -> ref [self._entities] List[Entity]:
+    def get_entities(self) -> ref[self._entities] List[Entity]:
         """Returns the entities in the archetype.
 
         Returns:
@@ -680,7 +709,7 @@ struct Archetype[
         return self._entities
 
     @always_inline
-    fn has_component(self, id: Self.Id) -> Bool:
+    def has_component(self, id: Self.Id) -> Bool:
         """Returns whether the archetype contains the given component id.
 
         Args:
@@ -692,7 +721,9 @@ struct Archetype[
         return Bool(self._data[id])
 
     @always_inline
-    fn has_component[T: ComponentType](self) -> Bool:
+    def has_component[
+        T: ComponentType where Self.component_manager._ContainsComponent[T]
+    ](self) -> Bool:
         """Returns whether the archetype contains the given component id.
 
         Parameters:
@@ -701,10 +732,10 @@ struct Archetype[
         Returns:
             Whether the archetype contains the component.
         """
-        return Bool(self._data[component_manager.get_id[T]()])
+        return Bool(self._data[Self.component_manager.get_id[T]()])
 
     @always_inline
-    fn assert_has_component(self, id: Self.Id) raises:
+    def assert_has_component(self, id: Self.Id) raises:
         """Raises if the archetype does not contain the given component id.
 
         Args:
@@ -721,14 +752,11 @@ struct Archetype[
             )
 
     @always_inline
-    fn remove[T: Indexer](mut self, idx: T) -> Bool:
+    def remove(mut self, idx: Int) -> Bool:
         """Removes an entity and its components from the archetype.
 
         Performs a swap-remove and reports whether a swap was necessary
         (i.e. not the last entity that was removed).
-
-        Parameters:
-            T: The type of the index.
 
         Args:
             idx: The index of the entity to remove.
@@ -737,9 +765,18 @@ struct Archetype[
             Whether a swap was necessary.
         """
 
-        self._size -= 1
+        debug_assert(
+            0 <= idx < self._size,
+            "Index out of bounds: idx=",
+            idx,
+            " size=",
+            self._size,
+        )
 
-        var swapped = index(idx) != self._size
+        # Store new size temporarily to not interfere with further bounds checking
+        new_size = self._size - 1
+
+        var swapped = idx != new_size
 
         if swapped:
             self._entities[idx] = self._entities.pop()
@@ -751,16 +788,19 @@ struct Archetype[
                     continue
 
                 memcpy(
-                    self._get_component_ptr(index(idx), id),
-                    self._get_component_ptr(self._size, id),
-                    index(size),
+                    dest=self._get_component_ptr(idx, id),
+                    src=self._get_component_ptr(new_size, id),
+                    count=size,
                 )
         else:
             _ = self._entities.pop()
 
+        self._size = new_size
+
         return swapped
 
-    fn clear(mut self):
+    @always_inline
+    def clear(mut self):
         """Removes all entities from the archetype.
 
         Note: does not free any memory.
@@ -768,7 +808,8 @@ struct Archetype[
         self._entities.clear()
         self._size = 0
 
-    fn add(mut self, entity: Entity) -> Int:
+    @always_inline
+    def add(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
 
         Args:
@@ -784,9 +825,10 @@ struct Archetype[
         self._size += 1
         return self._size - 1
 
-    fn extend(
+    @always_inline
+    def extend(
         mut self,
-        count: UInt,
+        count: Int,
         mut entity_pool: EntityPool,
     ) -> Int:
         """Extends the archetype by `count` entities from the provided pool.
@@ -800,6 +842,9 @@ struct Archetype[
             archetype. The other new entities are at consecutive
             `count` indices.
         """
+        if count <= 0:
+            return self._size - 1
+
         if self._size + count >= self._capacity:
             self.reserve(
                 self._size + count
