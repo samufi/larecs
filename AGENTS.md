@@ -38,6 +38,9 @@
 
         Returns:
             <description what gets returned>
+
+        Constraints:
+            <description of one comptime constraint (indicated by `comptime assert`)>
         """
   ```
 
