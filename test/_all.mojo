@@ -11,6 +11,8 @@ from static_optional_test import functions as static_optional_functions
 from component_test import functions as component_functions
 from graph_test import functions as graph_functions
 from archetype_test import functions as archetype_functions
+from entity_test import functions as entity_functions
+from query_test import functions as query_functions
 
 
 def main() raises:
@@ -25,4 +27,6 @@ def main() raises:
         .concat(component_functions)
         .concat(graph_functions)
         .concat(archetype_functions)
+        .concat(entity_functions)
+        .concat(query_functions)
     ]().run()

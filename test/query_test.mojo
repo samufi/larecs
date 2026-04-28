@@ -1,4 +1,4 @@
-from testing import *
+from std.testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
@@ -6,7 +6,7 @@ from larecs.component import ComponentManager
 from larecs.query import _ArchetypeByMaskIterator
 
 
-def test_query_length():
+def test_query_length() raises:
     world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -108,7 +108,7 @@ def test_query_length():
         assert_equal(size, len(iter))
 
 
-def test_query_result_ids():
+def test_query_result_ids() raises:
     world = SmallWorld()
 
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -119,13 +119,17 @@ def test_query_result_ids():
     entities = List[Entity]()
 
     for i in range(n):
-        entities.append(world.add_entity(FlexibleComponent[0](1.0, i), c1, c2))
+        entities.append(
+            world.add_entity(FlexibleComponent[0](1.0, Float32(i)), c1, c2)
+        )
     for i in range(n, 2 * n):
-        entities.append(world.add_entity(FlexibleComponent[0](1.0, i), c2))
+        entities.append(
+            world.add_entity(FlexibleComponent[0](1.0, Float32(i)), c2)
+        )
 
     i = 0
-    for entity in world.query[FlexibleComponent[0]]():
-        entity.set(FlexibleComponent[0](1.0, i))
+    for var entity in world.query[FlexibleComponent[0]]():
+        entity.set(FlexibleComponent[0](1.0, Float32(i)))
         assert_equal(
             entity.get[FlexibleComponent[0]]().y,
             world.get[FlexibleComponent[0]](entities[i]).y,
@@ -134,7 +138,7 @@ def test_query_result_ids():
         i += 1
 
 
-def test_query_get_set():
+def test_query_get_set() raises:
     world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -150,17 +154,17 @@ def test_query_get_set():
 
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
-        entity.get[FlexibleComponent[0]]().y = i
+        entity.get[FlexibleComponent[0]]().y = Float32(i)
         i += 1
 
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
-        assert_equal(entity.get[FlexibleComponent[0]]().y, i)
-        assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, i)
+        assert_equal(entity.get[FlexibleComponent[0]]().y, Float32(i))
+        assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, Float32(i))
         i += 1
 
 
-def test_query_component_reference():
+def test_query_component_reference() raises:
     world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -177,17 +181,17 @@ def test_query_component_reference():
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
         ref a = entity.get[FlexibleComponent[0]]()
-        a.y = i
+        a.y = Float32(i)
         i += 1
 
     i = 0
     for entity in world.query[FlexibleComponent[0]]():
-        assert_equal(entity.get[FlexibleComponent[0]]().y, i)
-        assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, i)
+        assert_equal(entity.get[FlexibleComponent[0]]().y, Float32(i))
+        assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, Float32(i))
         i += 1
 
 
-def test_query_has_component():
+def test_query_has_component() raises:
     world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -208,7 +212,7 @@ def test_query_has_component():
         assert_false(entity.has[FlexibleComponent[3]]())
 
 
-fn test_query_empty() raises:
+def test_query_empty() raises:
     world = SmallWorld()
     query = world.query[FlexibleComponent[0]]()
     cnt = 0
@@ -219,7 +223,7 @@ fn test_query_empty() raises:
     assert_equal(cnt, 0)
 
 
-def test_query_without():
+def test_query_without() raises:
     world = SmallWorld()
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -265,7 +269,7 @@ def test_query_without():
     assert_false(world.is_locked())
 
 
-def test_query_exclusive():
+def test_query_exclusive() raises:
     world = SmallWorld()
     c0 = FlexibleComponent[0](1.0, 2.0)
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -294,8 +298,8 @@ def test_query_exclusive():
 #     world_origin: MutableOrigin,
 #     *ComponentTypes: ComponentType,
 # ]:
-#     alias WorldPointer = Pointer[World[*ComponentTypes], world_origin]
-#     alias Query = Query[
+#     comptime WorldPointer = Pointer[World[*ComponentTypes], world_origin]
+#     comptime Query = Query[
 #         world_origin,
 #         *ComponentTypes,
 #         has_without_mask=_,
@@ -303,7 +307,7 @@ def test_query_exclusive():
 
 #     var _query: Self.Query[has_without_mask=True]
 
-#     fn __init__(
+#     def __init__(
 #         world: Self.WorldPointer,
 #         out self,
 #     ) raises:
@@ -313,13 +317,13 @@ def test_query_exclusive():
 #             .without[FlexibleComponent[1]]()
 #         )
 
-#     fn update(self) raises:
+#     def update(self) raises:
 #         for entity in self._query:
 #             ref f = entity.get[FlexibleComponent[0]]()
 #             f.x += 1
 
 
-# fn test_query_in_system() raises:
+# def test_query_in_system() raises:
 #     world = SmallWorld()
 #     sys1 = QueryOwner(Pointer(to=world))
 #     sys2 = QueryOwner(Pointer(to=world))
@@ -339,7 +343,7 @@ def test_query_exclusive():
 #         assert_equal(f.x, 21)
 
 
-def test_query_lock():
+def test_query_lock() raises:
     world = SmallWorld()
 
     c0 = FlexibleComponent[0](1.0, 2.0)
@@ -385,28 +389,28 @@ def test_query_lock():
         _ = world.add_entity(c0, c1, c2)
 
 
-def test_query_archetype_iterator():
-    alias Archetype = _Archetype[
+def test_query_archetype_iterator() raises:
+    comptime Archetype = _Archetype[
         FlexibleComponent[0],
-        component_manager = ComponentManager[FlexibleComponent[0]](),
+        component_manager=ComponentManager[FlexibleComponent[0]](),
     ]
 
     a = Archetype(0, BitMask(0))
     _ = a.add(Entity(0, 0))
-    l = List[Archetype](a.copy(), a.copy(), a.copy())
+    l: List[Archetype] = [a.copy(), a.copy(), a.copy()]
     var count = 0
 
     for _ in _ArchetypeByMaskIterator[
-        __origin_of(l),
+        origin_of(l),
         FlexibleComponent[0],
-        component_manager = ComponentManager[FlexibleComponent[0]](),
+        component_manager=ComponentManager[FlexibleComponent[0]](),
     ](Pointer(to=l), BitMask(0)):
         count += 1
 
     assert_equal(count, 3)
 
 
-def run_all_query_tests():
+def run_all_query_tests() raises:
     test_query_lock()
     test_query_component_reference()
     test_query_result_ids()
@@ -418,7 +422,8 @@ def run_all_query_tests():
     test_query_archetype_iterator()
 
 
-def main():
-    print("Running tests...")
-    run_all_query_tests()
-    print("All tests passed.")
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()

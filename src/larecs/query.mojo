@@ -1,16 +1,21 @@
+from std.utils.type_functions import ConditionalType
+
 from .entity import Entity
 from .bitmask import BitMask
-from .component import ComponentType, ComponentManager
+from .component import (
+    ComponentType,
+    ComponentManager,
+    constrain_components_unique,
+)
 from .archetype import Archetype as _Archetype
 from .world import World
 from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
-from .static_variant import StaticVariant
 
 
 struct Query[
-    world_origin: MutableOrigin,
+    world_origin: MutOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
 ](ImplicitlyCopyable, Movable, SizedRaising):
@@ -38,24 +43,24 @@ struct Query[
         has_without_mask: Whether the query has excluded components.
     """
 
-    alias World = World[*ComponentTypes]
+    comptime World = World[*Self.ComponentTypes]
 
-    alias QueryWithWithout = Query[
-        world_origin,
-        *ComponentTypes,
+    comptime QueryWithWithout = Query[
+        Self.world_origin,
+        *Self.ComponentTypes,
         has_without_mask=True,
     ]
 
-    var _world: Pointer[Self.World, world_origin]
+    var _world: Pointer[Self.World, Self.world_origin]
     var _mask: BitMask
-    var _without_mask: StaticOptional[BitMask, has_without_mask]
+    var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
 
-    @doc_private
-    fn __init__(
+    @doc_hidden
+    def __init__(
         out self,
-        world: Pointer[Self.World, world_origin],
+        world: Pointer[Self.World, Self.world_origin],
         var mask: BitMask,
-        var without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        var without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
     ):
         """
         Creates a new query.
@@ -71,18 +76,18 @@ struct Query[
         self._mask = mask^
         self._without_mask = without_mask^
 
-    fn __copyinit__(out self, other: Self):
+    def __init__(out self, *, copy: Self):
         """
         Copy constructor.
 
         Args:
-            other: The query to copy.
+            copy: The query to copy.
         """
-        self._world = other._world
-        self._mask = other._mask
-        self._without_mask = other._without_mask.copy()
+        self._world = copy._world
+        self._mask = copy._mask
+        self._without_mask = copy._without_mask.copy()
 
-    fn __len__(self) raises -> Int:
+    def __len__(self) raises -> Int:
         """
         Returns the number of entities matching the query.
 
@@ -93,14 +98,13 @@ struct Query[
         return len(self.__iter__())
 
     @always_inline
-    fn __iter__(
+    def __iter__(
         self,
-        out iterator: self.World.Iterator[
-            __origin_of(self._world[]._archetypes),
-            __origin_of(self._world[]._locks),
-            arch_iter_variant_idx=_ArchetypeByMaskIteratorIdx,
+        out iterator: Self.World.Iterator[
+            origin_of(self._world[]._archetypes),
+            origin_of(self._world[]._locks),
             has_start_indices=False,
-            has_without_mask=has_without_mask,
+            has_without_mask=Self.has_without_mask,
         ],
     ) raises:
         """
@@ -112,12 +116,15 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_entity_iterator(
+        iterator = self._world[]._get_entity_iterator[
+            has_without_mask=Self.has_without_mask,
+            has_start_indices=False,
+        ](
             self._mask, self._without_mask
         )
 
     @always_inline
-    fn without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
+    def without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -141,6 +148,10 @@ struct Query[
         Returns:
             The query, excluding the given components.
         """
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Duplicate component types in query are not allowed."
+
         query = Self.QueryWithWithout(
             self._world,
             self._mask,
@@ -148,7 +159,7 @@ struct Query[
         )
 
     @always_inline
-    fn exclusive(var self, out query: Self.QueryWithWithout):
+    def exclusive(var self, out query: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
@@ -169,11 +180,7 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
-        query = Self.QueryWithWithout(
-            self._world,
-            self._mask,
-            ~self._mask
-        )
+        query = Self.QueryWithWithout(self._world, self._mask, ~self._mask)
 
 
 struct QueryInfo[
@@ -191,12 +198,12 @@ struct QueryInfo[
     """
 
     var mask: BitMask
-    var without_mask: StaticOptional[BitMask, has_without_mask]
+    var without_mask: StaticOptional[BitMask, Self.has_without_mask]
 
     @implicit
-    fn __init__(
+    def __init__(
         out self,
-        query: Query[has_without_mask=has_without_mask],
+        query: Query[..., has_without_mask=Self.has_without_mask],
     ):
         """
         Takes the query info from an existing query.
@@ -207,10 +214,10 @@ struct QueryInfo[
         self.mask = query._mask
         self.without_mask = query._without_mask.copy()
 
-    fn __init__(
+    def __init__(
         out self,
         mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
     ):
         """
         Takes the query info from an existing query.
@@ -221,23 +228,22 @@ struct QueryInfo[
         """
         self.mask = mask
 
-        @parameter
-        if has_without_mask:
+        comptime if Self.has_without_mask:
             self.without_mask = without_mask.copy()
         else:
             self.without_mask = None
 
-    fn __copyinit__(out self, other: Self):
+    def __init__(out self, *, copy: Self):
         """
         Copy constructor.
 
         Args:
-            other: The query to copy.
+            copy: The query to copy.
         """
-        self.mask = other.mask
-        self.without_mask = other.without_mask.copy()
+        self.mask = copy.mask
+        self.without_mask = copy.without_mask.copy()
 
-    fn matches(self, archetype_mask: BitMask) -> Bool:
+    def matches(self, archetype_mask: BitMask) -> Bool:
         """
         Checks whether the given archetype mask matches the query.
 
@@ -249,16 +255,16 @@ struct QueryInfo[
         """
         is_valid = archetype_mask.contains(self.mask)
 
-        @parameter
-        if has_without_mask:
+        comptime if Self.has_without_mask:
             is_valid &= not archetype_mask.contains_any(self.without_mask[])
 
         return is_valid
 
 
 struct _ArchetypeByMaskIterator[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
+    archetype_mutability: Bool,
+    //,
+    archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
@@ -276,25 +282,25 @@ struct _ArchetypeByMaskIterator[
         has_without_mask: Whether the iterator has excluded components.
     """
 
-    alias buffer_size = 8
-    alias Archetype = _Archetype[
-        *ComponentTypes, component_manager=component_manager
+    comptime buffer_size = 8
+    comptime Archetype = _Archetype[
+        *Self.ComponentTypes, component_manager=Self.component_manager
     ]
-    alias Element = Pointer[Self.Archetype, archetype_origin]
-    alias QueryInfo = QueryInfo[has_without_mask=has_without_mask]
-    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
-    var _archetype_index_buffer: SIMD[DType.int32, Self.buffer_size]
+    comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
+    comptime QueryInfo = QueryInfo[has_without_mask=Self.has_without_mask]
+    var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
+    var _archetype_index_buffer: InlineArray[Int, Self.buffer_size]
     var _mask: BitMask
-    var _without_mask: StaticOptional[BitMask, has_without_mask]
+    var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
     var _archetype_count: Int
     var _buffer_index: Int
     var _max_buffer_index: Int
 
-    fn __init__(
+    def __init__(
         out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
         var mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask] = None,
+        without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
     ):
         """
         Creates an archetype by mask iterator.
@@ -312,7 +318,9 @@ struct _ArchetypeByMaskIterator[
 
         self._buffer_index = 0
         self._max_buffer_index = Self.buffer_size
-        self._archetype_index_buffer = SIMD[DType.int32, Self.buffer_size](-1)
+        self._archetype_index_buffer = InlineArray[Int, Self.buffer_size](
+            fill=-1
+        )
 
         self._fill_archetype_buffer()
 
@@ -321,14 +329,14 @@ struct _ArchetypeByMaskIterator[
         if self._archetype_index_buffer[0] >= 0:
             self._buffer_index = -1
 
-    @doc_private
+    @doc_hidden
     @always_inline
-    fn __init__(
+    def __init__(
         out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
-        archetype_index_buffer: SIMD[DType.int32, Self.buffer_size],
+        archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
+        archetype_index_buffer: InlineArray[Int, Self.buffer_size],
         var mask: BitMask,
-        without_mask: StaticOptional[BitMask, has_without_mask],
+        without_mask: StaticOptional[BitMask, Self.has_without_mask],
         archetype_count: Int,
         buffer_index: Int,
         max_buffer_index: Int,
@@ -353,7 +361,7 @@ struct _ArchetypeByMaskIterator[
         self._buffer_index = buffer_index
         self._max_buffer_index = max_buffer_index
 
-    fn _fill_archetype_buffer(mut self):
+    def _fill_archetype_buffer(mut self):
         """
         Find the next archetypes that contain the mask.
 
@@ -385,7 +393,7 @@ struct _ArchetypeByMaskIterator[
         self._max_buffer_index = buffer_index - 1
 
     @always_inline
-    fn __iter__(var self, out iterator: Self):
+    def __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -395,24 +403,28 @@ struct _ArchetypeByMaskIterator[
         iterator = self^
 
     @always_inline
-    fn __next__(mut self, out archetype: Self.Element):
+    def __next__(mut self, out archetype: Self.Element) raises StopIteration:
         """
         Returns the next archetype in the iteration.
 
         Returns:
             The next archetype as a pointer.
         """
+        if not self.__has_next__():
+            raise StopIteration()
+
         self._buffer_index += 1
+
         archetype = Pointer(
             to=self._archetypes[].unsafe_get(
-                index(self._archetype_index_buffer[self._buffer_index])
+                self._archetype_index_buffer[self._buffer_index]
             )
         )
         if self._buffer_index >= Self.buffer_size - 1:
             self._fill_archetype_buffer()
             self._buffer_index = -1  # Will be incremented to 0
 
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
 
@@ -439,12 +451,12 @@ struct _ArchetypeByMaskIterator[
                 self._archetypes[].unsafe_get(i).get_mask()
             )
 
-            size += is_valid
+            size += Int(is_valid)
 
         return size
 
     @always_inline
-    fn __has_next__(self) -> Bool:
+    def __has_next__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -454,7 +466,7 @@ struct _ArchetypeByMaskIterator[
         return self._buffer_index < self._max_buffer_index
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -465,8 +477,9 @@ struct _ArchetypeByMaskIterator[
 
 
 struct _ArchetypeByListIterator[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
+    archetype_mutability: Bool,
+    //,
+    archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
 ](Boolable, Copyable, Iterator, Movable, Sized):
@@ -482,18 +495,18 @@ struct _ArchetypeByListIterator[
         component_manager: The component manager.
     """
 
-    alias buffer_size = 8
-    alias Archetype = _Archetype[
-        *ComponentTypes, component_manager=component_manager
+    comptime buffer_size = 8
+    comptime Archetype = _Archetype[
+        *Self.ComponentTypes, component_manager=Self.component_manager
     ]
-    alias Element = Pointer[Self.Archetype, archetype_origin]
-    var _archetypes: Pointer[List[Self.Archetype], archetype_origin]
+    comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
+    var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
     var _archetype_indices: List[Int]
     var _index: Int
 
-    fn __init__(
+    def __init__(
         out self,
-        archetypes: Pointer[List[Self.Archetype], archetype_origin],
+        archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
         var archetype_indices: List[Int],
     ):
         """
@@ -509,7 +522,7 @@ struct _ArchetypeByListIterator[
         self._index = 0
 
     @always_inline
-    fn __iter__(var self, out iterator: Self):
+    def __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
@@ -519,13 +532,15 @@ struct _ArchetypeByListIterator[
         iterator = self^
 
     @always_inline
-    fn __next__(mut self, out archetype: Self.Element):
+    def __next__(mut self, out archetype: Self.Element) raises StopIteration:
         """
         Returns the next archetype in the iteration.
 
         Returns:
             The next archetype as a pointer.
         """
+        if not self.__has_next__():
+            raise StopIteration()
         archetype = Pointer(
             to=self._archetypes[].unsafe_get(
                 self._archetype_indices.unsafe_get(self._index)
@@ -533,14 +548,14 @@ struct _ArchetypeByListIterator[
         )
         self._index += 1
 
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
         """
         return len(self._archetype_indices) - self._index
 
     @always_inline
-    fn __has_next__(self) -> Bool:
+    def __has_next__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -550,7 +565,7 @@ struct _ArchetypeByListIterator[
         return self._index < len(self._archetype_indices)
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -560,44 +575,159 @@ struct _ArchetypeByListIterator[
         return self.__has_next__()
 
 
-# TODO: If parameters on traits get implemented, use them to implement a generic Iterator[Archetype[*Ts]]!
-alias _ArchetypeIterator[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
+struct ArchetypeIteratorVariant:
+    comptime by_mask = ArchetypeIterator[0, ...]
+    comptime by_list = ArchetypeIterator[1, ..., has_without_mask=False]
+
+
+struct ArchetypeIterator[
+    archetype_mutability: Bool,
+    //,
+    id: Int,
+    archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-    arch_iter_variant_idx: Int,
     has_without_mask: Bool = False,
-] = StaticVariant[
-    arch_iter_variant_idx,
-    _ArchetypeByMaskIterator[
-        archetype_origin,
-        *ComponentTypes,
-        component_manager=component_manager,
-        has_without_mask=has_without_mask,
-    ],
-    _ArchetypeByListIterator[
-        archetype_origin,
-        *ComponentTypes,
-        component_manager=component_manager,
-    ],
-]
+](Boolable, Copyable, IterableOwned, Iterator, Movable, Sized):
+    comptime Element = Pointer[
+        _Archetype[
+            *Self.ComponentTypes, component_manager=Self.component_manager
+        ],
+        Self.archetype_origin,
+    ]
 
-alias _ArchetypeByMaskIteratorIdx = 0
-alias _ArchetypeByListIteratorIdx = 1
+    comptime IteratorOwnedType = ArchetypeIterator[
+        Self.id,
+        Self.archetype_origin,
+        *Self.ComponentTypes,
+        component_manager=Self.component_manager,
+        has_without_mask=Self.has_without_mask,
+    ]
+
+    comptime mask_iterator = _ArchetypeByMaskIterator[
+        Self.archetype_origin,
+        *Self.ComponentTypes,
+        component_manager=Self.component_manager,
+        has_without_mask=Self.has_without_mask,
+    ]
+
+    comptime list_iterator = _ArchetypeByListIterator[
+        Self.archetype_origin,
+        *Self.ComponentTypes,
+        component_manager=Self.component_manager,
+    ]
+
+    var _mask_iterator: StaticOptional[
+        Self.mask_iterator, Self.id == ArchetypeIteratorVariant.by_mask.id
+    ]
+    var _list_iterator: StaticOptional[
+        Self.list_iterator, Self.id == ArchetypeIteratorVariant.by_list.id
+    ]
+
+    def __init__(out self, *, var mask_iterator: Self.mask_iterator):
+        """
+        Creates an archetype iterator from a mask iterator.
+        """
+        comptime assert (
+            Self.id == ArchetypeIteratorVariant.by_mask.id
+        ), "Mask iterator should be initialized with a mask iterator."
+        self._mask_iterator = mask_iterator^
+        self._list_iterator = None
+
+    def __init__(out self, *, var list_iterator: Self.list_iterator):
+        """
+        Creates an archetype iterator from a list iterator.
+        """
+        comptime assert (
+            Self.id == ArchetypeIteratorVariant.by_list.id
+        ), "List iterator should be initialized with a list iterator."
+        self._list_iterator = list_iterator^
+        self._mask_iterator = None
+
+    def __next__(mut self, out archetype: Self.Element) raises StopIteration:
+        """
+        Returns the next archetype in the iteration.
+
+        Returns:
+            The next archetype as a pointer.
+        """
+        comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            archetype = self._mask_iterator[].__next__()
+        else:
+            archetype = self._list_iterator[].__next__()
+
+    def __len__(self) -> Int:
+        """
+        Returns the number of archetypes remaining in the iterator.
+        """
+        comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            return len(self._mask_iterator[])
+        else:
+            return len(self._list_iterator[])
+
+    def __bool__(self) -> Bool:
+        """
+        Returns whether the iterator has at least one more element.
+
+        Returns:
+            Whether there are more elements to iterate.
+        """
+        comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            return self._mask_iterator[].__bool__()
+        else:
+            return self._list_iterator[].__bool__()
+
+    def __iter__(var self, out iterator: Self.IteratorOwnedType):
+        """
+        Returns self as an iterator usable in for loops.
+
+        Returns:
+            Self as an iterator usable in for loops.
+        """
+        iterator = self^
+
+    def __has_next__(self) -> Bool:
+        """
+        Returns whether the iterator has at least one more element.
+
+        Returns:
+            Whether there are more elements to iterate.
+        """
+        comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            return self._mask_iterator[].__has_next__()
+        else:
+            return self._list_iterator[].__has_next__()
 
 
-# TODO: Use generic ArchetypeIterator trait when parameters on traits are implemented.
+@fieldwise_init
+struct CouldNotCreateIteratorError(Writable):
+    """
+    Error raised when an iterator could not be created because the query does not match any entities.
+    """
+
+    var message: String
+
+    def write_to(self, mut writer: Some[Writer]):
+        """
+        Writes the error message to the given writer.
+
+        Args:
+            writer: The writer to write the error message to.
+        """
+        writer.write("CouldNotCreateIteratorError: ", self.message)
+
+
 struct _EntityIterator[
-    archetype_mutability: Bool, //,
-    archetype_origin: Origin[archetype_mutability],
-    lock_origin: MutableOrigin,
+    archetype_mutability: Bool,
+    //,
+    archetype_origin: Origin[mut=archetype_mutability],
+    lock_origin: MutOrigin,
     *ComponentTypes: ComponentType,
     component_manager: ComponentManager[*ComponentTypes],
-    arch_iter_variant_idx: Int = _ArchetypeByMaskIteratorIdx,
     has_start_indices: Bool = False,
     has_without_mask: Bool = False,
-](Boolable, Movable, Sized):
+    archetype_iterator_variant_id: Int,
+](Boolable, IterableOwned, Iterator, Movable, Sized):
     """Iterator over all entities corresponding to a mask.
 
     Locks the world while it exists.
@@ -608,61 +738,62 @@ struct _EntityIterator[
         lock_origin: The origin of the LockManager.
         ComponentTypes: The types of the components.
         component_manager: The component manager.
-        arch_iter_variant_idx: The index of the variant that holds the archetype iterator.
         has_start_indices: Whether the iterator starts iterating the
                            archetypes at given indices.
         has_without_mask: Whether the iterator has excluded components.
+        archetype_iterator_variant_id: The variant id of the archetype iterator to use.
     """
 
-    alias buffer_size = 8
-    alias Archetype = _Archetype[
-        *ComponentTypes, component_manager=component_manager
+    comptime Archetype = _Archetype[
+        *Self.ComponentTypes, component_manager=Self.component_manager
     ]
-    alias StartIndices = StaticOptional[List[UInt], has_start_indices]
-
-    alias ArchetypeIterator = _ArchetypeIterator[
-        archetype_origin,
-        *ComponentTypes,
-        component_manager=component_manager,
-        arch_iter_variant_idx=arch_iter_variant_idx,
-        has_without_mask=has_without_mask,
+    comptime archetype_iterator = ArchetypeIterator[
+        Self.archetype_iterator_variant_id,
+        Self.archetype_origin,
+        *Self.ComponentTypes,
+        component_manager=Self.component_manager,
+        has_without_mask=Self.has_without_mask,
     ]
 
-    alias ArchetypeByMaskIterator = _ArchetypeByMaskIterator[
-        archetype_origin,
-        *ComponentTypes,
-        component_manager=component_manager,
-        has_without_mask=has_without_mask,
+    comptime Element = Self.Archetype.EntityAccessor[Self.archetype_origin]
+
+    comptime IteratorOwnedType = _EntityIterator[
+        Self.archetype_origin,
+        Self.lock_origin,
+        *Self.ComponentTypes,
+        component_manager=Self.component_manager,
+        has_start_indices=Self.has_start_indices,
+        has_without_mask=Self.has_without_mask,
+        archetype_iterator_variant_id=Self.archetype_iterator_variant_id,
     ]
 
-    alias ArchetypeByListIterator = _ArchetypeByListIterator[
-        archetype_origin,
-        *ComponentTypes,
-        component_manager=component_manager,
-    ]
+    comptime buffer_size = 8
+    comptime StartIndices = StaticOptional[List[Int], Self.has_start_indices]
 
-    var _current_archetype: Pointer[Self.Archetype, archetype_origin]
-    var _lock_ptr: Pointer[LockManager, lock_origin]
-    var _lock: UInt8
+    var _current_archetype: Optional[
+        Pointer[Self.Archetype, Self.archetype_origin]
+    ]
+    var _lock_ptr: Pointer[LockManager, Self.lock_origin]
+    var _lock: Int
     var _entity_index: Int
     var _last_entity_index: Int
     var _archetype_size: Int
+    var _archetype_iterator: Self.archetype_iterator
     var _start_indices: Self.StartIndices
-    var _processed_archetypes_count: StaticOptional[Int, has_start_indices]
-    var _archetype_iterator: Self.ArchetypeIterator
+    var _processed_archetypes_count: StaticOptional[Int, Self.has_start_indices]
 
-    fn __init__(
+    def __init__(
         out self,
-        lock_ptr: Pointer[LockManager, lock_origin],
-        var archetype_iterator: Self.ArchetypeIterator,
+        var archetype_iter: Self.archetype_iterator,
+        lock_ptr: Pointer[LockManager, Self.lock_origin],
         var start_indices: Self.StartIndices = None,
-    ) raises:
+    ) raises CouldNotCreateIteratorError:
         """
         Creates an entity iterator with or without excluded components.
 
         Args:
+            archetype_iter: The variant of the archetype iterator to use.
             lock_ptr: a pointer to the world's locks.
-            archetype_iterator: The iterator over the archetypes to iterate.
             start_indices: The indices where the iterator starts iterating the
                            archetypes. Caution: the index order must
                            match the order of the archetypes that
@@ -672,59 +803,40 @@ struct _EntityIterator[
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
 
-        self._archetype_iterator = archetype_iterator^
         self._lock_ptr = lock_ptr
-        self._lock = self._lock_ptr[].lock()
+        try:
+            self._lock = self._lock_ptr[].lock()
+        except _:
+            raise CouldNotCreateIteratorError(
+                "Failed to acquire lock for the query iterator. More than 256"
+                " locks exist."
+            )
         self._start_indices = start_indices^
 
+        self._current_archetype = None
         self._entity_index = 0
         self._archetype_size = 0
         self._last_entity_index = 0
+        self._archetype_iterator = archetype_iter^
 
-        @parameter
-        if has_start_indices:
+        comptime if Self.has_start_indices:
             self._processed_archetypes_count = 0
         else:
             self._processed_archetypes_count = None
 
-        # NOTE: This is a workaround! Accessing common members of a static variant is awkward, because the compiler
-        #       does not check the variants for similarities. To do this properly, we would need to implement a generic
-        #       Iterator[Archetype[*Ts]] trait. But this is not possible yet, because parameters on traits are not
-        #       implemented. This should be fixed in the future.
-
-        # If the iterator is not empty
-        @parameter
-        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
-            self._current_archetype = Pointer(
-                to=rebind[Self.ArchetypeByMaskIterator](
-                    self._archetype_iterator[]
-                )._archetypes[][0]
-            )
-            is_empty = Bool(
-                rebind[Self.ArchetypeByMaskIterator](self._archetype_iterator[])
-            )
-        else:
-            constrained[
-                Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator](),
-                "The archetype iterator must be an ArchetypeByListIterator.",
-            ]()
-            self._current_archetype = Pointer(
-                to=rebind[Self.ArchetypeByListIterator](
-                    self._archetype_iterator[]
-                )._archetypes[][0]
-            )
-            is_empty = Bool(
-                rebind[Self.ArchetypeByListIterator](self._archetype_iterator[])
-            )
-
-        if is_empty:
+        if self._archetype_iterator:
             self._last_entity_index = Int.MAX
-            self._next_archetype()
+            try:
+                self._next_archetype()
+            except StopIteration:
+                raise CouldNotCreateIteratorError(
+                    "The query does not match any entities."
+                )
             # We need to reduce the index by 1, because the
             # first call to __next__ will increment it.
             self._entity_index -= 1
 
-    fn __del__(deinit self):
+    def __del__(deinit self):
         """
         Releases the lock.
         """
@@ -734,7 +846,7 @@ struct _EntityIterator[
             debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    fn __iter__(var self, out iterator: Self):
+    def __iter__(var self, out iterator: Self.IteratorOwnedType):
         """
         Returns self as an iterator usable in for loops.
 
@@ -744,24 +856,15 @@ struct _EntityIterator[
         iterator = self^
 
     @always_inline
-    fn _next_archetype(mut self):
+    def _next_archetype(mut self) raises StopIteration:
         """
         Moves to the next archetype.
         """
+        self._current_archetype = {self._archetype_iterator.__next__()}
 
-        @parameter
-        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
-            self._current_archetype = rebind[Self.ArchetypeByMaskIterator](
-                self._archetype_iterator[]
-            ).__next__()
-        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
-            self._current_archetype = rebind[Self.ArchetypeByListIterator](
-                self._archetype_iterator[]
-            ).__next__()
-        self._archetype_size = len(self._current_archetype[])
+        self._archetype_size = len(self._current_archetype.unsafe_value()[])
 
-        @parameter
-        if has_start_indices:
+        comptime if Self.has_start_indices:
             self._entity_index = self._start_indices[][
                 self._processed_archetypes_count[]
             ]
@@ -772,26 +875,11 @@ struct _EntityIterator[
         # If we arrived at the last archetype, we
         # reset the last entity index so that the iterator
         # stops at the last entity of the last archetype.
-        @parameter
-        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
-            if not rebind[Self.ArchetypeByMaskIterator](
-                self._archetype_iterator[]
-            ):
-                self._last_entity_index = self._archetype_size - 1
-        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
-            if not rebind[Self.ArchetypeByListIterator](
-                self._archetype_iterator[]
-            ):
-                self._last_entity_index = self._archetype_size - 1
+        if not self._archetype_iterator:
+            self._last_entity_index = self._archetype_size - 1
 
     @always_inline
-    fn __next__(
-        mut self,
-        out accessor: Self.Archetype.EntityAccessor[
-            archetype_mutability,
-            __origin_of(self._current_archetype[]),
-        ],
-    ):
+    def __next__(mut self, out accessor: Self.Element) raises StopIteration:
         """
         Returns the next entity in the iteration.
 
@@ -801,11 +889,14 @@ struct _EntityIterator[
         self._entity_index += 1
         if self._entity_index >= self._archetype_size:
             self._next_archetype()
-        accessor = self._current_archetype[].get_entity_accessor(
+        debug_assert(
+            Bool(self._current_archetype), "No more archetypes to iterate."
+        )
+        accessor = self._current_archetype.unsafe_value()[].get_entity_accessor(
             self._entity_index,
         )
 
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """
         Returns the number of entities remaining in the iterator.
 
@@ -815,26 +906,23 @@ struct _EntityIterator[
         if not self.__has_next__():
             return 0
 
+        assert Bool(
+            self._current_archetype
+        ), "No current archetype, but has next entity."
+
         # Elements in the current archetype
-        size = len(self._current_archetype[]) - self._entity_index - 1
+        size = (
+            len(self._current_archetype.unsafe_value()[])
+            - self._entity_index
+            - 1
+        )
 
         # Elements in the remaining archetypes
-        @parameter
-        if Self.ArchetypeIterator.is_a[Self.ArchetypeByMaskIterator]():
-            if rebind[Self.ArchetypeByMaskIterator](self._archetype_iterator[]):
-                for archetype in rebind[Self.ArchetypeByMaskIterator](
-                    self._archetype_iterator[]
-                ).copy():
-                    size += len(archetype[])
-        elif Self.ArchetypeIterator.is_a[Self.ArchetypeByListIterator]():
-            if rebind[Self.ArchetypeByListIterator](self._archetype_iterator[]):
-                for archetype in rebind[Self.ArchetypeByListIterator](
-                    self._archetype_iterator[]
-                ).copy():
-                    size += len(archetype[])
+        if self._archetype_iterator:
+            for archetype in self._archetype_iterator.copy():
+                size += len(archetype[])
 
-        @parameter
-        if has_start_indices:
+        comptime if Self.has_start_indices:
             for i in range(
                 self._processed_archetypes_count[],
                 len(self._start_indices[]),
@@ -844,7 +932,7 @@ struct _EntityIterator[
         return size
 
     @always_inline
-    fn __has_next__(self) -> Bool:
+    def __has_next__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -854,7 +942,7 @@ struct _EntityIterator[
         return self._entity_index < self._last_entity_index
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 

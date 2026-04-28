@@ -1,5 +1,5 @@
-from bit import bit_reverse
-from hashlib import Hasher
+from std.bit import bit_reverse
+from std.hashlib import Hasher
 
 from .types import EntityId
 from .archetype import Archetype, EntityAccessor
@@ -14,14 +14,14 @@ from .archetype import Archetype, EntityAccessor
 # var entityIndexSize uint32 = uint32(reflect.TypeOf(entityIndex{}).Size())
 
 
-@register_passable("trivial")
 struct Entity(
     Boolable,
-    EqualityComparable,
+    Equatable,
     Hashable,
     ImplicitlyCopyable,
     KeyElement,
-    Stringable,
+    TrivialRegisterPassable,
+    Writable,
 ):
     """Entity identifier.
     Holds an entity ID and it's generation for recycling.
@@ -38,15 +38,15 @@ struct Entity(
     var _generation: UInt32
     """Entity generation"""
 
-    @doc_private
+    @doc_hidden
     @always_inline
-    fn __init__(out self, id: EntityId = 0, generation: UInt32 = 0):
+    def __init__(out self, id: EntityId = 0, generation: UInt32 = 0):
         self._id = id
         self._generation = generation
 
     @implicit
     @always_inline
-    fn __init__(out self, accessor: EntityAccessor):
+    def __init__(out self, accessor: EntityAccessor):
         """
         Initializes the entity from an [..archetype.EntityAccessor].
 
@@ -56,7 +56,7 @@ struct Entity(
         self = accessor.get_entity()
 
     @always_inline
-    fn __eq__(self, other: Entity) -> Bool:
+    def __eq__(self, other: Entity) -> Bool:
         """
         Compares two entities for equality.
 
@@ -66,7 +66,7 @@ struct Entity(
         return self._id == other._id and self._generation == other._generation
 
     @always_inline
-    fn __ne__(self, other: Entity) -> Bool:
+    def __ne__(self, other: Entity) -> Bool:
         """
         Compares two entities for inequality.
 
@@ -76,14 +76,15 @@ struct Entity(
         return not (self == other)
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """
         Returns whether this entity is not the zero entity.
         """
         return self._id != 0
 
+    @deprecated(use=write_to)
     @always_inline
-    fn __str__(self) -> String:
+    def __str__(self) -> String:
         """
         Returns a string representation of the entity.
         """
@@ -92,34 +93,33 @@ struct Entity(
         )
 
     @always_inline
-    fn __hash__[H: Hasher](self, mut hasher: H):
+    def __hash__[H: Hasher](self, mut hasher: H):
         """Returns a unique hash of the entity."""
         hasher.update(self._id)
         hasher.update(self._generation)
 
     @always_inline
-    fn get_id(self) -> EntityId:
+    def get_id(self) -> EntityId:
         """Returns the entity's ID."""
         return self._id
 
     @always_inline
-    fn get_generation(self) -> UInt32:
+    def get_generation(self) -> UInt32:
         """Returns the entity's generation."""
         return self._generation
 
     @always_inline
-    fn is_zero(self) -> Bool:
+    def is_zero(self) -> Bool:
         """Returns whether this entity is the reserved zero entity."""
         return self._id == 0
 
 
 @fieldwise_init
-@register_passable("trivial")
-struct EntityIndex(ImplicitlyCopyable, Movable):
+struct EntityLocation(ImplicitlyCopyable, Movable, TrivialRegisterPassable):
     """Indicates where an entity is currently stored."""
 
     # Entity's current index in the archetype
-    var index: UInt32
+    var entity_index: Int
 
     # Entity's current archetype
-    var archetype_index: UInt32
+    var archetype_index: Int
