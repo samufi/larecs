@@ -13,6 +13,9 @@ from graph_test import functions as graph_functions
 from archetype_test import functions as archetype_functions
 from entity_test import functions as entity_functions
 from query_test import functions as query_functions
+from pool_test import functions as pool_functions
+
+# from world_test import functions as world_functions
 
 
 def main() raises:
@@ -29,4 +32,6 @@ def main() raises:
         .concat(archetype_functions)
         .concat(entity_functions)
         .concat(query_functions)
+        .concat(pool_functions)
+        # .concat(world_functions)
     ]().run()

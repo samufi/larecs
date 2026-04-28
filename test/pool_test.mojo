@@ -1,30 +1,34 @@
-from testing import *
-from random import random_float64
+from std.testing import *
+from std.random import random_float64
 
 
-from collections import Dict
+from std.collections import Dict
 from larecs.pool import EntityPool, BitPool, IntPool
 from larecs.entity import Entity
 from larecs.constants import MAX_UINT16, MASK_TOTAL_BITS
-from larecs.test_utils import assert_equal_lists
 
 
-def test_entity_pool_constructor():
+def test_entity_pool_constructor() raises:
     _ = EntityPool()
 
 
-def test_entity_pool():
+def test_entity_pool() raises:
     p = EntityPool()
 
-    expected_all = List[Entity](
-        Entity(0), Entity(1), Entity(2), Entity(3), Entity(4), Entity(5)
-    )
+    expected_all: List[Entity] = [
+        Entity(0),
+        Entity(1),
+        Entity(2),
+        Entity(3),
+        Entity(4),
+        Entity(5),
+    ]
     expected_all[0]._generation = MAX_UINT16
 
     for _ in range(5):
         _ = p.get()
 
-    assert_equal_lists(expected_all, p._entities, "Wrong initial entities")
+    assert_equal(expected_all, p._entities, "Wrong initial entities")
 
     with assert_raises():
         p.recycle(p._entities[0])
@@ -44,9 +48,7 @@ def test_entity_pool():
         "Recycled entity of old generation should not be alive",
     )
 
-    assert_equal_lists(
-        expected_all, p._entities, "Wrong _entities after get/recycle"
-    )
+    assert_equal(expected_all, p._entities, "Wrong _entities after get/recycle")
 
     e0_old = p._entities[1]
     for i in range(5):
@@ -68,7 +70,7 @@ def test_entity_pool():
     assert_false(p.is_alive(Entity()), "Zero entity should not be alive")
 
 
-def test_entity_pool_stochastic():
+def test_entity_pool_stochastic() raises:
     p = EntityPool()
 
     for _ in range(10):
@@ -144,13 +146,13 @@ def test_entity_pool_stochastic():
             )
 
 
-def test_bit_pool():
+def test_bit_pool() raises:
     p = BitPool()
 
     assert_equal(p.capacity, 256)
 
     for i in range(p.capacity):
-        assert_equal(i, Int(p.get()))
+        assert_equal(i, p.get())
 
     with assert_raises():
         _ = p.get()
@@ -159,7 +161,7 @@ def test_bit_pool():
         p.recycle(i)
 
     for i in range(9, -1, -1):
-        assert_equal(i, Int(p.get()))
+        assert_equal(i, p.get())
 
     with assert_raises():
         _ = p.get()
@@ -167,7 +169,7 @@ def test_bit_pool():
     p.reset()
 
     for i in range(p.capacity):
-        assert_equal(i, Int(p.get()))
+        assert_equal(i, p.get())
 
     with assert_raises():
         _ = p.get()
@@ -176,10 +178,10 @@ def test_bit_pool():
         p.recycle(i)
 
     for i in range(9, -1, -1):
-        assert_equal(i, Int(p.get()))
+        assert_equal(i, p.get())
 
 
-def test_int_pool():
+def test_int_pool() raises:
     p = IntPool()
 
     for i in range(32):
@@ -195,11 +197,8 @@ def test_int_pool():
     p.reset()
 
 
-def main():
-    test_entity_pool_constructor()
-    test_entity_pool()
-    test_entity_pool_stochastic()
-    test_bit_pool()
-    test_int_pool()
+comptime functions = __functions_in_module()
 
-    print("All tests passed")
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
