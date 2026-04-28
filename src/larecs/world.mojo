@@ -130,18 +130,37 @@ struct Replacer[
 
     var _world: Pointer[Self.World, Self.world_origin]
 
-    def by[
-        *AddTs: ComponentType
-    ](self, entity: Entity, *components: *AddTs) raises:
+    def by(self, entity: Entity) raises:
         """
-        Removes and adds the components to an [..entity.Entity].
-
-        Parameters:
-            AddTs: The types of the components to add.
+        Removes components from an [..entity.Entity].
 
         Args:
-            entity:         The entity to modify.
-            components: The components to add.
+            entity: The entity to modify.
+
+        Raises:
+            Error: when called for a removed (and potentially recycled) entity.
+            Error: when called with components that can't be removed because they are not present.
+            Error: when called on a locked world. Do not use during [.World.query] iteration.
+        """
+        self._world[]._remove_and_add[
+            rem_size=Self.size,
+            remove_ids=Self.remove_ids,
+        ](entity)
+
+    def by[
+        T: ComponentType where Self.World.component_manager._ContainsComponent[
+            T
+        ]
+    ](self, component: T, *, entity: Entity) raises:
+        """
+        Removes components from and adds one component to an [..entity.Entity].
+
+        Parameters:
+            T: The type of the component to add.
+
+        Args:
+            component: The component to add.
+            entity:    The entity to modify.
 
         Raises:
             Error: when called for a removed (and potentially recycled) entity.
@@ -149,13 +168,16 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self.by(
-            *components,
-            entity=entity,
-        )
+        self._world[]._remove_and_add[
+            T,
+            rem_size=Self.size,
+            remove_ids=Self.remove_ids,
+        ](entity, component)
 
     def by[
-        *AddTs: ComponentType where constrain_components_unique[*AddTs]()
+        *AddTs: ComponentType where (
+            Self.World.component_manager._ContainsComponents[*AddTs]
+        )
     ](self, *components: *AddTs, entity: Entity) raises:
         """
         Removes and adds the components to an [..entity.Entity].
@@ -180,7 +202,9 @@ struct Replacer[
         ](entity, *components)
 
     def by[
-        *AddTs: ComponentType,
+        *AddTs: ComponentType where (
+            Self.World.component_manager._ContainsComponents[*AddTs]
+        ),
         has_without_mask: Bool = False,
     ](
         self,
@@ -214,7 +238,9 @@ struct Replacer[
         )
 
     def by[
-        *AddTs: ComponentType,
+        *AddTs: ComponentType where (
+            Self.World.component_manager._ContainsComponents[*AddTs]
+        ),
         has_without_mask: Bool = False,
     ](
         self,
@@ -248,7 +274,7 @@ struct Replacer[
             remove_ids=Self.remove_ids,
         ](
             query,
-            components,
+            *components,
         )
 
 
@@ -448,7 +474,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _get_archetype_index[
-        size: Int where 0 <= size
+        size: Int
     ](mut self, components: InlineArray[Self.ComponentId, size]) -> Int:
         """Returns the archetype list index of the archetype differing from
         the archetype at the start node by the given indices.
@@ -481,7 +507,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _get_archetype_index[
-        size: Int where 0 <= size
+        size: Int
     ](
         mut self,
         components: InlineArray[Self.ComponentId, size],
@@ -499,7 +525,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The archetype list index of the archetype differing from the start
             archetype by the components at the given indices.
+
+        Constraints:
+            `size` must be non-negative.
         """
+        comptime assert 0 <= size, "Size must be non-negative."
         node_index = self._archetype_map.get_node_index(
             components, start_node_index
         )
@@ -701,19 +731,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._archetypes)
         ]
 
-        iterator = Self.ListIterator[
-            origin_of(self._archetypes),
-            origin_of(self._locks),
-            has_start_indices=True,
-        ](
-            ArchetypeByListIterator(
-                list_iterator=ArchetypeByListIterator.list_iterator(
-                    Pointer(to=self._archetypes), [archetype_index]
+        try:
+            iterator = {
+                ArchetypeByListIterator(
+                    list_iterator=ArchetypeByListIterator.list_iterator(
+                        Pointer(to=self._archetypes), [archetype_index]
+                    ),
                 ),
-            ),
-            Pointer(to=self._locks),
-            {[first_index_in_archetype]},
-        )
+                Pointer(to=self._locks),
+                {[first_index_in_archetype]},
+            }
+        except CouldNotCreateIteratorError:
+            raise WorldError.UNKNOWN
 
     @always_inline
     def _create_entity(mut self, archetype_index: Int, out entity: Entity):
@@ -907,6 +936,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
+        self._archetypes.unsafe_get(
+            entity_loc.archetype_index
+        ).assert_has_component(Self.component_manager.get_id[T]())
+
         return self._archetypes.unsafe_get(
             entity_loc.archetype_index
         ).get_component[T](entity_loc.entity_index)
@@ -1004,14 +1037,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def add[
         has_without_mask: Bool,
         //,
-        *Ts: ComponentType,
+        *Ts: ComponentType where Self.component_manager._ContainsComponents[
+            *Ts
+        ],
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        var *add_components: *Ts,
-        out iterator: type_of(
-            self._batch_remove_and_add(query, add_components)
-        ),
+        *add_components: *Ts,
+        out iterator: Self.ListIterator[
+            origin_of(self._archetypes),
+            origin_of(self._locks),
+            has_start_indices=True,
+        ],
     ) raises WorldError:
         """
         Adds components to multiple [..entity.Entity Entities] at once that are specified by a [..query.Query].
@@ -1063,7 +1100,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         return self._batch_remove_and_add(
             query,
-            add_components,
+            *add_components,
         )
 
     def remove[*Ts: ComponentType](mut self, entity: Entity) raises WorldError:
@@ -1184,11 +1221,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _remove_and_add[
-        *Ts: ComponentType where (
-            Self.component_manager._ContainsComponents[*Ts]
-            and constrain_components_unique[*Ts]()
-            and 0 <= len(Ts)
-        ),
+        *Ts: ComponentType where Self.component_manager._ContainsComponents[
+            *Ts
+        ],
         rem_size: Int = 0,
         remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
     ](mut self, entity: Entity, *add_components: *Ts,) raises WorldError:
@@ -1309,7 +1344,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _batch_remove_and_add[
-        *Ts: ComponentType where constrain_components_unique[*Ts](),
+        *Ts: ComponentType where Self.component_manager._ContainsComponents[
+            *Ts
+        ],
         rem_size: Int = 0,
         remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
         has_without_mask: Bool = False,
@@ -1563,9 +1600,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def apply[
         operation: def(accessor: MutableEntityAccessor) capturing -> None,
+        has_without_mask: Bool = False,
         *,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo) raises WorldError:
+    ](
+        mut self, query: QueryInfo[has_without_mask=has_without_mask]
+    ) raises WorldError:
         """
         Applies an operation to all entities with the given components.
 
@@ -1581,21 +1621,31 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the world is locked.
         """
 
-        @always_inline
-        @parameter
-        def operation_wrapper[simd_width: Int](accessor: MutableEntityAccessor):
-            operation(accessor)
+        self._assert_unlocked()
 
-        self.apply[operation_wrapper, unroll_factor=unroll_factor](query)
+        try:
+            with self._locked():
+                for archetype in _ArchetypeByMaskIterator(
+                    Pointer(to=self._archetypes),
+                    query.mask,
+                    query.without_mask,
+                ):
+                    for i in range(len(archetype[])):
+                        operation(archetype[].get_entity_accessor(i))
+        except:
+            raise WorldError.UNKNOWN
 
     def apply[
         operation: def[simd_width: Int](
             accessor: MutableEntityAccessor
         ) capturing -> None,
+        has_without_mask: Bool = False,
         *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo) raises WorldError:
+    ](
+        mut self, query: QueryInfo[has_without_mask=has_without_mask]
+    ) raises WorldError:
         """
         Applies an operation to all entities with the given components.
 
@@ -1677,22 +1727,24 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         self._assert_unlocked()
 
-        with self._locked():
-            for archetype in _ArchetypeByMaskIterator(
-                Pointer(to=self._archetypes),
-                query.mask,
-                query.without_mask,
-            ):
+        try:
+            with self._locked():
+                for archetype in _ArchetypeByMaskIterator(
+                    Pointer(to=self._archetypes),
+                    query.mask,
+                    query.without_mask,
+                ):
 
-                @always_inline
-                @parameter
-                def closure[simd_width: Int](i: Int) capturing:
-                    accessor = archetype[].get_entity_accessor(i)
-                    operation[simd_width](accessor)
+                    @always_inline
+                    def closure[width: Int](i: Int) unified {read}:
+                        accessor = archetype[].get_entity_accessor(i)
+                        operation[width](accessor)
 
-                vectorize[closure, simd_width, unroll_factor=unroll_factor](
-                    len(archetype[])
-                )
+                    vectorize[simd_width, unroll_factor=unroll_factor](
+                        len(archetype[]), closure
+                    )
+        except:
+            raise WorldError.UNKNOWN
 
     # def Reset(self):
     #     """
@@ -1801,12 +1853,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask],
-        var start_indices: Self.Iterator[
-            origin_of(self._archetypes),
-            origin_of(self._locks),
-            has_start_indices=has_start_indices,
-            has_without_mask=has_without_mask,
-        ].StartIndices = None,
+        var start_indices: StaticOptional[List[Int], has_start_indices] = None,
         out iterator: Self.Iterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
@@ -1820,6 +1867,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             has_without_mask: Whether a without_mask is provided.
             has_start_indices: Whether start_indices are provided.
+
 
         Args:
             mask:          The mask of components to include.

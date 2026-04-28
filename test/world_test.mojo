@@ -1,15 +1,16 @@
-from testing import *
+from std.testing import *
 
-from larecs.world import World, WorldErrors
+from larecs.world import World, WorldError
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import ResourceType
 from larecs.archetype import MutableEntityAccessor
+from larecs.query import QueryInfo
 
 from larecs.test_utils import *
 
 
-def test_add_entity():
+def test_add_entity() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -27,7 +28,7 @@ def test_add_entity():
         _ = world.add_entity(pos, vel)
 
 
-def test_add_entities():
+def test_add_entities() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -54,7 +55,23 @@ def test_add_entities():
     assert_equal(i, 25)
 
 
-def test_world_len():
+def test_add_entities_iterator_length() raises:
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+
+    iterator = world.add_entities(pos, vel, count=12)
+    iter = (iterator^).__iter__()
+    for remaining in range(12, 0, -1):
+        assert_equal(len(iter), remaining)
+        entity = iter.__next__()
+        assert_equal(entity.get[Position]().x, pos.x)
+        assert_equal(entity.get[Velocity]().dy, vel.dy)
+
+    assert_equal(len(iter), 0)
+
+
+def test_world_len() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -71,7 +88,7 @@ def test_world_len():
     assert_equal(len(world), entity_count)
 
 
-def test_world_remove_entities():
+def test_world_remove_entities() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -107,7 +124,7 @@ def test_world_remove_entities():
     assert_equal(entity.get_generation(), 1)
 
 
-def test_entity_get():
+def test_entity_get() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -121,7 +138,7 @@ def test_entity_get():
     assert_equal(world.get[Position](entity).x, 456)
 
 
-def test_get_archetype_index():
+def test_get_archetype_index() raises:
     world = SmallWorld()
     pos = Position(12, 654)
     vel = Velocity(0.1, 0.2)
@@ -129,14 +146,14 @@ def test_get_archetype_index():
     _ = world.add_entity(vel)
     _ = world.add_entity(pos, vel)
 
-    fn get_index[T: ComponentType](mut world: World) raises -> Int:
+    def get_index[T: ComponentType](mut world: SmallWorld) raises -> Int:
         return world._get_archetype_index(
             world.component_manager.get_id_arr[T]()
         )
 
-    fn get_index[
+    def get_index[
         T1: ComponentType, T2: ComponentType
-    ](mut world: World, start: Int = 0) raises -> Int:
+    ](mut world: SmallWorld, start: Int = 0) raises -> Int:
         return world._get_archetype_index(
             world.component_manager.get_id_arr[T1, T2](),
             start_node_index=start,
@@ -150,7 +167,7 @@ def test_get_archetype_index():
     assert_equal(get_index[Velocity, Position](world, 2), 1)
 
 
-def test_set_component():
+def test_set_component() raises:
     world = SmallWorld()
     pos = Position(3.0, 4.0)
     entity = world.add_entity(pos)
@@ -170,7 +187,7 @@ def test_set_component():
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
 
-def test_remove_entity():
+def test_remove_entity() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -185,7 +202,7 @@ def test_remove_entity():
     assert_equal(len(world._entity_pool), 0)
 
 
-def test_remove_archetype():
+def test_remove_archetype() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -207,7 +224,7 @@ def test_remove_archetype():
     assert_equal(len(world._entity_pool), 0)
 
 
-def test_world_has_component():
+def test_world_has_component() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     entity = world.add_entity(pos)
@@ -215,7 +232,7 @@ def test_world_has_component():
     assert_false(world.has[Velocity](entity))
 
 
-def test_world_add():
+def test_world_add() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     entity = world.add_entity(pos)
@@ -230,7 +247,7 @@ def test_world_add():
         world.add(entity, Velocity(0.3, 0.4))
 
 
-def test_world_batch_add():
+def test_world_batch_add() raises:
     world = SmallWorld()
     n = 100
     _ = world.add_entities(Position(1.0, 2.0), count=n)
@@ -249,7 +266,7 @@ def test_world_batch_add():
     assert_equal(len(world.query[Position, Velocity]()), n)
 
     with assert_raises(
-        contains=WorldErrors.duplicate_components_for_addition_query_msg
+        contains=WorldError.duplicate_components_for_addition_query.msg()
     ):
         _ = world.add(
             world.query[Position]().without[LargerComponent](),
@@ -267,7 +284,7 @@ def test_world_batch_add():
     assert_equal(len(world.query[Position, Velocity]()), n)
 
 
-def test_world_remove():
+def test_world_remove() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -293,26 +310,22 @@ def test_world_remove():
     # Test swapping
     entity1 = world.add_entity(pos, vel)
     entity2 = world.add_entity(pos, vel)
-    index1 = world._entities[entity1._id].index
-    index2 = world._entities[entity2._id].index
+    index1 = world._entities[entity1._id].entity_index
+    index2 = world._entities[entity2._id].entity_index
     assert_not_equal(index1, index2)
     world.remove[Position](entity1)
-    assert_equal(index1, world._entities[entity2._id].index)
+    assert_equal(index1, world._entities[entity2._id].entity_index)
 
 
-def test_world_batch_remove():
+def test_world_batch_remove() raises:
     world = SmallWorld()
     n = 100
-    _ = world.add_entities(
-        Position(1.0, 2.0), Velocity(0.1, 0.2), count=n
-    )
+    _ = world.add_entities(Position(1.0, 2.0), Velocity(0.1, 0.2), count=n)
 
     assert_equal(len(world.query[Position, Velocity]()), n)
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
 
-    for entity in world.remove[Velocity](
-        world.query[Position, Velocity]())
-    :
+    for entity in world.remove[Velocity](world.query[Position, Velocity]()):
         assert_false(entity.has[Velocity]())
         assert_equal(entity.get[Position]().x, 1.0)
         assert_equal(entity.get[Position]().y, 2.0)
@@ -321,14 +334,14 @@ def test_world_batch_remove():
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
 
     with assert_raises(
-        contains=WorldErrors.missing_components_for_removal_query_msg
+        contains=WorldError.missing_components_for_removal_query.msg()
     ):
         _ = world.remove[Velocity](
             world.query[Position](),
         )
 
 
-def test_remove_and_add():
+def test_remove_and_add() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -340,32 +353,49 @@ def test_remove_and_add():
     assert_true(world.has[Position](entity))
     assert_false(world.has[Velocity](entity))
 
-    world.replace[Position]().by(entity, vel)
+    world.replace[Position]().by(vel, entity=entity)
     assert_false(world.has[Position](entity))
     assert_true(world.has[Velocity](entity))
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
     with assert_raises():
-        world.replace[Position]().by(entity, vel)
+        world.replace[Position]().by(vel, entity=entity)
 
     assert_false(world.has[Position](entity))
     assert_true(world.has[Velocity](entity))
     assert_equal(world.get[Velocity](entity).dx, vel.dx)
     assert_equal(world.get[Velocity](entity).dy, vel.dy)
 
-def test_batch_remove_and_add():
+
+def test_replace_remove_only() raises:
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    vel = Velocity(0.1, 0.2)
+    entity = world.add_entity(pos, vel)
+
+    world.replace[Velocity]().by(entity)
+
+    assert_true(world.has[Position](entity))
+    assert_false(world.has[Velocity](entity))
+    assert_equal(world.get[Position](entity).x, pos.x)
+    assert_equal(world.get[Position](entity).y, pos.y)
+
+
+def test_batch_remove_and_add() raises:
     world = SmallWorld()
     n = 100
-    _ = world.add_entities(
-        Position(1.0, 2.0), Velocity(0.1, 0.2), count=n
-    )
+    _ = world.add_entities(Position(1.0, 2.0), Velocity(0.1, 0.2), count=n)
 
     assert_equal(len(world.query[Position, Velocity]()), n)
-    assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), 0)
+    assert_equal(
+        len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()),
+        0,
+    )
 
-    for entity in world.replace[Velocity]().by(FlexibleComponent[1](3.0, 4.0), query=
-        world.query[Position, Velocity]()):
+    for entity in world.replace[Velocity]().by(
+        FlexibleComponent[1](3.0, 4.0), query=world.query[Position, Velocity]()
+    ):
         assert_false(entity.has[Velocity]())
         assert_true(entity.has[Position]())
         assert_true(entity.has[FlexibleComponent[1]]())
@@ -375,14 +405,21 @@ def test_batch_remove_and_add():
         assert_equal(entity.get[FlexibleComponent[1]]().y, 4.0)
 
     assert_equal(len(world.query[Position, Velocity]()), 0)
-    assert_equal(len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()), n)
+    assert_equal(
+        len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()),
+        n,
+    )
 
     with assert_raises(
-        contains=WorldErrors.duplicate_components_for_addition_query_msg
+        contains=WorldError.duplicate_components_for_addition_query.msg()
     ):
-        _ = world.replace[Velocity]().by(Position(5.0, 6.0), query=world.query[Position]())
+        _ = world.replace[Velocity]().by(
+            Position(5.0, 6.0), query=world.query[Position]()
+        )
 
-    for entity in world.replace[Position]().by(Position(42.0, 6.0), query=world.query[Position]()):
+    for entity in world.replace[Position]().by(
+        Position(42.0, 6.0), query=world.query[Position]()
+    ):
         assert_true(entity.has[Position]())
         assert_equal(entity.get[Position]().x, 42.0)
         assert_equal(entity.get[Position]().y, 6.0)
@@ -398,7 +435,7 @@ struct Resource2(ResourceType):
     var value: Int
 
 
-def test_world_resource_access():
+def test_world_resource_access() raises:
     world = World[Position, Velocity]()
     world.resources.add(Resource1(2), Resource2(4))
     assert_equal(world.resources.get[Resource1]().value, 2)
@@ -415,7 +452,7 @@ def test_world_resource_access():
     assert_equal(world.resources.get[Resource1]().value, 30)
 
 
-def test_world_apply():
+def test_world_apply() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -427,14 +464,11 @@ def test_world_apply():
     for _ in range(100):
         _ = world.add_entity(pos, vel)
 
-    fn operation(accessor: MutableEntityAccessor) capturing:
-        try:
-            ref pos2 = accessor.get[Position]()
-            ref vel2 = accessor.get[Velocity]()
-            pos2.x += vel2.dx
-            pos2.y += vel2.dy
-        except:
-            pass
+    def operation(accessor: MutableEntityAccessor) capturing:
+        ref pos2 = accessor.get[Position]()
+        ref vel2 = accessor.get[Velocity]()
+        pos2.x += vel2.dx
+        pos2.y += vel2.dy
 
     world.apply[operation, unroll_factor=3](world.query[Position, Velocity]())
 
@@ -443,7 +477,7 @@ def test_world_apply():
         assert_equal(entity.get[Position]().y, new_pos.y)
 
 
-def test_world_lock():
+def test_world_lock() raises:
     world = SmallWorld()
     _ = world.add_entity(Position(1.0, 2.0))
     assert_false(world.is_locked())
@@ -458,7 +492,7 @@ def test_world_lock():
     assert_false(world.is_locked())
 
 
-def test_world_apply_SIMD():
+def test_world_apply_SIMD() raises:
     world = SmallWorld()
     pos = Position(0.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -473,24 +507,21 @@ def test_world_apply_SIMD():
         new_pos.y += vel.dy
         comparison.append(new_pos)
 
-    fn operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
-        try:
-            ref pos2 = accessor.get[Position]()
-            ref vel2 = accessor.get[Velocity]()
+    def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+        ref pos2 = accessor.get[Position]()
+        ref vel2 = accessor.get[Velocity]()
 
-            alias _load = load2[simd_width]
-            alias _store = store2[simd_width]
+        comptime _load = load2[simd_width]
+        comptime _store = store2[simd_width]
 
-            x = _load(pos2.x)
-            y = _load(pos2.y)
+        x = _load(pos2.x)
+        y = _load(pos2.y)
 
-            x += _load(vel2.dx)
-            y += _load(vel2.dy)
+        x += _load(vel2.dx)
+        y += _load(vel2.dy)
 
-            _store(pos2.x, x)
-            _store(pos2.y, y)
-        except:
-            pass
+        _store(pos2.x, x)
+        _store(pos2.y, y)
 
     world.apply[operation, simd_width=4, unroll_factor=3](
         world.query[Position, Velocity]()
@@ -504,7 +535,7 @@ def test_world_apply_SIMD():
         i += 1
 
 
-def test_world_copy():
+def test_world_copy() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -526,25 +557,8 @@ def test_world_copy():
     )
 
 
-def main():
-    print("Running tests...")
-    test_add_entity()
-    test_add_entities()
-    test_world_len()
-    test_world_remove_entities()
-    test_set_component()
-    test_get_archetype_index()
-    test_entity_get()
-    test_remove_entity()
-    test_remove_archetype()
-    test_world_has_component()
-    test_world_add()
-    test_world_batch_add()
-    test_world_remove()
-    test_remove_and_add()
-    test_world_resource_access()
-    test_world_apply()
-    test_world_apply_SIMD()
-    test_world_lock()
-    test_world_copy()
-    print("All tests passed.")
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()

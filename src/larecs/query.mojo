@@ -95,7 +95,12 @@ struct Query[
         If you intend to iterate anyway, get the iterator with [.Query.__iter__],
         and call `len` on it, instead.
         """
-        return len(self.__iter__())
+        size = 0
+        for archetype in self._world[]._get_archetype_iterator[
+            has_without_mask=Self.has_without_mask
+        ](self._mask, self._without_mask):
+            size += len(archetype[])
+        return size
 
     @always_inline
     def __iter__(
@@ -116,12 +121,25 @@ struct Query[
         Raises:
             Error: If the lock cannot be acquired (more than 256 locks exist).
         """
-        iterator = self._world[]._get_entity_iterator[
+        comptime ArchetypeByMaskIterator = Self.World.ArchetypeByMaskIterator[
+            origin_of(self._world[]._archetypes),
             has_without_mask=Self.has_without_mask,
-            has_start_indices=False,
-        ](
-            self._mask, self._without_mask
-        )
+        ]
+
+        try:
+            iterator = {
+                ArchetypeByMaskIterator(
+                    mask_iterator=ArchetypeByMaskIterator.mask_iterator(
+                        Pointer(to=self._world[]._archetypes),
+                        self._mask,
+                        self._without_mask,
+                    )
+                ),
+                Pointer(to=self._world[]._locks),
+                None,
+            }
+        except CouldNotCreateIteratorError:
+            raise Error("Could not create query iterator.")
 
     @always_inline
     def without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
@@ -631,6 +649,9 @@ struct ArchetypeIterator[
         comptime assert (
             Self.id == ArchetypeIteratorVariant.by_mask.id
         ), "Mask iterator should be initialized with a mask iterator."
+        comptime assert (
+            not Self.id == ArchetypeIteratorVariant.by_list.id
+        ), "Mask iterator should be initialized with a mask iterator."
         self._mask_iterator = mask_iterator^
         self._list_iterator = None
 
@@ -640,6 +661,9 @@ struct ArchetypeIterator[
         """
         comptime assert (
             Self.id == ArchetypeIteratorVariant.by_list.id
+        ), "List iterator should be initialized with a list iterator."
+        comptime assert (
+            not Self.id == ArchetypeIteratorVariant.by_mask.id
         ), "List iterator should be initialized with a list iterator."
         self._list_iterator = list_iterator^
         self._mask_iterator = None
@@ -846,7 +870,7 @@ struct _EntityIterator[
             debug_warn("Failed to unlock the lock. This should not happen.")
 
     @always_inline
-    def __iter__(var self, out iterator: Self.IteratorOwnedType):
+    def __iter__(var self, out iterator: Self):
         """
         Returns self as an iterator usable in for loops.
 
