@@ -12,7 +12,9 @@ struct TestStruct:
 
 def test_unsafe_box_copy_move_del() raises:
     def factory(
-        var val: MemTestStruct,
+        var val: MemTestStruct[
+            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+        ],
         out result: UnsafeBox,
     ):
         result = type_of(result)(val^)

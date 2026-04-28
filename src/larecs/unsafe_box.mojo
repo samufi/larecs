@@ -29,9 +29,9 @@ def _dummy_destructor(box: UnsafeBox.data_type):
     pass
 
 
-def _copy_initializer[T: Copyable](
-    existing_box: UnsafeBox.data_type,
-) -> UnsafeBox.data_type:
+def _copy_initializer[
+    T: Copyable
+](existing_box: UnsafeBox.data_type,) -> UnsafeBox.data_type:
     """
     Copy initializer for the data in the UnsafeBox.
 
