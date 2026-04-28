@@ -1,112 +1,166 @@
+from std.memory import UnsafePointer
+from std.utils.type_functions import ConditionalType
+
+
 @fieldwise_init
-struct StaticOptional[
-    ElementType: Copyable & Movable,
-    has_value: Bool = True,
-](Boolable, Copyable, Movable):
-    """An optional type that can potentially hold a value of ElementType.
+struct _EmptyStaticOptionalStorage(Copyable, ImplicitlyDestructible, Movable):
+    """Zero-sized backing storage for an absent `StaticOptional` value.
 
-    In contrast to the built-in optional, it is decided at
-    compile time whether a value is present. This allows
-    this type to have a size of 0 in these cases.
+    Raises:
+        No runtime exceptions.
 
-    Parameters:
-        ElementType: The type of the elements in the array.
-        has_value: Whether the element exists.
+    Returns:
+        A zero-sized storage value.
     """
 
-    # Fields
-    var _value: InlineArray[ElementType, Int(has_value)]
-    """The underlying storage for the optional."""
+    pass
 
-    # ===------------------------------------------------------------------===#
-    # Life cycle methods
-    # ===------------------------------------------------------------------===#
+
+@fieldwise_init
+struct StaticOptional[
+    ElementType: Copyable & Movable & ImplicitlyDestructible,
+    has_value: Bool = True,
+](Boolable, Copyable, Movable):
+    """An optional type with compile-time presence.
+
+    `StaticOptional` stores `ElementType` directly when `has_value` is `True`
+    and uses zero-sized empty storage when `has_value` is `False`.
+
+    Parameters:
+        ElementType: The stored element type.
+        has_value: Whether the optional contains a value at compile time.
+    """
+
+    comptime Storage = ConditionalType[
+        Trait=Copyable & Movable & ImplicitlyDestructible,
+        If=Self.has_value,
+        Then=Self.ElementType,
+        Else=_EmptyStaticOptionalStorage,
+    ]
+    """Selected backing storage type."""
+
+    var _value: Self.Storage
+    """Backing storage selected by `ConditionalType`."""
 
     @always_inline
     @implicit
-    fn __init__(out self, none: None = None):
-        """This constructor will always cause a compile time error if used.
-        It is used to steer users away from uninitialized memory.
+    def __init__(out self, none: None = None):
+        """Construct an absent optional.
+
+        This constructor is only valid when `has_value` is `False`.
+
+        Args:
+            none: Must be `None`.
+
+        Raises:
+            A compile-time assertion if `has_value` is `True`.
+
+        Returns:
+            A `StaticOptional` with empty backing storage.
         """
-        constrained[
-            not has_value,
-            "Initialize with a value if `has_value` is `True`",
-        ]()
-        self._value = {uninitialized = True}
+        comptime assert (
+            not Self.has_value
+        ), "Cannot initialize with `None` if `has_value` is `True`"
+
+        self._value = rebind_var[dest_type=Self.Storage](
+            _EmptyStaticOptionalStorage()
+        )
 
     @always_inline
     @implicit
-    fn __init__(out self, var value: Self.ElementType):
-        """Constructs an optional type holding the provided value.
+    def __init__(out self, var value: Self.ElementType):
+        """Construct a present optional.
 
         Args:
-            value: The value to fill the optional with.
-        """
-        self._value = {value^}
+            value: The value to store.
 
-    @always_inline
-    fn __getitem__(ref self) -> ref [self._value] Self.ElementType:
-        """Get a reference to the value.
+        Raises:
+            A compile-time assertion if `has_value` is `False`.
 
         Returns:
-            A reference to the value.
+            A `StaticOptional` initialized with selected backing storage.
         """
-        constrained[
-            has_value,
-            (
-                "The value is not present. Use `has_value` to check if the"
-                " value is present."
-            ),
-        ]()
-        return self._value.unsafe_get(0)
+        comptime assert (
+            Self.has_value
+        ), "Cannot initialize with a value if `has_value` is `False`"
+
+        self._value = rebind_var[dest_type=Self.Storage](value^)
 
     @always_inline
-    fn or_else(
-        ref self, ref value: ElementType
-    ) -> ref [self._value, value] ElementType:
-        """Returns a copy of the value contained in the Optional or a default value if no value is present.
+    def __del__(deinit self):
+        """Destroy the stored value when present.
+
+        Raises:
+            No runtime exceptions.
+
+        Returns:
+            Nothing.
+        """
+        comptime if Self.has_value:
+            _ = self._value^
+
+    @always_inline
+    def __getitem__(ref self) -> ref[self._value] Self.ElementType:
+        """Get a reference to the stored value.
+
+        Raises:
+            A compile-time assertion if `has_value` is `False`.
+
+        Returns:
+            A reference to the contained value.
+        """
+        comptime assert (
+            Self.has_value
+        ), "The value is not present. Use `has_value` to check first."
+
+        return rebind[Self.ElementType](self._value)
+
+    @always_inline
+    def or_else(
+        ref self, ref value: Self.ElementType
+    ) -> ref[self._value, value] Self.ElementType:
+        """Return the stored value or the provided fallback.
 
         Args:
-            value: The default value to return if the optional is empty.
+            value: The fallback value returned when no value is present.
+
+        Raises:
+            No runtime exceptions.
 
         Returns:
-            A copy of the value contained in the Optional or the default value if no value is present.
+            The stored value when present, otherwise `value`.
         """
-
-        @parameter
-        if has_value:
+        comptime if Self.has_value:
             return self[]
         else:
             return value
 
     @always_inline
-    fn unsafe_ptr(self) -> UnsafePointer[Self.ElementType]:
-        """Get an `UnsafePointer` to the underlying array.
+    def unsafe_ptr(
+        ref self,
+    ) -> UnsafePointer[Self.ElementType, origin_of(self._value)]:
+        """Get a pointer to the stored value.
 
-        That pointer is unsafe but can be used to read or write to the array.
-        Be careful when using this. As opposed to a pointer to a `List`,
-        this pointer becomes invalid when the `InlineArray` is moved.
-
-        Make sure to refresh your pointer every time the `InlineArray` is moved.
+        Raises:
+            A compile-time assertion if `has_value` is `False`.
 
         Returns:
-            An `UnsafePointer` to the underlying value.
+            An `UnsafePointer` to the contained value.
         """
-        constrained[
-            has_value,
-            (
-                "The value is not present. Use `has_value` to check if the"
-                " value is present."
-            ),
-        ]()
+        comptime assert (
+            Self.has_value
+        ), "The value is not present. Use `has_value` to check first."
 
-        return self._value.unsafe_ptr()
+        return UnsafePointer(to=rebind[Self.ElementType](self._value))
 
     @always_inline
-    fn __bool__(self) -> Bool:
-        """Check if the optional has a value.
+    def __bool__(self) -> Bool:
+        """Check whether the optional has a value.
+
+        Raises:
+            No runtime exceptions.
 
         Returns:
-            True if the optional has a value, False otherwise.
+            The value of `has_value`.
         """
-        return has_value
+        return Self.has_value

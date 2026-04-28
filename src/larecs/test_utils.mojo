@@ -446,18 +446,18 @@ struct MemTestStruct[
 def test_copy_move_del[
     Container: Copyable & Movable & ImplicitlyDestructible,
     //,
-    container_factory: def(var val: MemTestStruct) thin -> Container,
+    container_factory: def(
+        var val: MemTestStruct[
+            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+        ]
+    ) thin -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
-    This function tests that the copy, move, and delete methods of
-    the elements of a container are called the expected number of times.
-    Note that some containers need to move the elements during initialization or
-    while copying. This can be specified with the `init_moves` parameter.
-
-    Similarly, elements may not be moved if the container is moved,
-    since the underlying storage may stay constant. In other instances,
-    the storage is moved as well, which can be specified with the `move_moves` parameter.
+    The tracked value uses `MutExternalOrigin` for its counters intentionally.
+    This keeps the produced container type fixed across call sites. The purpose
+    of this helper is to verify lifecycle behavior, not caller-origin
+    propagation.
 
     Parameters:
         Container: The type of the container to test.
@@ -467,53 +467,64 @@ def test_copy_move_del[
         init_moves: The expected number of element move operations during initialization.
         copy_moves: The expected number of element move operations during copying.
         move_moves: The expected number of element move operations during moving.
+
+    Raises:
+        AssertionError: If any copy, move, or delete count differs from the expected value.
     """
 
-    var del_counter = 0
-    var move_counter = 0
-    var copy_counter = 0
+    copy_counter = alloc[Int](1)
+    move_counter = alloc[Int](1)
+    del_counter = alloc[Int](1)
+    copy_counter.init_pointee_copy(0)
+    move_counter.init_pointee_copy(0)
+    del_counter.init_pointee_copy(0)
+
     var test_del_counter = 0
     var test_move_counter = init_moves
     var test_copy_counter = 0
-
     container = container_factory(
-        MemTestStruct(
-            UnsafePointer(to=copy_counter),
-            UnsafePointer(to=move_counter),
-            UnsafePointer(to=del_counter),
+        MemTestStruct[MutExternalOrigin, MutExternalOrigin, MutExternalOrigin](
+            copy_counter, move_counter, del_counter
         )
     )
 
     # Initialize
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Copy
     container2 = container.copy()
     test_copy_counter += 1
     test_move_counter += copy_moves
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Delete
     _ = container2^
     test_del_counter += 1
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Move
     container2 = container^
     test_move_counter += move_moves
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Delete
     _ = container2^
     test_del_counter += 1
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
+
+    copy_counter.destroy_pointee()
+    move_counter.destroy_pointee()
+    del_counter.destroy_pointee()
+    copy_counter.free()
+    move_counter.free()
+    del_counter.free()
