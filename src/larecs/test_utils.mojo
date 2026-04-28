@@ -7,28 +7,18 @@ from .world import World
 from .resource import Resources
 
 
-# TODO: Revisit the function parameters of `load` and `store` when crash report: https://github.com/modular/modular/issues/5361 is resolved.
 @always_inline
 def load[
     dType: DType,
-    is_mut: Bool,
-    origin: Origin[mut=is_mut],
-    address_space: AddressSpace,
     //,
     simd_width: Int,
     stride: Int = 1,
-](
-    ref[origin, address_space] val: SIMD[dType, 1],
-    out simd: SIMD[dType, simd_width],
-):
+](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width],):
     """
     Load multiple values from a SIMD.
 
     Parameters:
         dType: The data type of the SIMD.
-        is_mut: Whether the value is mutable.
-        origin: The origin of the value.
-        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
@@ -41,22 +31,15 @@ def load[
 @always_inline
 def store[
     dType: DType,
-    origin: MutOrigin,
-    address_space: AddressSpace,
     //,
     simd_width: Int,
     stride: Int = 1,
-](
-    ref[origin, address_space] val: SIMD[dType, 1],
-    simd: SIMD[dType, simd_width],
-):
+](mut val: SIMD[dType, 1], simd: SIMD[dType, simd_width],):
     """
     Store the values of a SIMD into memory with a given start SIMD value.
 
     Parameters:
         dType: The data type of the SIMD.
-        origin: The origin of the value.
-        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
