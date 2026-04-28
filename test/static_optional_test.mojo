@@ -10,7 +10,7 @@ def test_comptime_optional_init() raises:
     assert_false(opt.has_value)
     _ = opt._value
     l: List[Int] = [42]
-    opt_with_value = StaticOptional(l^)
+    opt_with_value: StaticOptional[List[Int], True] = l^
     assert_true(opt_with_value.has_value)
     assert_equal(opt_with_value[][0], 42)
 

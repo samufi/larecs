@@ -250,7 +250,7 @@ struct Archetype[
 
     @always_inline
     def __init__[
-        component_count: Int where 0 <= component_count
+        component_count: Int
     ](
         out self,
         node_index: Int,
@@ -271,7 +271,14 @@ struct Archetype[
 
         Returns:
             The archetype with the given components.
+
+        Constraints:
+            `component_count` must be non-negative.
         """
+        comptime assert (
+            0 <= component_count
+        ), "Component count must be non-negative."
+
         mask_ = BitMask()
 
         comptime for i in range(component_count):
@@ -280,7 +287,7 @@ struct Archetype[
         self = Self(node_index, mask_, component_ids, capacity)
 
     def __init__[
-        component_count: Int where 0 <= component_count
+        component_count: Int
     ](
         out self,
         node_index: Int,
@@ -305,7 +312,14 @@ struct Archetype[
 
         Returns:
             The archetype with the given components and BitMask.
+
+        Constraints:
+             `component_count` must be non-negative.
         """
+        comptime assert (
+            0 <= component_count
+        ), "Component count must be non-negative."
+
         self = Self.__init__[used_internally=True](node_index, mask, capacity)
         self._component_count = component_count
 

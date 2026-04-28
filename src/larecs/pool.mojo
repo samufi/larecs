@@ -44,7 +44,7 @@ struct EntityPool(Copyable, Movable, Sized):
         if entity.get_id() == 0:
             raise Error("Can't recycle reserved zero entity")
 
-        if entity.get_id() >= len(self._entities):
+        if Int(entity.get_id()) >= len(self._entities):
             raise Error(
                 "Entity ID {} is out of bounds (max: {})".format(
                     entity.get_id(), len(self._entities) - 1
@@ -94,7 +94,7 @@ struct BitPool(Copyable, Movable):
     """
 
     comptime capacity = Int(UInt8.MAX_FINITE) + 1
-    var _bits: SIMD[DType.uint8, Self.capacity]
+    var _bits: InlineArray[UInt8, Self.capacity]
     var _next: Int
     var _available: UInt8
 
@@ -105,7 +105,7 @@ struct BitPool(Copyable, Movable):
 
     @always_inline
     def __init__(out self):
-        self._bits = SIMD[DType.uint8, Self.capacity]()
+        self._bits = InlineArray[UInt8, Self.capacity](fill=0)
         self._next = 0
         self._length = 0
         self._available = 0
@@ -115,6 +115,9 @@ struct BitPool(Copyable, Movable):
 
         Raises:
             Error: If the pool is full.
+
+        Returns:
+            The index of a fresh or recycled bit.
         """
         if self._available == 0:
             return self._get_new()
@@ -132,6 +135,9 @@ struct BitPool(Copyable, Movable):
 
         Raises:
             Error: If the pool is full.
+
+        Returns:
+            The index of the newly allocated bit.
         """
         if self._length >= Self.capacity:
             raise Error(
@@ -140,16 +146,20 @@ struct BitPool(Copyable, Movable):
                 )
             )
 
-        bit = self._length
-        self._bits[self._length] = UInt8(bit)
+        bit_idx = self._length
+        self._bits[self._length] = UInt8(bit_idx)
         self._length += 1
-        return bit
+        return bit_idx
 
     @always_inline
-    def recycle(mut self, bit: Int):
-        """Hands a bit back for recycling."""
-        debug_assert(0 <= bit < self._length, "Bit is out of bounds")
-        self._next, self._bits[bit] = bit, UInt8(self._next)
+    def recycle(mut self, bit_idx: Int):
+        """Hands a bit back for recycling.
+
+        Args:
+            bit_idx: The index of the bit to recycle.
+        """
+        debug_assert(0 <= bit_idx < self._length, "Bit is out of bounds")
+        self._next, self._bits[bit_idx] = bit_idx, UInt8(self._next)
         self._available += 1
 
     @always_inline

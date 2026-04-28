@@ -32,7 +32,7 @@ struct Velocity(Copyable, Movable):
 
 
 # Run the ECS
-fn main() raises:
+def main() raises:
     # Create a world, list all components that will / may be used
     world = World[Position, Velocity, IsStatic]()
 

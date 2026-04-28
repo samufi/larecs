@@ -3,7 +3,9 @@ from std.utils.type_functions import ConditionalType
 
 
 @fieldwise_init
-struct _EmptyStaticOptionalStorage(Copyable, ImplicitlyDestructible, Movable):
+struct _EmptyStaticOptionalStorage(
+    Copyable, ImplicitlyDestructible, Movable, Writable
+):
     """Zero-sized backing storage for an absent `StaticOptional` value.
 
     Raises:
@@ -13,14 +15,27 @@ struct _EmptyStaticOptionalStorage(Copyable, ImplicitlyDestructible, Movable):
         A zero-sized storage value.
     """
 
-    pass
+    def write_to(self, mut writer: Some[Writer]):
+        """Writes a value to the storage.
+
+        This is a no-op since the storage is zero-sized.
+
+        Args:
+            writer: The writer to write to.
+        """
+        writer.write("_EmptyStaticOptionalStorage")
 
 
 @fieldwise_init
 struct StaticOptional[
     ElementType: Copyable & Movable & ImplicitlyDestructible,
     has_value: Bool = True,
-](Boolable, Copyable, Movable):
+](
+    Boolable,
+    Copyable,
+    Movable,
+    Writable where conforms_to(ElementType, Writable),
+):
     """An optional type with compile-time presence.
 
     `StaticOptional` stores `ElementType` directly when `has_value` is `True`
@@ -44,16 +59,13 @@ struct StaticOptional[
 
     @always_inline
     @implicit
-    def __init__(out self, none: None = None):
+    def __init__(out self, none: None = None) where Self.has_value == False:
         """Construct an absent optional.
 
         This constructor is only valid when `has_value` is `False`.
 
         Args:
             none: Must be `None`.
-
-        Raises:
-            A compile-time assertion if `has_value` is `True`.
 
         Returns:
             A `StaticOptional` with empty backing storage.
@@ -68,14 +80,13 @@ struct StaticOptional[
 
     @always_inline
     @implicit
-    def __init__(out self, var value: Self.ElementType):
+    def __init__(
+        out self, var value: Self.ElementType
+    ) where Self.has_value == True:
         """Construct a present optional.
 
         Args:
             value: The value to store.
-
-        Raises:
-            A compile-time assertion if `has_value` is `False`.
 
         Returns:
             A `StaticOptional` initialized with selected backing storage.
@@ -103,9 +114,6 @@ struct StaticOptional[
     def __getitem__(ref self) -> ref[self._value] Self.ElementType:
         """Get a reference to the stored value.
 
-        Raises:
-            A compile-time assertion if `has_value` is `False`.
-
         Returns:
             A reference to the contained value.
         """
@@ -124,9 +132,6 @@ struct StaticOptional[
         Args:
             value: The fallback value returned when no value is present.
 
-        Raises:
-            No runtime exceptions.
-
         Returns:
             The stored value when present, otherwise `value`.
         """
@@ -141,9 +146,6 @@ struct StaticOptional[
     ) -> UnsafePointer[Self.ElementType, origin_of(self._value)]:
         """Get a pointer to the stored value.
 
-        Raises:
-            A compile-time assertion if `has_value` is `False`.
-
         Returns:
             An `UnsafePointer` to the contained value.
         """
@@ -156,9 +158,6 @@ struct StaticOptional[
     @always_inline
     def __bool__(self) -> Bool:
         """Check whether the optional has a value.
-
-        Raises:
-            No runtime exceptions.
 
         Returns:
             The value of `has_value`.

@@ -1,19 +1,17 @@
-from sys.info import sizeof
-
 # Eid is the entity identifier/index type.
-alias EntityId = UInt32
+comptime EntityId = Int
 
 # ID is the component identifier type.
-alias Id = UInt8
+comptime Id = UInt8
 
 
-fn get_max_size[dType: DType]() -> UInt:
-    """Returns how many different numbers could be expressed with a UInt with the same size as dType.
+def get_max_size[dType: DType]() -> Int:
+    """Returns how many different numbers could be expressed with a Int with the same size as dType.
 
     Parameters:
         dType: The type to get the size of.
     """
-    return index(Scalar[dType].MAX) + 1
+    return Int(Scalar[dType].MAX) + 1
 
 
 # # ResID is the resource identifier type.

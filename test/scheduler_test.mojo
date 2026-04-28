@@ -1,5 +1,5 @@
 from larecs import World, Scheduler, System, ResourceType
-from testing import *
+from std.testing import *
 
 
 @fieldwise_init
@@ -11,21 +11,21 @@ struct MeanState(ResourceType):
 # struct TestSystem[copies: Int, count: Int = 10](System):
 #     var a: Int
 
-#     fn __init__(out self):
+#     def __init__(out self):
 #         self.a = 0
 
-#     fn initialize(mut self, mut world: World) raises:
+#     def initialize(mut self, mut world: World) raises:
 #         assert_equal(self.a, 0)
 #         _ = world.add_entities(self.a, count=self.count)
 #         self.a = 1
 
-#     fn update(mut self, mut world: World) raises:
+#     def update(mut self, mut world: World) raises:
 #         assert_equal(self.a, 1)
 #         assert_equal(len(world), self.count * self.copies)
 #         for entity in world.query[Int]():
 #             entity.get[Int]() += 1
 
-#     fn finalize(mut self, mut world: World) raises:
+#     def finalize(mut self, mut world: World) raises:
 #         sum = 0
 #         count = 0
 #         for entity in world.query[Int]():
@@ -44,7 +44,8 @@ struct MeanState(ResourceType):
 #         6,
 #     )
 
+comptime functions = __functions_in_module()
 
-def main():
-    # test_scheduler()
-    print("All tests passed!")
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
