@@ -243,7 +243,7 @@ struct Archetype[
         self._ids = InlineArray[Self.Id, Self.max_size](fill=-1)
         self._data = InlineArray[
             UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
-        ](fill=UnsafePointer[UInt8, MutExternalOrigin]())
+        ](fill=UnsafePointer[UInt8, MutExternalOrigin].unsafe_dangling())
         self._item_sizes = InlineArray[Int, Self.max_size](fill=0)
         self._entities = List[Entity]()
         self._node_index = node_index
@@ -379,7 +379,7 @@ struct Archetype[
         # Copy the data
         self._data = InlineArray[
             UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
-        ](fill=UnsafePointer[UInt8, MutExternalOrigin]())
+        ](fill=UnsafePointer[UInt8, MutExternalOrigin].unsafe_dangling())
 
         for i in range(copy._component_count):
             id = copy._ids[i]
@@ -780,21 +780,22 @@ struct Archetype[
         Returns:
             Whether the archetype contains the component.
         """
-        return Bool(self._data[id])
+        return self._mask.get(id)
 
     @always_inline
-    def has_component[
-        T: ComponentType where Self.component_manager._ContainsComponent[T]
-    ](self) -> Bool:
+    def has_component[T: ComponentType](self) -> Bool:
         """Returns whether the archetype contains the given component id.
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be contained in the component manager.
 
         Returns:
             Whether the archetype contains the component.
         """
-        return Bool(self._data[Self.component_manager.get_id[T]()])
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
+        return self._mask.get(Self.component_manager.get_id[T]())
 
     @always_inline
     def assert_has_component(self, id: Self.Id) raises:

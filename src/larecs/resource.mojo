@@ -1,5 +1,5 @@
 from std.collections import Dict
-from std.reflection import get_type_name
+from std.reflection import reflect
 
 from .unsafe_box import UnsafeBox
 
@@ -48,7 +48,7 @@ struct Resources(Copyable, Movable, Sized):
         conflicting_ids = List[StringSlice[StaticConstantOrigin]](capacity=0)
 
         comptime for idx in range(len(Ts)):
-            comptime id = get_type_name[Ts[idx]]()
+            comptime id = reflect[Ts[idx]]().name()
             if id in self._storage:
                 conflicting_ids.append(id)
 
@@ -56,7 +56,7 @@ struct Resources(Copyable, Movable, Sized):
             raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
 
         def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
-            self._add(get_type_name[Ts[idx]](), resource^)
+            self._add(reflect[Ts[idx]]().name(), resource^)
 
         resources^.consume_elements[take_resource]()
 
@@ -90,7 +90,7 @@ struct Resources(Copyable, Movable, Sized):
             conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
 
             comptime for idx in range(len(Ts)):
-                comptime id = get_type_name[Ts[idx]]()
+                comptime id = reflect[Ts[idx]]().name()
                 if id not in self._storage:
                     conflicting_ids.append(id)
 
@@ -99,7 +99,7 @@ struct Resources(Copyable, Movable, Sized):
 
         def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
             self._set[add_if_not_found=add_if_not_found](
-                get_type_name[Ts[idx]](),
+                reflect[Ts[idx]]().name(),
                 resource^,
             )
 
@@ -136,7 +136,7 @@ struct Resources(Copyable, Movable, Sized):
         """
 
         comptime for i in range(len(Ts)):
-            self._remove[Ts[i]](get_type_name[Ts[i]]())
+            self._remove[Ts[i]](reflect[Ts[i]]().name())
 
     @always_inline
     def _remove[T: ResourceType](mut self, id: Self.IdType) raises:
@@ -165,7 +165,7 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             A reference to the resource.
         """
-        return self._storage[get_type_name[T]()].unsafe_get[T]()
+        return self._storage[reflect[T]().name()].unsafe_get[T]()
 
     @always_inline
     def has[T: ResourceType](mut self) -> Bool:
@@ -177,4 +177,4 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             True if the resource is present, otherwise False.
         """
-        return get_type_name[T]() in self._storage
+        return reflect[T]().name() in self._storage

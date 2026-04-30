@@ -1,5 +1,4 @@
 from std.memory import memcpy
-from std.sys import size_of
 
 
 @always_inline
@@ -15,7 +14,7 @@ def concatenate_inline_arrays[
     memcpy(dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size)
 
     memcpy(
-        dest=result.unsafe_ptr() + a_size * size_of[ElementType](),
+        dest=result.unsafe_ptr() + a_size,
         src=b.unsafe_ptr(),
         count=b_size,
     )

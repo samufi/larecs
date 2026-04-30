@@ -1,3 +1,5 @@
+"""Test helpers and shared component fixtures for larecs tests."""
+
 from std.testing import assert_true, assert_false, assert_equal
 from std.random import random
 from std.memory import UnsafePointer
@@ -14,8 +16,7 @@ def load[
     simd_width: Int,
     stride: Int = 1,
 ](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width],):
-    """
-    Load multiple values from a SIMD.
+    """Load multiple values from a SIMD.
 
     Parameters:
         dType: The data type of the SIMD.
@@ -24,6 +25,9 @@ def load[
 
     Args:
         val: The SIMD to load from.
+
+    Returns:
+        The loaded SIMD value.
     """
     return UnsafePointer(to=val).strided_load[width=simd_width](stride)
 
@@ -35,8 +39,7 @@ def store[
     simd_width: Int,
     stride: Int = 1,
 ](mut val: SIMD[dType, 1], simd: SIMD[dType, simd_width],):
-    """
-    Store the values of a SIMD into memory with a given start SIMD value.
+    """Store the values of a SIMD into memory with a given start SIMD value.
 
     Parameters:
         dType: The data type of the SIMD.
@@ -46,19 +49,33 @@ def store[
     Args:
         val: The SIMD at the first entry where the data should be stored.
         simd: The SIMD to store.
+
+    The SIMD values are written through the pointer to `val`.
     """
     return UnsafePointer(to=val).strided_store[width=simd_width](simd, stride)
 
 
 comptime load2 = load[_, 2]
+"""A two-stride specialization of `load` for SIMD tests.
+
+Parameters:
+    dType: The data type of the SIMD.
+    simd_width: The number of values to load.
+"""
+
 comptime store2 = store[_, 2]
+"""A two-stride specialization of `store` for SIMD tests.
+
+Parameters:
+    dType: The data type of the SIMD.
+    simd_width: The number of values to store.
+"""
 
 
 def is_mutable[
     mut: Bool, //, T: AnyType, origin: Origin[mut=mut]
 ](ref[origin] val: T) -> Bool:
-    """
-    Check if the value is mutable.
+    """Check if the value is mutable.
 
     Parameters:
         mut: Whether the value is mutable.
@@ -67,6 +84,9 @@ def is_mutable[
 
     Args:
         val: The value to check.
+
+    Returns:
+        True if the value has a mutable origin, False otherwise.
     """
     return mut
 
@@ -77,52 +97,103 @@ def get_random_bitmask_list(
     range_end: Int = 1000,
     out list: List[BitMask],
 ):
+    """Creates a list of random bitmasks.
+
+    Args:
+        count: The number of bitmasks to create.
+        range_start: The inclusive lower bound for the generated `Int`.
+        range_end: The exclusive upper bound for the generated `Int`.
+
+    Returns:
+        The generated list of bitmasks.
+        Result is undefined if either condition is violated:
+            - `count` must be non-negative.
+            - `range_start` must be non-negative.
+            - `range_end` must be at most 2^64.
+            - `range_start` must be less than `range_end`.
+    """
+    debug_assert(range_start >= 0, "range_start must be non-negative")
+    debug_assert(range_end <= 2**64, "range_end must be at most 2^64")
+    debug_assert(
+        range_start < range_end, "range_start must be less than range_end"
+    )
+    debug_assert(count >= 0, "count must be non-negative")
+
     list = List[BitMask]()
     list.reserve(count)
     for _ in range(count):
-        bytes = SIMD[DType.uint64, 4]()
-        bytes[0] = Int(random.random_ui64(range_start, range_end))
+        bytes = InlineArray[Scalar[DType.int], BitMask.total_bytes // 4]()
+        random.randint(bytes.unsafe_ptr(), 4, range_start, range_end)
         list.append(
             BitMask(
-                bytes=LegacyUnsafePointer(to=bytes).bitcast[
-                    SIMD[DType.uint8, 32]
-                ]()[]
+                bytes=UnsafePointer(to=bytes).bitcast[BitMask.BytesType]()[]
             )
         )
 
 
 @always_inline
 def get_random_bitmask() -> BitMask:
+    """Create a random bitmask.
+
+    Returns:
+        A bitmask with each bit set independently at random.
+    """
     mask = BitMask()
     for i in range(BitMask.total_bits):
         if random.random_float64() < 0.5:
-            mask.set(UInt8(i), True)
+            mask.set[True](i)
     return mask
 
 
 @fieldwise_init
 struct Position(ComponentType & ImplicitlyCopyable):
+    """A position component used by tests."""
+
     var x: Float64
+    """The horizontal position coordinate."""
+
     var y: Float64
+    """The vertical position coordinate."""
 
 
 @fieldwise_init
 struct Velocity(ComponentType & ImplicitlyCopyable):
+    """A velocity component used by tests."""
+
     var dx: Float64
+    """The horizontal velocity component."""
+
     var dy: Float64
+    """The vertical velocity component."""
 
 
 @fieldwise_init
 struct LargerComponent(ComponentType & ImplicitlyCopyable):
+    """A larger three-field component used by tests."""
+
     var x: Float64
+    """The first component value."""
+
     var y: Float64
+    """The second component value."""
+
     var z: Float64
+    """The third component value."""
 
 
 @fieldwise_init
 struct FlexibleComponent[i: Int](ComponentType & ImplicitlyCopyable):
+    """A parameterized component used to build larger test worlds.
+
+    Parameters:
+        i: The compile-time component variant index.
+    """
+
     var x: Float64
+    """The Float64 test value."""
+
     var y: Float32
+    """The Float32 test value."""
 
 
 comptime SmallWorld = World[
@@ -141,6 +212,7 @@ comptime SmallWorld = World[
     FlexibleComponent[9],
     FlexibleComponent[10],
 ]
+"""A compact world type used by most ECS tests."""
 
 comptime FullWorld = World[
     LargerComponent,
@@ -400,29 +472,61 @@ comptime FullWorld = World[
     FlexibleComponent[251],
     FlexibleComponent[252],
 ]
+"""A large world type used to test many component registrations."""
 
 
 @fieldwise_init
 struct MemTestStruct[
     copy_origin: MutOrigin, move_origin: MutOrigin, del_origin: MutOrigin
 ](Copyable, Movable):
+    """A value that records copy, move, and delete lifecycle operations.
+
+    Parameters:
+        copy_origin: The origin used for the copy counter pointer.
+        move_origin: The origin used for the move counter pointer.
+        del_origin: The origin used for the delete counter pointer.
+    """
+
     var copy_counter: UnsafePointer[Int, Self.copy_origin]
+    """The counter incremented on copy initialization."""
+
     var move_counter: UnsafePointer[Int, Self.move_origin]
+    """The counter incremented on move initialization."""
+
     var del_counter: UnsafePointer[Int, Self.del_origin]
+    """The counter incremented on deletion."""
 
     def __init__(out self, *, deinit take: Self):
+        """Move-initialize a lifecycle-counting test value.
+
+        Args:
+            take: The value whose counters are transferred into this value.
+
+        The source value is consumed by this initializer.
+        """
         self.move_counter = take.move_counter
         self.del_counter = take.del_counter
         self.copy_counter = take.copy_counter
         self.move_counter[] += 1
 
     def __init__(out self, *, copy: Self):
+        """Copy-initialize a lifecycle-counting test value.
+
+        Args:
+            copy: The value whose counters are copied into this value.
+
+        The new value shares the same lifecycle counters as the source value.
+        """
         self.move_counter = copy.move_counter
         self.del_counter = copy.del_counter
         self.copy_counter = copy.copy_counter
         self.copy_counter[] += 1
 
     def __del__(deinit self):
+        """Destroy a lifecycle-counting test value.
+
+        The delete counter is incremented in place.
+        """
         self.del_counter[] += 1
 
 
