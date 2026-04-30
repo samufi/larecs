@@ -1,6 +1,6 @@
 from std.memory import UnsafePointer, Span, memcpy
-from std.algorithm import vectorize
 from std.sys import size_of
+from std.algorithm.backend.vectorize import vectorize
 
 from .pool import EntityPool
 from .entity import Entity, EntityLocation
@@ -1611,6 +1611,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Parameters:
             operation: The operation to apply.
+            has_without_mask: Whether the query has a without mask.
             unroll_factor: The unroll factor for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
 
@@ -1663,6 +1664,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         memory. This may require knowledge of the memory layout
         of the components!
 
+        Parameters:
+            operation: The operation to apply.
+            has_without_mask: Whether the query has a without mask.
+            simd_width: The SIMD width for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+            unroll_factor: The unroll factor for the operation
+                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+
+        Args:
+            query: The query to determine which entities to apply the operation to.
+
+        Constraints:
+            The simd_width must be a power of 2.
+
+        Raises:
+            Error: If the world is locked.
 
         Example:
         ```mojo {doctest="apply" global=true hide=true}
@@ -1709,21 +1726,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
         ```
 
-        Parameters:
-            operation: The operation to apply.
-            simd_width: The SIMD width for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
-            unroll_factor: The unroll factor for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
-
-        Args:
-            query: The query to determine which entities to apply the operation to.
-
-        Constraints:
-            The simd_width must be a power of 2.
-
-        Raises:
-            Error: If the world is locked.
         """
         self._assert_unlocked()
 
@@ -1736,7 +1738,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 ):
 
                     @always_inline
-                    def closure[width: Int](i: Int) unified {read}:
+                    def closure[width: Int](i: Int) {read}:
                         accessor = archetype[].get_entity_accessor(i)
                         operation[width](accessor)
 
