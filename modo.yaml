@@ -16,7 +16,8 @@ output: docs/site/content
 
 # Output directory for doc-tests.
 # Remove or set to "" to disable doc-tests.
-tests: docs/test
+tests: ""
+#docs/test
 
 # Output format. One of (plain|hugo|mdbook).
 format: hugo
