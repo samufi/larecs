@@ -383,7 +383,7 @@ struct Archetype[
 
         for i in range(copy._component_count):
             id = copy._ids[i]
-            size = copy._capacity * index(copy._item_sizes[id])
+            size = copy._capacity * copy._item_sizes[id]
             self._data[id] = alloc[UInt8](size)
             memcpy(
                 dest=self._data[id],
@@ -682,12 +682,12 @@ struct Archetype[
 
     @always_inline
     def get_component[
-        T: ComponentType where Self.component_manager._ContainsComponent[T],
+        T: ComponentType
     ](ref self, entity_idx: Int) -> ref[self] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be contained in the component manager.
 
         Args:
             entity_idx: The index of the entity.
@@ -695,6 +695,9 @@ struct Archetype[
         Returns:
             A reference to the component.
         """
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         comptime id = Self.component_manager.get_id[T]()
 
         debug_assert(
@@ -705,21 +708,24 @@ struct Archetype[
             self._size,
         )
 
-        return (self._data[id] + entity_idx * size_of[T]()).bitcast[T]()[]
+        return self._get_component_ptr(entity_idx, id).bitcast[T]()[]
 
     @always_inline
     def set_component[
-        T: ComponentType where Self.component_manager._ContainsComponent[T],
+        T: ComponentType
     ](mut self, entity_idx: Int, var component: T):
         """Sets the component with the given Type T at the given index.
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be contained in the component manager.
 
         Args:
             entity_idx: The index of the entity.
             component: The new value of the component.
         """
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         debug_assert(
             0 <= entity_idx < self._size,
             "Index out of bounds: entity_idx=",
@@ -731,19 +737,20 @@ struct Archetype[
 
     @always_inline
     def set_components[
-        *Ts: ComponentType where Self.component_manager._ContainsComponents[
-            *Ts
-        ],
+        *Ts: ComponentType
     ](mut self, entity_idx: Int, var *components: *Ts):
         """Sets the component with the given Type T at the given index.
 
         Parameters:
-            Ts: The types of the components to set.
+            Ts: The types of the components to set. Constraints: Must be contained in the component manager and must be unique.
 
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
         """
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Component types must be unique."
         debug_assert(
             0 <= entity_idx < self._size,
             "Index out of bounds: entity_idx=",
