@@ -41,8 +41,15 @@
 
         Constraints:
             <description of one comptime constraint (indicated by `comptime assert`)>
-        """
+
+        Examples:
+          <Include ONLY on end user facing API which isn't easily understable!>
+        ```mojo
+       <example mojo code here>
+        ```
+       """
   ```
+  - Skip sections that are empty. So for example if a function returns nothing don't specify a `Returns: ...`.
 
 - Reference Mojo docs via the `mojo-syntax` skill
 
