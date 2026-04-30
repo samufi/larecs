@@ -23,9 +23,8 @@ from .query import (
     _ArchetypeByListIterator,
     ArchetypeIterator,
     ArchetypeIteratorVariant,
-    CouldNotCreateIteratorError,
 )
-from .lock import LockManager, LockedContext
+from .lock import LockManager, LockedContext, LockError
 from .resource import Resources
 from ._utils import concatenate_inline_arrays
 
@@ -40,7 +39,11 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
     comptime missing_components_for_removal_entity = WorldError(_variant=3)
     comptime missing_components_for_removal_query = WorldError(_variant=4)
     comptime duplicate_components_for_addition_entity = WorldError(_variant=5)
-    comptime duplicate_components_for_addition_query = WorldError(_variant=6)
+    comptime duplicate_components_for_addition_query = WorldError(
+        _variant=6,
+    )
+    comptime out_of_locks = WorldError(_variant=7)
+    comptime unbalanced_unlock = WorldError(_variant=7)
 
     def variant_name(self) -> String:
         if self._variant == Self.non_existent_entity._variant:
@@ -65,8 +68,20 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
             == Self.duplicate_components_for_addition_query._variant
         ):
             return "duplicate_components_for_addition_query"
+        elif self._variant == Self.out_of_locks._variant:
+            return LockError.out_of_locks.variant_name()
+        elif self._variant == Self.unbalanced_unlock._variant:
+            return LockError.unbalanced_unlock.variant_name()
         else:
             return "unknown"
+
+    def __init__(out self, e: LockError):
+        if e._variant == LockError.out_of_locks._variant:
+            return Self.out_of_locks
+        elif e._variant == LockError.unbalanced_unlock._variant:
+            return Self.unbalanced_unlock
+        else:
+            return Self.UNKNOWN
 
     def msg(self) -> String:
         if self._variant == Self.non_existent_entity._variant:
@@ -99,6 +114,10 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
                 " components to add. Use `Query.without[Component, ...]()` to"
                 " exclude those components."
             )
+        elif self._variant == Self.out_of_locks._variant:
+            return LockError.out_of_locks.msg()
+        elif self._variant == Self.unbalanced_unlock._variant:
+            return LockError.unbalanced_unlock.msg()
         else:
             return "Unknown error."
 
@@ -130,7 +149,7 @@ struct Replacer[
 
     var _world: Pointer[Self.World, Self.world_origin]
 
-    def by(self, entity: Entity) raises:
+    def by(self, entity: Entity) raises WorldError:
         """
         Removes components from an [..entity.Entity].
 
@@ -151,7 +170,7 @@ struct Replacer[
         T: ComponentType where Self.World.component_manager._ContainsComponent[
             T
         ]
-    ](self, component: T, *, entity: Entity) raises:
+    ](self, component: T, *, entity: Entity) raises WorldError:
         """
         Removes components from and adds one component to an [..entity.Entity].
 
@@ -178,7 +197,7 @@ struct Replacer[
         *AddTs: ComponentType where (
             Self.World.component_manager._ContainsComponents[*AddTs]
         )
-    ](self, *components: *AddTs, entity: Entity) raises:
+    ](self, *components: *AddTs, entity: Entity) raises WorldError:
         """
         Removes and adds the components to an [..entity.Entity].
 
@@ -438,7 +457,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     var resources: Resources  # The resources of the world.
 
-    def __init__(out self) raises:
+    def __init__(out self) raises WorldError:
         """
         Creates a new [.World].
         """
@@ -552,7 +571,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType where (
             0 <= len(Ts) and Self.component_manager._ContainsComponents[*Ts]
         )
-    ](mut self, var *components: *Ts, out entity: Entity) raises:
+    ](mut self, var *components: *Ts, out entity: Entity) raises WorldError:
         """Returns a new or recycled [..entity.Entity].
 
         The given component types are added to the entity.
@@ -647,7 +666,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises WorldError:
         """Adds a batch of [..entity.Entity Entities].
 
         The given component types are added to the entities.
@@ -741,7 +760,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 Pointer(to=self._locks),
                 {[first_index_in_archetype]},
             }
-        except CouldNotCreateIteratorError:
+        except _:
             raise WorldError.UNKNOWN
 
     @always_inline
@@ -903,7 +922,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def has[
         T: ComponentType where Self.component_manager._ContainsComponent[T]
-    ](self, entity: Entity) raises -> Bool:
+    ](self, entity: Entity) raises WorldError -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
@@ -1049,7 +1068,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises WorldError:
+    ) raises:
         """
         Adds components to multiple [..entity.Entity Entities] at once that are specified by a [..query.Query].
         The provided query must ensure that matching entities do not already have one or more of the
@@ -1139,7 +1158,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises WorldError:
+    ) raises:
         """
         Removes components from multiple entities at once, specified by a [..query.Query].
         The provided query must ensure that matching entities have all of the components that should get removed.
@@ -1359,7 +1378,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises WorldError:
+    ) raises:
         """
         Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
 
@@ -1462,7 +1481,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     Pointer(to=self._locks),
                     List[Int](),
                 }
-            except CouldNotCreateIteratorError:
+            except _:
                 raise WorldError.UNKNOWN
             return
 
@@ -1569,7 +1588,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 Pointer(to=self._locks),
                 arch_start_idcs^,
             }
-        except CouldNotCreateIteratorError:
+        except _:
             raise WorldError.UNKNOWN
 
     @always_inline
@@ -1603,9 +1622,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         has_without_mask: Bool = False,
         *,
         unroll_factor: Int = 1,
-    ](
-        mut self, query: QueryInfo[has_without_mask=has_without_mask]
-    ) raises WorldError:
+    ](mut self, query: QueryInfo[has_without_mask=has_without_mask]) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1644,9 +1661,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](
-        mut self, query: QueryInfo[has_without_mask=has_without_mask]
-    ) raises WorldError:
+    ](mut self, query: QueryInfo[has_without_mask=has_without_mask]) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1898,7 +1913,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 Pointer(to=self._locks),
                 start_indices^,
             )
-        except CouldNotCreateIteratorError:
+        except _:
             raise WorldError.UNKNOWN
 
     @always_inline
@@ -1936,21 +1951,29 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return self._locks.is_locked()
 
     @always_inline
-    def _lock(mut self) raises -> UInt8:
+    def _lock(mut self) raises WorldError -> Int:
         """
         Locks the world and gets the lock bit for later unlocking.
         """
-        return self._locks.lock()
+        try:
+            return self._locks.lock()
+        except e:
+            raise WorldError(e)
 
     @always_inline
-    def _unlock(mut self, lock: UInt8) raises:
+    def _unlock(mut self, lock: Int) raises WorldError:
         """
         Unlocks the given lock bit.
         """
-        self._locks.unlock(lock)
+        try:
+            return self._locks.unlock(lock)
+        except e:
+            raise WorldError(e)
 
     @always_inline
-    def _locked(mut self) -> LockedContext[origin_of(self._locks)]:
+    def _locked(
+        mut self,
+    ) -> LockedContext[origin_of(self._locks)]:
         """
         Returns a context manager that unlocks the world when it goes out of scope.
 
