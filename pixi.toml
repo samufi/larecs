@@ -4,7 +4,7 @@ authors = [
     "Martin Lange <martin_lange_@gmx.net>",
     "Mose Schmiedel <mose@schmiednet.de>",
 ]
-channels = ["conda-forge", "https://repo.prefix.dev/max"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
 platforms = ["linux-64", "osx-arm64"]
@@ -13,4 +13,4 @@ version = "0.4.0"
 [tasks]
 
 [dependencies]
-mojo = "==0.25.7"
+mojo = ">=0.26.2, <1.0.0"
