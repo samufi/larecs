@@ -14,6 +14,51 @@ from .debug_utils import debug_warn
 from .static_optional import StaticOptional
 
 
+@fieldwise_init
+struct QueryError(Equatable, ImplicitlyCopyable, Writable):
+    """
+    Typed errors raised by query operations.
+    """
+
+    var _variant: Int
+
+    comptime UNKNOWN = QueryError(_variant=0)
+    comptime could_not_create_iterator = QueryError(_variant=1)
+
+    def variant_name(self) -> String:
+        """
+        Returns the variant name.
+
+        Returns:
+            The name of the error variant.
+        """
+        if self._variant == Self.could_not_create_iterator._variant:
+            return "could_not_create_iterator"
+        else:
+            return "unknown"
+
+    def msg(self) -> String:
+        """
+        Returns the error message.
+
+        Returns:
+            The human-readable error message.
+        """
+        if self._variant == Self.could_not_create_iterator._variant:
+            return "Could not create query iterator."
+        else:
+            return "Unknown error."
+
+    def write_to(self, mut writer: Some[Writer]):
+        """
+        Writes the error to the given writer.
+
+        Args:
+            writer: The writer to write to.
+        """
+        writer.write("QueryError.", self.variant_name(), ": ", self.msg())
+
+
 struct Query[
     world_origin: MutOrigin,
     *ComponentTypes: ComponentType,
@@ -96,15 +141,19 @@ struct Query[
         and call `len` on it, instead.
         """
         size = 0
-        for archetype in self._world[]._get_archetype_iterator[
-            has_without_mask=Self.has_without_mask
-        ](self._mask, self._without_mask):
-            size += len(archetype[])
+        query_info = QueryInfo[has_without_mask=Self.has_without_mask](
+            self._mask,
+            self._without_mask,
+        )
+        for i in range(len(self._world[]._archetypes)):
+            archetype = Pointer(to=self._world[]._archetypes.unsafe_get(i))
+            if archetype[] and query_info.matches(archetype[].get_mask()):
+                size += len(archetype[])
         return size
 
     @always_inline
     def __iter__(
-        self,
+        var self,
         out iterator: Self.World.Iterator[
             origin_of(self._world[]._archetypes),
             origin_of(self._world[]._locks),
@@ -115,11 +164,11 @@ struct Query[
         """
         Creates an iterator over all entities that match the query.
 
+        Raises:
+            QueryError: If the iterator cannot acquire a lock.
+
         Returns:
             An iterator over all entities that match the query.
-
-        Raises:
-            Error: If the lock cannot be acquired (more than 256 locks exist).
         """
         comptime ArchetypeByMaskIterator = Self.World.ArchetypeByMaskIterator[
             origin_of(self._world[]._archetypes),
@@ -127,7 +176,7 @@ struct Query[
         ]
 
         try:
-            iterator = {
+            iterator = type_of(iterator)(
                 ArchetypeByMaskIterator(
                     mask_iterator=ArchetypeByMaskIterator.mask_iterator(
                         Pointer(to=self._world[]._archetypes),
@@ -137,9 +186,9 @@ struct Query[
                 ),
                 Pointer(to=self._world[]._locks),
                 None,
-            }
-        except CouldNotCreateIteratorError:
-            raise Error("Could not create query iterator.")
+            )
+        except _:
+            raise QueryError.could_not_create_iterator
 
     @always_inline
     def without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
@@ -723,24 +772,6 @@ struct ArchetypeIterator[
             return self._list_iterator[].__has_next__()
 
 
-@fieldwise_init
-struct CouldNotCreateIteratorError(Writable):
-    """
-    Error raised when an iterator could not be created because the query does not match any entities.
-    """
-
-    var message: String
-
-    def write_to(self, mut writer: Some[Writer]):
-        """
-        Writes the error message to the given writer.
-
-        Args:
-            writer: The writer to write the error message to.
-        """
-        writer.write("CouldNotCreateIteratorError: ", self.message)
-
-
 struct _EntityIterator[
     archetype_mutability: Bool,
     //,
@@ -811,7 +842,7 @@ struct _EntityIterator[
         var archetype_iter: Self.archetype_iterator,
         lock_ptr: Pointer[LockManager, Self.lock_origin],
         var start_indices: Self.StartIndices = None,
-    ) raises CouldNotCreateIteratorError:
+    ) raises:
         """
         Creates an entity iterator with or without excluded components.
 
@@ -824,17 +855,11 @@ struct _EntityIterator[
                            are iterated.
 
         Raises:
-            Error: If the lock cannot be acquired (more than 256 locks exist).
+            Error: If the lock cannot be acquired.
         """
 
         self._lock_ptr = lock_ptr
-        try:
-            self._lock = self._lock_ptr[].lock()
-        except _:
-            raise CouldNotCreateIteratorError(
-                "Failed to acquire lock for the query iterator. More than 256"
-                " locks exist."
-            )
+        self._lock = self._lock_ptr[].lock()
         self._start_indices = start_indices^
 
         self._current_archetype = None
@@ -852,13 +877,33 @@ struct _EntityIterator[
             self._last_entity_index = Int.MAX
             try:
                 self._next_archetype()
+                # We need to reduce the index by 1, because the
+                # first call to __next__ will increment it.
+                self._entity_index -= 1
             except StopIteration:
-                raise CouldNotCreateIteratorError(
-                    "The query does not match any entities."
-                )
-            # We need to reduce the index by 1, because the
-            # first call to __next__ will increment it.
-            self._entity_index -= 1
+                self._current_archetype = None
+                self._entity_index = 0
+                self._last_entity_index = 0
+                self._archetype_size = 0
+
+    # def __init__(out self, *, deinit take: Self):
+    #     """
+    #     Move constructor.
+
+    #     Transfers iterator state and the owned lock bit to the new iterator.
+
+    #     Args:
+    #         take: The iterator to move from.
+    #     """
+    #     self._current_archetype = take._current_archetype
+    #     self._lock_ptr = take._lock_ptr
+    #     self._lock = take._lock
+    #     self._entity_index = take._entity_index
+    #     self._last_entity_index = take._last_entity_index
+    #     self._archetype_size = take._archetype_size
+    #     self._archetype_iterator = take._archetype_iterator^
+    #     self._start_indices = take._start_indices^
+    #     self._processed_archetypes_count = take._processed_archetypes_count^
 
     def __del__(deinit self):
         """
@@ -866,8 +911,11 @@ struct _EntityIterator[
         """
         try:
             self._lock_ptr[].unlock(self._lock)
-        except Error:
-            debug_warn("Failed to unlock the lock. This should not happen.")
+        except _:
+            debug_warn(
+                t"Failed to unlock the lock {self._lock}. This should not"
+                t" happen."
+            )
 
     @always_inline
     def __iter__(var self, out iterator: Self):

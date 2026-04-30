@@ -3,7 +3,7 @@ from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
 from larecs.component import ComponentManager
-from larecs.query import _ArchetypeByMaskIterator
+from larecs.query import QueryError, _ArchetypeByMaskIterator
 
 
 def test_query_length() raises:
@@ -389,6 +389,32 @@ def test_query_lock() raises:
         _ = world.add_entity(c0, c1, c2)
 
 
+def test_query_requires_available_lock() raises:
+    world = SmallWorld()
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    _ = world.add_entity(c0)
+
+    locks = List[Int]()
+    for _ in range(world._locks.bit_pool.capacity):
+        locks.append(world._lock())
+
+    with assert_raises(contains=QueryError.could_not_create_iterator.msg()):
+        for _ in world.query[FlexibleComponent[0]]():
+            pass
+
+    for i in range(len(locks)):
+        world._unlock(locks[i])
+
+    assert_false(world.is_locked())
+
+    count = 0
+    for _ in world.query[FlexibleComponent[0]]():
+        count += 1
+
+    assert_equal(count, 1)
+
+
 def test_query_archetype_iterator() raises:
     comptime Archetype = _Archetype[
         FlexibleComponent[0],
@@ -412,6 +438,7 @@ def test_query_archetype_iterator() raises:
 
 def run_all_query_tests() raises:
     test_query_lock()
+    test_query_requires_available_lock()
     test_query_component_reference()
     test_query_result_ids()
     test_query_length()

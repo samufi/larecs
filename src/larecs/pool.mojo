@@ -88,50 +88,73 @@ struct EntityPool(Copyable, Movable, Sized):
 
 @fieldwise_init
 struct BitPool(Copyable, Movable):
-    """BitPool is a pool of bits with ability to obtain an un-set bit and to recycle it for later use.
+    """Pool of reusable bit indices.
 
-    This implementation uses an implicit list.
+    `BitPool` hands out unique bit indices in the range `0..<capacity` and
+    recycles returned indices for later reuse. Recycled indices are stored as an
+    implicit singly linked free list inside `_bits`, so allocation and recycling
+    are O(1).
     """
 
     comptime capacity = Int(UInt8.MAX_FINITE) + 1
+    """The maximum number of unique bit indices managed by the pool."""
+
     var _bits: InlineArray[UInt8, Self.capacity]
+    """Storage for allocated bit values and recycled free-list links."""
+
     var _next: Int
-    var _available: UInt8
+    """The head index of the recycled-bit free list."""
+
+    var _available: Int
+    """The number of recycled bits currently available for reuse."""
 
     # The length must be able to express that the pool is full.
     # Hence, the data type must be larger than the index
     # data type.
     var _length: Int
+    """The number of unique bit indices allocated so far."""
 
     @always_inline
     def __init__(out self):
+        """Initializes an empty bit pool.
+
+        The pool starts with no allocated bits and no recycled bits. Fresh calls
+        to [BitPool.get] return monotonically increasing indices until recycled
+        bits become available.
+        """
         self._bits = InlineArray[UInt8, Self.capacity](fill=0)
         self._next = 0
         self._length = 0
         self._available = 0
 
-    def get(mut self) raises -> Int:
-        """Returns a fresh or recycled bit.
+    def get(mut self, out bit_idx: Int) raises:
+        """Returns a fresh or recycled bit index.
+
+        Recycled indices are returned before allocating new indices. When no
+        recycled index exists, the next fresh index is allocated.
 
         Raises:
             Error: If the pool is full.
 
         Returns:
-            The index of a fresh or recycled bit.
+            The acquired bit index.
         """
         if self._available == 0:
-            return self._get_new()
+            bit_idx = self._next = self._get_new()
+            return
 
-        curr = self._next
+        bit_idx = self._next
         self._next, self._bits[self._next] = (
             Int(self._bits[self._next]),
             UInt8(self._next),
         )
         self._available -= 1
-        return Int(self._bits[curr])
 
-    def _get_new(mut self) raises -> Int:
-        """Allocates and returns a new bit. For internal use.
+    def _get_new(mut self, out bit_idx: Int) raises:
+        """Allocates and returns a new bit index.
+
+        This internal helper only allocates fresh indices; callers should use
+        [BitPool.get] so recycled indices are preferred.
 
         Raises:
             Error: If the pool is full.
@@ -140,20 +163,18 @@ struct BitPool(Copyable, Movable):
             The index of the newly allocated bit.
         """
         if self._length >= Self.capacity:
-            raise Error(
-                String("Ran out of the capacity of {} bits").format(
-                    Self.capacity
-                )
-            )
+            raise Error(t"Ran out of the capacity of {Self.capacity} bits")
 
         bit_idx = self._length
         self._bits[self._length] = UInt8(bit_idx)
         self._length += 1
-        return bit_idx
 
     @always_inline
     def recycle(mut self, bit_idx: Int):
-        """Hands a bit back for recycling.
+        """Hands a bit index back for recycling.
+
+        The recycled index becomes the head of the free list and may be returned
+        by the next [BitPool.get] call.
 
         Args:
             bit_idx: The index of the bit to recycle.
@@ -164,7 +185,11 @@ struct BitPool(Copyable, Movable):
 
     @always_inline
     def reset(mut self):
-        """Recycles all bits."""
+        """Resets the pool to its initial empty state.
+
+        All previously handed-out indices are invalidated from the pool's point
+        of view. The next allocation starts again at index 0.
+        """
         self._next = 0
         self._length = 0
         self._available = 0

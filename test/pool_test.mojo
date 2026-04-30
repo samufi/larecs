@@ -146,15 +146,35 @@ def test_entity_pool_stochastic() raises:
             )
 
 
-def test_bit_pool() raises:
+def test_bit_pool_constructor() raises:
     p = BitPool()
 
     assert_equal(p.capacity, 256)
+    assert_equal(p._length, 0)
+    assert_equal(p._available, 0)
+
+
+def test_bit_pool_fresh_allocation() raises:
+    p = BitPool()
 
     for i in range(p.capacity):
         assert_equal(i, p.get())
 
+
+def test_bit_pool_exhaustion() raises:
+    p = BitPool()
+
+    for _ in range(p.capacity):
+        _ = p.get()
+
     with assert_raises():
+        _ = p.get()
+
+
+def test_bit_pool_recycle_lifo() raises:
+    p = BitPool()
+
+    for _ in range(10):
         _ = p.get()
 
     for i in range(10):
@@ -163,16 +183,54 @@ def test_bit_pool() raises:
     for i in range(9, -1, -1):
         assert_equal(i, p.get())
 
+
+def test_bit_pool_recycle_full_capacity() raises:
+    p = BitPool()
+
+    for i in range(p.capacity):
+        assert_equal(i, p.get())
+
+    for i in range(p.capacity):
+        p.recycle(i)
+
+    for i in range(p.capacity - 1, -1, -1):
+        assert_equal(i, p.get())
+
     with assert_raises():
         _ = p.get()
 
+
+def test_bit_pool_reset() raises:
+    p = BitPool()
+
+    for i in range(32):
+        assert_equal(i, p.get())
+
+    for i in range(10):
+        p.recycle(i)
+
     p.reset()
+
+    assert_equal(p._length, 0)
+    assert_equal(p._available, 0)
 
     for i in range(p.capacity):
         assert_equal(i, p.get())
 
     with assert_raises():
         _ = p.get()
+
+
+def test_bit_pool_recycle_after_reset() raises:
+    p = BitPool()
+
+    for _ in range(p.capacity):
+        _ = p.get()
+
+    p.reset()
+
+    for i in range(10):
+        assert_equal(i, p.get())
 
     for i in range(10):
         p.recycle(i)

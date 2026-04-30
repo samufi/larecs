@@ -3,6 +3,59 @@ from .pool import BitPool
 
 
 @fieldwise_init
+struct LockError(Equatable, ImplicitlyCopyable, Writable):
+    """
+    Typed errors raised by lock operations.
+    """
+
+    var _variant: Int
+
+    comptime UNKNOWN = LockError(_variant=0)
+    comptime out_of_locks = LockError(_variant=1)
+    comptime unbalanced_unlock = LockError(_variant=2)
+
+    def variant_name(self) -> String:
+        """
+        Returns the variant name.
+
+        Returns:
+            The name of the error variant.
+        """
+        if self._variant == Self.out_of_locks._variant:
+            return "out_of_locks"
+        elif self._variant == Self.unbalanced_unlock._variant:
+            return "unbalanced_unlock"
+        else:
+            return "unknown"
+
+    def msg(self) -> String:
+        """
+        Returns the error message.
+
+        Returns:
+            The human-readable error message.
+        """
+        if self._variant == Self.out_of_locks._variant:
+            return "The number of locks exceeds the maximum limit of 256."
+        elif self._variant == Self.unbalanced_unlock._variant:
+            return (
+                "Unbalanced unlock. Did you close a query that was already"
+                " iterated?"
+            )
+        else:
+            return "Unknown error."
+
+    def write_to(self, mut writer: Some[Writer]):
+        """
+        Writes the error to the given writer.
+
+        Args:
+            writer: The writer to write to.
+        """
+        writer.write("LockError.", self.variant_name(), ": ", self.msg())
+
+
+@fieldwise_init
 struct LockManager(Copyable, Movable):
     """
     Manages locks by mask bits.
@@ -19,30 +72,30 @@ struct LockManager(Copyable, Movable):
         self.bit_pool = BitPool()
 
     @always_inline
-    def lock(mut self) raises -> Int:
+    def lock(mut self, out lock: Int) raises LockError:
         """
         Locks the world and gets the Lock bit for later unlocking.
 
         Raises:
-            Error: If the number of locks exceeds 256.
+            LockError: If the number of locks exceeds 256.
         """
-        lock = self.bit_pool.get()
+        try:
+            lock = self.bit_pool.get()
+        except Error:
+            raise LockError.out_of_locks
+
         self.locks.set[True](lock)
-        return lock
 
     @always_inline
-    def unlock(mut self, lock: Int) raises:
+    def unlock(mut self, lock: Int) raises LockError:
         """
         Unlocks the given lock bit.
 
         Raises:
-            Error: If the lock is not set.
+            LockError: If the lock is not set.
         """
         if not self.locks.get(lock):
-            raise Error(
-                "Unbalanced unlock. Did you close a query that was already"
-                " iterated?"
-            )
+            raise LockError.unbalanced_unlock
 
         self.locks.set[False](lock)
         self.bit_pool.recycle(lock)
@@ -94,7 +147,7 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
         self._lock = 0
 
     @always_inline
-    def __enter__(mut self) raises -> Self:
+    def __enter__(mut self) raises LockError -> Self:
         """
         Locks the world.
 
@@ -102,17 +155,17 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
             The LockedContext.
 
         Raises:
-            Error: If the number of locks exceeds 256.
+            LockError: If the number of locks exceeds 256.
         """
         self._lock = self._locks[].lock()
         return self
 
     @always_inline
-    def __exit__(mut self) raises:
+    def __exit__(mut self) raises LockError:
         """
         Unlocks the world.
 
         Raises:
-            Error: If the number of locks exceeds 256.
+            LockError: If the number of locks exceeds 256.
         """
         self._locks[].unlock(self._lock)
