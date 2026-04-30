@@ -1,4 +1,5 @@
 from std.testing import *
+from std.memory import memcpy
 
 from larecs.archetype import Archetype as _Archetype
 from larecs.bitmask import BitMask
@@ -6,15 +7,6 @@ from larecs.component import ComponentManager
 from larecs.entity import Entity
 from larecs.pool import EntityPool
 from larecs.test_utils import *
-
-
-# ToDo: Remove this when the benchmark tools
-# are updated
-@fieldwise_init
-struct LargerComponent(ComponentType):
-    var x: Float64
-    var y: Float64
-    var z: Float64
 
 
 comptime Archetype = _Archetype[
@@ -134,11 +126,29 @@ def test_archetype_get_component_ptr() raises:
     var archetype = Archetype(0, id2Arr)
 
     var entity = Entity(0, 0)
-    archetype._entities.append(entity)
-    archetype._size = 1
+    entity_idx = archetype.add(entity)
 
-    var ptr = archetype._get_component_ptr(0, 1)
-    assert_true(ptr != UnsafePointer[UInt8, MutExternalOrigin]())
+    comptime comp_id = Archetype.component_manager.get_id[LargerComponent]()
+
+    archetype.set_component(entity_idx, LargerComponent(1.0, 2.0, 3.0))
+
+    var ptr = archetype._get_component_ptr(entity_idx, comp_id)
+    assert_equal(
+        ptr,
+        archetype._data[comp_id] + entity_idx * archetype._item_sizes[comp_id],
+    )
+    assert_equal(archetype.get_component[LargerComponent](entity_idx).x, 1.0)
+
+    # Test that ptr can be used for memcpy operations.
+    var component = LargerComponent(0.0, 0.0, 0.0)
+    memcpy(
+        dest=UnsafePointer(to=component).bitcast[UInt8](),
+        src=ptr,
+        count=archetype._item_sizes[comp_id],
+    )
+    assert_equal(component.x, 1.0)
+    assert_equal(component.y, 2.0)
+    assert_equal(component.z, 3.0)
 
 
 def test_archetype_move() raises:
