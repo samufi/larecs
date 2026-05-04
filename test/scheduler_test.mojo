@@ -1,10 +1,40 @@
-from larecs import World, Scheduler, System, ResourceType
+from larecs import World, Scheduler, System, ResourceType, ComponentType
 from std.testing import *
 
 
 @fieldwise_init
 struct MeanState(ResourceType):
     var value: Float64
+
+
+struct UpdateOnlySystem(System):
+    var updates: Int
+
+    def __init__(out self):
+        """Construct an update-only system."""
+        self.updates = 0
+
+    def update[
+        *ComponentTypes: ComponentType
+    ](mut self, mut world: World[*ComponentTypes]) raises:
+        """Adds one entity during each update.
+
+        Parameters:
+            ComponentTypes: The component types in the world.
+
+        Args:
+            world: The world to update.
+        """
+        self.updates += 1
+        _ = world.add_entity(1)
+
+
+def test_scheduler_default_lifecycle_hooks() raises:
+    """Systems can rely on default initialize and finalize hooks."""
+    scheduler = Scheduler[Int]()
+    scheduler.add_system(UpdateOnlySystem())
+    scheduler.run(3)
+    assert_equal(len(scheduler.world), 3)
 
 
 # @fieldwise_init

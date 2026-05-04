@@ -15,6 +15,7 @@ from entity_test import functions as entity_functions
 from query_test import functions as query_functions
 from pool_test import functions as pool_functions
 from world_test import functions as world_functions
+from scheduler_test import functions as scheduler_functions
 
 
 def main() raises:
@@ -33,4 +34,5 @@ def main() raises:
         .concat(query_functions)
         .concat(pool_functions)
         .concat(world_functions)
+        .concat(scheduler_functions)
     ]().run()
