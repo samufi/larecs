@@ -1,5 +1,16 @@
 # Agent Guidelines for Larecs
 
+## Project Overview
+Larecs is a high-performance Entity Component System (ECS) library written in Mojo. It provides efficient data structures and algorithms for game development and simulation applications.
+
+## Key Components
+- **Entities**: Unique identifiers for game objects
+- **Components**: Data containers that can be attached to entities
+- **Systems**: Logic that operates on entities with specific components
+- **World**: Central container managing entities, components, and systems
+- **Archetypes**: Efficient storage for entities with the same component composition
+- **Queries**: Fast iteration over entities matching specific criteria
+
 ## Build/Test Commands
 
 - Run all tests: `pixi run mojo run -D ASSERT=all -I src/ test/_all.mojo`
