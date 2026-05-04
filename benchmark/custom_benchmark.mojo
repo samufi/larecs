@@ -10,7 +10,9 @@ from std.collections import Dict
 
 def DefaultConfig() raises -> BenchConfig_:
     """Returns the default configuration for benchmarking."""
-    config = BenchConfig_(min_runtime_secs=2, max_batch_size=50)
+    config = BenchConfig_(
+        min_runtime_secs=2.0, max_runtime_secs=10.0, max_batch_size=50
+    )
     config.verbose_timing = True
     return config^
 
@@ -21,7 +23,7 @@ def DefaultBench() raises -> Bench_:
 
 
 @fieldwise_init
-struct Bencher(Copyable, ImplicitlyCopyable, Movable):
+struct Bencher(ImplicitlyCopyable):
     """A helper struct for benchmarking functions.
 
     It mimics some features of benchmark.Bencher
@@ -68,9 +70,7 @@ struct Bencher(Copyable, ImplicitlyCopyable, Movable):
 
 
 @fieldwise_init
-struct BenchConfig(
-    Copyable, ImplicitlyCopyable, ImplicitlyDestructible, Movable
-):
+struct BenchConfig(ImplicitlyCopyable):
     """A configuration struct for benchmarking.
 
     It mimics some features of benchmark.BenchConfig
@@ -91,7 +91,7 @@ struct BenchConfig(
         warmup_iters: Int = 3,
         min_iter_runtime_ns: UInt = 100000,
         max_iters: Int = 10_000_000_000,
-        max_runtime_secs: Float64 = 10,
+        max_runtime_secs: Float64 = 10.0,
         min_runtime_secs: Float64 = 0.5,
         num_repetitions: Int = 1,
         initial_batch_size: Int = 1,
@@ -149,9 +149,7 @@ def copy_bench_id(input_id: BenchId) -> BenchId:
         return BenchId(input_id.func_name, input_id.input_id)
 
 
-struct BenchResult(
-    Copyable, ImplicitlyCopyable, ImplicitlyDestructible, Movable
-):
+struct BenchResult(ImplicitlyCopyable):
     """A struct combining a BenchId and a Bencher, representing the result of a benchmark.
     """
 
