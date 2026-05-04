@@ -206,8 +206,8 @@ struct Archetype[
 
     @doc_hidden
     def __init__[
-        *, used_internally: Bool where used_internally
-    ](out self, node_index: Int, mask: BitMask, capacity: Int):
+        *, used_internally: Bool 
+    ](out self, node_index: Int, mask: BitMask, capacity: Int) where used_internally:
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -581,7 +581,7 @@ struct Archetype[
         mut: Bool,
         //,
         origin: Origin[mut=mut],
-        T: ComponentType where Self.component_manager._ContainsComponent[T],
+        T: ComponentType 
     ](
         mut self,
         start_idx: Int,
@@ -593,13 +593,14 @@ struct Archetype[
         Parameters:
             mut: Whether the data pointer is mutable.
             origin: The lifetime of the data pointer.
-            T: The type of the index.
+            T: The type of the index. Constraints: Must be contained in the component manager.
 
         Args:
             start_idx: The index of the first entity to set.
             data: Pointer to the values to set the component with.
             count: The number of elements to set.
         """
+        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
         debug_assert(
             0 <= start_idx and start_idx + count <= self._size,
             "Index out of bounds.",

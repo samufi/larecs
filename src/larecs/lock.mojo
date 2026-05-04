@@ -147,7 +147,7 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
         self._lock = 0
 
     @always_inline
-    def __enter__(mut self) raises LockError -> Self:
+    def __enter__(mut self) raises -> Self:
         """
         Locks the world.
 
@@ -161,7 +161,7 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
         return self
 
     @always_inline
-    def __exit__(mut self) raises LockError:
+    def __exit__(mut self) raises:
         """
         Unlocks the world.
 

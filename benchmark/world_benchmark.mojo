@@ -231,12 +231,9 @@ def benchmark_apply_expexp_1_comp_100_000(
         @always_inline
         @parameter
         def operation_plus(accessor: MutableEntityAccessor) capturing:
-            try:
-                ref pos2 = accessor.get[Position]()
-                pos2.x = exp(1 - exp(pos2.x))
-                pos2.y = exp(1 - exp(pos2.y))
-            except:
-                pass
+            ref pos2 = accessor.get[Position]()
+            pos2.x = exp(1 - exp(pos2.x))
+            pos2.y = exp(1 - exp(pos2.y))
 
         for _ in range(100):
             world.apply[operation_plus, unroll_factor=3](
@@ -267,13 +264,10 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
             comptime _load = load2[simd_width]
             comptime _store = store2[simd_width]
 
-            try:
-                ref pos2 = accessor.get[Position]()
+            ref pos2 = accessor.get[Position]()
 
-                _store(pos2.x, exp(1 - exp(_load(pos2.x))))
-                _store(pos2.y, exp(1 - exp(_load(pos2.y))))
-            except:
-                pass
+            _store(pos2.x, exp(1 - exp(_load(pos2.x))))
+            _store(pos2.y, exp(1 - exp(_load(pos2.y))))
 
         for _ in range(100):
             world.apply[
@@ -663,9 +657,9 @@ def prevent_inlining_replace() raises:
     vel = Velocity(0.1, 0.2)
     world = SmallWorld()
     entity = world.add_entity(pos)
-    _ = world.replace[Position]().by(entity, vel)
+    _ = world.replace[Position]().by(vel, entity=entity)
     query = world.query[Position]().without[Velocity]()
-    _ = world.replace[Position]().by(query, vel)
+    _ = world.replace[Position]().by(vel, query=query)
 
 
 def benchmark_replace_1_comp_1_000_000(
@@ -685,7 +679,9 @@ def benchmark_replace_1_comp_1_000_000(
             for i in range(20):
                 component = FlexibleComponent[i + 1](i, 2.0)
                 for entity in entities:
-                    world.replace[FlexibleComponent[i]]().by(entity, component)
+                    world.replace[FlexibleComponent[i]]().by(
+                        component, entity=entity
+                    )
 
     bencher.iter[bench_fn]()
 
@@ -760,7 +756,6 @@ def benchmark_replace_5_comp_1_000_000(
                         FlexibleComponent[base + 3],
                         FlexibleComponent[base + 4],
                     ]().by(
-                        entity,
                         FlexibleComponent[base + 5](
                             i + 11.0, Float32(i + 12.0)
                         ),
@@ -776,6 +771,7 @@ def benchmark_replace_5_comp_1_000_000(
                         FlexibleComponent[base + 9](
                             i + 19.0, Float32(i + 20.0)
                         ),
+                        entity=entity,
                     )
 
     bencher.iter[bench_fn]()
@@ -1024,5 +1020,5 @@ def run_all_world_benchmarks(mut bench: Bench) raises:
     prevent_inlining_replace()
 
 
-def main():
+def main() raises:
     run_all_world_benchmarks()

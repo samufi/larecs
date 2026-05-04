@@ -457,7 +457,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     var resources: Resources  # The resources of the world.
 
-    def __init__(out self) raises WorldError:
+    def __init__(out self) raises:
         """
         Creates a new [.World].
         """
@@ -568,9 +568,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return archetype_index
 
     def add_entity[
-        *Ts: ComponentType where (
-            0 <= len(Ts) and Self.component_manager._ContainsComponents[*Ts]
-        )
+        *Ts: ComponentType 
     ](mut self, var *components: *Ts, out entity: Entity) raises WorldError:
         """Returns a new or recycled [..entity.Entity].
 
@@ -605,7 +603,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         Parameters:
-            Ts: The components to add to the entity.
+            Ts: The components to add to the entity. Constraints: Must contain no duplicates and all components must be in the component manager.
 
         Args:
             components: The components to add to the entity.
@@ -617,6 +615,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The new or recycled [..entity.Entity].
 
         """
+        comptime assert Self.component_manager._ContainsComponents[*Ts], "Not all component types are in the component manager."
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in add_entity are not allowed."
@@ -654,9 +653,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return
 
     def add_entities[
-        *Ts: ComponentType where (
-            0 <= len(Ts) and Self.component_manager._ContainsComponents[*Ts]
-        )
+        *Ts: ComponentType 
     ](
         mut self,
         *components: *Ts,
@@ -700,7 +697,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         Parameters:
-            Ts: The components to add to the entity.
+            Ts: The components to add to the entity. Constraints: Must contain no duplicates and all components must be in the component manager.
 
         Args:
             components: The components to add to the entity.
@@ -713,6 +710,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator to the new or recycled [..entity.Entity Entities].
 
         """
+        comptime assert Self.component_manager._ContainsComponents[*Ts], "Not all component types are in the component manager."
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in add_entities are not allowed."
@@ -921,13 +919,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def has[
-        T: ComponentType where Self.component_manager._ContainsComponent[T]
+        T: ComponentType 
     ](self, entity: Entity) raises WorldError -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be in the component manager.
 
         Args:
             entity: The entity to check.
@@ -935,6 +933,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
+        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
         self._assert_alive(entity)
         return self._archetypes.unsafe_get(
             index(self._entities[entity.get_id()].archetype_index)
@@ -942,16 +941,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def get[
-        T: ComponentType where Self.component_manager._ContainsComponent[T]
+        T: ComponentType 
     ](mut self, entity: Entity) raises -> ref[self._archetypes] T:
         """Returns a reference to the given component of an [..entity.Entity].
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be in the component manager.
 
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
+        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
@@ -965,13 +965,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def set[
-        T: ComponentType where Self.component_manager._ContainsComponent[T]
+        T: ComponentType 
     ](mut self, entity: Entity, var component: T) raises:
         """
         Overwrites a component for an [..entity.Entity], using the given content.
 
         Parameters:
-            T:         The type of the component.
+            T:         The type of the component. Constraints: Must be in the component manager.
 
         Args:
             entity:    The entity to modify.
@@ -980,6 +980,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the [..entity.Entity] does not exist.
         """
+        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
         self._assert_alive(entity)
         entity_loc = self._entities[entity.get_id()]
         self._archetypes.unsafe_get(entity_loc.archetype_index).set_component[
@@ -988,16 +989,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def set[
-        *Ts: ComponentType where (
-            constrain_components_unique[*Ts]()
-            and Self.component_manager._ContainsComponents[*Ts]
-        )
+        *Ts: ComponentType 
     ](mut self, entity: Entity, var *components: *Ts) raises WorldError:
         """
         Overwrites components for an [..entity.Entity] using the given content.
 
         Parameters:
-            Ts:        The types of the components.
+            Ts:        The types of the components. Constraints: Must be in the component manager and contain no duplicates.
 
         Args:
             entity:    The entity to modify.
@@ -1006,6 +1004,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
+        comptime assert Self.component_manager._ContainsComponents[*Ts], "One or more component types not in component manager"
+        comptime assert constrain_components_unique[*Ts](), "Duplicate component types in set are not allowed."
 
         self._assert_alive(entity)
         entity_loc = self._entities[entity.get_id()]
@@ -1056,9 +1056,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def add[
         has_without_mask: Bool,
         //,
-        *Ts: ComponentType where Self.component_manager._ContainsComponents[
-            *Ts
-        ],
+        *Ts: ComponentType 
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
@@ -1104,7 +1102,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Parameters:
             has_without_mask: Whether the query has a without mask.
-            Ts: The types of the components to add.
+            Ts: The types of the components to add. Constraints: Must be in the component manager and contain no duplicates.
 
         Args:
             query: The query specifying which entities to modify. The query must explicitly exclude existing entities
@@ -1116,6 +1114,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match existing entities that already have at least one of the
                 components to add.
         """
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "One or more component types not in component manager"
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Duplicate component types in add are not allowed."
 
         return self._batch_remove_and_add(
             query,
@@ -1188,7 +1192,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         Parameters:
-            Ts: The types of the components to remove.
+            Ts: The types of the components to remove. Constraints: Must be in the component manager and contain no duplicates.
             has_without_mask: Whether the query has a without mask.
 
         Args:
@@ -1207,6 +1211,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in remove are not allowed."
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "One or more component types not in component manager"
 
         return self._batch_remove_and_add[
             rem_size=len(Ts),
@@ -1240,9 +1247,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _remove_and_add[
-        *Ts: ComponentType where Self.component_manager._ContainsComponents[
-            *Ts
-        ],
+        *Ts: ComponentType,
         rem_size: Int = 0,
         remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
     ](mut self, entity: Entity, *add_components: *Ts,) raises WorldError:
@@ -1250,7 +1255,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Adds and removes components to an [..entity.Entity].
 
         Parameters:
-            Ts:          The types of the components to add.
+            Ts:          The types of the components to add. Constraints: Must be in the component manager and contain no duplicates.
             rem_size:    The number of components to remove.
             remove_ids:     The IDs of the components to remove.
 
@@ -1264,6 +1269,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "One or more component types not in component manager"
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Duplicate component types in remove are not allowed."
+
         comptime add_size = len(Ts)
         comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
@@ -1363,9 +1375,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def _batch_remove_and_add[
-        *Ts: ComponentType where Self.component_manager._ContainsComponents[
-            *Ts
-        ],
+        *Ts: ComponentType,
         rem_size: Int = 0,
         remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
         has_without_mask: Bool = False,
@@ -1383,7 +1393,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
 
         Parameters:
-            Ts:                 The types of the components to add.
+            Ts:                 The types of the components to add. Constraints: Must be in the component manager and contain no duplicates.
             rem_size:           The number of components to remove.
             remove_ids:         The IDs of the components to remove.
             has_without_mask:   Whether the query has a without mask.
@@ -1402,6 +1412,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match entities that don't have all of the components to remove.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "One or more component types not in component manager"
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Duplicate component types in add are not allowed."
+
         comptime add_size = len(Ts)
         comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
