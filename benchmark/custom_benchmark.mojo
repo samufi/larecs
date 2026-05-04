@@ -1,27 +1,27 @@
-from benchmark import (
+from std.benchmark import (
     keep,
     BenchId,
     BenchConfig as BenchConfig_,
     Bench as Bench_,
 )
-from time import perf_counter_ns
-from collections import Dict
+from std.time import perf_counter_ns
+from std.collections import Dict
 
 
-fn DefaultConfig() raises -> BenchConfig_:
+def DefaultConfig() raises -> BenchConfig_:
     """Returns the default configuration for benchmarking."""
     config = BenchConfig_(min_runtime_secs=2, max_batch_size=50)
     config.verbose_timing = True
     return config^
 
 
-fn DefaultBench() raises -> Bench_:
+def DefaultBench() raises -> Bench_:
     """Returns the default benchmarking struct."""
     return Bench_(DefaultConfig())
 
 
 @fieldwise_init
-struct Bencher:
+struct Bencher(Copyable, ImplicitlyCopyable, Movable):
     """A helper struct for benchmarking functions.
 
     It mimics some features of benchmark.Bencher
@@ -33,10 +33,10 @@ struct Bencher:
     """
 
     var num_iters: Int
-    var _time_ns: Int
+    var _time_ns: UInt
     var _iters: Int
 
-    fn __init__(out self, num_iters: Int):
+    def __init__(out self, num_iters: Int):
         """Initializes the Bencher with the given number of iterations.
 
         Args:
@@ -47,7 +47,7 @@ struct Bencher:
         self._time_ns = 0
         self._iters = 0
 
-    fn iter_custom[iter_fn: fn (Int) capturing -> Int](mut self: Self):
+    def iter_custom[iter_fn: def(Int) capturing -> Int](mut self: Self):
         """Times the execution of the given function.
 
         Parameters:
@@ -61,14 +61,16 @@ struct Bencher:
         time_passed = perf_counter_ns() - start
         self._time_ns += time_passed
 
-    fn reset_time(mut self: Self):
+    def reset_time(mut self: Self):
         """Resets the time and iteration counters."""
         self._time_ns = 0
         self._iters = 0
 
 
 @fieldwise_init
-struct BenchConfig(Copyable, Movable):
+struct BenchConfig(
+    Copyable, ImplicitlyCopyable, ImplicitlyDestructible, Movable
+):
     """A configuration struct for benchmarking.
 
     It mimics some features of benchmark.BenchConfig
@@ -77,17 +79,17 @@ struct BenchConfig(Copyable, Movable):
     var warmup_iters: Int
     var max_iters: Int
     var num_repetitions: Int
-    var min_iter_runtime_ns: Int
+    var min_iter_runtime_ns: UInt
     var initial_batch_size: Int
     var max_runtime_secs: Float64
     var min_runtime_secs: Float64
     var show_progress: Bool
 
-    fn __init__(
+    def __init__(
         out self,
         *,
         warmup_iters: Int = 3,
-        min_iter_runtime_ns: Int = 100000,
+        min_iter_runtime_ns: UInt = 100000,
         max_iters: Int = 10_000_000_000,
         max_runtime_secs: Float64 = 10,
         min_runtime_secs: Float64 = 0.5,
@@ -132,23 +134,81 @@ struct BenchConfig(Copyable, Movable):
         self.show_progress = show_progress
 
 
+def copy_bench_id(input_id: BenchId) -> BenchId:
+    """Creates a copy of the given BenchId.
+
+    Args:
+        input_id: The BenchId to be copied.
+
+    Returns:
+        A copy of the given BenchId.
+    """
+    if input_id.input_id is None:
+        return BenchId(input_id.func_name)
+    else:
+        return BenchId(input_id.func_name, input_id.input_id)
+
+
+struct BenchResult(
+    Copyable, ImplicitlyCopyable, ImplicitlyDestructible, Movable
+):
+    """A struct combining a BenchId and a Bencher, representing the result of a benchmark.
+    """
+
+    var bench_id: BenchId
+    var bencher: Bencher
+
+    def __init__(out self, bench_id: BenchId, bencher: Bencher):
+        """Initializes the BenchResult with the given parameters.
+
+        Args:
+            bench_id: The identifier for the benchmark.
+            bencher: The Bencher containing the results of the benchmark.
+        """
+        self.bench_id = copy_bench_id(bench_id)
+        self.bencher = bencher
+
+    def __init__(out self, *, deinit take: Self):
+        """Initializes the BenchResult with the given parameters.
+
+        Args:
+            take: The BenchResult to take from.
+        """
+        self.bench_id = copy_bench_id(take.bench_id)
+        self.bencher = take.bencher^
+
+    def __init__(out self, *, copy: Self):
+        """Initializes the BenchResult with the given parameters.
+
+        Args:
+            copy: The BenchResult to copy from.
+        """
+        if copy.bench_id.input_id is None:
+            self.bench_id = BenchId(copy.bench_id.func_name)
+        else:
+            self.bench_id = BenchId(
+                copy.bench_id.func_name, copy.bench_id.input_id
+            )
+        self.bencher = copy.bencher.copy()
+
+
 struct Bench:
     """A benchmarking struct mimicing the features of benchmark.Bench."""
 
     var config: BenchConfig
-    var _results: List[Tuple[BenchId, Bencher]]
+    var _results: List[BenchResult]
 
-    fn __init__(out self, config: BenchConfig):
+    def __init__(out self, config: BenchConfig):
         """Initializes the Bench with the given configuration.
 
         Args:
             config: The configuration for the benchmarking.
         """
         self.config = config
-        self._results = List[Tuple[BenchId, Bencher]]()
+        self._results = List[BenchResult]()
 
-    fn _bench_function_once[
-        bench_fn: fn (mut Bencher) capturing -> None
+    def _bench_function_once[
+        bench_fn: def(mut Bencher) capturing -> None
     ](mut self, mut bencher: Bencher):
         """Benchmarks the given function once and adjusts the batch size if required.
 
@@ -165,18 +225,15 @@ struct Bench:
                 bencher.num_iters *= 2
             else:
                 bencher.num_iters = (
-                    Int(
-                        bencher.num_iters
-                        * self.config.min_iter_runtime_ns
-                        / time_passed
-                    )
+                    bencher.num_iters
+                    * Int(self.config.min_iter_runtime_ns / time_passed)
                     + 1
                 )
             bencher.reset_time()
             return self._bench_function_once[bench_fn](bencher)
 
-    fn bench_function[
-        bench_fn: fn (mut Bencher) capturing -> None
+    def bench_function[
+        bench_fn: def(mut Bencher) capturing -> None
     ](mut self, bench_id: BenchId):
         """Benchmarks the given function.
 
@@ -198,27 +255,27 @@ struct Bench:
 
         while (
             bencher._iters < self.config.max_iters
-            and bencher._time_ns * 1e-9 < self.config.max_runtime_secs
+            and Float64(bencher._time_ns) * 1e-9 < self.config.max_runtime_secs
             and (
                 bencher._iters < self.config.num_repetitions
-                or bencher._time_ns * 1e-9 < self.config.min_runtime_secs
+                or Float64(bencher._time_ns) * 1e-9
+                < self.config.min_runtime_secs
             )
         ):
             self._bench_function_once[bench_fn](bencher)
 
-        self._results.append((bench_id, bencher))
+        self._results.append({bench_id, bencher})
 
-    fn dump_report(mut self):
+    def dump_report(mut self):
         """Prints the results of the benchmarking."""
 
-        for tuple in self._results:
-            bench_id, bencher = tuple[]
-            mean_time = bencher._time_ns / bencher._iters
+        for result in self._results:
+            mean_time = result.bencher._time_ns / UInt(result.bencher._iters)
             print(
-                bench_id.func_name + ":",
+                result.bench_id.func_name + ":",
                 mean_time,
-                "ns per iteration (" + String(bencher._iters),
+                "ns per iteration (" + String(result.bencher._iters),
                 "iterations in",
-                bencher._time_ns * 1e-9,
+                result.bencher._time_ns * 1e-9,
                 "seconds)",
             )

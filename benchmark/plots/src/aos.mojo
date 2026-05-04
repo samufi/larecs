@@ -4,13 +4,13 @@ from time import perf_counter_ns
 
 import larecs as lx
 
-alias RESULTS_DIR = "results"
+comptime RESULTS_DIR = "results"
 """Output directory for benchmark results."""
 
-alias FILE_NAME = "aos_benchmark"
+comptime FILE_NAME = "aos_benchmark"
 """Base name of benchmark output file."""
 
-alias TARGET_ITERATIONS = 10**9
+comptime TARGET_ITERATIONS = 10**9
 """Target number of total entity iterations for each benchmark."""
 
 
@@ -197,7 +197,7 @@ def to_dataframe(results: List[BenchResult]) -> PythonObject:
     return pd.DataFrame(data)
 
 
-fn run_benchmarks(config: BenchConfig, out results: List[BenchResult]) raises:
+def run_benchmarks(config: BenchConfig, out results: List[BenchResult]) raises:
     results = List[BenchResult]()
 
     for ent_exp in range(2, config.max_entity_exp + 1):
@@ -211,7 +211,7 @@ fn run_benchmarks(config: BenchConfig, out results: List[BenchResult]) raises:
             results.append(result)
 
 
-fn benchmark[
+def benchmark[
     components_exp: Int
 ](rounds: Int, entities: Int) raises -> BenchResult:
     w1 = create_ecs_world[components_exp](entities)
@@ -238,13 +238,13 @@ fn benchmark[
     )
 
 
-fn create_ecs_world[components_exp: Int](entities: Int, out w: World) raises:
+def create_ecs_world[components_exp: Int](entities: Int, out w: World) raises:
     w = World()
     for _ in range(entities):
         _ = create_ecs_entity[components_exp](w)
 
 
-fn create_ecs_entity[
+def create_ecs_entity[
     components_exp: Int
 ](mut w: World, out e: lx.Entity) raises:
     e = w.add_entity(Position(1, 2), Velocity(1, 2))
@@ -257,13 +257,13 @@ fn create_ecs_entity[
 struct AosWorld[components_exp: Int](Copyable, Movable):
     var entities: List[AosEntity[components_exp]]
 
-    fn __init__(out self, entities: Int):
+    def __init__(out self, entities: Int):
         self.entities = List[AosEntity[components_exp]]()
         for _ in range(entities):
             self.entities.append(AosEntity[components_exp]())
 
     @always_inline
-    fn update(mut self):
+    def update(mut self):
         for ref entity in self.entities:
             entity.update()
 
@@ -272,13 +272,13 @@ struct AosWorld[components_exp: Int](Copyable, Movable):
 struct AosEntity[components_exp: Int](ImplicitlyCopyable, Movable):
     var comps: InlineArray[Position, 2**components_exp]
 
-    fn __init__(out self):
+    def __init__(out self):
         self.comps = InlineArray[Position, 2**components_exp](
             fill=Position(1.0, 2.0)
         )
 
     @always_inline
-    fn update(mut self):
+    def update(mut self):
         self.comps[0].x += self.comps[1].x
         self.comps[0].y += self.comps[1].y
 
@@ -301,7 +301,7 @@ struct PayloadComponent[i: UInt](lx.ComponentType):
     var y: Float64
 
 
-alias World = lx.World[
+comptime World = lx.World[
     Position,
     Velocity,
     PayloadComponent[0],
@@ -339,7 +339,7 @@ alias World = lx.World[
 ]
 
 
-fn main() raises:
+def main() raises:
     config = BenchConfig[max_comp_exp=5](
         max_entity_exp=6, target_iters=TARGET_ITERATIONS
     )

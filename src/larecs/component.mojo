@@ -78,18 +78,18 @@ struct ComponentManager[
 
     @staticmethod
     @always_inline
-    def get_id[T: ComponentType where Self._ContainsComponent[T]]() -> Self.Id:
+    def get_id[T: ComponentType]() -> Self.Id:
         """Get the ID of a component type.
 
         Parameters:
-            T: The component type.
+            T: The component type. Constraints: Must be in the list of component types.
 
         Returns:
             The ID of the component type.
-
-        Constraints:
-            The component type must be in the list of component types.
         """
+        comptime assert Self._ContainsComponent[
+            T
+        ], "Component type not in component manager"
 
         comptime for i in range(len(Self.ComponentTypes)):
             comptime if _type_is_eq[T, Self.ComponentTypes[i]]():

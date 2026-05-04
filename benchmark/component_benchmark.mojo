@@ -1,11 +1,11 @@
-from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
+from std.benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 
 from custom_benchmark import DefaultBench
 
 from larecs.test_utils import *
 from larecs.component import ComponentManager
 
-alias FullManager = ComponentManager[
+comptime FullManager = ComponentManager[
     FlexibleComponent[0],
     FlexibleComponent[1],
     FlexibleComponent[2],
@@ -265,43 +265,43 @@ alias FullManager = ComponentManager[
 ]
 
 
-fn benchmark_get_first_id_1_000_000(mut bencher: Bencher) capturing:
+def benchmark_get_first_id_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
     @always_inline
     @parameter
-    fn bench_fn() capturing -> None:
+    def bench_fn() capturing -> None:
         for _ in range(1_000_000):
             keep(manager.get_id[FlexibleComponent[0]]())
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_get_last_id_1_000_000(mut bencher: Bencher) capturing:
+def benchmark_get_last_id_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
     @always_inline
     @parameter
-    fn bench_fn() capturing -> None:
+    def bench_fn() capturing -> None:
         for _ in range(1_000_000):
             keep(manager.get_id[FlexibleComponent[255]]())
 
     bencher.iter[bench_fn]()
 
 
-fn t[size: Int](arr: InlineArray[UInt8, size]) -> UInt8:
+def t[size: Int](arr: InlineArray[UInt8, size]) -> UInt8:
     return arr[0]
 
 
-fn benchmark_get_5_id_arr_1_000_000(mut bencher: Bencher) capturing:
+def benchmark_get_5_id_arr_1_000_000(mut bencher: Bencher) capturing:
     # create a component manager with 256 components
     manager = FullManager()
 
     @always_inline
     @parameter
-    fn bench_fn() capturing -> None:
+    def bench_fn() capturing -> None:
         for _ in range(1_000_000):
             arr = manager.get_id_arr[
                 FlexibleComponent[1],
@@ -315,13 +315,13 @@ fn benchmark_get_5_id_arr_1_000_000(mut bencher: Bencher) capturing:
     bencher.iter[bench_fn]()
 
 
-def run_all_component_benchmarks():
+def run_all_component_benchmarks() raises:
     bench = DefaultBench()
     run_all_component_benchmarks(bench)
     bench.dump_report()
 
 
-def run_all_component_benchmarks(mut bench: Bench):
+def run_all_component_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_get_first_id_1_000_000](
         BenchId("10^6 * component_get_id[0]")
     )
@@ -333,5 +333,5 @@ def run_all_component_benchmarks(mut bench: Bench):
     )
 
 
-def main():
+def main() raises:
     run_all_component_benchmarks()
