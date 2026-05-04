@@ -8,7 +8,7 @@ from larecs.test_utils import get_random_bitmask
 
 def benchmark_bitmask_get_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
-    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits)))
+    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1)))
 
     @always_inline
     @parameter
@@ -21,7 +21,7 @@ def benchmark_bitmask_get_1_000_000(mut bencher: Bencher) capturing:
 
 def benchmark_bitmask_set_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
-    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits)))
+    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1)))
 
     @always_inline
     @parameter
@@ -37,7 +37,7 @@ def benchmark_bitmask_set_1_000_000(mut bencher: Bencher) capturing:
 
 def benchmark_bitmask_flip_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
-    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits)))
+    val = Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1)))
 
     @always_inline
     @parameter
@@ -51,7 +51,7 @@ def benchmark_bitmask_flip_1_000_000(mut bencher: Bencher) capturing:
 
 def benchmark_bitmask_contains_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
-    val = BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits))))
+    val = BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1))))
 
     @always_inline
     @parameter
@@ -64,7 +64,7 @@ def benchmark_bitmask_contains_1_000_000(mut bencher: Bencher) capturing:
 
 def benchmark_bitmask_contains_any_1_000_000(mut bencher: Bencher) capturing:
     mask = get_random_bitmask()
-    val = BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits))))
+    val = BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1))))
 
     @always_inline
     @parameter
