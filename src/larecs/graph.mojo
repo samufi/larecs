@@ -1,9 +1,10 @@
 # from collections import Dict
+from std.collections.check_bounds import check_bounds
 from .bitmask import BitMask
 
 
 @fieldwise_init
-struct Node[DataType: KeyElement](ImplicitlyCopyable, Movable):
+struct Node[DataType: KeyElement](ImplicitlyCopyable):
     """Node in a BitMaskGraph.
 
     Parameters:
@@ -111,14 +112,8 @@ struct BitMaskGraph[
         Returns:
             The index of the node to which the link is created.
         """
-        debug_assert(
-            0 <= from_node_index < len(self._nodes),
-            "Node index is out of bounds",
-        )
-        debug_assert(
-            0 <= changed_bit < BitMask.total_bits,
-            "Changed bit index is out of bounds",
-        )
+        check_bounds(from_node_index, len(self._nodes))
+        check_bounds(changed_bit, BitMask.total_bits)
 
         new_mask = self._nodes[from_node_index].bit_mask
         new_mask.flip(changed_bit)
@@ -135,6 +130,7 @@ struct BitMaskGraph[
 
         return to_node_index
 
+    @always_inline
     def get_node_index[
         size: Int
     ](
@@ -158,18 +154,12 @@ struct BitMaskGraph[
             The index of the node differing from the start node by the given indices.
         """
         comptime assert 0 <= size, "Size must be non-negative"
-        debug_assert(
-            0 <= start_node_index < len(self._nodes),
-            "Node index is out of bounds",
-        )
+        check_bounds(start_node_index, len(self._nodes))
 
         var current_node = start_node_index
 
         comptime for i in range(size):
-            debug_assert(
-                0 <= different_bits[i] < BitMask.total_bits,
-                "Changed bit index is out of bounds",
-            )
+            check_bounds(different_bits[i], BitMask.total_bits)
 
             var next_node = self._nodes[current_node].neighbours[
                 different_bits[i]
@@ -191,9 +181,7 @@ struct BitMaskGraph[
         Returns:
             The mask of the node.
         """
-        debug_assert(
-            0 <= node_index < len(self._nodes), "Node index is out of bounds"
-        )
+        check_bounds(node_index, len(self._nodes))
         return self._nodes[node_index].bit_mask
 
     @always_inline
@@ -205,6 +193,7 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
+        check_bounds(node_index, len(self._nodes))
         return self._nodes[node_index].value
 
     @always_inline
@@ -214,7 +203,5 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
-        debug_assert(
-            0 <= node_index < len(self._nodes), "Node index is out of bounds"
-        )
+        check_bounds(node_index, len(self._nodes))
         return self[node_index] != materialize[Self.null_value]()

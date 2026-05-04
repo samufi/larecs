@@ -15,7 +15,7 @@ comptime TARGET_ITERATIONS = 10**9
 
 
 @fieldwise_init
-struct BenchResult(ImplicitlyCopyable, Movable):
+struct BenchResult(ImplicitlyCopyable):
     var components: Int
     var entities: Int
     var nanos_ecs: Float64
@@ -23,7 +23,7 @@ struct BenchResult(ImplicitlyCopyable, Movable):
 
 
 @fieldwise_init
-struct BenchConfig[max_comp_exp: Int](ImplicitlyCopyable, Movable):
+struct BenchConfig[max_comp_exp: Int](ImplicitlyCopyable):
     var max_entity_exp: Int
     var target_iters: Int
 
@@ -269,7 +269,7 @@ struct AosWorld[components_exp: Int](Copyable, Movable):
 
 
 @fieldwise_init
-struct AosEntity[components_exp: Int](ImplicitlyCopyable, Movable):
+struct AosEntity[components_exp: Int](ImplicitlyCopyable):
     var comps: InlineArray[Position, 2**components_exp]
 
     def __init__(out self):

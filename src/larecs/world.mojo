@@ -568,7 +568,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return archetype_index
 
     def add_entity[
-        *Ts: ComponentType 
+        *Ts: ComponentType
     ](mut self, var *components: *Ts, out entity: Entity) raises WorldError:
         """Returns a new or recycled [..entity.Entity].
 
@@ -615,7 +615,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The new or recycled [..entity.Entity].
 
         """
-        comptime assert Self.component_manager._ContainsComponents[*Ts], "Not all component types are in the component manager."
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "Not all component types are in the component manager."
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in add_entity are not allowed."
@@ -637,7 +639,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             entity_index = self._entities[entity.get_id()].entity_index
             self._archetypes[archetype_index].set_components[*Ts](
                 entity_index, *components^
-            )
+                )
 
         # TODO
         # if self._listener != nil:
@@ -653,7 +655,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return
 
     def add_entities[
-        *Ts: ComponentType 
+        *Ts: ComponentType
     ](
         mut self,
         *components: *Ts,
@@ -710,7 +712,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator to the new or recycled [..entity.Entity Entities].
 
         """
-        comptime assert Self.component_manager._ContainsComponents[*Ts], "Not all component types are in the component manager."
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "Not all component types are in the component manager."
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in add_entities are not allowed."
@@ -918,9 +922,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         return self._entity_pool.is_alive(entity)
 
     @always_inline
-    def has[
-        T: ComponentType 
-    ](self, entity: Entity) raises WorldError -> Bool:
+    def has[T: ComponentType](self, entity: Entity) raises WorldError -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
@@ -933,7 +935,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
-        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         self._assert_alive(entity)
         return self._archetypes.unsafe_get(
             index(self._entities[entity.get_id()].archetype_index)
@@ -941,7 +945,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def get[
-        T: ComponentType 
+        T: ComponentType
     ](mut self, entity: Entity) raises -> ref[self._archetypes] T:
         """Returns a reference to the given component of an [..entity.Entity].
 
@@ -951,7 +955,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
-        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
@@ -965,7 +971,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def set[
-        T: ComponentType 
+        T: ComponentType
     ](mut self, entity: Entity, var component: T) raises:
         """
         Overwrites a component for an [..entity.Entity], using the given content.
@@ -980,7 +986,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the [..entity.Entity] does not exist.
         """
-        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         self._assert_alive(entity)
         entity_loc = self._entities[entity.get_id()]
         self._archetypes.unsafe_get(entity_loc.archetype_index).set_component[
@@ -989,8 +997,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def set[
-        *Ts: ComponentType 
-    ](mut self, entity: Entity, var *components: *Ts) raises WorldError:
+        *Ts: ComponentType
+    ](mut self, entity: Entity, var *components: *Ts) raises:
         """
         Overwrites components for an [..entity.Entity] using the given content.
 
@@ -1003,9 +1011,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Raises:
             Error: If the entity does not exist.
+            Error: If the entity does not have one of the components.
         """
-        comptime assert Self.component_manager._ContainsComponents[*Ts], "One or more component types not in component manager"
-        comptime assert constrain_components_unique[*Ts](), "Duplicate component types in set are not allowed."
+        comptime assert Self.component_manager._ContainsComponents[
+            *Ts
+        ], "One or more component types not in component manager"
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Duplicate component types in set are not allowed."
 
         self._assert_alive(entity)
         entity_loc = self._entities[entity.get_id()]
@@ -1054,9 +1067,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._remove_and_add(entity, *add_components)
 
     def add[
-        has_without_mask: Bool,
-        //,
-        *Ts: ComponentType 
+        has_without_mask: Bool, //, *Ts: ComponentType
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
@@ -1635,7 +1646,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def apply[
-        operation: def(accessor: MutableEntityAccessor) capturing -> None,
+        operation: def(
+            accessor: MutableEntityAccessor
+        ) capturing raises -> None,
         has_without_mask: Bool = False,
         *,
         unroll_factor: Int = 1,
@@ -1654,26 +1667,27 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Raises:
             Error: If the world is locked.
+            Error: If the operation raises.
         """
 
         self._assert_unlocked()
 
         try:
-            with self._locked():
-                for archetype in _ArchetypeByMaskIterator(
-                    Pointer(to=self._archetypes),
-                    query.mask,
-                    query.without_mask,
-                ):
-                    for i in range(len(archetype[])):
-                        operation(archetype[].get_entity_accessor(i))
+        with self._locked():
+            for archetype in _ArchetypeByMaskIterator(
+                Pointer(to=self._archetypes),
+                query.mask,
+                query.without_mask,
+            ):
+                for i in range(len(archetype[])):
+                    operation(archetype[].get_entity_accessor(i))
         except:
             raise WorldError.UNKNOWN
 
     def apply[
         operation: def[simd_width: Int](
             accessor: MutableEntityAccessor
-        ) capturing -> None,
+        ) capturing raises -> None,
         has_without_mask: Bool = False,
         *,
         simd_width: Int = 1,
@@ -1686,9 +1700,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         unless not enough are available anymore. Then the chunk size
         `simd_width` is reduced.
 
-        Uses [`vectorize`](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize/) internally.
-        Have a look there to see a more detailed explanation of the parameters
-        `simd_width` and `unroll_factor`.
+        Processes full `simd_width` chunks directly, then handles any trailing
+        entities one at a time.
 
         Caution! If `simd_width` is greater than 1, the operation **must**
         apply to the `simd_width` elements after the element passed to

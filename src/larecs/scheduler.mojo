@@ -4,6 +4,49 @@ from .world import World
 from .unsafe_box import UnsafeBox
 
 
+trait System(Copyable, ImplicitlyDestructible, Movable):
+    """Trait for systems in the scheduler."""
+
+    def initialize[
+        *ComponentTypes: ComponentType
+    ](mut self, mut world: World[*ComponentTypes]) raises:
+        """Optionally initializes the system with the given world.
+
+        Parameters:
+            ComponentTypes: The component types in the world.
+
+        Args:
+            world: The world to use for initialization.
+        """
+        pass
+
+    def update[
+        *ComponentTypes: ComponentType
+    ](mut self, mut world: World[*ComponentTypes]) raises:
+        """Updates the system with the given world.
+
+        Parameters:
+            ComponentTypes: The component types in the world.
+
+        Args:
+            world: The world to use for the update.
+        """
+        ...
+
+    def finalize[
+        *ComponentTypes: ComponentType
+    ](mut self, mut world: World[*ComponentTypes]) raises:
+        """Optionally finalizes the system with the given world.
+
+        Parameters:
+            ComponentTypes: The component types in the world.
+
+        Args:
+            world: The world to use for the finalization.
+        """
+        pass
+
+
 def _update_system[
     S: System, *ComponentTypes: ComponentType
 ](mut system: UnsafeBox, mut world: World[*ComponentTypes]) raises:
@@ -17,7 +60,8 @@ def _update_system[
         system: The system to update.
         world: The world to use for the update.
     """
-    system.unsafe_get[S]().update(world)
+    ref concrete_system = system.unsafe_get[S]()
+    S.update[*ComponentTypes](concrete_system, world)
 
 
 def _initialize_system[
@@ -33,7 +77,8 @@ def _initialize_system[
         system: The system to initialize.
         world: The world to use for the initialization.
     """
-    system.unsafe_get[S]().initialize(world)
+    ref concrete_system = system.unsafe_get[S]()
+    S.initialize[*ComponentTypes](concrete_system, world)
 
 
 def _finalize_system[
@@ -49,7 +94,8 @@ def _finalize_system[
         system: The system to finalize.
         world: The world to use for the finalization.
     """
-    system.unsafe_get[S]().finalize(world)
+    ref concrete_system = system.unsafe_get[S]()
+    S.finalize[*ComponentTypes](concrete_system, world)
 
 
 struct Scheduler[*ComponentTypes: ComponentType](Movable):
@@ -81,17 +127,23 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         var internal_variable: Int
 
         # This is executed once at the beginning
-        def initialize(mut self, mut world: World) raises:
+        def initialize[
+            *ComponentTypes: ComponentType
+        ](mut self, mut world: World[*ComponentTypes]) raises:
             _ = world.add_entities(Position(0.0, 0.0), Velocity(1.0, 1.0), count=10)
 
         # This is executed in each step
-        def update(mut self, mut world: World) raises:
+        def update[
+            *ComponentTypes: ComponentType
+        ](mut self, mut world: World[*ComponentTypes]) raises:
             for entity in world.query[Position, Velocity]():
                 entity.get[Position]().x += entity.get[Velocity]().x
                 entity.get[Position]().y += entity.get[Velocity]().y
 
         # This is executed at the end
-        def finalize(mut self, mut world: World) raises:
+        def finalize[
+            *ComponentTypes: ComponentType
+        ](mut self, mut world: World[*ComponentTypes]) raises:
             print("Final positions")
             for entity in world.query[Position]():
                 print(entity.get[Position]().x, entity.get[Position]().y)
@@ -172,9 +224,9 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         self._systems.append(
             (
                 UnsafeBox(system^),
-                _initialize_system[S, *ComponentTypes],
-                _update_system[S, *ComponentTypes],
-                _finalize_system[S, *ComponentTypes],
+                _initialize_system[S, *Self.ComponentTypes],
+                _update_system[S, *Self.ComponentTypes],
+                _finalize_system[S, *Self.ComponentTypes],
             )
         )
 
@@ -219,31 +271,3 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         self.initialize()
         self.update(steps)
         self.finalize()
-
-
-trait System(Copyable, ImplicitlyDestructible, Movable):
-    """Trait for systems in the scheduler."""
-
-    def initialize(mut self, mut world: World) raises:
-        """Initializes the system with the given world.
-
-        Args:
-            world: The world to use for initialization.
-        """
-        ...
-
-    def update(mut self, mut world: World) raises:
-        """Updates the system with the given world.
-
-        Args:
-            world: The world to use for the update.
-        """
-        ...
-
-    def finalize(mut self, mut world: World) raises:
-        """Finalizes the system with the given world.
-
-        Args:
-            world: The world to use for the finalization.
-        """
-        ...

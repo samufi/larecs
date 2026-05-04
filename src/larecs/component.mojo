@@ -1,3 +1,4 @@
+from std.collections.check_bounds import check_bounds
 from std.sys import size_of
 from std.sys.intrinsics import _type_is_eq
 
@@ -152,7 +153,5 @@ struct ComponentManager[
         Returns:
             The size of the component type.
         """
-        debug_assert(
-            0 <= i < Self.component_count, "Component ID out of bounds."
-        )
+        check_bounds(i, Self.component_count)
         return Self.component_sizes[i]

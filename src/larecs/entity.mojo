@@ -115,7 +115,7 @@ struct Entity(
 
 
 @fieldwise_init
-struct EntityLocation(ImplicitlyCopyable, Movable, TrivialRegisterPassable):
+struct EntityLocation(ImplicitlyCopyable, TrivialRegisterPassable):
     """Indicates where an entity is currently stored."""
 
     # Entity's current index in the archetype

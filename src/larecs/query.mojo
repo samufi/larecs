@@ -63,7 +63,7 @@ struct Query[
     world_origin: MutOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
-](ImplicitlyCopyable, Movable, SizedRaising):
+](ImplicitlyCopyable, SizedRaising):
     """Query builder for entities with and without specific components.
 
     This type should not be used directly, but through the [..world.World.query] method:
@@ -252,7 +252,7 @@ struct Query[
 
 struct QueryInfo[
     has_without_mask: Bool = False,
-](ImplicitlyCopyable, Movable):
+](ImplicitlyCopyable):
     """
     Class that holds the same information as a query but no reference to the world.
 

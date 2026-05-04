@@ -1,4 +1,5 @@
 from std.sys.intrinsics import _type_is_eq
+from std.collections.check_bounds import check_bounds
 from std.memory import memcpy, UnsafePointer
 from std.sys import size_of
 from std.bit import next_power_of_two
@@ -71,11 +72,14 @@ struct EntityAccessor[
         return self._archetype[].get_entity(self._index_in_archetype)
 
     @always_inline
-    def get[T: ComponentType](ref self) -> ref[self.archetype_origin] T:
+    def get[T: ComponentType](ref self) raises -> ref[self.archetype_origin] T:
         """Returns a reference to the given component of the Entity.
 
         Parameters:
             T: The type of the component.
+
+        Raises:
+            Error: If the entity's archetype does not contain the component.
 
         Returns:
             A reference to the component of the entity.
@@ -97,7 +101,7 @@ struct EntityAccessor[
             component_manager=Self.component_manager,
         ],
         var *components: *Ts,
-    ):
+    ) raises:
         """
         Overwrites components for an [..entity.Entity], using the given content.
 
@@ -107,6 +111,9 @@ struct EntityAccessor[
 
         Args:
             components: The new components.
+
+        Raises:
+            Error: If the entity's archetype does not contain one of the components.
         """
         comptime assert constrain_components_unique[
             *Ts
@@ -205,9 +212,12 @@ struct Archetype[
         self = Self.__init__[used_internally=True](0, BitMask(), 0)
 
     @doc_hidden
+    @always_inline
     def __init__[
-        *, used_internally: Bool 
-    ](out self, node_index: Int, mask: BitMask, capacity: Int) where used_internally:
+        *, used_internally: Bool
+    ](
+        out self, node_index: Int, mask: BitMask, capacity: Int
+    ) where used_internally:
         """Initializes the archetype without allocating memory for components.
 
         Note:
@@ -232,9 +242,7 @@ struct Archetype[
         debug_assert(
             0 <= capacity, "Capacity must be greater or equal to zero."
         )
-        debug_assert(
-            0 <= node_index < Self.max_size, "Node index is out of bounds."
-        )
+        check_bounds(node_index, Self.max_size)
 
         self._size = 0
         self._mask = mask
@@ -525,13 +533,7 @@ struct Archetype[
         Returns:
             A reference to the entity at the given index.
         """
-        debug_assert(
-            0 <= idx < self._size,
-            "Index out of bounds: idx=",
-            idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(idx, self._size)
         return self._entities[idx]
 
     @always_inline
@@ -550,7 +552,7 @@ struct Archetype[
         Returns:
             An accessor for the entity at the given index.
         """
-        debug_assert(0 <= idx < self._size, "Index out of bounds.")
+        check_bounds(idx, self._size)
 
         accessor = Self.EntityAccessor(
             Pointer(to=self),
@@ -568,7 +570,7 @@ struct Archetype[
             id: The id of the component.
             value: A pointer to the value being set.
         """
-        debug_assert(0 <= idx < self._size, "Index out of bounds.")
+        check_bounds(idx, self._size)
 
         memcpy(
             dest=self._get_component_ptr(idx, id),
@@ -578,10 +580,7 @@ struct Archetype[
 
     @always_inline
     def unsafe_set[
-        mut: Bool,
-        //,
-        origin: Origin[mut=mut],
-        T: ComponentType 
+        mut: Bool, //, origin: Origin[mut=mut], T: ComponentType
     ](
         mut self,
         start_idx: Int,
@@ -600,7 +599,9 @@ struct Archetype[
             data: Pointer to the values to set the component with.
             count: The number of elements to set.
         """
-        comptime assert Self.component_manager._ContainsComponent[T], "Component type not in component manager"
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
         debug_assert(
             0 <= start_idx and start_idx + count <= self._size,
             "Index out of bounds.",
@@ -644,7 +645,7 @@ struct Archetype[
         """
         for i in range(self._component_count):
             id = self._ids[i]
-            debug_assert(0 <= id < Self.max_size, "Component ID out of bounds.")
+            check_bounds(id, Self.max_size)
             if id in ids:
                 if self._data[id] != data[id]:
                     self._data[id].free()
@@ -671,20 +672,14 @@ struct Archetype[
         Returns:
             A pointer to the component.
         """
-        debug_assert(
-            0 <= entity_idx < self._size,
-            "Index out of bounds: idx=",
-            entity_idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(entity_idx, self._size)
 
         return self._data[id] + entity_idx * self._item_sizes[id]
 
     @always_inline
     def get_component[
         T: ComponentType
-    ](ref self, entity_idx: Int) -> ref[self] T:
+    ](ref self, entity_idx: Int) raises -> ref[self] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
@@ -692,6 +687,9 @@ struct Archetype[
 
         Args:
             entity_idx: The index of the entity.
+
+        Raises:
+            Error: If the archetype does not contain the component.
 
         Returns:
             A reference to the component.
@@ -701,20 +699,15 @@ struct Archetype[
         ], "Component type not in component manager"
         comptime id = Self.component_manager.get_id[T]()
 
-        debug_assert(
-            0 <= entity_idx < self._size,
-            "Index out of bounds: entity_idx=",
-            entity_idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(entity_idx, self._size)
 
+        self.assert_has_component(id)
         return self._get_component_ptr(entity_idx, id).bitcast[T]()[]
 
     @always_inline
     def set_component[
         T: ComponentType
-    ](mut self, entity_idx: Int, var component: T):
+    ](mut self, entity_idx: Int, var component: T) raises:
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -723,23 +716,20 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             component: The new value of the component.
+
+        Raises:
+            Error: If the archetype does not contain the component.
         """
         comptime assert Self.component_manager._ContainsComponent[
             T
         ], "Component type not in component manager"
-        debug_assert(
-            0 <= entity_idx < self._size,
-            "Index out of bounds: entity_idx=",
-            entity_idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(entity_idx, self._size)
         self.get_component[T](entity_idx) = component^
 
     @always_inline
     def set_components[
         *Ts: ComponentType
-    ](mut self, entity_idx: Int, var *components: *Ts):
+    ](mut self, entity_idx: Int, var *components: *Ts) raises:
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -748,24 +738,30 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
+
+        Raises:
+            Error: If the archetype does not contain one of the components.
         """
         comptime assert constrain_components_unique[
             *Ts
         ](), "Component types must be unique."
-        debug_assert(
-            0 <= entity_idx < self._size,
-            "Index out of bounds: entity_idx=",
-            entity_idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(entity_idx, self._size)
 
-        def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
-            comptime T = Ts[comp_id]
+        comptime for i in range(len(Ts)):
+            comptime T = Ts[i]
             comptime assert Self.component_manager._ContainsComponent[
                 T
             ], "Component type not in component manager"
-            self.set_component[T](entity_idx, component^)
+            self.assert_has_component(Self.component_manager.get_id[T]())
+
+        def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
+            comptime T = Ts[comp_id]
+            comptime id = Self.component_manager.get_id[T]()
+            memcpy(
+                dest=self._get_component_ptr(entity_idx, id),
+                src=UnsafePointer(to=component).bitcast[UInt8](),
+                count=self._item_sizes[id],
+            )
 
         (components^).consume_elements[set_component]()
 
@@ -836,13 +832,7 @@ struct Archetype[
             Whether a swap was necessary.
         """
 
-        debug_assert(
-            0 <= idx < self._size,
-            "Index out of bounds: idx=",
-            idx,
-            " size=",
-            self._size,
-        )
+        check_bounds(idx, self._size)
 
         # Store new size temporarily to not interfere with further bounds checking
         new_size = self._size - 1

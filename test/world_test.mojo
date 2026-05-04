@@ -464,7 +464,7 @@ def test_world_apply() raises:
     for _ in range(100):
         _ = world.add_entity(pos, vel)
 
-    def operation(accessor: MutableEntityAccessor) capturing:
+    def operation(accessor: MutableEntityAccessor) raises capturing:
         ref pos2 = accessor.get[Position]()
         ref vel2 = accessor.get[Velocity]()
         pos2.x += vel2.dx
@@ -507,7 +507,9 @@ def test_world_apply_SIMD() raises:
         new_pos.y += vel.dy
         comparison.append(new_pos)
 
-    def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+    def operation[
+        simd_width: Int
+    ](accessor: MutableEntityAccessor) raises capturing:
         ref pos2 = accessor.get[Position]()
         ref vel2 = accessor.get[Velocity]()
 

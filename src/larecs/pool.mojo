@@ -1,3 +1,4 @@
+from std.collections.check_bounds import check_bounds
 from .types import EntityId
 from .entity import Entity
 from .constants import MAX_UINT16
@@ -179,7 +180,7 @@ struct BitPool(Copyable, Movable):
         Args:
             bit_idx: The index of the bit to recycle.
         """
-        debug_assert(0 <= bit_idx < self._length, "Bit is out of bounds")
+        check_bounds(bit_idx, self._length)
         self._next, self._bits[bit_idx] = bit_idx, UInt8(self._next)
         self._available += 1
 

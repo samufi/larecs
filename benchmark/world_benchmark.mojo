@@ -231,9 +231,12 @@ def benchmark_apply_expexp_1_comp_100_000(
         @always_inline
         @parameter
         def operation_plus(accessor: MutableEntityAccessor) capturing:
-            ref pos2 = accessor.get[Position]()
-            pos2.x = exp(1 - exp(pos2.x))
-            pos2.y = exp(1 - exp(pos2.y))
+            try:
+                ref pos2 = accessor.get[Position]()
+                pos2.x = exp(1 - exp(pos2.x))
+                pos2.y = exp(1 - exp(pos2.y))
+            except:
+                pass
 
         for _ in range(100):
             world.apply[operation_plus, unroll_factor=3](
@@ -264,7 +267,10 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
             comptime _load = load2[simd_width]
             comptime _store = store2[simd_width]
 
-            ref pos2 = accessor.get[Position]()
+            try:
+                ref pos2 = accessor.get[Position]()
+            except:
+                return
 
             _store(pos2.x, exp(1 - exp(_load(pos2.x))))
             _store(pos2.y, exp(1 - exp(_load(pos2.y))))

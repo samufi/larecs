@@ -1,4 +1,5 @@
 from std.bit import pop_count, bit_not
+from std.collections.check_bounds import check_bounds
 from .filter import MaskFilter
 from std.hashlib import Hasher
 from std.io.write import Writable, Writer
@@ -8,7 +9,7 @@ from std.sys import bit_width_of
 @fieldwise_init
 struct _BitMaskIndexIter[
     total_bits: Int where total_bits.is_power_of_two(),
-](ImplicitlyCopyable, Movable, Sized):
+](ImplicitlyCopyable, Sized):
     """Iterator for BitMask indices.
 
     Iterates over the indices of all bits that are set to True in a BitMask,
@@ -339,9 +340,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Returns:
             True if the bit is set, False otherwise.
         """
-        debug_assert(
-            0 <= bit < Self.total_bits, "Bit index out of bounds for BitMask"
-        )
+        check_bounds(bit, Self.total_bits)
 
         var idx = bit >> 3  # equivalent to bit // 8
         var offset = bit & 7  # equivalent to bit - (8 * idx)
@@ -371,9 +370,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Args:
             bit: The index of the bit to modify.
         """
-        debug_assert(
-            0 <= bit < Self.total_bits, "Bit index out of bounds for BitMask"
-        )
+        check_bounds(bit, Self.total_bits)
 
         var idx = bit >> 3  # equivalent to bit // 8
         var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)
@@ -468,9 +465,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Args:
             bit: The index of the bit to flip.
         """
-        debug_assert(
-            0 <= bit < Self.total_bits, "Bit index out of bounds for BitMask"
-        )
+        check_bounds(bit, Self.total_bits)
 
         var idx = bit >> 3  # equivalent to bit // 8
         var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)

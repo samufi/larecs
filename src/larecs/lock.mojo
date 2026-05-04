@@ -124,7 +124,7 @@ struct LockManager(Copyable, Movable):
 
 
 @fieldwise_init
-struct LockedContext[origin: MutOrigin](ImplicitlyCopyable, Movable):
+struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
     """
     A context manager for locking and unlocking the world.
 

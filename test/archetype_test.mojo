@@ -151,6 +151,39 @@ def test_archetype_get_component_ptr() raises:
     assert_equal(component.z, 3.0)
 
 
+def test_archetype_get_component_missing_raises() raises:
+    var archetype = Archetype(0, id2Arr)
+    entity_idx = archetype.add(Entity(0, 0))
+
+    comptime comp_id = Archetype.component_manager.get_id[
+        FlexibleComponent[0]
+    ]()
+
+    with assert_raises(
+        contains="Archetype does not contain component with id "
+        + String(comp_id)
+        + "."
+    ):
+        _ = archetype.get_component[FlexibleComponent[0]](entity_idx)
+
+
+def test_entity_accessor_get_missing_raises() raises:
+    var archetype = Archetype(0, id2Arr)
+    entity_idx = archetype.add(Entity(0, 0))
+    entity = archetype.get_entity_accessor(entity_idx)
+
+    comptime comp_id = Archetype.component_manager.get_id[
+        FlexibleComponent[0]
+    ]()
+
+    with assert_raises(
+        contains="Archetype does not contain component with id "
+        + String(comp_id)
+        + "."
+    ):
+        _ = entity.get[FlexibleComponent[0]]()
+
+
 def test_archetype_move() raises:
     # TODO: not all fields are tested
     var archetype = Archetype(0, id2Arr)
