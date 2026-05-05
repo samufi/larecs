@@ -79,6 +79,12 @@ struct ComponentManager[
 
     @staticmethod
     @always_inline
+    def assert_valid_components[*Ts: ComponentType]():
+        """Assert that all component types are valid."""
+        comptime assert Self._ContainsComponents[*Ts], "Not all component types are valid for this component manager."
+
+    @staticmethod
+    @always_inline
     def get_id[T: ComponentType]() -> Self.Id:
         """Get the ID of a component type.
 

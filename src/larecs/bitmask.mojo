@@ -6,6 +6,9 @@ from std.io.write import Writable, Writer
 from std.sys import bit_width_of
 
 
+# TODO: Implement `Iterable` for this
+# TODO: Implement `IterableOwned` for this
+# TODO: Implement `Iterator` for this
 @fieldwise_init
 struct _BitMaskIndexIter[
     total_bits: Int where total_bits.is_power_of_two(),
@@ -306,6 +309,8 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         """Matches the mask as filter against another mask.
 
         Checks if the provided mask contains all bits set in this mask.
+
+        This is the flipped version of `contains()`, i.e. `self.matches(bits) == bits.contains(self)`.
 
         Args:
             bits: The BitMask to check against.
