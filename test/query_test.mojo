@@ -429,7 +429,6 @@ def test_query_archetype_iterator() raises:
     for _ in _ArchetypeByMaskIterator[
         origin_of(l),
         FlexibleComponent[0],
-        component_manager=ComponentManager[FlexibleComponent[0]](),
     ](Pointer(to=l), BitMask(0)):
         count += 1
 

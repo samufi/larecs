@@ -167,10 +167,8 @@ struct Replacer[
         ](entity)
 
     def by[
-        T: ComponentType where Self.World.component_manager._ContainsComponent[
-            T
-        ]
-    ](self, component: T, *, entity: Entity) raises WorldError:
+        T: ComponentType 
+    ](self, var component: T, *, entity: Entity) raises WorldError:
         """
         Removes components from and adds one component to an [..entity.Entity].
 
@@ -191,13 +189,11 @@ struct Replacer[
             T,
             rem_size=Self.size,
             remove_ids=Self.remove_ids,
-        ](entity, component)
+        ](entity, component^)
 
     def by[
-        *AddTs: ComponentType where (
-            Self.World.component_manager._ContainsComponents[*AddTs]
-        )
-    ](self, *components: *AddTs, entity: Entity) raises WorldError:
+        *AddTs: ComponentType 
+    ](self, var *components: *AddTs, entity: Entity) raises WorldError:
         """
         Removes and adds the components to an [..entity.Entity].
 
@@ -218,17 +214,15 @@ struct Replacer[
             *AddTs,
             rem_size=Self.size,
             remove_ids=Self.remove_ids,
-        ](entity, *components)
+        ](entity, *components^)
 
     def by[
-        *AddTs: ComponentType where (
-            Self.World.component_manager._ContainsComponents[*AddTs]
-        ),
+        *AddTs: ComponentType 
         has_without_mask: Bool = False,
     ](
         self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        *components: *AddTs,
+        var *components: *AddTs,
         out iterator: Self.World.ListIterator[
             origin_of(self._world[]._archetypes),
             origin_of(self._world[]._locks),
@@ -252,18 +246,16 @@ struct Replacer[
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
         return self.by(
-            *components,
+            *components^,
             query=query,
         )
 
     def by[
-        *AddTs: ComponentType where (
-            Self.World.component_manager._ContainsComponents[*AddTs]
-        ),
+        *AddTs: ComponentType 
         has_without_mask: Bool = False,
     ](
         self,
-        *components: *AddTs,
+        var *components: *AddTs,
         query: QueryInfo[has_without_mask=has_without_mask],
         out iterator: Self.World.ListIterator[
             origin_of(self._world[]._archetypes),
@@ -293,7 +285,7 @@ struct Replacer[
             remove_ids=Self.remove_ids,
         ](
             query,
-            *components,
+            *components^,
         )
 
 
@@ -315,11 +307,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     results in an InlineArray of component IDs.
     """
     comptime _optional_component_ids[
-        *Ts: ComponentType where constrain_components_unique[*Ts]()
+        *Ts: ComponentType 
     ] = Self.component_manager.get_id_arr[*Ts]()
 
     comptime Archetype = _Archetype[
-        *Self.component_types, component_manager=Self.component_manager
+        *Self.component_types
     ]
     comptime Query = Query[
         _,
@@ -339,7 +331,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         archetype_origin,
         lock_origin,
         *Self.component_types,
-        component_manager=Self.component_manager,
         has_start_indices=has_start_indices,
         has_without_mask=has_without_mask,
         archetype_iterator_variant_id=ArchetypeIteratorVariant.by_mask.id,
@@ -427,7 +418,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         archetype_origin,
         lock_origin,
         *Self.component_types,
-        component_manager=Self.component_manager,
         has_start_indices=has_start_indices,
         has_without_mask=False,
         archetype_iterator_variant_id=ArchetypeIteratorVariant.by_list.id,
@@ -515,7 +505,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._archetypes.append(
             Self.Archetype(
                 node_index,
-                self._archetype_map.get_node_mask(node_index),
                 components,
             )
         )
@@ -637,9 +626,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         comptime if component_count:
             entity_index = self._entities[entity.get_id()].entity_index
-            self._archetypes[archetype_index].set_components[*Ts](
-                entity_index, *components^
+            try:
+                self._archetypes[archetype_index].set_components[*Ts](
+                    entity_index, *components^
                 )
+            except _:
+                raise WorldError.UNKNOWN
 
         # TODO
         # if self._listener != nil:
@@ -741,12 +733,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             comptime assert Self.component_manager._ContainsComponent[
                 T
             ], "Component type is not part of the world."
-            Span(
-                ptr=UnsafePointer(
-                    to=archetype[].get_component[T](first_index_in_archetype)
-                ),
-                length=count,
-            ).fill(components[i])
+            archetype[].set_component_range[T](
+                first_index_in_archetype, count, components[i]
+            )
 
         comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
             origin_of(self._archetypes)
@@ -941,7 +930,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._assert_alive(entity)
         return self._archetypes.unsafe_get(
             index(self._entities[entity.get_id()].archetype_index)
-        ).has_component(Self.component_manager.get_id[T]())
+        ).has_component[T]()
 
     @always_inline
     def get[
@@ -963,7 +952,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         self._archetypes.unsafe_get(
             entity_loc.archetype_index
-        ).assert_has_component(Self.component_manager.get_id[T]())
+        ).assert_has_component[T]()
 
         return self._archetypes.unsafe_get(
             entity_loc.archetype_index
@@ -1028,7 +1017,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     def add[
         *Ts: ComponentType
-    ](mut self, entity: Entity, *add_components: *Ts) raises WorldError:
+    ](mut self, entity: Entity, var *add_components: *Ts) raises WorldError:
         """
         Adds components to an [..entity.Entity].
 
@@ -1044,11 +1033,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._remove_and_add(entity, *add_components)
+        self._remove_and_add(entity, *add_components^)
 
     def add[
         *Ts: ComponentType
-    ](mut self, *add_components: *Ts, entity: Entity) raises WorldError:
+    ](mut self, var *add_components: *Ts, entity: Entity) raises WorldError:
         """
         Adds components to an [..entity.Entity].
 
@@ -1064,14 +1053,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._remove_and_add(entity, *add_components)
+        self._remove_and_add(entity, *add_components^)
 
     def add[
         has_without_mask: Bool, //, *Ts: ComponentType
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        *add_components: *Ts,
+        var *add_components: *Ts,
         out iterator: Self.ListIterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
@@ -1134,7 +1123,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         return self._batch_remove_and_add(
             query,
-            *add_components,
+            *add_components^,
         )
 
     def remove[*Ts: ComponentType](mut self, entity: Entity) raises WorldError:
@@ -1261,7 +1250,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType,
         rem_size: Int = 0,
         remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
-    ](mut self, entity: Entity, *add_components: *Ts,) raises WorldError:
+    ](mut self, entity: Entity, var *add_components: *Ts) raises WorldError:
         """
         Adds and removes components to an [..entity.Entity].
 
@@ -1349,27 +1338,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         index_in_new_archetype = new_archetype[].add(entity)
 
         # Move component data from old archetype to new archetype.
-        for i in range(old_archetype[]._component_count):
-            id = old_archetype[]._ids[i]
+        comptime for id in range(Self.component_manager.component_count):
+            comptime T = Self.component_types[id]
+            if not old_archetype[].has_component[T]():
+                continue
 
             comptime if rem_size:
-                if not new_archetype[].has_component(id):
+                if not new_archetype[].has_component[T]():
                     continue
 
-            new_archetype[].unsafe_set(
-                index_in_new_archetype,
-                id,
-                old_archetype[]._get_component_ptr(
-                    index(index_in_old_archetype), id
-                ),
-            )
+            new_archetype[].set_component[T](index_in_new_archetype, old_archetype[].get_component[T](index_in_old_archetype).copy())
 
-        comptime for i in range(add_size):
-            new_archetype[].unsafe_set(
-                index_in_new_archetype,
-                add_ids[i],
-                UnsafePointer(to=add_components[i]).bitcast[UInt8](),
-            )
+        new_archetype[].set_components[*Ts](index_in_new_archetype, *add_components^)
 
         swapped = old_archetype[].remove(index_in_old_archetype)
         if swapped:
@@ -1393,7 +1373,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        *add_components: *Ts,
+        var *add_components: *Ts,
         out iterator: Self.ListIterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
@@ -1570,32 +1550,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         )
 
                         # Move existing component data from old archetype to new archetype.
-                        for comp_idx in range(old_archetype[]._component_count):
-                            id = old_archetype[]._ids[comp_idx]
+                        for id in range(Self.component_manager.component_count):
+                            comptime T = Self.component_types[id]
+
+                            if not old_archetype[].has_component[T]():
+                                continue
 
                             comptime if rem_size:
-                                if not new_archetype[].has_component(id):
+                                if not new_archetype[].has_component[T]():
                                     continue
 
-                            new_archetype[].unsafe_set(
-                                new_index,
-                                id,
-                                old_archetype[]._get_component_ptr(
-                                    index(i), id
-                                ),
-                            )
+                            new_archetype[].set_component_from[T](new_index, old_archetype[], i)
 
                         # Set new component data
-                        comptime for add_comp_idx in range(len(Ts)):
-                            comptime comp_id = add_ids[add_comp_idx]
-
-                            new_archetype[].unsafe_set(
-                                new_index,
-                                comp_id,
-                                UnsafePointer(
-                                    to=add_components[add_comp_idx]
-                                ).bitcast[UInt8](),
-                            )
+                        new_archetype[].set_components[*Ts](
+                            new_index, *add_components^
+                        )
 
                     old_archetype[].clear()
         except:
@@ -1673,14 +1643,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._assert_unlocked()
 
         try:
-        with self._locked():
-            for archetype in _ArchetypeByMaskIterator(
-                Pointer(to=self._archetypes),
-                query.mask,
-                query.without_mask,
-            ):
-                for i in range(len(archetype[])):
-                    operation(archetype[].get_entity_accessor(i))
+            with self._locked():
+                for archetype in _ArchetypeByMaskIterator(
+                    Pointer(to=self._archetypes),
+                    query.mask,
+                    query.without_mask,
+                ):
+                    for i in range(len(archetype[])):
+                        operation(archetype[].get_entity_accessor(i))
         except:
             raise WorldError.UNKNOWN
 
@@ -1785,7 +1755,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     @always_inline
                     def closure[width: Int](i: Int) {read}:
                         accessor = archetype[].get_entity_accessor(i)
-                        operation[width](accessor)
+                        try:
+                            operation[width](accessor)
+                        except:
+                            # Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
+                            pass
 
                     vectorize[simd_width, unroll_factor=unroll_factor](
                         len(archetype[]), closure

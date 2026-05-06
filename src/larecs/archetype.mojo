@@ -1,18 +1,17 @@
 from std.sys.intrinsics import _type_is_eq
-from std.reflect import get_type_name
+from std.sys.defines import is_defined
+from std.reflection import reflect
 from std.collections.check_bounds import check_bounds
 from std.memory import memcpy, UnsafePointer
-from std.sys import size_of
 from std.bit import next_power_of_two
 from .entity import Entity
 from .component import (
+    ComponentType,
     constrain_components_unique,
-    get_max_size,
     ComponentManager,
 )
 from .bitmask import BitMask
 from .pool import EntityPool
-from .types import get_max_size
 
 comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
@@ -26,7 +25,6 @@ struct EntityAccessor[
     //,
     archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
-    #component_manager: ComponentManager[*ComponentTypes],
 ](Movable):
     """Accessor for an Entity.
 
@@ -37,12 +35,10 @@ struct EntityAccessor[
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List.
         ComponentTypes: The types of the components.
-        component_manager: The component manager that provides size information about the component types.
     """
 
     comptime Archetype = Archetype[
         *Self.ComponentTypes,
-        #component_manager=Self.component_manager
     ]
     """The archetype of the entity."""
 
@@ -100,7 +96,6 @@ struct EntityAccessor[
         mut self: EntityAccessor[
             origin,
             *Self.ComponentTypes,
-            #component_manager=Self.component_manager,
         ],
         var *components: *Ts,
     ) raises:
@@ -146,18 +141,18 @@ struct EntityAccessor[
 
 @fieldwise_init
 struct MissingComponentsError[*Ts: ComponentType](Writable):
-    def write_to(self, mut writer: Writer):
+    def write_to(self, mut writer: Some[Writer]):
         comptime if len(Self.Ts) <= 1:
             writer.write("The component [")
             comptime for i in range(len(Self.Ts)):
                 comptime T = Self.Ts[i]
-                writer.write(get_type_name[T]())
+                writer.write(reflect[T]().name())
             writer.write("] is missing.")
         else:
             writer.write("At least one of the components [")
             comptime for i in range(len(Self.Ts)):
                 comptime T = Self.Ts[i]
-                writer.write(get_type_name[T](), ", ")
+                writer.write(reflect[T]().name(), ", ")
             writer.write("] is missing.")
 
 comptime ComponentId = Int
@@ -184,7 +179,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
 
     comptime component_manager = ComponentManager[*Self.ComponentTypes]
 
-    comptime _PointerMapper[T: ComponentType]: ImplicitlyCopyable & TrivialRegisterPassable = UnsafePointer[T, MutExternalOrigin]
+    comptime ComponentPointer[T: ComponentType] = Optional[UnsafePointer[T, MutExternalOrigin]]
+
+    comptime _PointerMapper[T: ComponentType]: ImplicitlyCopyable & RegisterPassable & Defaultable = Self.ComponentPointer[T]
 
     comptime _PointerTuple = Tuple[*Self.ComponentTypes.map[Self._PointerMapper]()]
 
@@ -198,10 +195,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
     var active_component_mask: BitMask
     """Ids of the active components in the archetype."""
 
-    def __init__(out self, active_component_mask: BitMask, *, capacity: Int = DEFAULT_CAPACITY):
+    def __init__(out self, active_component_mask: BitMask, *, size: Int = 0, capacity: Int = DEFAULT_CAPACITY):
         self.data = Self._PointerTuple()
         self.capacity = capacity
-        self.size = 0
+        self.size = size
         self.active_component_mask = active_component_mask
 
         self.unsafe_init_components(active_component_mask)
@@ -212,8 +209,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         self.active_component_mask = copy.active_component_mask
         self.data = Self._PointerTuple()
 
-        def copy_component_ptr[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> UnsafePointer[T, MutExternalOrigin]:
-            return rebind[UnsafePointer[T, MutExternalOrigin]](copy.data[id])
+        def copy_component_ptr[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> Self.ComponentPointer[T]:
+            return rebind[Self.ComponentPointer[T]](copy.data[id])
 
         self._for_active_components[is_mutating=True, func=copy_component_ptr]()
 
@@ -233,19 +230,17 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         self._for_active_components[is_mutating=False, func=free_component_storage]()
 
     def copy_deep(self, out new_storage: Self):
-        new_storage.capacity = self.capacity
-        new_storage.size = self.size
-        new_storage.active_component_mask = self.active_component_mask
+        new_storage = Self(copy=self)
 
-        def memcpy_component[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> UnsafePointer[T, MutExternalOrigin]:
+        def memcpy_component[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> Self.ComponentPointer[T]:
             new_ptr = alloc[T](self.capacity)
             memcpy(dest=new_ptr, src=ptr, count=self.capacity)
-            return new_ptr
+            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         new_storage._for_active_components[is_mutating=True, func=memcpy_component]()
 
     def unsafe_init_components(
-        mut self, read ids: List[ComponentId]
+        mut self, read init_component_mask: BitMask
     ):
         """(Re)Initializes owned component storage while keeping the component layout intact.
 
@@ -258,15 +253,15 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         to determine which component buffers must be reallocated.
 
         Args:
-            ids: The IDs of the components that should get (re)initialized.
+            init_component_mask: A bit mask indicating which components should be initialized.
         """
         self.capacity = DEFAULT_CAPACITY
 
-        def init_component_ptr[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> UnsafePointer[T, MutExternalOrigin]:
-            if id in ids:
-                return alloc[T](self.capacity)
+        def init_component_ptr[T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> Self.ComponentPointer[T]:
+            if init_component_mask.get(id):
+                return rebind[Self.ComponentPointer[T]](Optional(alloc[T](self.capacity)))
             else:
-                return ptr
+                return rebind[Self.ComponentPointer[T]](Optional(ptr))
 
         self._for_active_components[is_mutating=True, func=init_component_ptr]()
 
@@ -322,7 +317,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
 
         var new_pow2_capacity = next_power_of_two(new_capacity)
 
-        def resize_component_storage[T: ComponentType, id: ComponentId](old_ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> UnsafePointer[T, MutExternalOrigin]:
+        def resize_component_storage[T: ComponentType, id: ComponentId](old_ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> Self.ComponentPointer[T]:
             var new_ptr = alloc[T](new_pow2_capacity)
             memcpy(
                 dest=new_ptr,
@@ -330,7 +325,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
                 count=self.capacity,
             )
             old_ptr.free()
-            return new_ptr
+            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         self.capacity = new_pow2_capacity
 
@@ -377,9 +372,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         return True
 
     def get_component_ptr[
-        T: ComponentType
-    ](self) raises -> UnsafePointer[T, MutExternalOrigin]:
-        """Returns the pointer to the component with the given Type T at the given index.
+        T: ComponentType,
+    ](ref self) -> UnsafePointer[T, MutExternalOrigin]:
+        """Returns the base pointer for the given component type.
 
         Parameters:
             T: The type of the component.
@@ -394,7 +389,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
 
         self.assert_has_component[T]()
 
-        return rebind[UnsafePointer[T, MutExternalOrigin]](self.data[id])
+        return rebind[Self.ComponentPointer[T]](self.data[id]).value()
 
     def has_component[
         T: ComponentType
@@ -419,33 +414,47 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
 
     def assert_has_component[
         T: ComponentType
-    ](self) raises MissingComponentsError[T]:
-        """Raises if the storage does not contain the given component type.
+    ](self):
+        """Asserts if the storage does not contain the given component type.
+            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             T: The type of the component.
 
-        Raises:
-            Error: If the storage does not contain the component type.
         """
-        Self.component_manager.assert_valid_components[T]()
+        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
+            Self.component_manager.assert_valid_components[T]()
 
-        if not self.has_component[T]():
-            raise MissingComponentsError[T]()
+            assert self.has_component[T](), MissingComponentsError[T]()
 
-    def assert_has_components[*Ts: ComponentType](self) raises MissingComponentsError[*Ts]:
+    def set_component[
+        T: ComponentType
+    ](mut self, entity_idx: Int, var component: T):
+        """Sets a typed component value.
+
+        Parameters:
+            T: The component type.
+
+        Args:
+            entity_idx: The entity row index.
+            component: The component value to store.
+        """
+        self.get_component_ptr[T]()[entity_idx] = component^
+
+    def assert_has_components[*Ts: ComponentType](self):
         """Raises if the storage does not contain all the given component types.
+            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             Ts: The types of the components to check.
         """
-        Self.component_manager.assert_valid_components[*Ts]()
+        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
+            Self.component_manager.assert_valid_components[*Ts]()
 
-        if not self.has_components[*Ts]():
-            raise MissingComponentsError[*Ts]()
+            assert self.has_components[*Ts](), MissingComponentsError[*Ts]()
 
 
-    def set_components[*Ts: ComponentType](mut self, entity_idx: Int, *components: Ts) raises MissingComponentsError[*Ts]:
+    def set_components[*Ts: ComponentType](mut self, entity_idx: Int, var *components: *Ts):
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -454,28 +463,48 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
-
-        Raises:
-            MissingComponentsError[*Ts]: If the archetype does not contain one of the components.
         """
         comptime assert constrain_components_unique[
             *Ts
         ](), "Component types must be unique."
-        check_bounds(entity_idx, self._storage.size)
+        check_bounds(entity_idx, self.size)
 
         Self.component_manager.assert_valid_components[*Ts]()
         self.assert_has_components[*Ts]()
 
         def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
             comptime T = Ts[comp_id]
-            self.get_component_ptr[T][entity_idx] = component^
+            self.get_component_ptr[T]()[entity_idx] = component^
 
         (components^).consume_elements[set_component]()
 
+    def set_component_from[T: ComponentType](mut self, to_idx: Int, storage: _ComponentStorage, count: Int, from_idx: Int = 0):
+        """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            to_idx: The index of the first entity to set.
+            storage: The storage to copy components from.
+            count: The number of elements to set.
+            from_idx: The index of the first entity in the storage to copy from.
+        """
+        check_bounds(to_idx, self.size)
+        check_bounds(from_idx, storage.size)
+        debug_assert(0 <= count, "Count must be non-negative.")
+        check_bounds(to_idx + count - 1, self.size)
+        check_bounds(from_idx + count - 1, storage.size)
+
+        memcpy(
+            dest=self.get_component_ptr[T]() + to_idx,
+            src=storage.get_component_ptr[T]() + from_idx,
+            count=count,
+        )
 
     def _for_active_components[
         is_mutating: Bool,
-        func: def [T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> UnsafePointer[T, MutExternalOrigin]
+        func: def [T: ComponentType, id: ComponentId](ptr: UnsafePointer[T, MutExternalOrigin]) capturing -> Self.ComponentPointer[T]
     ](mut self) where is_mutating:
         """Helper to iterate over active components and their pointers.
 
@@ -485,8 +514,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
-            if self.has_component[T]():
-                self.data[id] = rebind[Self._PointerTuple.element_types[id]](func[T,id](rebind[UnsafePointer[T, MutExternalOrigin]](self.data[id])))
+            comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
+            if self.has_component[T]() and comp_ptr is not None:
+                self.data[id] = rebind[Self._PointerTuple.element_types[id]](func[T,id](comp_ptr.value()))
 
     def _for_active_components[
         is_mutating: Bool,
@@ -500,8 +530,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](Copyable, Movable, Size
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
-            if self.has_component[T]():
-                func[T, id](rebind[UnsafePointer[T, MutExternalOrigin]](self.data[id]))
+            comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
+            if self.has_component[T]() and comp_ptr is not None:
+                func[T,id](comp_ptr.value())
 
 
 
@@ -607,7 +638,7 @@ struct Archetype[
             0 <= component_count
         ), "Component count must be non-negative."
 
-        self = Self__(node_index, BitMask(component_ids), capacity)
+        self = Self(node_index, BitMask(component_ids), capacity)
 
     def __init__(out self, *, copy: Self):
         """Copies the data from an existing archetype to a new one.
@@ -733,62 +764,6 @@ struct Archetype[
             idx,
         )
 
-    @always_inline
-    def unsafe_set[
-        mut: Bool, //, origin: Origin[mut=mut]
-    ](mut self, idx: Int, id: ComponentId, value: UnsafePointer[UInt8, origin]):
-        """Sets the component with the given id at the given index.
-
-        Args:
-            idx: The index of the entity.
-            id: The id of the component.
-            value: A pointer to the value being set.
-        """
-        check_bounds(idx, self._storage.size)
-
-        memcpy(
-            dest=self._storage.get_component_ptr_unsafe(idx, id),
-            src=value,
-            count=self._storage.item_sizes[id],
-        )
-
-    @always_inline
-    def unsafe_set[
-        mut: Bool, //, origin: Origin[mut=mut], T: ComponentType
-    ](
-        mut self,
-        start_idx: Int,
-        data: UnsafePointer[UInt8, origin],
-        count: Int,
-    ):
-        """Sets the data of the component with the given id for multiple consecutive entities starting with the given index.
-
-        Parameters:
-            mut: Whether the data pointer is mutable.
-            origin: The lifetime of the data pointer.
-            T: The type of the index. Constraints: Must be contained in the component manager.
-
-        Args:
-            start_idx: The index of the first entity to set.
-            data: Pointer to the values to set the component with.
-            count: The number of elements to set.
-        """
-        # comptime assert Self.component_manager._ContainsComponent[
-        #     T
-        # ], "Component type not in component manager"
-        debug_assert(
-            0 <= start_idx and start_idx + count <= self._storage.size,
-            "Index out of bounds.",
-        )
-
-        # comptime id = Self.component_manager.get_id[T]()
-
-        memcpy(
-            dest=self._storage.get_component_ptr_unsafe(start_idx, id),
-            src=data,
-            count=count,
-        )
-
     # @always_inline
     # def unsafe_take_data_from_parts[](
     #     mut self,
@@ -851,7 +826,7 @@ struct Archetype[
     @always_inline
     def get_component[
         T: ComponentType
-    ](ref self, entity_idx: Int) raises -> ref[self] T:
+    ](ref self, entity_idx: Int) -> ref[self] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
@@ -860,26 +835,17 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
 
-        Raises:
-            Error: If the archetype does not contain the component.
-
         Returns:
             A reference to the component.
         """
-        # comptime assert Self.component_manager._ContainsComponent[
-        #     T
-        # ], "Component type not in component manager"
-        # comptime id = Self.component_manager.get_id[T]()
-
         check_bounds(entity_idx, self._storage.size)
 
-        self.assert_has_component(id)
-        return self._storage.get_component_ptr_unsafe(entity_idx, id).bitcast[T]()[]
+        return self._storage.get_component_ptr[T]()[entity_idx]
 
     @always_inline
     def set_component[
         T: ComponentType
-    ](mut self, entity_idx: Int, var component: T) raises:
+    ](mut self, entity_idx: Int, var component: T):
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -888,20 +854,13 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             component: The new value of the component.
-
-        Raises:
-            MissingComponentsError[*Ts]: If the archetype does not contain the component.
         """
-        # comptime assert Self.component_manager._ContainsComponent[
-        #     T
-        # ], "Component type not in component manager"
-        check_bounds(entity_idx, self._storage.size)
-        self.get_component[T](entity_idx) = component^
+        self._storage.set_component[T](entity_idx, component^)
 
     @always_inline
     def set_components[
         *Ts: ComponentType
-    ](mut self, entity_idx: Int, var *components: *Ts) raises MissingComponentsError[*Ts]:
+    ](mut self, entity_idx: Int, var *components: *Ts):
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -910,12 +869,44 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
-
-        Raises:
-            MissingComponentsError[*Ts]: If the archetype does not contain one of the components.
         """
-        self._storage.set_components[*Ts](entity_idx, components)
+        self._storage.set_components[*Ts](entity_idx, *components^)
+    
+    def set_component_range[
+        T: ComponentType
+    ](mut self, start_entity_idx: Int, count: Int, value: T):
+        """Fills the component with the given Type T for multiple consecutive entities starting with the given index.
 
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            start_entity_idx: The index of the first entity to set.
+            count: The number of elements to set.
+            value: The value to fill the component with.
+        """
+        check_bounds(start_entity_idx, self._storage.size)
+        debug_assert(0<=count, "Count must be non-negative.")
+        check_bounds(start_entity_idx + count - 1, self._storage.size)
+
+        var comp_ptr = self._storage.get_component_ptr[T]()
+        Span(ptr=comp_ptr+start_entity_idx, length=count).fill(value)
+    
+    def set_component_from[
+        T: ComponentType
+    ](mut self, to_idx: Int, archetype: Archetype, count: Int, from_idx: Int = 0):
+        """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            to_idx: The index of the first entity to set.
+            archetype: The archetype to copy components from.
+            count: The number of elements to set.
+            from_idx: The index of the first entity in the archetype to copy from.
+        """
+        self._storage.set_component_from[T](to_idx, archetype._storage, count, from_idx)
 
     @always_inline
     def get_entities(self) -> ref[self._entities] List[Entity]:
@@ -939,16 +930,13 @@ struct Archetype[
         return self._storage.has_component[T]()
 
     @always_inline
-    def assert_has_component[T: ComponentType](self) raises:
+    def assert_has_component[T: ComponentType](self):
         """Raises if the archetype does not contain the given component id.
 
         Parameters:
             T: The type of the component. Constraints: Must be contained in the component manager of the storage.
-
-        Raises:
-            Error: If the archetype does not contain the component.
         """
-        self._storage.assert_has_component[T]
+        self._storage.assert_has_component[T]()
 
     @always_inline
     def remove(mut self, idx: Int) -> Bool:

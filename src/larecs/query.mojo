@@ -333,7 +333,6 @@ struct _ArchetypeByMaskIterator[
     //,
     archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
-    component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
 ](Boolable, Copyable, Iterator, Movable, Sized):
     """
@@ -345,13 +344,12 @@ struct _ArchetypeByMaskIterator[
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
         ComponentTypes: The types of the components.
-        component_manager: The component manager.
         has_without_mask: Whether the iterator has excluded components.
     """
 
     comptime buffer_size = 8
     comptime Archetype = _Archetype[
-        *Self.ComponentTypes, component_manager=Self.component_manager
+        *Self.ComponentTypes
     ]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     comptime QueryInfo = QueryInfo[has_without_mask=Self.has_without_mask]
@@ -548,7 +546,6 @@ struct _ArchetypeByListIterator[
     //,
     archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
-    component_manager: ComponentManager[*ComponentTypes],
 ](Boolable, Copyable, Iterator, Movable, Sized):
     """
     Iterator over non-empty archetypes corresponding to given list of Archetype IDs.
@@ -559,12 +556,11 @@ struct _ArchetypeByListIterator[
         archetype_mutability: Whether the reference to the archetypes is mutable.
         archetype_origin: The origin of the archetypes.
         ComponentTypes: The types of the components.
-        component_manager: The component manager.
     """
 
     comptime buffer_size = 8
     comptime Archetype = _Archetype[
-        *Self.ComponentTypes, component_manager=Self.component_manager
+        *Self.ComponentTypes, 
     ]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
@@ -653,12 +649,11 @@ struct ArchetypeIterator[
     id: Int,
     archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
-    component_manager: ComponentManager[*ComponentTypes],
     has_without_mask: Bool = False,
 ](Boolable, Copyable, IterableOwned, Iterator, Movable, Sized):
     comptime Element = Pointer[
         _Archetype[
-            *Self.ComponentTypes, component_manager=Self.component_manager
+            *Self.ComponentTypes, 
         ],
         Self.archetype_origin,
     ]
@@ -667,21 +662,18 @@ struct ArchetypeIterator[
         Self.id,
         Self.archetype_origin,
         *Self.ComponentTypes,
-        component_manager=Self.component_manager,
         has_without_mask=Self.has_without_mask,
     ]
 
     comptime mask_iterator = _ArchetypeByMaskIterator[
         Self.archetype_origin,
         *Self.ComponentTypes,
-        component_manager=Self.component_manager,
         has_without_mask=Self.has_without_mask,
     ]
 
     comptime list_iterator = _ArchetypeByListIterator[
         Self.archetype_origin,
         *Self.ComponentTypes,
-        component_manager=Self.component_manager,
     ]
 
     var _mask_iterator: StaticOptional[
@@ -778,7 +770,6 @@ struct _EntityIterator[
     archetype_origin: Origin[mut=archetype_mutability],
     lock_origin: MutOrigin,
     *ComponentTypes: ComponentType,
-    component_manager: ComponentManager[*ComponentTypes],
     has_start_indices: Bool = False,
     has_without_mask: Bool = False,
     archetype_iterator_variant_id: Int,
@@ -792,7 +783,6 @@ struct _EntityIterator[
         archetype_origin: The origin of the archetypes.
         lock_origin: The origin of the LockManager.
         ComponentTypes: The types of the components.
-        component_manager: The component manager.
         has_start_indices: Whether the iterator starts iterating the
                            archetypes at given indices.
         has_without_mask: Whether the iterator has excluded components.
@@ -800,13 +790,12 @@ struct _EntityIterator[
     """
 
     comptime Archetype = _Archetype[
-        *Self.ComponentTypes, component_manager=Self.component_manager
+        *Self.ComponentTypes, 
     ]
     comptime archetype_iterator = ArchetypeIterator[
         Self.archetype_iterator_variant_id,
         Self.archetype_origin,
         *Self.ComponentTypes,
-        component_manager=Self.component_manager,
         has_without_mask=Self.has_without_mask,
     ]
 
@@ -816,7 +805,6 @@ struct _EntityIterator[
         Self.archetype_origin,
         Self.lock_origin,
         *Self.ComponentTypes,
-        component_manager=Self.component_manager,
         has_start_indices=Self.has_start_indices,
         has_without_mask=Self.has_without_mask,
         archetype_iterator_variant_id=Self.archetype_iterator_variant_id,
