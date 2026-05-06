@@ -140,6 +140,9 @@ struct EntityAccessor[
 
         _trace_function["IN"]("EntityAccessor.get")
 
+        if not self._archetype[].has_component[T]():
+            raise Error("The component is missing.")
+
         _trace_function["OUT"]("EntityAccessor.get")
         return self._archetype[].get_component[T](
             self._index_in_archetype,

@@ -4,7 +4,10 @@ from std.algorithm.backend.vectorize import vectorize
 
 from .pool import EntityPool
 from .entity import Entity, EntityLocation
-from .archetype import Archetype as _Archetype, MutableEntityAccessor
+from .archetype import (
+    Archetype as _Archetype,
+    MutableEntityAccessor,
+)
 from .graph import BitMaskGraph
 from .bitmask import BitMask
 from .debug_utils import debug_warn
@@ -948,9 +951,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        self._archetypes.unsafe_get(
-            entity_loc.archetype_index
-        ).assert_has_component[T]()
+        if not self._archetypes.unsafe_get(entity_loc.archetype_index).has_component[
+            T
+        ]():
+            raise Error("The component is missing.")
 
         return self._archetypes.unsafe_get(
             entity_loc.archetype_index
