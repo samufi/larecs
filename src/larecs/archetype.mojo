@@ -65,9 +65,9 @@ def _trace_function[inout: StaticString](name: StaticString):
 
     comptime if is_defined["TRACE_FUNCTIONS"]():
         comptime if inout == "IN":
-            print("[archetype] in ", name)
+            print("[IN]  ", name)
         elif inout == "OUT":
-            print("[archetype] out ", name)
+            print("[OUT] ", name)
 
 
 struct EntityAccessor[
