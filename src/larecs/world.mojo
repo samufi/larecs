@@ -217,7 +217,7 @@ struct Replacer[
         ](entity, *components^)
 
     def by[
-        *AddTs: ComponentType 
+        *AddTs: ComponentType,
         has_without_mask: Bool = False,
     ](
         self,
@@ -251,7 +251,7 @@ struct Replacer[
         )
 
     def by[
-        *AddTs: ComponentType 
+        *AddTs: ComponentType,
         has_without_mask: Bool = False,
     ](
         self,
@@ -358,7 +358,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ] = ArchetypeIteratorVariant.by_mask[
         archetype_origin,
         *Self.component_types,
-        component_manager=Self.component_manager,
         has_without_mask=has_without_mask,
     ]
     """
@@ -386,7 +385,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ] = ArchetypeIteratorVariant.by_list[
         archetype_origin,
         *Self.component_types,
-        component_manager=Self.component_manager,
     ]
     """
     Archetype iterator optimized for iteration over predetermined archetype sets.
@@ -1514,15 +1512,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     #    and insert new component data for moved entities.
                     # 2. If an archetype with the new component combination does not exist yet,
                     #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
+                    old_node_index = old_archetype[].get_node_index()
                     new_archetype_idx = self._get_archetype_index[
                         add_size + rem_size
-                    ](component_ids, old_archetype[].get_node_index())
+                    ](component_ids, old_node_index)
 
                     # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                     # resized during the call to `_get_archetype_index`.
-                    old_archetype_idx = self._archetype_map[
-                        old_archetype[].get_node_index()
-                    ]
+                    old_archetype_idx = self._archetype_map[old_node_index]
                     old_archetype = Pointer(
                         to=self._archetypes.unsafe_get(index(old_archetype_idx))
                     )
@@ -1532,39 +1529,39 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     )
 
                     old_archetype_size = len(old_archetype[])
-                    new_archetype[].reserve(
-                        len(new_archetype[]) + old_archetype_size
-                    )
+                    if old_archetype_idx == new_archetype_idx:
+                        arch_start_idcs.append(0)
+                        changed_archetype_idcs.append(new_archetype_idx)
 
-                    # Save arch_start_idx for the iterator.
-                    arch_start_idx = len(new_archetype[])
+                        comptime for i in range(add_size):
+                            comptime T = Ts[i]
+                            new_archetype[].set_component_range[T](
+                                0,
+                                old_archetype_size,
+                                add_components[i].copy(),
+                            )
+                        continue
+
+                    old_archetype_unsafe = UnsafePointer(to=old_archetype[]).as_any_origin()
+                    arch_start_idx = new_archetype[].extend_from_archetype_unsafe(
+                        old_archetype_unsafe, old_archetype_size
+                    )
                     arch_start_idcs.append(arch_start_idx)
                     changed_archetype_idcs.append(new_archetype_idx)
 
-                    # Move entities to the new archetype and update entity index mappings
-                    for i in range(old_archetype_size):
-                        entity = old_archetype[].get_entity(i)
-                        new_index = new_archetype[].add(entity)
-                        self._entities[entity.get_id()] = EntityLocation(
-                            new_index, new_archetype_idx
+                    comptime for i in range(add_size):
+                        comptime T = Ts[i]
+                        new_archetype[].set_component_range[T](
+                            arch_start_idx,
+                            old_archetype_size,
+                            add_components[i].copy(),
                         )
 
-                        # Move existing component data from old archetype to new archetype.
-                        for id in range(Self.component_manager.component_count):
-                            comptime T = Self.component_types[id]
-
-                            if not old_archetype[].has_component[T]():
-                                continue
-
-                            comptime if rem_size:
-                                if not new_archetype[].has_component[T]():
-                                    continue
-
-                            new_archetype[].set_component_from[T](new_index, old_archetype[], i)
-
-                        # Set new component data
-                        new_archetype[].set_components[*Ts](
-                            new_index, *add_components^
+                    # Update entity index mappings for the moved entity range.
+                    for entity_idx in range(old_archetype_size):
+                        entity = old_archetype[].get_entity(entity_idx)
+                        self._entities[entity.get_id()] = EntityLocation(
+                            arch_start_idx + entity_idx, new_archetype_idx
                         )
 
                     old_archetype[].clear()

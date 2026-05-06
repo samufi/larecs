@@ -595,7 +595,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         (components^).consume_elements[set_component]()
 
-    def set_component_from[
+    def copy_component_from[
         T: ComponentType
     ](
         mut self,
@@ -626,6 +626,47 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             src=storage.get_component_ptr[T]() + from_idx,
             count=count,
         )
+
+    def copy_shared_components_from_unsafe[
+        source_origin: Origin,
+    ](
+        mut self,
+        to_idx: Int,
+        source: UnsafePointer[Self, source_origin],
+        count: Int,
+        from_idx: Int = 0,
+    ):
+        """Copies shared component columns from an unsafe source storage.
+
+        This helper intentionally erases the source origin so callers can copy
+        between two distinct archetypes that originate from the same parent
+        list. Only components that are active in both storages are copied.
+
+        Args:
+            to_idx: The index of the first destination row.
+            source: An unsafe pointer to the source storage.
+            count: The number of rows to copy.
+            from_idx: The index of the first source row.
+
+        Constraints:
+            The source and destination storages must be distinct and their
+            shared component columns must have identical layouts.
+        """
+        debug_assert(0 <= count, "Count must be non-negative.")
+        _assert_range_in_bounds(to_idx, count, self.size)
+        _assert_range_in_bounds(from_idx, count, source[].size)
+
+        if count == 0:
+            return
+
+        comptime for id in range(len(Self.ComponentTypes)):
+            comptime T = Self.ComponentTypes[id]
+            if self.has_component[T]() and source[].has_component[T]():
+                memcpy(
+                    dest=self.get_component_ptr[T]() + to_idx,
+                    src=source[].get_component_ptr[T]() + from_idx,
+                    count=count,
+                )
 
     def _for_active_components[
         is_mutating: Bool,
@@ -1084,7 +1125,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.set_component_range")
 
-    def set_component_from[
+    def copy_component_from[
         T: ComponentType
     ](
         mut self,
@@ -1105,12 +1146,12 @@ struct Archetype[
             from_idx: The index of the first entity in the archetype to copy from.
         """
 
-        _trace_function["IN"]("Archetype.set_component_from")
-        self._storage.set_component_from[T](
+        _trace_function["IN"]("Archetype.copy_component_from")
+        self._storage.copy_component_from[T](
             to_idx, archetype._storage, count, from_idx
         )
 
-        _trace_function["OUT"]("Archetype.set_component_from")
+        _trace_function["OUT"]("Archetype.copy_component_from")
 
     def get_entities(self) -> ref[self._entities] List[Entity]:
         """Returns the entities in the archetype.
@@ -1203,6 +1244,73 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.add")
         return idx
+
+    def extend_from_archetype_unsafe[
+        source_origin: Origin,
+    ](
+        mut self,
+        source: UnsafePointer[Self, source_origin],
+        count: Int,
+        from_idx: Int = 0,
+    ) -> Int:
+        """Appends entities and shared components from another archetype.
+
+        This helper is intended for internal batch migration paths where the
+        caller has already proven that source and destination archetypes are
+        distinct, but Mojo's alias analysis cannot express that relationship.
+
+        Args:
+            source: An unsafe pointer to the source archetype.
+            count: The number of entities to append.
+            from_idx: The index of the first source entity to append.
+
+        Returns:
+            The index of the first newly appended entity.
+
+        Constraints:
+            The source and destination archetypes must be distinct and
+            contiguous ranges `[from_idx, from_idx + count)` and
+            `[return, return + count)` must be valid for the source and
+            destination storages.
+        """
+        _trace_function["IN"]("Archetype.extend_from_archetype_unsafe")
+
+        debug_assert(0 <= count, "Count must be non-negative.")
+        debug_assert(
+            UnsafePointer(to=self) != source,
+            "Source and destination archetypes must be distinct.",
+        )
+        _assert_range_in_bounds(from_idx, count, len(source[]))
+
+        start_index = self._storage.size
+
+        if count == 0:
+            _trace_function["OUT"]("Archetype.extend_from_archetype_unsafe")
+            return start_index
+
+        self._storage.reserve(add=count)
+        self._storage.size += count
+        self._entities.reserve(self._storage.capacity)
+
+        for i in range(count):
+            self._entities.append(source[]._entities[from_idx + i])
+
+        debug_assert(
+            start_index + count <= self._storage.size,
+            "Destination range must be valid after extending the storage.",
+        )
+
+        comptime for id in range(len(Self.ComponentTypes)):
+            comptime T = Self.ComponentTypes[id]
+            if self.has_component[T]() and source[].has_component[T]():
+                memcpy(
+                    dest=self._storage.get_component_ptr[T]() + start_index,
+                    src=UnsafePointer(to=source[].get_component[T](from_idx)),
+                    count=count,
+                )
+
+        _trace_function["OUT"]("Archetype.extend_from_archetype_unsafe")
+        return start_index
 
     def extend(
         mut self,

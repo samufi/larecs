@@ -250,7 +250,9 @@ def test_world_add() raises:
 def test_world_batch_add() raises:
     world = SmallWorld()
     n = 100
-    _ = world.add_entities(Position(1.0, 2.0), count=n)
+    entities = List[Entity]()
+    for i in range(n):
+        entities.append(world.add_entity(Position(Float64(i), Float64(i + 1))))
 
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
     assert_equal(len(world.query[Position, Velocity]()), 0)
@@ -264,6 +266,12 @@ def test_world_batch_add() raises:
 
     assert_equal(len(world.query[Position]().without[Velocity]()), 0)
     assert_equal(len(world.query[Position, Velocity]()), n)
+    for i in range(n):
+        entity = entities[i]
+        assert_equal(world.get[Position](entity).x, Float64(i))
+        assert_equal(world.get[Position](entity).y, Float64(i + 1))
+        assert_equal(world.get[Velocity](entity).dx, 0.1)
+        assert_equal(world.get[Velocity](entity).dy, 0.2)
 
     with assert_raises(
         contains=WorldError.duplicate_components_for_addition_query.msg()
@@ -385,7 +393,14 @@ def test_replace_remove_only() raises:
 def test_batch_remove_and_add() raises:
     world = SmallWorld()
     n = 100
-    _ = world.add_entities(Position(1.0, 2.0), Velocity(0.1, 0.2), count=n)
+    entities = List[Entity]()
+    for i in range(n):
+        entities.append(
+            world.add_entity(
+                Position(Float64(i), Float64(i + 1)),
+                Velocity(Float64(i) / 10.0, Float64(i) / 5.0),
+            )
+        )
 
     assert_equal(len(world.query[Position, Velocity]()), n)
     assert_equal(
@@ -399,8 +414,6 @@ def test_batch_remove_and_add() raises:
         assert_false(entity.has[Velocity]())
         assert_true(entity.has[Position]())
         assert_true(entity.has[FlexibleComponent[1]]())
-        assert_equal(entity.get[Position]().x, 1.0)
-        assert_equal(entity.get[Position]().y, 2.0)
         assert_equal(entity.get[FlexibleComponent[1]]().x, 3.0)
         assert_equal(entity.get[FlexibleComponent[1]]().y, 4.0)
 
@@ -409,6 +422,12 @@ def test_batch_remove_and_add() raises:
         len(world.query[Position, FlexibleComponent[1]]().without[Velocity]()),
         n,
     )
+    for i in range(n):
+        entity = entities[i]
+        assert_equal(world.get[Position](entity).x, Float64(i))
+        assert_equal(world.get[Position](entity).y, Float64(i + 1))
+        assert_equal(world.get[FlexibleComponent[1]](entity).x, 3.0)
+        assert_equal(world.get[FlexibleComponent[1]](entity).y, 4.0)
 
     with assert_raises(
         contains=WorldError.duplicate_components_for_addition_query.msg()
@@ -423,6 +442,61 @@ def test_batch_remove_and_add() raises:
         assert_true(entity.has[Position]())
         assert_equal(entity.get[Position]().x, 42.0)
         assert_equal(entity.get[Position]().y, 6.0)
+
+
+def test_world_batch_add_multiple_source_archetypes() raises:
+    world = SmallWorld()
+    plain_entities = List[Entity]()
+    flex_entities = List[Entity]()
+
+    for i in range(6):
+        plain_entities.append(
+            world.add_entity(Position(Float64(i), Float64(i + 10)))
+        )
+
+    for i in range(4):
+        flex_entities.append(
+            world.add_entity(
+                Position(Float64(100 + i), Float64(200 + i)),
+                FlexibleComponent[0](Float64(300 + i), Float32(400 + i)),
+            )
+        )
+
+    for entity in world.add(
+        world.query[Position]().without[Velocity](), Velocity(9.0, 10.0)
+    ):
+        assert_true(entity.has[Position]())
+        assert_true(entity.has[Velocity]())
+
+    first_plain_arch = world._entities[plain_entities[0].get_id()].archetype_index
+    first_flex_arch = world._entities[flex_entities[0].get_id()].archetype_index
+
+    assert_not_equal(first_plain_arch, first_flex_arch)
+
+    for i in range(len(plain_entities)):
+        entity = plain_entities[i]
+        loc = world._entities[entity.get_id()]
+        assert_equal(loc.archetype_index, first_plain_arch)
+        assert_equal(loc.entity_index, i)
+        assert_equal(world.get[Position](entity).x, Float64(i))
+        assert_equal(world.get[Position](entity).y, Float64(i + 10))
+        assert_equal(world.get[Velocity](entity).dx, 9.0)
+        assert_equal(world.get[Velocity](entity).dy, 10.0)
+        assert_false(world.has[FlexibleComponent[0]](entity))
+
+    for i in range(len(flex_entities)):
+        entity = flex_entities[i]
+        loc = world._entities[entity.get_id()]
+        assert_equal(loc.archetype_index, first_flex_arch)
+        assert_equal(loc.entity_index, i)
+        assert_equal(world.get[Position](entity).x, Float64(100 + i))
+        assert_equal(world.get[Position](entity).y, Float64(200 + i))
+        assert_equal(world.get[Velocity](entity).dx, 9.0)
+        assert_equal(world.get[Velocity](entity).dy, 10.0)
+        assert_equal(world.get[FlexibleComponent[0]](entity).x, Float64(300 + i))
+        assert_equal(
+            world.get[FlexibleComponent[0]](entity).y, Float32(400 + i)
+        )
 
 
 @fieldwise_init
