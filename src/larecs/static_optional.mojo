@@ -99,14 +99,7 @@ struct StaticOptional[
 
     @always_inline
     def __del__(deinit self):
-        """Destroy the stored value when present.
-
-        Raises:
-            No runtime exceptions.
-
-        Returns:
-            Nothing.
-        """
+        """Destroy the stored value when present."""
         comptime if Self.has_value:
             _ = self._value^
 
