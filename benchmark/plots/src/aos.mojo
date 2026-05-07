@@ -230,13 +230,17 @@ def benchmark[
             ref velocity = entity.get[Velocity]()
             position.x += velocity.x
             position.y += velocity.y
-    dur_ecs = Float64(perf_counter_ns() - start_ecs) / Float64(entities * rounds)
+    dur_ecs = Float64(perf_counter_ns() - start_ecs) / Float64(
+        entities * rounds
+    )
 
     w2 = AosWorld[components_exp](entities)
     var start_aos: UInt = perf_counter_ns()
     for _ in range(rounds):
         w2.update()
-    dur_aos = Float64(perf_counter_ns() - start_aos) / Float64(entities * rounds)
+    dur_aos = Float64(perf_counter_ns() - start_aos) / Float64(
+        entities * rounds
+    )
 
     return BenchResult(
         entities=entities,
@@ -283,7 +287,7 @@ struct AosEntity[components_exp: Int](ImplicitlyCopyable):
         self.comps = InlineArray[Position, 2**Self.components_exp](
             fill=Position(1.0, 2.0)
         )
-    
+
     def __init__(out self, *, copy: Self):
         self.comps = copy.comps.copy()
 

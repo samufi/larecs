@@ -427,6 +427,7 @@ def test_query_archetype_iterator() raises:
 
     assert_equal(count, 3)
 
+
 comptime functions = __functions_in_module()
 
 

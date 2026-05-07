@@ -92,7 +92,9 @@ struct _BitMask[total_bits: Int](
         Args:
             bytes: The raw byte data representing the bitmask state.
         """
-        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
         self._bytes = bytes
 
     @always_inline
@@ -107,7 +109,9 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: An inline array of bit indices to set to True.
         """
-        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
         self._bytes = Self.BytesType()
 
         comptime for i in range(size):
@@ -122,7 +126,9 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: Variadic bit indices to set to True.
         """
-        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
         self._bytes = Self.BytesType()
         for bit in bits:
             self.set[True](bit)

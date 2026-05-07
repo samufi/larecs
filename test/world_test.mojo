@@ -468,7 +468,9 @@ def test_world_batch_add_multiple_source_archetypes() raises:
         assert_true(entity.has[Position]())
         assert_true(entity.has[Velocity]())
 
-    first_plain_arch = world._entities[plain_entities[0].get_id()].archetype_index
+    first_plain_arch = world._entities[
+        plain_entities[0].get_id()
+    ].archetype_index
     first_flex_arch = world._entities[flex_entities[0].get_id()].archetype_index
 
     assert_not_equal(first_plain_arch, first_flex_arch)
@@ -493,7 +495,9 @@ def test_world_batch_add_multiple_source_archetypes() raises:
         assert_equal(world.get[Position](entity).y, Float64(200 + i))
         assert_equal(world.get[Velocity](entity).dx, 9.0)
         assert_equal(world.get[Velocity](entity).dy, 10.0)
-        assert_equal(world.get[FlexibleComponent[0]](entity).x, Float64(300 + i))
+        assert_equal(
+            world.get[FlexibleComponent[0]](entity).x, Float64(300 + i)
+        )
         assert_equal(
             world.get[FlexibleComponent[0]](entity).y, Float32(400 + i)
         )

@@ -24,8 +24,8 @@ comptime Archetype = _Archetype[
     FlexibleComponent[10],
 ]
 
-comptime mask2  = BitMask(1, 2)
-comptime mask3  = BitMask(1, 2, 3)
+comptime mask2 = BitMask(1, 2)
+comptime mask3 = BitMask(1, 2, 3)
 
 
 def test_archetype_init() raises:
@@ -98,7 +98,6 @@ def test_archetype_has_component() raises:
     assert_false(archetype.has_component[Archetype.ComponentTypes[3]]())
 
 
-
 def test_archetype_move() raises:
     var archetype = Archetype(0, mask2)
 
@@ -109,13 +108,23 @@ def test_archetype_move() raises:
         FlexibleComponent[1](4.0, 5.0),
     )
 
-    storage_ptr_large = archetype._storage.get_component_ptr[LargerComponent]() + idx
-    storage_ptr_flex = archetype._storage.get_component_ptr[FlexibleComponent[1]]() + idx
+    storage_ptr_large = (
+        archetype._storage.get_component_ptr[LargerComponent]() + idx
+    )
+    storage_ptr_flex = (
+        archetype._storage.get_component_ptr[FlexibleComponent[1]]() + idx
+    )
 
     var archetype2 = archetype^
 
-    assert_equal(storage_ptr_large, archetype2._storage.get_component_ptr[LargerComponent]() + idx)
-    assert_equal(storage_ptr_flex, archetype2._storage.get_component_ptr[FlexibleComponent[1]]() + idx)
+    assert_equal(
+        storage_ptr_large,
+        archetype2._storage.get_component_ptr[LargerComponent]() + idx,
+    )
+    assert_equal(
+        storage_ptr_flex,
+        archetype2._storage.get_component_ptr[FlexibleComponent[1]]() + idx,
+    )
     assert_equal(archetype2.get_component[LargerComponent](idx).x, 1.0)
     assert_equal(archetype2.get_component[FlexibleComponent[1]](idx).x, 4.0)
 

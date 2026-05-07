@@ -274,7 +274,6 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
             except:
                 return
 
-
         for _ in range(100):
             world.apply[
                 operation_plus,
