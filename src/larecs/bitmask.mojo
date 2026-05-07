@@ -68,7 +68,7 @@ struct _BitMaskIndexIter[
 comptime BitMask = _BitMask[256]
 
 
-struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
+struct _BitMask[total_bits: Int](
     Equatable,
     ImplicitlyCopyable,
     KeyElement,
@@ -92,6 +92,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Args:
             bytes: The raw byte data representing the bitmask state.
         """
+        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
         self._bytes = bytes
 
     @always_inline
@@ -106,6 +107,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Args:
             bits: An inline array of bit indices to set to True.
         """
+        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
         self._bytes = Self.BytesType()
 
         comptime for i in range(size):
@@ -120,6 +122,7 @@ struct _BitMask[total_bits: Int where total_bits.is_power_of_two()](
         Args:
             bits: Variadic bit indices to set to True.
         """
+        comptime assert Self.total_bits.is_power_of_two(), "BitMask size must be a power of two."
         self._bytes = Self.BytesType()
         for bit in bits:
             self.set[True](bit)
