@@ -431,7 +431,4 @@ comptime functions = __functions_in_module()
 
 
 def main() raises:
-    # TestSuite.discover_tests[functions]().run()
-    tests = TestSuite()
-    tests.test[test_query_result_ids]()
-    tests^.run()
+    TestSuite.discover_tests[functions]().run()

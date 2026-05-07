@@ -406,19 +406,16 @@ struct _ArchetypeByMaskIterator[
         has_without_mask: Whether the iterator has excluded components.
     """
 
-    comptime buffer_size = 8
     comptime Archetype = _Archetype[
         *Self.ComponentTypes
     ]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     comptime QueryInfo = QueryInfo[has_without_mask=Self.has_without_mask]
     var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
-    var _archetype_index_buffer: InlineArray[Int, Self.buffer_size]
     var _mask: BitMask
     var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
     var _archetype_count: Int
-    var _buffer_index: Int
-    var _max_buffer_index: Int
+    var _next_archetype_index: Int
 
     def __init__(
         out self,
@@ -440,93 +437,87 @@ struct _ArchetypeByMaskIterator[
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
         self._without_mask = without_mask.copy()
-
-        self._buffer_index = 0
-        self._max_buffer_index = Self.buffer_size
-        self._archetype_index_buffer = InlineArray[Int, Self.buffer_size](
-            fill=-1
-        )
-
-        self._fill_archetype_buffer()
-
-        # If the buffer is not empty, we set the buffer index to -1
-        # so that it is incremented to 0 in the first call to __next__.
-        if self._archetype_index_buffer[0] >= 0:
-            self._buffer_index = -1
+        self._next_archetype_index = 0
+        self._advance_to_next_match()
 
         _trace_function["OUT"]("_ArchetypeByMaskIterator.__init__")
+
+    @doc_hidden
+    @always_inline
+    def __init__(out self, *, copy: Self):
+        """
+        Copies the iterator state.
+
+        Args:
+            copy: The iterator to copy.
+        """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__init__ copy")
+
+        self._archetypes = copy._archetypes
+        self._archetype_count = copy._archetype_count
+        self._mask = copy._mask
+        self._without_mask = copy._without_mask.copy()
+        self._next_archetype_index = copy._next_archetype_index
+
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__init__ copy")
 
     @doc_hidden
     @always_inline
     def __init__(
         out self,
         archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
-        archetype_index_buffer: InlineArray[Int, Self.buffer_size],
         var mask: BitMask,
         without_mask: StaticOptional[BitMask, Self.has_without_mask],
         archetype_count: Int,
-        buffer_index: Int,
-        max_buffer_index: Int,
+        next_archetype_index: Int,
     ):
         """
         Initializes the iterator based on given field values.
 
         Args:
             archetypes: A pointer to the world's archetypes.
-            archetype_index_buffer: The buffer of valid archetypes indices.
             mask: The mask of the archetypes to iterate over.
             without_mask: An optional mask for archetypes to exclude.
             archetype_count: The number of archetypes in the world.
-            buffer_index: Current index in the archetype buffer.
-            max_buffer_index: Maximal valid index in the archetype buffer.
+            next_archetype_index: The next archetype index to inspect.
         """
         _trace_function["IN"]("_ArchetypeByMaskIterator.__init__ fields")
 
         self._archetypes = archetypes
-        self._archetype_index_buffer = archetype_index_buffer
         self._mask = mask^
         self._without_mask = without_mask.copy()
         self._archetype_count = archetype_count
-        self._buffer_index = buffer_index
-        self._max_buffer_index = max_buffer_index
+        self._next_archetype_index = next_archetype_index
 
         _trace_function["OUT"]("_ArchetypeByMaskIterator.__init__ fields")
 
-    def _fill_archetype_buffer(mut self):
+    def _advance_to_next_match(mut self):
         """
-        Find the next archetypes that contain the mask.
-
-        Fills the _archetype_index_buffer with the
-        archetypes' indices.
+        Advances the iterator to the next matching archetype.
         """
-        _trace_function["IN"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
+        _trace_function["IN"]("_ArchetypeByMaskIterator._advance_to_next_match")
 
         query_info = Self.QueryInfo(
             mask=self._mask,
             without_mask=self._without_mask,
         )
 
-        buffer_index = 0
-        for i in range(
-            self._archetype_index_buffer[self._buffer_index] + 1,
-            self._archetype_count,
-        ):
-            is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
-                self._archetypes[].unsafe_get(i).get_mask()
+        while self._next_archetype_index < self._archetype_count:
+            is_valid = self._archetypes[].unsafe_get(
+                self._next_archetype_index
+            ) and query_info.matches(
+                self._archetypes[]
+                .unsafe_get(self._next_archetype_index)
+                .get_mask()
             )
-
             if is_valid:
-                self._archetype_index_buffer[buffer_index] = i
-                buffer_index += 1
-                if buffer_index >= Self.buffer_size:
-                    _trace_function["OUT"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
-                    return
+                _trace_function["OUT"](
+                    "_ArchetypeByMaskIterator._advance_to_next_match"
+                )
+                return
+            self._next_archetype_index += 1
 
-        # If the buffer is not full, we
-        # note the last index that is still valid.
-        self._max_buffer_index = buffer_index - 1
-
-        _trace_function["OUT"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
+        _trace_function["OUT"]("_ArchetypeByMaskIterator._advance_to_next_match")
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -556,16 +547,13 @@ struct _ArchetypeByMaskIterator[
             _trace_function["OUT"]("_ArchetypeByMaskIterator.__next__")
             raise StopIteration()
 
-        self._buffer_index += 1
+        current_index = self._next_archetype_index
+        self._next_archetype_index += 1
+        self._advance_to_next_match()
 
         archetype = Pointer(
-            to=self._archetypes[].unsafe_get(
-                self._archetype_index_buffer[self._buffer_index]
-            )
+            to=self._archetypes[].unsafe_get(current_index)
         )
-        if self._buffer_index >= Self.buffer_size - 1:
-            self._fill_archetype_buffer()
-            self._buffer_index = -1  # Will be incremented to 0
 
         _trace_function["OUT"]("_ArchetypeByMaskIterator.__next__")
 
@@ -578,22 +566,12 @@ struct _ArchetypeByMaskIterator[
         """
         _trace_function["IN"]("_ArchetypeByMaskIterator.__len__")
 
-        if self._max_buffer_index < Self.buffer_size:
-            _trace_function["OUT"]("_ArchetypeByMaskIterator.__len__")
-            return self._max_buffer_index - self._buffer_index
-
-        size = Self.buffer_size
-
+        size = 0
         query_info = Self.QueryInfo(
             mask=self._mask,
             without_mask=self._without_mask,
         )
-        # If there are more archetypes than the buffer size, we
-        # need to iterate over the remaining archetypes.
-        for i in range(
-            self._archetype_index_buffer[Self.buffer_size - 1] + 1,
-            len(self._archetypes[]),
-        ):
+        for i in range(self._next_archetype_index, len(self._archetypes[])):
             is_valid = self._archetypes[].unsafe_get(i) and query_info.matches(
                 self._archetypes[].unsafe_get(i).get_mask()
             )
@@ -612,7 +590,7 @@ struct _ArchetypeByMaskIterator[
             Whether there are more elements to iterate.
         """
         _trace_function["IN"]("_ArchetypeByMaskIterator.__has_next__")
-        result = self._buffer_index < self._max_buffer_index
+        result = self._next_archetype_index < self._archetype_count
         _trace_function["OUT"]("_ArchetypeByMaskIterator.__has_next__")
         return result
 
@@ -675,6 +653,23 @@ struct _ArchetypeByListIterator[
         self._index = 0
 
         _trace_function["OUT"]("_ArchetypeByListIterator.__init__")
+
+    @doc_hidden
+    @always_inline
+    def __init__(out self, *, copy: Self):
+        """
+        Copies the iterator state.
+
+        Args:
+            copy: The iterator to copy.
+        """
+        _trace_function["IN"]("_ArchetypeByListIterator.__init__ copy")
+
+        self._archetypes = copy._archetypes
+        self._archetype_indices = copy._archetype_indices.copy()
+        self._index = copy._index
+
+        _trace_function["OUT"]("_ArchetypeByListIterator.__init__ copy")
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -811,6 +806,22 @@ struct ArchetypeIterator[
         self._list_iterator = None
 
         _trace_function["OUT"]("ArchetypeIterator.__init__ mask")
+
+    @doc_hidden
+    @always_inline
+    def __init__(out self, *, copy: Self):
+        """
+        Copies the iterator state.
+
+        Args:
+            copy: The iterator to copy.
+        """
+        _trace_function["IN"]("ArchetypeIterator.__init__ copy")
+
+        self._mask_iterator = copy._mask_iterator.copy()
+        self._list_iterator = copy._list_iterator.copy()
+
+        _trace_function["OUT"]("ArchetypeIterator.__init__ copy")
 
     def __init__(out self, *, var list_iterator: Self.list_iterator):
         """
