@@ -160,13 +160,13 @@ struct MissingComponentsError[*Ts: ComponentType](Writable):
             writer.write("The component [")
             comptime for i in range(len(Self.Ts)):
                 comptime T = Self.Ts[i]
-                writer.write(reflect[T]().name())
+                writer.write(reflect[T].name())
             writer.write("] is missing.")
         else:
             writer.write("At least one of the components [")
             comptime for i in range(len(Self.Ts)):
                 comptime T = Self.Ts[i]
-                writer.write(reflect[T]().name(), ", ")
+                writer.write(reflect[T].name(), ", ")
             writer.write("] is missing.")
 
 
