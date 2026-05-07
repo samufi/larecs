@@ -1,5 +1,6 @@
 from std.memory import memcpy
 from std.sys.defines import is_defined
+from std.time import global_perf_counter_ns
 
 
 @always_inline
@@ -64,7 +65,8 @@ def _trace_function[inout: StaticString](name: StaticString):
     ), "Trace direction must be IN or OUT."
 
     comptime if is_defined["TRACE_FUNCTIONS"]():
+        timestamp_ns = global_perf_counter_ns()
         comptime if inout == "IN":
-            print("[IN]  ", name)
+            print(t"[IN] , {name}, {timestamp_ns} ns")
         elif inout == "OUT":
-            print("[OUT] ", name)
+            print(t"[OUT], {name}, {timestamp_ns} ns")

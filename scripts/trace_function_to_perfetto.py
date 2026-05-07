@@ -17,11 +17,12 @@ from perfetto.protos.perfetto.trace.perfetto_trace_pb2 import TrackEvent
 from perfetto.trace_builder.proto_builder import TraceProtoBuilder
 
 
-TRACE_LINE_RE = re.compile(r"^\[(?P<direction>IN|OUT)\]\s+(?P<name>.+?)\s*$")
+TRACE_LINE_RE = re.compile(
+    r"^\[(?P<direction>IN|OUT)\]\s*,\s*(?P<name>.+?)\s*,\s*(?P<timestamp>\d+)\s*ns\s*$"
+)
 TRACK_UUID = 1
 TRUSTED_PACKET_SEQUENCE_ID = 1
 DEFAULT_TRACK_NAME = "larecs::_trace_function"
-DEFAULT_LINE_SPACING_NS = 1_000
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,7 @@ class TraceEvent:
     direction: str
     name: str
     line_number: int
+    timestamp_ns: int
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,12 +56,6 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_TRACK_NAME,
         help="Track name shown in the Perfetto UI.",
     )
-    parser.add_argument(
-        "--line-spacing-ns",
-        type=int,
-        default=DEFAULT_LINE_SPACING_NS,
-        help="Synthetic time spacing between consecutive log lines, in nanoseconds.",
-    )
     return parser.parse_args()
 
 
@@ -77,8 +73,9 @@ def parse_trace_events(input_path: Path) -> list[TraceEvent]:
         events.append(
             TraceEvent(
                 direction=match.group("direction"),
-                name=match.group("name"),
+                name=match.group("name").strip(),
                 line_number=line_number,
+                timestamp_ns=int(match.group("timestamp")),
             )
         )
 
@@ -111,19 +108,17 @@ def add_slice_packet(
     packet.track_event.name = name
 
 
-def convert_trace_events(events: list[TraceEvent], track_name: str, line_spacing_ns: int) -> TraceProtoBuilder:
+def convert_trace_events(events: list[TraceEvent], track_name: str) -> TraceProtoBuilder:
     builder = TraceProtoBuilder()
     add_track_descriptor(builder, track_name)
 
     stack: list[TraceEvent] = []
-    for index, event in enumerate(events):
-        timestamp_ns = index * line_spacing_ns
-
+    for event in events:
         if event.direction == "IN":
             stack.append(event)
             add_slice_packet(
                 builder,
-                timestamp_ns=timestamp_ns,
+                timestamp_ns=event.timestamp_ns,
                 event_type=TrackEvent.TYPE_SLICE_BEGIN,
                 name=event.name,
             )
@@ -144,7 +139,7 @@ def convert_trace_events(events: list[TraceEvent], track_name: str, line_spacing
 
         add_slice_packet(
             builder,
-            timestamp_ns=timestamp_ns,
+            timestamp_ns=event.timestamp_ns,
             event_type=TrackEvent.TYPE_SLICE_END,
             name=event.name,
         )
@@ -160,16 +155,19 @@ def convert_trace_events(events: list[TraceEvent], track_name: str, line_spacing
         ]
         print("\n".join(warning_lines), file=sys.stderr)
 
-        next_index = len(events)
+        # Use the last timestamp + 1 ns for implicitly closed events
+        max_timestamp = max(e.timestamp_ns for e in events) if events else 0
+        next_timestamp = max_timestamp + 1
+        
         while stack:
             open_event = stack.pop()
             add_slice_packet(
                 builder,
-                timestamp_ns=next_index * line_spacing_ns,
+                timestamp_ns=next_timestamp,
                 event_type=TrackEvent.TYPE_SLICE_END,
                 name=open_event.name,
             )
-            next_index += 1
+            next_timestamp += 1
 
     return builder
 
@@ -182,7 +180,7 @@ def main() -> int:
 
     output_path = args.output or args.input.with_suffix(".pftrace")
     events = parse_trace_events(args.input)
-    builder = convert_trace_events(events, args.track_name, args.line_spacing_ns)
+    builder = convert_trace_events(events, args.track_name)
 
     output_path.write_bytes(builder.serialize())
     print(f"Wrote Perfetto trace to {output_path}")
