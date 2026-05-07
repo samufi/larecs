@@ -11,7 +11,11 @@ from .component import (
 )
 from .bitmask import BitMask
 from .pool import EntityPool
-from ._utils import _assert_index_in_bounds, _assert_range_in_bounds, _trace_function
+from ._utils import (
+    _assert_index_in_bounds,
+    _assert_range_in_bounds,
+    _trace_function,
+)
 
 comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
@@ -255,9 +259,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         def copy_component_ptr[
             T: ComponentType, id: ComponentId
-        ](
-            ptr: Self.ComponentPointer[T]
-        ) capturing -> Self.ComponentPointer[T]:
+        ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
             return rebind[Self.ComponentPointer[T]](copy.data[id])
 
         self._for_active_components[is_mutating=True, func=copy_component_ptr]()
@@ -287,9 +289,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         def memcpy_component[
             T: ComponentType, id: ComponentId
-        ](
-            ptr: Self.ComponentPointer[T]
-        ) capturing -> Self.ComponentPointer[T]:
+        ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
             new_ptr = alloc[T](self.capacity)
             memcpy(dest=new_ptr, src=ptr.value(), count=self.capacity)
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
@@ -374,9 +374,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         def resize_component_storage[
             T: ComponentType, id: ComponentId
-        ](
-            old_ptr: Self.ComponentPointer[T]
-        ) capturing -> Self.ComponentPointer[T]:
+        ](old_ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[
+            T
+        ]:
             var new_ptr = alloc[T](new_pow2_capacity)
             if self.size > 0:
                 memcpy(dest=new_ptr, src=old_ptr.value(), count=self.size)

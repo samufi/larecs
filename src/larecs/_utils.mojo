@@ -21,6 +21,7 @@ def concatenate_inline_arrays[
         count=b_size,
     )
 
+
 def _assert_index_in_bounds(index: Int, size: Int):
     """Asserts that an index refers to a valid element.
 
@@ -46,6 +47,7 @@ def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
 
     _assert_index_in_bounds(start_index, size)
     _assert_index_in_bounds(start_index + count - 1, size)
+
 
 @always_inline
 def _trace_function[inout: StaticString](name: StaticString):

@@ -406,9 +406,7 @@ struct _ArchetypeByMaskIterator[
         has_without_mask: Whether the iterator has excluded components.
     """
 
-    comptime Archetype = _Archetype[
-        *Self.ComponentTypes
-    ]
+    comptime Archetype = _Archetype[*Self.ComponentTypes]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     comptime QueryInfo = QueryInfo[has_without_mask=Self.has_without_mask]
     var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
@@ -517,7 +515,9 @@ struct _ArchetypeByMaskIterator[
                 return
             self._next_archetype_index += 1
 
-        _trace_function["OUT"]("_ArchetypeByMaskIterator._advance_to_next_match")
+        _trace_function["OUT"](
+            "_ArchetypeByMaskIterator._advance_to_next_match"
+        )
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -551,9 +551,7 @@ struct _ArchetypeByMaskIterator[
         self._next_archetype_index += 1
         self._advance_to_next_match()
 
-        archetype = Pointer(
-            to=self._archetypes[].unsafe_get(current_index)
-        )
+        archetype = Pointer(to=self._archetypes[].unsafe_get(current_index))
 
         _trace_function["OUT"]("_ArchetypeByMaskIterator.__next__")
 
@@ -626,9 +624,7 @@ struct _ArchetypeByListIterator[
     """
 
     comptime buffer_size = 8
-    comptime Archetype = _Archetype[
-        *Self.ComponentTypes, 
-    ]
+    comptime Archetype = _Archetype[*Self.ComponentTypes,]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
     var _archetype_indices: List[Int]
@@ -759,9 +755,7 @@ struct ArchetypeIterator[
     has_without_mask: Bool = False,
 ](Boolable, Copyable, IterableOwned, Iterator, Movable, Sized):
     comptime Element = Pointer[
-        _Archetype[
-            *Self.ComponentTypes, 
-        ],
+        _Archetype[*Self.ComponentTypes,],
         Self.archetype_origin,
     ]
 
@@ -940,9 +934,7 @@ struct _EntityIterator[
         archetype_iterator_variant_id: The variant id of the archetype iterator to use.
     """
 
-    comptime Archetype = _Archetype[
-        *Self.ComponentTypes, 
-    ]
+    comptime Archetype = _Archetype[*Self.ComponentTypes,]
     comptime archetype_iterator = ArchetypeIterator[
         Self.archetype_iterator_variant_id,
         Self.archetype_origin,
@@ -1032,17 +1024,17 @@ struct _EntityIterator[
         """
         Releases the lock.
         """
-           _trace_function["IN"]("_EntityIterator.__del__")
+        _trace_function["IN"]("_EntityIterator.__del__")
 
-           try:
-               self._lock_ptr[].unlock(self._lock)
-           except _:
-               debug_warn(
-                   t"Failed to unlock the lock {self._lock}. This should not"
-                   t" happen."
-               )
+        try:
+            self._lock_ptr[].unlock(self._lock)
+        except _:
+            debug_warn(
+                t"Failed to unlock the lock {self._lock}. This should not"
+                t" happen."
+            )
 
-           _trace_function["OUT"]("_EntityIterator.__del__")
+        _trace_function["OUT"]("_EntityIterator.__del__")
 
     @always_inline
     def __iter__(var self, out iterator: Self):

@@ -81,7 +81,9 @@ struct ComponentManager[
     @always_inline
     def assert_valid_components[*Ts: ComponentType]():
         """Assert that all component types are valid."""
-        comptime assert Self._ContainsComponents[*Ts], "Not all component types are valid for this component manager."
+        comptime assert Self._ContainsComponents[
+            *Ts
+        ], "Not all component types are valid for this component manager."
 
     @staticmethod
     @always_inline
