@@ -29,7 +29,7 @@ from .query import (
 )
 from .lock import LockManager, LockedContext, LockError
 from .resource import Resources
-from ._utils import concatenate_inline_arrays
+from ._utils import concatenate_inline_arrays, _trace_function
 
 
 @fieldwise_init
@@ -170,7 +170,7 @@ struct Replacer[
         ](entity)
 
     def by[
-        T: ComponentType 
+        T: ComponentType
     ](self, var component: T, *, entity: Entity) raises WorldError:
         """
         Removes components from and adds one component to an [..entity.Entity].
@@ -195,7 +195,7 @@ struct Replacer[
         ](entity, component^)
 
     def by[
-        *AddTs: ComponentType 
+        *AddTs: ComponentType
     ](self, var *components: *AddTs, entity: Entity) raises WorldError:
         """
         Removes and adds the components to an [..entity.Entity].
@@ -310,12 +310,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     results in an InlineArray of component IDs.
     """
     comptime _optional_component_ids[
-        *Ts: ComponentType 
+        *Ts: ComponentType
     ] = Self.component_manager.get_id_arr[*Ts]()
 
-    comptime Archetype = _Archetype[
-        *Self.component_types
-    ]
+    comptime Archetype = _Archetype[*Self.component_types]
     comptime Query = Query[
         _,
         *Self.component_types,
@@ -452,6 +450,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Creates a new [.World].
         """
+        _trace_function["IN"]("World.__init__")
         self._archetype_map = BitMaskGraph[-1](0)
         self._archetypes = [Self.Archetype()]
         self._entities = [EntityLocation(0, 0)]
@@ -469,6 +468,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         # self._filter_cache:    newCache(),
 
         # var node = self.createArchetypeNode(Mask, ID, false)
+        _trace_function["OUT"]("World.__init__")
 
     def __len__(self) -> Int:
         """
@@ -477,9 +477,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Note that this requires iterating over all archetypes and
         may be an expensive operation.
         """
+        _trace_function["IN"]("World.__len__")
         size = 0
         for archetype in self._archetypes:
             size += len(archetype)
+        _trace_function["OUT"]("World.__len__")
         return size
 
     @always_inline
@@ -498,8 +500,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The archetype list index of the archetype differing from the start
             archetype by the components at the given indices.
         """
+        _trace_function["IN"]("World._get_archetype_index root")
         node_index = self._archetype_map.get_node_index(components, 0)
         if self._archetype_map.has_value(node_index):
+            _trace_function["OUT"]("World._get_archetype_index root")
             return self._archetype_map[node_index]
 
         archetype_index = len(self._archetypes)
@@ -512,6 +516,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         self._archetype_map[node_index] = archetype_index
 
+        _trace_function["OUT"]("World._get_archetype_index root")
         return archetype_index
 
     @always_inline
@@ -538,11 +543,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Constraints:
             `size` must be non-negative.
         """
+        _trace_function["IN"]("World._get_archetype_index start")
         comptime assert 0 <= size, "Size must be non-negative."
         node_index = self._archetype_map.get_node_index(
             components, start_node_index
         )
         if self._archetype_map.has_value(node_index):
+            _trace_function["OUT"]("World._get_archetype_index start")
             return self._archetype_map[node_index]
 
         archetype_index = len(self._archetypes)
@@ -555,6 +562,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         self._archetype_map[node_index] = archetype_index
 
+        _trace_function["OUT"]("World._get_archetype_index start")
         return archetype_index
 
     def add_entity[
@@ -605,6 +613,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The new or recycled [..entity.Entity].
 
         """
+        _trace_function["IN"]("World.add_entity")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "Not all component types are in the component manager."
@@ -645,6 +654,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
         #         self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
 
+        _trace_function["OUT"]("World.add_entity")
         return
 
     def add_entities[
@@ -705,6 +715,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator to the new or recycled [..entity.Entity Entities].
 
         """
+        _trace_function["IN"]("World.add_entities")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "Not all component types are in the component manager."
@@ -754,6 +765,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             }
         except _:
             raise WorldError.UNKNOWN
+        _trace_function["OUT"]("World.add_entities")
 
     @always_inline
     def _create_entity(mut self, archetype_index: Int, out entity: Entity):
@@ -763,6 +775,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The new entity.
         """
+        _trace_function["IN"]("World._create_entity")
         entity = self._entity_pool.get()
         idx = self._archetypes.unsafe_get(archetype_index).add(entity)
         if entity.get_id() == len(self._entities):
@@ -771,6 +784,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             self._entities[entity.get_id()] = EntityLocation(
                 idx, archetype_index
             )
+        _trace_function["OUT"]("World._create_entity")
 
     @always_inline
     def _create_entities(mut self, archetype_index: Int, count: Int) -> Int:
@@ -780,6 +794,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The index of the first newly created entity in the archetype.
         """
+        _trace_function["IN"]("World._create_entities")
         archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
         arch_start_idx = archetype[].extend(count, self._entity_pool)
         entities_size = (
@@ -800,6 +815,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             self._entities[entity_id].archetype_index = archetype_index
             self._entities[entity_id].entity_index = arch_start_idx + i
 
+        _trace_function["OUT"]("World._create_entities")
         return arch_start_idx
 
     def remove_entity(mut self, entity: Entity) raises:
@@ -814,6 +830,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked or the entity does not exist.
         """
+        _trace_function["IN"]("World.remove_entity")
         self._assert_unlocked()
         self._assert_alive(entity)
 
@@ -847,6 +864,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             self._entities[
                 swap_entity.get_id()
             ].entity_index = entity_loc.entity_index
+        _trace_function["OUT"]("World.remove_entity")
 
     def remove_entities(mut self, query: QueryInfo) raises:
         """
@@ -876,6 +894,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked.
         """
+        _trace_function["IN"]("World.remove_entities")
         self._assert_unlocked()
 
         for archetype in self._get_archetype_iterator(
@@ -900,6 +919,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #         var lock = self.lock()
         #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
         #         self.unlock(lock)
+        _trace_function["OUT"]("World.remove_entities")
 
     @always_inline
     def is_alive(self, entity: Entity) -> Bool:
@@ -909,7 +929,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             entity: The entity to check.
         """
-        return self._entity_pool.is_alive(entity)
+        _trace_function["IN"]("World.is_alive")
+        result = self._entity_pool.is_alive(entity)
+        _trace_function["OUT"]("World.is_alive")
+        return result
 
     @always_inline
     def has[T: ComponentType](self, entity: Entity) raises WorldError -> Bool:
@@ -925,13 +948,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
+        _trace_function["IN"]("World.has")
         comptime assert Self.component_manager._ContainsComponent[
             T
         ], "Component type not in component manager"
         self._assert_alive(entity)
-        return self._archetypes.unsafe_get(
+        result = self._archetypes.unsafe_get(
             index(self._entities[entity.get_id()].archetype_index)
         ).has_component[T]()
+        _trace_function["OUT"]("World.has")
+        return result
 
     @always_inline
     def get[
@@ -945,17 +971,19 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
+        _trace_function["IN"]("World.get")
         comptime assert Self.component_manager._ContainsComponent[
             T
         ], "Component type not in component manager"
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        if not self._archetypes.unsafe_get(entity_loc.archetype_index).has_component[
-            T
-        ]():
+        if not self._archetypes.unsafe_get(
+            entity_loc.archetype_index
+        ).has_component[T]():
             raise Error("The component is missing.")
 
+        _trace_function["OUT"]("World.get")
         return self._archetypes.unsafe_get(
             entity_loc.archetype_index
         ).get_component[T](entity_loc.entity_index)
@@ -977,6 +1005,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the [..entity.Entity] does not exist.
         """
+        _trace_function["IN"]("World.set")
         comptime assert Self.component_manager._ContainsComponent[
             T
         ], "Component type not in component manager"
@@ -985,6 +1014,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._archetypes.unsafe_get(entity_loc.archetype_index).set_component[
             T
         ](entity_loc.entity_index, component^)
+        _trace_function["OUT"]("World.set")
 
     @always_inline
     def set[
@@ -1004,6 +1034,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the entity does not exist.
             Error: If the entity does not have one of the components.
         """
+        _trace_function["IN"]("World.set_components")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "One or more component types not in component manager"
@@ -1016,6 +1047,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._archetypes.unsafe_get(entity_loc.archetype_index).set_components[
             *Ts
         ](entity_loc.entity_index, *components^)
+        _trace_function["OUT"]("World.set_components")
 
     def add[
         *Ts: ComponentType
@@ -1035,7 +1067,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        _trace_function["IN"]("World.add")
         self._remove_and_add(entity, *add_components^)
+        _trace_function["OUT"]("World.add")
 
     def add[
         *Ts: ComponentType
@@ -1055,7 +1089,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        _trace_function["IN"]("World.add reversed")
         self._remove_and_add(entity, *add_components^)
+        _trace_function["OUT"]("World.add reversed")
 
     def add[
         has_without_mask: Bool, //, *Ts: ComponentType
@@ -1116,6 +1152,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match existing entities that already have at least one of the
                 components to add.
         """
+        _trace_function["IN"]("World.add query")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "One or more component types not in component manager"
@@ -1123,6 +1160,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             *Ts
         ](), "Duplicate component types in add are not allowed."
 
+        _trace_function["OUT"]("World.add query")
         return self._batch_remove_and_add(
             query,
             *add_components^,
@@ -1143,6 +1181,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        _trace_function["IN"]("World.remove")
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in remove are not allowed."
@@ -1153,6 +1192,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ](
             entity,
         )
+        _trace_function["OUT"]("World.remove")
 
     def remove[
         *Ts: ComponentType, has_without_mask: Bool = False
@@ -1210,6 +1250,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
         #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
         #     into one.  This also enables potential parallelization optimizations.
+        _trace_function["IN"]("World.remove query")
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in remove are not allowed."
@@ -1217,6 +1258,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             *Ts
         ], "One or more component types not in component manager"
 
+        _trace_function["OUT"]("World.remove query")
         return self._batch_remove_and_add[
             rem_size=len(Ts),
             remove_ids=Self._optional_component_ids[*Ts],
@@ -1241,10 +1283,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts: The types of the components to remove.
         """
+        _trace_function["IN"]("World.replace")
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in replace are not allowed."
 
+        _trace_function["OUT"]("World.replace")
         return {Pointer(to=self)}
 
     @always_inline
@@ -1271,6 +1315,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        _trace_function["IN"]("World._remove_and_add")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "One or more component types not in component manager"
@@ -1327,6 +1372,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         elif not add_size and Bool(rem_size):
             component_ids = rebind[ComponentIdsType](runtime_remove_ids)
         else:
+            _trace_function["OUT"]("World._remove_and_add")
             return
 
         index_in_old_archetype = entity_loc.entity_index
@@ -1349,9 +1395,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 if not new_archetype[].has_component[T]():
                     continue
 
-            new_archetype[].set_component[T](index_in_new_archetype, old_archetype[].get_component[T](index_in_old_archetype).copy())
+            new_archetype[].set_component[T](
+                index_in_new_archetype,
+                old_archetype[].get_component[T](index_in_old_archetype).copy(),
+            )
 
-        new_archetype[].set_components[*Ts](index_in_new_archetype, *add_components^)
+        new_archetype[].set_components[*Ts](
+            index_in_new_archetype, *add_components^
+        )
 
         swapped = old_archetype[].remove(index_in_old_archetype)
         if swapped:
@@ -1365,6 +1416,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._entities[entity.get_id()] = EntityLocation(
             index_in_new_archetype, new_archetype_idx
         )
+        _trace_function["OUT"]("World._remove_and_add")
 
     @always_inline
     def _batch_remove_and_add[
@@ -1405,6 +1457,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match entities that don't have all of the components to remove.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
+        _trace_function["IN"]("World._batch_remove_and_add")
         comptime assert Self.component_manager._ContainsComponents[
             *Ts
         ], "One or more component types not in component manager"
@@ -1493,6 +1546,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 }
             except _:
                 raise WorldError.UNKNOWN
+            _trace_function["OUT"]("World._batch_remove_and_add")
             return
 
         self._assert_unlocked()
@@ -1546,9 +1600,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                             )
                         continue
 
-                    old_archetype_unsafe = UnsafePointer(to=old_archetype[]).as_any_origin()
-                    arch_start_idx = new_archetype[].extend_from_archetype_unsafe(
-                        old_archetype_unsafe, old_archetype_size
+                    old_archetype_unsafe = UnsafePointer(
+                        to=old_archetype[]
+                    ).as_any_origin()
+                    arch_start_idx = (
+                        new_archetype[].extend_from_archetype_unsafe(
+                            old_archetype_unsafe, old_archetype_size
+                        )
                     )
                     arch_start_idcs.append(arch_start_idx)
                     changed_archetype_idcs.append(new_archetype_idx)
@@ -1589,6 +1647,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             }
         except _:
             raise WorldError.UNKNOWN
+        _trace_function["OUT"]("World._batch_remove_and_add")
 
     @always_inline
     def _assert_unlocked(self) raises WorldError:
@@ -1598,8 +1657,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked.
         """
+        _trace_function["IN"]("World._assert_unlocked")
         if self.is_locked():
             raise WorldError.world_is_locked
+        _trace_function["OUT"]("World._assert_unlocked")
 
     @always_inline
     def _assert_alive(self, entity: Entity) raises WorldError:
@@ -1612,8 +1673,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
+        _trace_function["IN"]("World._assert_alive")
         if not self._entity_pool.is_alive(entity):
             raise WorldError.non_existent_entity
+        _trace_function["OUT"]("World._assert_alive")
 
     @always_inline
     def apply[
@@ -1641,6 +1704,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the operation raises.
         """
 
+        _trace_function["IN"]("World.apply")
         self._assert_unlocked()
 
         try:
@@ -1654,6 +1718,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         operation(archetype[].get_entity_accessor(i))
         except:
             raise WorldError.UNKNOWN
+        _trace_function["OUT"]("World.apply")
 
     def apply[
         operation: def[simd_width: Int](
@@ -1743,6 +1808,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         """
+        _trace_function["IN"]("World.apply simd")
         self._assert_unlocked()
 
         try:
@@ -1767,6 +1833,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     )
         except:
             raise WorldError.UNKNOWN
+        _trace_function["OUT"]("World.apply simd")
 
     # def Reset(self):
     #     """
@@ -1855,6 +1922,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A [..query.Query] for all entities with the given components.
         """
+        _trace_function["IN"]("World.query")
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in query are not allowed."
@@ -1868,6 +1936,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
         iterator = Self.Query[has_without_mask=False](Pointer(to=self), bitmask)
+        _trace_function["OUT"]("World.query")
 
     def _get_entity_iterator[
         has_without_mask: Bool = False, has_start_indices: Bool = False
@@ -1896,6 +1965,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
+        _trace_function["IN"]("World._get_entity_iterator")
         comptime ArchetypeByMaskIterator = Self.ArchetypeByMaskIterator[
             origin_of(self._archetypes),
             has_without_mask=has_without_mask,
@@ -1920,6 +1990,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             )
         except _:
             raise WorldError.UNKNOWN
+        _trace_function["OUT"]("World._get_entity_iterator")
 
     @always_inline
     def _get_archetype_iterator[
@@ -1938,6 +2009,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             An iterator over all archetypes that match the query.
         """
+        _trace_function["IN"]("World._get_archetype_iterator")
         iterator = Self.ArchetypeByMaskIterator[
             origin_of(self._archetypes), has_without_mask=has_without_mask
         ](
@@ -1947,21 +2019,28 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 without_mask,
             )
         )
+        _trace_function["OUT"]("World._get_archetype_iterator")
 
     @always_inline
     def is_locked(self) -> Bool:
         """
         Returns whether the world is locked by any [.World.query queries].
         """
-        return self._locks.is_locked()
+        _trace_function["IN"]("World.is_locked")
+        result = self._locks.is_locked()
+        _trace_function["OUT"]("World.is_locked")
+        return result
 
     @always_inline
     def _lock(mut self) raises WorldError -> Int:
         """
         Locks the world and gets the lock bit for later unlocking.
         """
+        _trace_function["IN"]("World._lock")
         try:
-            return self._locks.lock()
+            result = self._locks.lock()
+            _trace_function["OUT"]("World._lock")
+            return result
         except e:
             raise WorldError(e)
 
@@ -1970,8 +2049,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Unlocks the given lock bit.
         """
+        _trace_function["IN"]("World._unlock")
         try:
-            return self._locks.unlock(lock)
+            result = self._locks.unlock(lock)
+            _trace_function["OUT"]("World._unlock")
+            return result
         except e:
             raise WorldError(e)
 
@@ -1985,6 +2067,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A context manager that unlocks the world when it goes out of scope.
         """
+        _trace_function["IN"]("World._locked")
+        _trace_function["OUT"]("World._locked")
         return self._locks.locked()
 
     # def Mask(self, entity: Entity) -> Mask:
