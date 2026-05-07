@@ -12,6 +12,7 @@ from .world import World
 from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
+from ._utils import _trace_function
 
 
 @fieldwise_init
@@ -32,9 +33,13 @@ struct QueryError(Equatable, ImplicitlyCopyable, Writable):
         Returns:
             The name of the error variant.
         """
+        _trace_function["IN"]("QueryError.variant_name")
+
         if self._variant == Self.could_not_create_iterator._variant:
+            _trace_function["OUT"]("QueryError.variant_name")
             return "could_not_create_iterator"
         else:
+            _trace_function["OUT"]("QueryError.variant_name")
             return "unknown"
 
     def msg(self) -> String:
@@ -44,9 +49,13 @@ struct QueryError(Equatable, ImplicitlyCopyable, Writable):
         Returns:
             The human-readable error message.
         """
+        _trace_function["IN"]("QueryError.msg")
+
         if self._variant == Self.could_not_create_iterator._variant:
+            _trace_function["OUT"]("QueryError.msg")
             return "Could not create query iterator."
         else:
+            _trace_function["OUT"]("QueryError.msg")
             return "Unknown error."
 
     def write_to(self, mut writer: Some[Writer]):
@@ -56,7 +65,11 @@ struct QueryError(Equatable, ImplicitlyCopyable, Writable):
         Args:
             writer: The writer to write to.
         """
+        _trace_function["IN"]("QueryError.write_to")
+
         writer.write("QueryError.", self.variant_name(), ": ", self.msg())
+
+        _trace_function["OUT"]("QueryError.write_to")
 
 
 struct Query[
@@ -117,9 +130,13 @@ struct Query[
             mask: The mask of the components to iterate over.
             without_mask: The mask for components to exclude.
         """
+        _trace_function["IN"]("Query.__init__")
+
         self._world = world
         self._mask = mask^
         self._without_mask = without_mask^
+
+        _trace_function["OUT"]("Query.__init__")
 
     def __init__(out self, *, copy: Self):
         """
@@ -128,9 +145,13 @@ struct Query[
         Args:
             copy: The query to copy.
         """
+        _trace_function["IN"]("Query.__init__ copy")
+
         self._world = copy._world
         self._mask = copy._mask
         self._without_mask = copy._without_mask.copy()
+
+        _trace_function["OUT"]("Query.__init__ copy")
 
     def __len__(self) raises -> Int:
         """
@@ -140,6 +161,8 @@ struct Query[
         If you intend to iterate anyway, get the iterator with [.Query.__iter__],
         and call `len` on it, instead.
         """
+        _trace_function["IN"]("Query.__len__")
+
         size = 0
         query_info = QueryInfo[has_without_mask=Self.has_without_mask](
             self._mask,
@@ -149,6 +172,8 @@ struct Query[
             archetype = Pointer(to=self._world[]._archetypes.unsafe_get(i))
             if archetype[] and query_info.matches(archetype[].get_mask()):
                 size += len(archetype[])
+
+        _trace_function["OUT"]("Query.__len__")
         return size
 
     @always_inline
@@ -170,24 +195,35 @@ struct Query[
         Returns:
             An iterator over all entities that match the query.
         """
+        _trace_function["IN"]("Query.__iter__")
+
         comptime ArchetypeByMaskIterator = Self.World.ArchetypeByMaskIterator[
             origin_of(self._world[]._archetypes),
             has_without_mask=Self.has_without_mask,
         ]
 
+        it = ArchetypeByMaskIterator(
+            mask_iterator=ArchetypeByMaskIterator.mask_iterator(
+                Pointer(to=self._world[]._archetypes),
+                self._mask,
+                self._without_mask,
+            )
+        )
+
         try:
-            iterator = type_of(iterator)(
-                ArchetypeByMaskIterator(
-                    mask_iterator=ArchetypeByMaskIterator.mask_iterator(
-                        Pointer(to=self._world[]._archetypes),
-                        self._mask,
-                        self._without_mask,
-                    )
-                ),
+            iterator = Self.World.Iterator[
+                origin_of(self._world[]._archetypes),
+                origin_of(self._world[]._locks),
+                has_start_indices=False,
+                has_without_mask=Self.has_without_mask,
+            ](
+                it^,
                 Pointer(to=self._world[]._locks),
                 None,
             )
+            _trace_function["OUT"]("Query.__iter__")
         except _:
+            _trace_function["OUT"]("Query.__iter__")
             raise QueryError.could_not_create_iterator
 
     @always_inline
@@ -215,6 +251,8 @@ struct Query[
         Returns:
             The query, excluding the given components.
         """
+        _trace_function["IN"]("Query.without")
+
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in query are not allowed."
@@ -224,6 +262,8 @@ struct Query[
             self._mask,
             BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
         )
+
+        _trace_function["OUT"]("Query.without")
 
     @always_inline
     def exclusive(var self, out query: Self.QueryWithWithout):
@@ -247,7 +287,11 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
+        _trace_function["IN"]("Query.exclusive")
+
         query = Self.QueryWithWithout(self._world, self._mask, ~self._mask)
+
+        _trace_function["OUT"]("Query.exclusive")
 
 
 struct QueryInfo[
@@ -278,8 +322,12 @@ struct QueryInfo[
         Args:
             query: The query the information should be taken from.
         """
+        _trace_function["IN"]("QueryInfo.__init__")
+
         self.mask = query._mask
         self.without_mask = query._without_mask.copy()
+
+        _trace_function["OUT"]("QueryInfo.__init__")
 
     def __init__(
         out self,
@@ -293,12 +341,16 @@ struct QueryInfo[
             mask: The mask of the components to include.
             without_mask: The optional mask of the components to exclude.
         """
+        _trace_function["IN"]("QueryInfo.__init__ mask")
+
         self.mask = mask
 
         comptime if Self.has_without_mask:
             self.without_mask = without_mask.copy()
         else:
             self.without_mask = None
+
+        _trace_function["OUT"]("QueryInfo.__init__ mask")
 
     def __init__(out self, *, copy: Self):
         """
@@ -307,8 +359,12 @@ struct QueryInfo[
         Args:
             copy: The query to copy.
         """
+        _trace_function["IN"]("QueryInfo.__init__ copy")
+
         self.mask = copy.mask
         self.without_mask = copy.without_mask.copy()
+
+        _trace_function["OUT"]("QueryInfo.__init__ copy")
 
     def matches(self, archetype_mask: BitMask) -> Bool:
         """
@@ -320,11 +376,14 @@ struct QueryInfo[
         Returns:
             Whether the archetype matches the query.
         """
+        _trace_function["IN"]("QueryInfo.matches")
+
         is_valid = archetype_mask.contains(self.mask)
 
         comptime if Self.has_without_mask:
             is_valid &= not archetype_mask.contains_any(self.without_mask[])
 
+        _trace_function["OUT"]("QueryInfo.matches")
         return is_valid
 
 
@@ -375,6 +434,7 @@ struct _ArchetypeByMaskIterator[
             mask: The mask of the archetypes to iterate over.
             without_mask: An optional mask for archetypes to exclude.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__init__")
 
         self._archetypes = archetypes
         self._archetype_count = len(self._archetypes[])
@@ -393,6 +453,8 @@ struct _ArchetypeByMaskIterator[
         # so that it is incremented to 0 in the first call to __next__.
         if self._archetype_index_buffer[0] >= 0:
             self._buffer_index = -1
+
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__init__")
 
     @doc_hidden
     @always_inline
@@ -418,6 +480,8 @@ struct _ArchetypeByMaskIterator[
             buffer_index: Current index in the archetype buffer.
             max_buffer_index: Maximal valid index in the archetype buffer.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__init__ fields")
+
         self._archetypes = archetypes
         self._archetype_index_buffer = archetype_index_buffer
         self._mask = mask^
@@ -426,6 +490,8 @@ struct _ArchetypeByMaskIterator[
         self._buffer_index = buffer_index
         self._max_buffer_index = max_buffer_index
 
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__init__ fields")
+
     def _fill_archetype_buffer(mut self):
         """
         Find the next archetypes that contain the mask.
@@ -433,6 +499,8 @@ struct _ArchetypeByMaskIterator[
         Fills the _archetype_index_buffer with the
         archetypes' indices.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
+
         query_info = Self.QueryInfo(
             mask=self._mask,
             without_mask=self._without_mask,
@@ -451,11 +519,14 @@ struct _ArchetypeByMaskIterator[
                 self._archetype_index_buffer[buffer_index] = i
                 buffer_index += 1
                 if buffer_index >= Self.buffer_size:
+                    _trace_function["OUT"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
                     return
 
         # If the buffer is not full, we
         # note the last index that is still valid.
         self._max_buffer_index = buffer_index - 1
+
+        _trace_function["OUT"]("_ArchetypeByMaskIterator._fill_archetype_buffer")
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -465,7 +536,11 @@ struct _ArchetypeByMaskIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__iter__")
+
         iterator = self^
+
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__iter__")
 
     @always_inline
     def __next__(mut self, out archetype: Self.Element) raises StopIteration:
@@ -475,7 +550,10 @@ struct _ArchetypeByMaskIterator[
         Returns:
             The next archetype as a pointer.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__next__")
+
         if not self.__has_next__():
+            _trace_function["OUT"]("_ArchetypeByMaskIterator.__next__")
             raise StopIteration()
 
         self._buffer_index += 1
@@ -489,6 +567,8 @@ struct _ArchetypeByMaskIterator[
             self._fill_archetype_buffer()
             self._buffer_index = -1  # Will be incremented to 0
 
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__next__")
+
     def __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
@@ -496,8 +576,10 @@ struct _ArchetypeByMaskIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__len__")
 
         if self._max_buffer_index < Self.buffer_size:
+            _trace_function["OUT"]("_ArchetypeByMaskIterator.__len__")
             return self._max_buffer_index - self._buffer_index
 
         size = Self.buffer_size
@@ -518,6 +600,7 @@ struct _ArchetypeByMaskIterator[
 
             size += Int(is_valid)
 
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__len__")
         return size
 
     @always_inline
@@ -528,7 +611,10 @@ struct _ArchetypeByMaskIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._buffer_index < self._max_buffer_index
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__has_next__")
+        result = self._buffer_index < self._max_buffer_index
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__has_next__")
+        return result
 
     @always_inline
     def __bool__(self) -> Bool:
@@ -538,7 +624,10 @@ struct _ArchetypeByMaskIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self.__has_next__()
+        _trace_function["IN"]("_ArchetypeByMaskIterator.__bool__")
+        result = self.__has_next__()
+        _trace_function["OUT"]("_ArchetypeByMaskIterator.__bool__")
+        return result
 
 
 struct _ArchetypeByListIterator[
@@ -579,10 +668,13 @@ struct _ArchetypeByListIterator[
             archetypes: a pointer to the world's archetypes.
             archetype_indices: The indices of the archetypes in the list that are being iterated over.
         """
+        _trace_function["IN"]("_ArchetypeByListIterator.__init__")
 
         self._archetypes = archetypes
         self._archetype_indices = archetype_indices^
         self._index = 0
+
+        _trace_function["OUT"]("_ArchetypeByListIterator.__init__")
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -592,7 +684,11 @@ struct _ArchetypeByListIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
+        _trace_function["IN"]("_ArchetypeByListIterator.__iter__")
+
         iterator = self^
+
+        _trace_function["OUT"]("_ArchetypeByListIterator.__iter__")
 
     @always_inline
     def __next__(mut self, out archetype: Self.Element) raises StopIteration:
@@ -602,7 +698,10 @@ struct _ArchetypeByListIterator[
         Returns:
             The next archetype as a pointer.
         """
+        _trace_function["IN"]("_ArchetypeByListIterator.__next__")
+
         if not self.__has_next__():
+            _trace_function["OUT"]("_ArchetypeByListIterator.__next__")
             raise StopIteration()
         archetype = Pointer(
             to=self._archetypes[].unsafe_get(
@@ -611,11 +710,18 @@ struct _ArchetypeByListIterator[
         )
         self._index += 1
 
+        _trace_function["OUT"]("_ArchetypeByListIterator.__next__")
+
     def __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
         """
-        return len(self._archetype_indices) - self._index
+        _trace_function["IN"]("_ArchetypeByListIterator.__len__")
+
+        result = len(self._archetype_indices) - self._index
+
+        _trace_function["OUT"]("_ArchetypeByListIterator.__len__")
+        return result
 
     @always_inline
     def __has_next__(self) -> Bool:
@@ -625,7 +731,10 @@ struct _ArchetypeByListIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._index < len(self._archetype_indices)
+        _trace_function["IN"]("_ArchetypeByListIterator.__has_next__")
+        result = self._index < len(self._archetype_indices)
+        _trace_function["OUT"]("_ArchetypeByListIterator.__has_next__")
+        return result
 
     @always_inline
     def __bool__(self) -> Bool:
@@ -635,7 +744,10 @@ struct _ArchetypeByListIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self.__has_next__()
+        _trace_function["IN"]("_ArchetypeByListIterator.__bool__")
+        result = self.__has_next__()
+        _trace_function["OUT"]("_ArchetypeByListIterator.__bool__")
+        return result
 
 
 struct ArchetypeIteratorVariant:
@@ -687,6 +799,8 @@ struct ArchetypeIterator[
         """
         Creates an archetype iterator from a mask iterator.
         """
+        _trace_function["IN"]("ArchetypeIterator.__init__ mask")
+
         comptime assert (
             Self.id == ArchetypeIteratorVariant.by_mask.id
         ), "Mask iterator should be initialized with a mask iterator."
@@ -696,10 +810,14 @@ struct ArchetypeIterator[
         self._mask_iterator = mask_iterator^
         self._list_iterator = None
 
+        _trace_function["OUT"]("ArchetypeIterator.__init__ mask")
+
     def __init__(out self, *, var list_iterator: Self.list_iterator):
         """
         Creates an archetype iterator from a list iterator.
         """
+        _trace_function["IN"]("ArchetypeIterator.__init__ list")
+
         comptime assert (
             Self.id == ArchetypeIteratorVariant.by_list.id
         ), "List iterator should be initialized with a list iterator."
@@ -709,6 +827,8 @@ struct ArchetypeIterator[
         self._list_iterator = list_iterator^
         self._mask_iterator = None
 
+        _trace_function["OUT"]("ArchetypeIterator.__init__ list")
+
     def __next__(mut self, out archetype: Self.Element) raises StopIteration:
         """
         Returns the next archetype in the iteration.
@@ -716,18 +836,26 @@ struct ArchetypeIterator[
         Returns:
             The next archetype as a pointer.
         """
+        _trace_function["IN"]("ArchetypeIterator.__next__")
+
         comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
             archetype = self._mask_iterator[].__next__()
         else:
             archetype = self._list_iterator[].__next__()
 
+        _trace_function["OUT"]("ArchetypeIterator.__next__")
+
     def __len__(self) -> Int:
         """
         Returns the number of archetypes remaining in the iterator.
         """
+        _trace_function["IN"]("ArchetypeIterator.__len__")
+
         comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            _trace_function["OUT"]("ArchetypeIterator.__len__")
             return len(self._mask_iterator[])
         else:
+            _trace_function["OUT"]("ArchetypeIterator.__len__")
             return len(self._list_iterator[])
 
     def __bool__(self) -> Bool:
@@ -737,9 +865,13 @@ struct ArchetypeIterator[
         Returns:
             Whether there are more elements to iterate.
         """
+        _trace_function["IN"]("ArchetypeIterator.__bool__")
+
         comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            _trace_function["OUT"]("ArchetypeIterator.__bool__")
             return self._mask_iterator[].__bool__()
         else:
+            _trace_function["OUT"]("ArchetypeIterator.__bool__")
             return self._list_iterator[].__bool__()
 
     def __iter__(var self, out iterator: Self.IteratorOwnedType):
@@ -749,7 +881,11 @@ struct ArchetypeIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
+        _trace_function["IN"]("ArchetypeIterator.__iter__")
+
         iterator = self^
+
+        _trace_function["OUT"]("ArchetypeIterator.__iter__")
 
     def __has_next__(self) -> Bool:
         """
@@ -758,9 +894,13 @@ struct ArchetypeIterator[
         Returns:
             Whether there are more elements to iterate.
         """
+        _trace_function["IN"]("ArchetypeIterator.__has_next__")
+
         comptime if Self.id == ArchetypeIteratorVariant.by_mask.id:
+            _trace_function["OUT"]("ArchetypeIterator.__has_next__")
             return self._mask_iterator[].__has_next__()
         else:
+            _trace_function["OUT"]("ArchetypeIterator.__has_next__")
             return self._list_iterator[].__has_next__()
 
 
@@ -845,6 +985,7 @@ struct _EntityIterator[
         Raises:
             Error: If the lock cannot be acquired.
         """
+        _trace_function["IN"]("_EntityIterator.__init__")
 
         self._lock_ptr = lock_ptr
         self._lock = self._lock_ptr[].lock()
@@ -874,36 +1015,23 @@ struct _EntityIterator[
                 self._last_entity_index = 0
                 self._archetype_size = 0
 
-    # def __init__(out self, *, deinit take: Self):
-    #     """
-    #     Move constructor.
-
-    #     Transfers iterator state and the owned lock bit to the new iterator.
-
-    #     Args:
-    #         take: The iterator to move from.
-    #     """
-    #     self._current_archetype = take._current_archetype
-    #     self._lock_ptr = take._lock_ptr
-    #     self._lock = take._lock
-    #     self._entity_index = take._entity_index
-    #     self._last_entity_index = take._last_entity_index
-    #     self._archetype_size = take._archetype_size
-    #     self._archetype_iterator = take._archetype_iterator^
-    #     self._start_indices = take._start_indices^
-    #     self._processed_archetypes_count = take._processed_archetypes_count^
+        _trace_function["OUT"]("_EntityIterator.__init__")
 
     def __del__(deinit self):
         """
         Releases the lock.
         """
-        try:
-            self._lock_ptr[].unlock(self._lock)
-        except _:
-            debug_warn(
-                t"Failed to unlock the lock {self._lock}. This should not"
-                t" happen."
-            )
+           _trace_function["IN"]("_EntityIterator.__del__")
+
+           try:
+               self._lock_ptr[].unlock(self._lock)
+           except _:
+               debug_warn(
+                   t"Failed to unlock the lock {self._lock}. This should not"
+                   t" happen."
+               )
+
+           _trace_function["OUT"]("_EntityIterator.__del__")
 
     @always_inline
     def __iter__(var self, out iterator: Self):
@@ -913,13 +1041,19 @@ struct _EntityIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
+        _trace_function["IN"]("_EntityIterator.__iter__")
+
         iterator = self^
+
+        _trace_function["OUT"]("_EntityIterator.__iter__")
 
     @always_inline
     def _next_archetype(mut self) raises StopIteration:
         """
         Moves to the next archetype.
         """
+        _trace_function["IN"]("_EntityIterator._next_archetype")
+
         self._current_archetype = {self._archetype_iterator.__next__()}
 
         self._archetype_size = len(self._current_archetype.unsafe_value()[])
@@ -938,6 +1072,8 @@ struct _EntityIterator[
         if not self._archetype_iterator:
             self._last_entity_index = self._archetype_size - 1
 
+        _trace_function["OUT"]("_EntityIterator._next_archetype")
+
     @always_inline
     def __next__(mut self, out accessor: Self.Element) raises StopIteration:
         """
@@ -946,6 +1082,8 @@ struct _EntityIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
+        _trace_function["IN"]("_EntityIterator.__next__")
+
         self._entity_index += 1
         if self._entity_index >= self._archetype_size:
             self._next_archetype()
@@ -956,6 +1094,8 @@ struct _EntityIterator[
             self._entity_index,
         )
 
+        _trace_function["OUT"]("_EntityIterator.__next__")
+
     def __len__(self) -> Int:
         """
         Returns the number of entities remaining in the iterator.
@@ -963,6 +1103,8 @@ struct _EntityIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
+        _trace_function["IN"]("_EntityIterator.__len__")
+
         if not self.__has_next__():
             return 0
 
@@ -989,6 +1131,8 @@ struct _EntityIterator[
             ):
                 size -= self._start_indices[][i]
 
+        _trace_function["OUT"]("_EntityIterator.__len__")
+
         return size
 
     @always_inline
@@ -999,7 +1143,10 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self._entity_index < self._last_entity_index
+        _trace_function["IN"]("_EntityIterator.__has_next__")
+        result = self._entity_index < self._last_entity_index
+        _trace_function["OUT"]("_EntityIterator.__has_next__")
+        return result
 
     @always_inline
     def __bool__(self) -> Bool:
@@ -1009,4 +1156,7 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        return self.__has_next__()
+        _trace_function["IN"]("_EntityIterator.__bool__")
+        result = self.__has_next__()
+        _trace_function["OUT"]("_EntityIterator.__bool__")
+        return result

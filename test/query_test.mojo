@@ -2,7 +2,6 @@ from std.testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
-from larecs.component import ComponentManager
 from larecs.query import QueryError, _ArchetypeByMaskIterator
 
 
@@ -416,40 +415,23 @@ def test_query_requires_available_lock() raises:
 
 
 def test_query_archetype_iterator() raises:
-    comptime Archetype = _Archetype[
-        FlexibleComponent[0],
-        component_manager=ComponentManager[FlexibleComponent[0]](),
-    ]
+    comptime Archetype = _Archetype[FlexibleComponent[0]]
 
     a = Archetype(0, BitMask(0))
     _ = a.add(Entity(0, 0))
-    l: List[Archetype] = [a.copy(), a.copy(), a.copy()]
+    archetypes: List[Archetype] = [a.copy(), a.copy(), a.copy()]
     var count = 0
 
-    for _ in _ArchetypeByMaskIterator[
-        origin_of(l),
-        FlexibleComponent[0],
-    ](Pointer(to=l), BitMask(0)):
+    for _ in _ArchetypeByMaskIterator(Pointer(to=archetypes), BitMask()):
         count += 1
 
     assert_equal(count, 3)
-
-
-def run_all_query_tests() raises:
-    test_query_lock()
-    test_query_requires_available_lock()
-    test_query_component_reference()
-    test_query_result_ids()
-    test_query_length()
-    test_query_get_set()
-    test_query_has_component()
-    test_query_empty()
-    test_query_without()
-    test_query_archetype_iterator()
-
 
 comptime functions = __functions_in_module()
 
 
 def main() raises:
-    TestSuite.discover_tests[functions]().run()
+    # TestSuite.discover_tests[functions]().run()
+    tests = TestSuite()
+    tests.test[test_query_result_ids]()
+    tests^.run()

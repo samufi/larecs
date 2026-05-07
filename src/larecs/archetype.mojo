@@ -11,63 +11,13 @@ from .component import (
 )
 from .bitmask import BitMask
 from .pool import EntityPool
+from ._utils import _assert_index_in_bounds, _assert_range_in_bounds, _trace_function
 
 comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
 
 comptime MutableEntityAccessor = EntityAccessor[archetype_mutability=True, ...]
 """An entity accessor with mutable references to the components."""
-
-
-def _assert_index_in_bounds(index: Int, size: Int):
-    """Asserts that an index refers to a valid element.
-
-    Args:
-        index: The candidate index to validate.
-        size: The logical number of available elements.
-    """
-    assert 0 <= index and index < size, "Index out of bounds"
-
-
-def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
-    """Asserts that a consecutive range fits into a logical size.
-
-    Args:
-        start_index: The index of the first element in the range.
-        count: The number of elements in the range.
-        size: The logical number of available elements.
-    """
-    debug_assert(0 <= count, "Count must be non-negative.")
-
-    if count == 0:
-        return
-
-    _assert_index_in_bounds(start_index, size)
-    _assert_index_in_bounds(start_index + count - 1, size)
-
-
-@always_inline
-def _trace_function[inout: StaticString](name: StaticString):
-    """Prints a function trace when tracing is enabled.
-
-    Parameters:
-        inout: The trace marker direction. Supported values are `"IN"` and `"OUT"`.
-
-    Args:
-        name: The function name to emit.
-
-    Constraints:
-        `inout` must be either `"IN"` or `"OUT"`.
-    """
-    comptime assert (
-        inout == "IN" or inout == "OUT"
-    ), "Trace direction must be IN or OUT."
-
-    comptime if is_defined["TRACE_FUNCTIONS"]():
-        comptime if inout == "IN":
-            print("[IN]  ", name)
-        elif inout == "OUT":
-            print("[OUT] ", name)
 
 
 struct EntityAccessor[
