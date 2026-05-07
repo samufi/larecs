@@ -212,7 +212,7 @@ def prevent_inlining_set_5_comp() raises:
     world.set(entity, c1, c2, c3, c4, c5)
 
 
-from math import exp
+from std.math import exp
 
 
 def benchmark_apply_expexp_1_comp_100_000(
@@ -269,11 +269,11 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
 
             try:
                 ref pos2 = accessor.get[Position]()
+                _store(pos2.x, exp(1 - exp(_load(pos2.x))))
+                _store(pos2.y, exp(1 - exp(_load(pos2.y))))
             except:
                 return
 
-            _store(pos2.x, exp(1 - exp(_load(pos2.x))))
-            _store(pos2.y, exp(1 - exp(_load(pos2.y))))
 
         for _ in range(100):
             world.apply[
