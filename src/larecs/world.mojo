@@ -636,12 +636,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         comptime if component_count:
             entity_index = self._entities[entity.get_id()].entity_index
-            try:
-                self._archetypes[archetype_index].set_components[*Ts](
-                    entity_index, *components^
-                )
-            except _:
-                raise WorldError.UNKNOWN
+            self._archetypes[archetype_index].set_components[*Ts](
+                entity_index, *components^
+            )
 
         # TODO
         # if self._listener != nil:
