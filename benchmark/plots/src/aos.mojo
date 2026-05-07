@@ -1,6 +1,6 @@
-from os import os
-from python import Python, PythonObject
-from time import perf_counter_ns
+from std.os import os
+from std.python import Python, PythonObject
+from std.time import perf_counter_ns
 
 import larecs as lx
 
@@ -28,10 +28,11 @@ struct BenchConfig[max_comp_exp: Int](ImplicitlyCopyable):
     var target_iters: Int
 
 
-def plot(config: BenchConfig, results: List[BenchResult]):
+def plot(config: BenchConfig, results: List[BenchResult]) raises:
     plt = Python.import_module("matplotlib.pyplot")
 
     var component_ticks: PythonObject = [2, 4, 8, 16, 32]
+    var legend_point: PythonObject = [0]
 
     csv_file = os.path.join(RESULTS_DIR, FILE_NAME + ".csv")
 
@@ -58,7 +59,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
                 nanos_ecs.append(row.nanos_ecs)
                 nanos_aos.append(row.nanos_aos)
 
-        lw = 0.5 + comp_exp / 4
+        lw = 0.5 + Float64(comp_exp) / 4
         ax1.plot(
             entities,
             nanos_ecs,
@@ -77,8 +78,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             labels.append("Larecs")
             handles.append(
                 plt.Line2D(
-                    [0],
-                    [0],
+                    legend_point,
+                    legend_point,
                     color="k",
                     lw=1,
                     linestyle="-",
@@ -87,15 +88,19 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             labels.append("Array of Structs")
             handles.append(
                 plt.Line2D(
-                    [0],
-                    [0],
+                    legend_point,
+                    legend_point,
                     color="b",
                     lw=1,
                     linestyle="--",
                 )
             )
         labels.append(String("{0} components").format(String(comp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                legend_point, legend_point, color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax1.set_xscale("log")
     ax1.set_xlabel("Entities")
@@ -120,7 +125,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
                 nanos_ecs.append(row.nanos_ecs)
                 nanos_aos.append(row.nanos_aos)
 
-        lw = 0.5 + entity_exp / 4
+        lw = 0.5 + Float64(entity_exp) / 4
         ax2.plot(
             components,
             nanos_ecs,
@@ -139,8 +144,8 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             labels.append("Larecs")
             handles.append(
                 plt.Line2D(
-                    [0],
-                    [0],
+                    legend_point,
+                    legend_point,
                     color="k",
                     lw=1,
                     linestyle="-",
@@ -149,15 +154,19 @@ def plot(config: BenchConfig, results: List[BenchResult]):
             labels.append("Array of Structs")
             handles.append(
                 plt.Line2D(
-                    [0],
-                    [0],
+                    legend_point,
+                    legend_point,
                     color="b",
                     lw=1,
                     linestyle="--",
                 )
             )
         labels.append(String("10^{0} entities").format(String(entity_exp)))
-        handles.append(plt.Line2D([0], [0], color="k", lw=lw, linestyle="-"))
+        handles.append(
+            plt.Line2D(
+                legend_point, legend_point, color="k", lw=lw, linestyle="-"
+            )
+        )
 
     ax2.set_xscale("log")
     ax2.set_xlabel("Components")
@@ -176,7 +185,7 @@ def plot(config: BenchConfig, results: List[BenchResult]):
     fig.savefig(os.path.join(RESULTS_DIR, FILE_NAME + ".png"))
 
 
-def to_dataframe(results: List[BenchResult]) -> PythonObject:
+def to_dataframe(results: List[BenchResult]) raises -> PythonObject:
     pd = Python.import_module("pandas")
     var entities: PythonObject = []
     var components: PythonObject = []
@@ -205,8 +214,7 @@ def run_benchmarks(config: BenchConfig, out results: List[BenchResult]) raises:
         rounds = config.target_iters // entities
         print(entities, "entities")
 
-        @parameter
-        for compExp in range(1, config.max_comp_exp + 1):
+        comptime for compExp in range(1, config.max_comp_exp + 1):
             result = benchmark[compExp](rounds, entities)
             results.append(result)
 
@@ -215,20 +223,20 @@ def benchmark[
     components_exp: Int
 ](rounds: Int, entities: Int) raises -> BenchResult:
     w1 = create_ecs_world[components_exp](entities)
-    var start_ecs: Float64 = perf_counter_ns()
+    var start_ecs: UInt = perf_counter_ns()
     for _ in range(rounds):
         for entity in w1.query[Position, Velocity]():
             ref position = entity.get[Position]()
             ref velocity = entity.get[Velocity]()
             position.x += velocity.x
             position.y += velocity.y
-    dur_ecs = (perf_counter_ns() - start_ecs) / (entities * rounds)
+    dur_ecs = Float64(perf_counter_ns() - start_ecs) / Float64(entities * rounds)
 
     w2 = AosWorld[components_exp](entities)
-    var start_aos: Float64 = perf_counter_ns()
+    var start_aos: UInt = perf_counter_ns()
     for _ in range(rounds):
         w2.update()
-    dur_aos = (perf_counter_ns() - start_aos) / (entities * rounds)
+    dur_aos = Float64(perf_counter_ns() - start_aos) / Float64(entities * rounds)
 
     return BenchResult(
         entities=entities,
@@ -249,18 +257,17 @@ def create_ecs_entity[
 ](mut w: World, out e: lx.Entity) raises:
     e = w.add_entity(Position(1, 2), Velocity(1, 2))
 
-    @parameter
-    for i in range(2**components_exp):
+    comptime for i in range(2**components_exp):
         w.add(e, PayloadComponent[i](1.0, 2.0))
 
 
 struct AosWorld[components_exp: Int](Copyable, Movable):
-    var entities: List[AosEntity[components_exp]]
+    var entities: List[AosEntity[Self.components_exp]]
 
     def __init__(out self, entities: Int):
-        self.entities = List[AosEntity[components_exp]]()
+        self.entities = List[AosEntity[Self.components_exp]]()
         for _ in range(entities):
-            self.entities.append(AosEntity[components_exp]())
+            self.entities.append(AosEntity[Self.components_exp]())
 
     @always_inline
     def update(mut self):
@@ -270,12 +277,15 @@ struct AosWorld[components_exp: Int](Copyable, Movable):
 
 @fieldwise_init
 struct AosEntity[components_exp: Int](ImplicitlyCopyable):
-    var comps: InlineArray[Position, 2**components_exp]
+    var comps: InlineArray[Position, 2**Self.components_exp]
 
     def __init__(out self):
-        self.comps = InlineArray[Position, 2**components_exp](
+        self.comps = InlineArray[Position, 2**Self.components_exp](
             fill=Position(1.0, 2.0)
         )
+    
+    def __init__(out self, *, copy: Self):
+        self.comps = copy.comps.copy()
 
     @always_inline
     def update(mut self):
@@ -296,7 +306,7 @@ struct Velocity(lx.ComponentType):
 
 
 @fieldwise_init
-struct PayloadComponent[i: UInt](lx.ComponentType):
+struct PayloadComponent[i: Int](lx.ComponentType):
     var x: Float64
     var y: Float64
 
