@@ -17,7 +17,7 @@ from .bitmask import _BitMask
 struct MaskFilter[total_bits: Int]:
     """MaskFilter is a filter for including and excluding certain components.
 
-    See [..bitmask.BitMask.without] and [..bitmask.BitMask.exclusive].
+    See [..bitmask._BitMask.exclusive].
     """
 
     comptime bitmask = _BitMask[Self.total_bits]

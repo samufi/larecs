@@ -120,7 +120,7 @@ struct BitPool(Copyable, Movable):
         """Initializes an empty bit pool.
 
         The pool starts with no allocated bits and no recycled bits. Fresh calls
-        to [BitPool.get] return monotonically increasing indices until recycled
+        to [.BitPool.get] return monotonically increasing indices until recycled
         bits become available.
         """
         self._bits = InlineArray[UInt8, Self.capacity](fill=0)
@@ -155,7 +155,7 @@ struct BitPool(Copyable, Movable):
         """Allocates and returns a new bit index.
 
         This internal helper only allocates fresh indices; callers should use
-        [BitPool.get] so recycled indices are preferred.
+        [.BitPool.get] so recycled indices are preferred.
 
         Raises:
             Error: If the pool is full.
@@ -175,7 +175,7 @@ struct BitPool(Copyable, Movable):
         """Hands a bit index back for recycling.
 
         The recycled index becomes the head of the free list and may be returned
-        by the next [BitPool.get] call.
+        by the next [.BitPool.get] call.
 
         Args:
             bit_idx: The index of the bit to recycle.
