@@ -10,9 +10,7 @@ from std.sys import bit_width_of
 # TODO: Implement `IterableOwned` for this
 # TODO: Implement `Iterator` for this
 @fieldwise_init
-struct _BitMaskIndexIter[
-    total_bits: Int where total_bits.is_power_of_two(),
-](ImplicitlyCopyable, Sized):
+struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
     """Iterator for BitMask indices.
 
     Iterates over the indices of all bits that are set to True in a BitMask,
@@ -30,6 +28,9 @@ struct _BitMaskIndexIter[
     var _compare: Self.bitmask.BytesType
 
     def __init__(out self, var bytes: Self.bitmask.BytesType):
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
         self._bytes = bytes
         self._mask = Self.bitmask.BytesType(1)
         self._compare = self._bytes & self._mask

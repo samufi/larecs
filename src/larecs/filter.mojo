@@ -14,7 +14,7 @@ from .bitmask import _BitMask
 
 
 @fieldwise_init
-struct MaskFilter[total_bits: Int where total_bits.is_power_of_two()]:
+struct MaskFilter[total_bits: Int]:
     """MaskFilter is a filter for including and excluding certain components.
 
     See [..bitmask.BitMask.without] and [..bitmask.BitMask.exclusive].
