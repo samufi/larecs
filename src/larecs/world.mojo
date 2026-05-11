@@ -1979,7 +1979,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     mask_iterator=ArchetypeByMaskIterator.mask_iterator(
                         Pointer(to=self._archetypes),
                         mask,
-                        without_mask,
+                        without_mask.copy(),
                     )
                 ),
                 Pointer(to=self._locks),
