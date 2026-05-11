@@ -140,6 +140,7 @@ def test_query_result_ids() raises:
     for i in range(2 * n):
         assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, Float32(i))
 
+
 def test_query_get_set() raises:
     world = SmallWorld()
 
