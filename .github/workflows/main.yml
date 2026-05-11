@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run mojo run --Werror -D ASSERT=all -I src test/_all.mojo
+          scripts/run_tests.sh test
 
       - name: Check formatting
         run: |

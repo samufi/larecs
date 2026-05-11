@@ -36,7 +36,7 @@ jobs:
 
       - name: Test package
         run: |
-          pixi run mojo run -D ASSERT=all -I src test/_all.mojo
+          scripts/run_tests.sh test
 
       - name: Upload package
         if: ${{ github.event_name == 'release' }}
