@@ -206,7 +206,7 @@ struct Query[
             mask_iterator=ArchetypeByMaskIterator.mask_iterator(
                 Pointer(to=self._world[]._archetypes),
                 self._mask,
-                self._without_mask,
+                self._without_mask.copy(),
             )
         )
 
@@ -419,7 +419,7 @@ struct _ArchetypeByMaskIterator[
         out self,
         archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
         var mask: BitMask,
-        without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
+        var without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
     ):
         """
         Creates an archetype by mask iterator.
@@ -434,7 +434,7 @@ struct _ArchetypeByMaskIterator[
         self._archetypes = archetypes
         self._archetype_count = len(self._archetypes[])
         self._mask = mask^
-        self._without_mask = without_mask.copy()
+        self._without_mask = without_mask^
         self._next_archetype_index = 0
         self._advance_to_next_match()
 

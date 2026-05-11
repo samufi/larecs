@@ -247,7 +247,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self.unsafe_init_components(active_component_mask)
 
     def __init__(out self, *, copy: Self):
-        """Deep-copies another component storage instance.
+        """Shallow-copies another component storage instance.
 
         Args:
             copy: The storage instance to clone.
@@ -285,6 +285,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ]()
 
     def copy_deep(self, out new_storage: Self):
+        """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
+
+        Returns:
+            A deep copy of the component storage with its own allocations.
+        """
         new_storage = Self(copy=self)
 
         def memcpy_component[

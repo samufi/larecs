@@ -1709,7 +1709,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 for archetype in _ArchetypeByMaskIterator(
                     Pointer(to=self._archetypes),
                     query.mask,
-                    query.without_mask,
+                    query.without_mask.copy(),
                 ):
                     for i in range(len(archetype[])):
                         operation(archetype[].get_entity_accessor(i))
@@ -1813,7 +1813,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 for archetype in _ArchetypeByMaskIterator(
                     Pointer(to=self._archetypes),
                     query.mask,
-                    query.without_mask,
+                    query.without_mask.copy(),
                 ):
 
                     @always_inline
@@ -2013,7 +2013,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             mask_iterator=_ArchetypeByMaskIterator(
                 Pointer(to=self._archetypes),
                 mask,
-                without_mask,
+                without_mask.copy(),
             )
         )
         _trace_function["OUT"]("World._get_archetype_iterator")

@@ -1,4 +1,5 @@
 from std.testing import *
+
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
@@ -128,14 +129,16 @@ def test_query_result_ids() raises:
 
     i = 0
     for var entity in world.query[FlexibleComponent[0]]():
-        entity.set(FlexibleComponent[0](1.0, Float32(i)))
         assert_equal(
-            entity.get[FlexibleComponent[0]]().y,
-            world.get[FlexibleComponent[0]](entities[i]).y,
+            entity.get_entity(),
+            entities[i],
             "Entity " + String(i) + " is incorrect.",
         )
+        entity.set(FlexibleComponent[0](1.0, Float32(i)))
         i += 1
 
+    for i in range(2 * n):
+        assert_equal(world.get[FlexibleComponent[0]](entities[i]).y, Float32(i))
 
 def test_query_get_set() raises:
     world = SmallWorld()
@@ -293,55 +296,6 @@ def test_query_exclusive() raises:
     assert_false(world.is_locked())
 
 
-# struct QueryOwner[
-#     world_origin: MutableOrigin,
-#     *ComponentTypes: ComponentType,
-# ]:
-#     comptime WorldPointer = Pointer[World[*ComponentTypes], world_origin]
-#     comptime Query = Query[
-#         world_origin,
-#         *ComponentTypes,
-#         has_without_mask=_,
-#     ]
-
-#     var _query: Self.Query[has_without_mask=True]
-
-#     def __init__(
-#         world: Self.WorldPointer,
-#         out self,
-#     ) raises:
-#         self._query = (
-#             world[]
-#             .query[FlexibleComponent[0]]()
-#             .without[FlexibleComponent[1]]()
-#         )
-
-#     def update(self) raises:
-#         for entity in self._query:
-#             ref f = entity.get[FlexibleComponent[0]]()
-#             f.x += 1
-
-
-# def test_query_in_system() raises:
-#     world = SmallWorld()
-#     sys1 = QueryOwner(Pointer(to=world))
-#     sys2 = QueryOwner(Pointer(to=world))
-
-#     c0 = FlexibleComponent[0](1.0, 2.0)
-
-#     n = 10
-#     for _ in range(n):
-#         _ = world.add_entity(c0)
-
-#     for _ in range(10):
-#         sys1.update()
-#         sys2.update()
-
-#     for entity in world.query[FlexibleComponent[0]]():
-#         ref f = entity.get[FlexibleComponent[0]]()
-#         assert_equal(f.x, 21)
-
-
 def test_query_lock() raises:
     world = SmallWorld()
 
@@ -417,9 +371,13 @@ def test_query_requires_available_lock() raises:
 def test_query_archetype_iterator() raises:
     comptime Archetype = _Archetype[FlexibleComponent[0]]
 
-    a = Archetype(0, BitMask(0))
-    _ = a.add(Entity(0, 0))
-    archetypes: List[Archetype] = [a.copy(), a.copy(), a.copy()]
+    a1 = Archetype(0, BitMask(0))
+    a2 = Archetype(0, BitMask(0))
+    a3 = Archetype(2, BitMask(0, 1))
+    _ = a1.add(Entity(0, 0))
+    _ = a2.add(Entity(0, 0))
+    _ = a3.add(Entity(0, 0))
+    archetypes: List[Archetype] = [a1^, a2^, a3^]
     var count = 0
 
     for _ in _ArchetypeByMaskIterator(Pointer(to=archetypes), BitMask()):
