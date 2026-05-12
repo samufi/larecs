@@ -1,8 +1,7 @@
 """
-The `_trace_function` helper prints nested `[IN]` and `[OUT]` markers without
-timestamps. This script reconstructs the call stack and assigns synthetic
-timestamps based on line order so the output can be visualized as slices in the
-Perfetto UI.
+The `_trace_function` helper prints nested `[IN]` and `[OUT]` markers with
+timestamps in a CSV format. This script reconstructs the call stack so the output 
+can be visualized as slices in the Perfetto UI.
 """
 
 from __future__ import annotations
