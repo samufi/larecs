@@ -940,9 +940,12 @@ struct _EntityIterator[
     def _next_archetype(mut self) raises StopIteration:
         """
         Moves to the next archetype.
+
+        Raises:
+            StopIteration: If there are no more archetypes to move to.
         """
         with TraceGuard(name="_EntityIterator._next_archetype"):
-            self._current_archetype = {self._archetype_iterator.__next__()}
+            self._current_archetype = self._archetype_iterator.__next__()
 
             self._archetype_size = len(self._current_archetype.unsafe_value()[])
 
@@ -964,6 +967,9 @@ struct _EntityIterator[
     def __next__(mut self, out accessor: Self.Element) raises StopIteration:
         """
         Returns the next entity in the iteration.
+
+        Raises:
+            StopIteration: If there are no more entities to iterate.
 
         Returns:
             An [..archetype.EntityAccessor] to the entity.
