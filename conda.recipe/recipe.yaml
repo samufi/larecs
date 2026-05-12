@@ -1,6 +1,5 @@
 context:
-  version: "0.1.0"
-  max_requirement: "max = 25.3.0.dev2025040705"
+  version: "0.5.0"
 
 package:
   name: "larecs"
@@ -8,29 +7,34 @@ package:
 
 source:
   - git: https://github.com/samufi/larecs.git
-    rev: v0.1.0
+    rev: 9b861b83434206dd9d03c9d4a6857ec96f05c2b5
 
 build:
   number: 0
   script:
     - mojo package src/larecs -o ${{ PREFIX }}/lib/mojo/larecs.mojopkg
+
 requirements:
+  build:
+    - mojo-compiler >1.0.0b1, <=1.0.0b2
   host:
-    - ${{ max_requirement }}
+    - mojo-compiler >1.0.0b1, <=1.0.0b2
   run:
-    - ${{ pin_compatible('max') }}
+    - ${{ pin_compatible('mojo-compiler') }}
 
 tests:
   - script:
       - if: unix
         then:
-          - mojo test --sanitize address -D ASSERT=all test
+          - scripts/run-tests.sh test
     requirements:
       run:
-        - ${{ max_requirement }}
+        - ${{ pin_compatible('mojo-compiler') }}
     files:
       source:
-        test/
+        - scripts/
+        - test/
+        - pixi.toml
 
 about:
   homepage: https://samufi.github.io/larecs/
@@ -43,4 +47,5 @@ extra:
   maintainers:
     - samufi
     - mlange-42
+    - moseschmiedel
   project_name: Larecs🌲
