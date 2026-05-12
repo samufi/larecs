@@ -28,3 +28,5 @@ jobs:
           fetch-depth: 0
       - name: Build conda package
         uses: prefix-dev/rattler-build-action@v0.2.37
+        with:
+          build-args: --channel conda-forge --channel https://repo.prefix.dev/max-nightly
