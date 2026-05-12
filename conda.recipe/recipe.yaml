@@ -6,8 +6,7 @@ package:
   version: ${{ version }}
 
 source:
-  - git: https://github.com/samufi/larecs.git
-    rev: 9b861b83434206dd9d03c9d4a6857ec96f05c2b5
+  path: ../
 
 build:
   number: 0
@@ -26,7 +25,7 @@ tests:
   - script:
       - if: unix
         then:
-          - scripts/run-tests.sh test
+          - scripts/run_tests.sh test
     requirements:
       run:
         - ${{ pin_compatible('mojo-compiler') }}
