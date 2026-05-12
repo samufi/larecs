@@ -1,0 +1,51 @@
+context:
+  version: "0.5.0"
+
+package:
+  name: "larecs"
+  version: ${{ version }}
+
+source:
+  - git: https://github.com/samufi/larecs.git
+    rev: 3ee51b8c4975ea408c20931fbaf3c7220a8b7983
+
+build:
+  number: 0
+  script:
+    - mojo package src/larecs -o ${{ PREFIX }}/lib/mojo/larecs.mojopkg
+
+requirements:
+  build:
+    - mojo-compiler >=0.26.2,<1.0.0
+  host:
+    - mojo-compiler >=0.26.2,<1.0.0
+  run:
+    - ${{ pin_compatible('mojo-compiler') }}
+
+tests:
+  - script:
+      - if: unix
+        then:
+          - scripts/run_tests.sh test
+    requirements:
+      run:
+        - ${{ pin_compatible('mojo-compiler') }}
+    files:
+      source:
+        - scripts/
+        - test/
+        - pixi.toml
+
+about:
+  homepage: https://samufi.github.io/larecs/
+  license: LGPL-3.0-only
+  license_file: LICENSE
+  summary: A performance-oriented archetype-based ECS for Mojo🔥.
+  repository: https://github.com/samufi/larecs
+
+extra:
+  maintainers:
+    - samufi
+    - mlange-42
+    - moseschmiedel
+  project_name: Larecs🌲
