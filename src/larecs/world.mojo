@@ -22,11 +22,8 @@ from .static_optional import StaticOptional
 from .query import (
     Query,
     QueryInfo,
-    _EntityIterator,
-    _ArchetypeByMaskIterator,
-    _ArchetypeByListIterator,
-    ArchetypeIterator,
-    ArchetypeIteratorVariant,
+    _WorldIterator,
+    _ArchetypeIterator,
 )
 from .lock import LockManager, LockedContext, LockError
 from .resource import Resources
@@ -236,7 +233,7 @@ struct Replacer[
         self,
         query: QueryInfo[has_without_mask=has_without_mask],
         var *components: *AddTs,
-        out iterator: Self.World.ListIterator[
+        out iterator: Self.World.Iterator[
             origin_of(self._world[]._archetypes),
             origin_of(self._world[]._locks),
             has_start_indices=True,
@@ -270,7 +267,7 @@ struct Replacer[
         self,
         var *components: *AddTs,
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: Self.World.ListIterator[
+        out iterator: Self.World.Iterator[
             origin_of(self._world[]._archetypes),
             origin_of(self._world[]._locks),
             has_start_indices=True,
@@ -336,14 +333,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         lock_origin: MutOrigin,
         *,
         has_start_indices: Bool = False,
-        has_without_mask: Bool = False,
-    ] = _EntityIterator[
+    ] = _WorldIterator[
         archetype_origin,
         lock_origin,
         *Self.component_types,
         has_start_indices=has_start_indices,
-        has_without_mask=has_without_mask,
-        archetype_iterator_variant_id=ArchetypeIteratorVariant.by_mask.id,
     ]
     """
     Primary entity iterator type comptime for mask-based World queries.
@@ -353,84 +347,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         archetype_origin: The origin of the archetype data accessed by the iterator.
         lock_origin: The origin of the locks used for safe concurrent access.
         has_start_indices: Enables iteration from specific entity ranges (batch ops).
-        has_without_mask: Includes exclusion filtering capabilities for complex queries.
-
-    **Performance Considerations:**
-    This is the preferred iterator for general component queries. Use
-    `ListIterator` when the archetype set is already known.
     """
 
-    comptime ArchetypeByMaskIterator[
+    comptime ArchetypeIterator[
         archetype_mutability: Bool,
         //,
         archetype_origin: Origin[mut=archetype_mutability],
         has_without_mask: Bool = False,
-    ] = ArchetypeIteratorVariant.by_mask[
-        archetype_origin,
-        *Self.component_types,
-        has_without_mask=has_without_mask,
-    ]
-    """
-    Archetype iterator optimized for component mask-based queries.
-
-    Efficiently iterates over archetypes by using bitmask operations to determine
-    archetype matches. This is the preferred iterator for general ECS queries where
-    you're filtering entities based on component presence/absence.
-
-    **Optimizations:**
-    - Uses SIMD-optimized bitmask operations for fast archetype matching
-    - Skips empty archetypes automatically to reduce iteration overhead
-    - Supports exclusion masks via `has_without_mask` for complex filtering
-
-    **Best Use Cases:**
-    - Standard component-based entity queries (e.g., entities with Position + Velocity)
-    - Complex queries with include/exclude component requirements
-    - Systems that iterate over entities matching specific component patterns
-    """
-
-    comptime ArchetypeByListIterator[
-        archetype_mutability: Bool,
-        //,
-        archetype_origin: Origin[mut=archetype_mutability],
-    ] = ArchetypeIteratorVariant.by_list[
+    ] = _ArchetypeIterator[
         archetype_origin,
         *Self.component_types,
     ]
     """
-    Archetype iterator optimized for iteration over predetermined archetype sets.
+    Archetype iterator type for iterating over archetypes matching a query.
 
-    Iterates through a specific list of archetype indices without mask-based filtering.
-    This iterator provides optimal performance when the set of archetypes to iterate
-    is known in advance, such as during batch operations or cached query results.
-
-    **Performance Benefits:**
-    - Direct archetype access without bitmask matching overhead
-    - Optimal for batch operations where archetype set is predetermined
-    - Cache-friendly iteration pattern for contiguous archetype ranges
-    - Minimal branching during iteration for maximum throughput
-
-    **Primary Use Cases:**
-    - Batch entity creation (add_entities) where all entities use same archetype
-    - Cached query results where archetype set is pre-computed
-    - High-performance systems iterating over specific, known entity groups
+    Parameters:
+        archetype_mutability: Whether the iterator allows mutable access to archetypes.
+        archetype_origin: The origin of the archetype data accessed by the iterator.
+        has_without_mask: Whether the query has a without mask, which requires additional checks during iteration.
     """
-
-    comptime ListIterator[
-        archetype_mutability: Bool,
-        //,
-        archetype_origin: Origin[mut=archetype_mutability],
-        lock_origin: MutOrigin,
-        *,
-        has_start_indices: Bool = False,
-    ] = _EntityIterator[
-        archetype_origin,
-        lock_origin,
-        *Self.component_types,
-        has_start_indices=has_start_indices,
-        has_without_mask=False,
-        archetype_iterator_variant_id=ArchetypeIteratorVariant.by_list.id,
-    ]
-    """Primary entity iterator type for predetermined archetype lists."""
 
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
@@ -485,7 +420,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             # var node = self.createArchetypeNode(Mask, ID, false)
 
-    def __len__(self) -> Int:
+    def __len__(self, out size: Int):
         """
         Returns the number of entities in the world.
 
@@ -496,7 +431,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             size = 0
             for archetype in self._archetypes:
                 size += len(archetype)
-            return size
 
     @always_inline
     def _get_archetype_index[
@@ -669,7 +603,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         *components: *Ts,
         count: Int,
-        out iterator: Self.ListIterator[
+        out iterator: Self.Iterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
             has_start_indices=True,
@@ -757,22 +691,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     first_index_in_archetype, count, components[i]
                 )
 
-            comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-                origin_of(self._archetypes)
-            ]
-
             try:
                 iterator = {
-                    ArchetypeByListIterator(
-                        list_iterator=ArchetypeByListIterator.list_iterator(
-                            Pointer(to=self._archetypes), [archetype_index]
-                        ),
-                    ),
+                    Self.ArchetypeIterator[
+                        origin_of(self._archetypes),
+                        has_without_mask=False,
+                    ](Pointer(to=self._archetypes), [archetype_index]),
                     Pointer(to=self._locks),
                     {[first_index_in_archetype]},
                 }
             except _:
-                raise WorldError.UNKNOWN
+                raise WorldError.out_of_locks
 
     @always_inline
     def _create_entity(mut self, archetype_index: Int, out entity: Entity):
@@ -1097,7 +1026,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         var *add_components: *Ts,
-        out iterator: Self.ListIterator[
+        out iterator: Self.Iterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
             has_start_indices=True,
@@ -1195,7 +1124,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     ](
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
-        out iterator: Self.ListIterator[
+        out iterator: Self.Iterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
             has_start_indices=True,
@@ -1422,7 +1351,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         var *add_components: *Ts,
-        out iterator: Self.ListIterator[
+        out iterator: Self.Iterator[
             origin_of(self._archetypes),
             origin_of(self._locks),
             has_start_indices=True,
@@ -1525,21 +1454,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             elif not add_size and Bool(rem_size):
                 component_ids = rebind[ComponentIdsType](runtime_remove_ids)
             else:
-                comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-                    origin_of(self._archetypes)
-                ]
                 try:
                     iterator = {
-                        ArchetypeByListIterator(
-                            list_iterator=ArchetypeByListIterator.list_iterator(
-                                Pointer(to=self._archetypes), List[Int]()
-                            )
+                        Self.ArchetypeIterator(
+                            Pointer(to=self._archetypes), List[Int]()
                         ),
                         Pointer(to=self._locks),
                         List[Int](),
                     }
                 except _:
-                    raise WorldError.UNKNOWN
+                    raise WorldError.out_of_locks
                 return
 
             self._assert_unlocked()
@@ -1627,24 +1551,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             except:
                 raise WorldError.UNKNOWN
 
-            comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-                origin_of(self._archetypes)
-            ]
-
             # Return iterator to iterate over the changed entities.
             try:
                 iterator = {
-                    ArchetypeByListIterator(
-                        list_iterator=ArchetypeByListIterator.list_iterator(
-                            Pointer(to=self._archetypes),
-                            changed_archetype_idcs^,
-                        )
+                    Self.ArchetypeIterator(
+                        Pointer(to=self._archetypes), changed_archetype_idcs^
                     ),
                     Pointer(to=self._locks),
                     arch_start_idcs^,
                 }
             except _:
-                raise WorldError.UNKNOWN
+                raise WorldError.out_of_locks
 
     @always_inline
     def _assert_unlocked(self) raises WorldError:
@@ -1708,11 +1625,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             try:
                 with self._locked():
-                    for archetype in _ArchetypeByMaskIterator(
-                        Pointer(to=self._archetypes),
+                    for archetype in Self.Query(
+                        Pointer(to=self),
                         query.mask,
                         query.without_mask.copy(),
-                    ):
+                    )._iter_archetypes():
                         for i in range(len(archetype[])):
                             operation(archetype[].get_entity_accessor(i))
             except:
@@ -1817,11 +1734,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             try:
                 with self._locked():
-                    for archetype in _ArchetypeByMaskIterator(
-                        Pointer(to=self._archetypes),
+                    for archetype in Self.Query(
+                        Pointer(to=self),
                         query.mask,
                         query.without_mask.copy(),
-                    ):
+                    )._iter_archetypes():
 
                         @always_inline
                         def closure[width: Int](i: Int) {read}:
@@ -1953,7 +1870,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._archetypes),
             origin_of(self._locks),
             has_start_indices=has_start_indices,
-            has_without_mask=has_without_mask,
         ],
     ) raises WorldError:
         """
@@ -1967,28 +1883,20 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             mask:          The mask of components to include.
             without_mask:  The mask of components to exclude.
-            start_indices: The start indices of the iterator. See [..query._EntityIterator].
+            start_indices: The start indices of the iterator. See [..query._WorldIterator].
         """
         with TraceGuard(name="World._get_entity_iterator"):
-            comptime ArchetypeByMaskIterator = Self.ArchetypeByMaskIterator[
-                origin_of(self._archetypes),
-                has_without_mask=has_without_mask,
-            ]
-
             try:
                 iterator = Self.Iterator[
                     origin_of(self._archetypes),
                     origin_of(self._locks),
                     has_start_indices=has_start_indices,
-                    has_without_mask=has_without_mask,
                 ](
-                    ArchetypeByMaskIterator(
-                        mask_iterator=ArchetypeByMaskIterator.mask_iterator(
-                            Pointer(to=self._archetypes),
-                            mask,
-                            without_mask.copy(),
-                        )
-                    ),
+                    Self.Query(
+                        Pointer(to=self),
+                        mask,
+                        without_mask.copy(),
+                    )._iter_archetypes(),
                     Pointer(to=self._locks),
                     start_indices^,
                 )
@@ -1999,10 +1907,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def _get_archetype_iterator[
         has_without_mask: Bool = False
     ](
-        ref self,
+        mut self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
-        out iterator: Self.ArchetypeByMaskIterator[
+        out iterator: Self.ArchetypeIterator[
             origin_of(self._archetypes), has_without_mask=has_without_mask
         ],
     ):
@@ -2013,18 +1921,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator over all archetypes that match the query.
         """
         with TraceGuard(name="World._get_archetype_iterator"):
-            iterator = Self.ArchetypeByMaskIterator[
-                origin_of(self._archetypes), has_without_mask=has_without_mask
-            ](
-                mask_iterator=_ArchetypeByMaskIterator(
-                    Pointer(to=self._archetypes),
-                    mask,
-                    without_mask.copy(),
-                )
-            )
+            iterator = Self.Query(
+                Pointer(to=self),
+                mask,
+                without_mask.copy(),
+            )._iter_archetypes()
 
     @always_inline
-    def is_locked(self) -> Bool:
+    def is_locked(self, out result: Bool):
         """
         Returns whether the world is locked by any [.World.query queries].
         """
@@ -2032,9 +1936,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             return self._locks.is_locked()
 
     @always_inline
-    def _lock(mut self) raises WorldError -> Int:
+    def _lock(mut self, out lock: Int) raises WorldError:
         """
         Locks the world and gets the lock bit for later unlocking.
+
+        Returns:
+            The lock bit for later unlocking.
+
+        Raises:
+            WorldError: when the world is already locked by the maximum number of locks (255).
         """
         with TraceGuard(name="World._lock"):
             try:
@@ -2046,6 +1956,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def _unlock(mut self, lock: Int) raises WorldError:
         """
         Unlocks the given lock bit.
+
+        Args:
+            lock: The lock bit to unlock.
+
+        Raises:
+            WorldError: when called with an invalid lock bit, or when the lock bit is already unlocked.
         """
         with TraceGuard(name="World._unlock"):
             try:

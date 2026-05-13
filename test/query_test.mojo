@@ -3,7 +3,7 @@ from std.testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
-from larecs.query import QueryError, _ArchetypeByMaskIterator
+from larecs.query import QueryError, _ArchetypeIterator
 
 
 def test_query_length() raises:
@@ -99,13 +99,12 @@ def test_query_length() raises:
     )
     assert_equal(len(world.query()), 5 * n)
 
-    iterator = world.query[FlexibleComponent[0]]()
-    iter = iterator.__iter__()
-    size = len(iter)
-    while iter.__has_next__():
-        _ = iter.__next__()
+    iterator = world.query[FlexibleComponent[0]]().__iter__()
+    size = len(iterator)
+    while iterator.__has_next__():
+        _ = iterator.__next__()
         size -= 1
-        assert_equal(size, len(iter))
+        assert_equal(size, len(iterator))
 
 
 def test_query_result_ids() raises:
@@ -381,7 +380,7 @@ def test_query_archetype_iterator() raises:
     archetypes: List[Archetype] = [a1^, a2^, a3^]
     var count = 0
 
-    for _ in _ArchetypeByMaskIterator(Pointer(to=archetypes), BitMask()):
+    for _ in _ArchetypeIterator(Pointer(to=archetypes), [0, 1, 2]):
         count += 1
 
     assert_equal(count, 3)
