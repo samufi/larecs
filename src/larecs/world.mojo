@@ -1677,24 +1677,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def apply[
-        operation: def(
+        OperationType: def(
             accessor: MutableEntityAccessor
-        ) capturing raises -> None,
+        ) raises -> None, //,
         has_without_mask: Bool = False,
         *,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo[has_without_mask=has_without_mask]) raises:
+    ](mut self, query: QueryInfo[has_without_mask=has_without_mask], operation: OperationType) raises:
         """
         Applies an operation to all entities with the given components.
 
         Parameters:
-            operation: The operation to apply.
+            OperationType: The type of the operation to apply.
             has_without_mask: Whether the query has a without mask.
             unroll_factor: The unroll factor for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/functional/vectorize)).
 
         Args:
             query: The query to determine which entities to apply the operation to.
+            operation: The operation to apply.
 
         Raises:
             Error: If the world is locked.
@@ -1718,14 +1719,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         _trace_function["OUT"]("World.apply")
 
     def apply[
-        operation: def[simd_width: Int](
+        OperationType: def[simd_width: Int](
             accessor: MutableEntityAccessor
-        ) capturing raises -> None,
+        ) raises -> None, //,
         has_without_mask: Bool = False,
         *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo[has_without_mask=has_without_mask]) raises:
+    ](mut self, query: QueryInfo[has_without_mask=has_without_mask], operation: OperationType) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1743,7 +1744,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         of the components!
 
         Parameters:
-            operation: The operation to apply.
+            OperationType: The type of the operation to apply.
             has_without_mask: Whether the query has a without mask.
             simd_width: The SIMD width for the operation
                 (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
@@ -1752,6 +1753,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
         Args:
             query: The query to determine which entities to apply the operation to.
+            operation: The operation to apply.
 
         Constraints:
             The simd_width must be a power of 2.

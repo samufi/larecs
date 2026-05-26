@@ -542,13 +542,13 @@ def test_world_apply() raises:
     for _ in range(100):
         _ = world.add_entity(pos, vel)
 
-    def operation(accessor: MutableEntityAccessor) raises capturing:
+    def operation(accessor: MutableEntityAccessor) raises:
         ref pos2 = accessor.get[Position]()
         ref vel2 = accessor.get[Velocity]()
         pos2.x += vel2.dx
         pos2.y += vel2.dy
 
-    world.apply[operation, unroll_factor=3](world.query[Position, Velocity]())
+    world.apply[unroll_factor=3](world.query[Position, Velocity](), operation)
 
     for entity in world.query[Position, Velocity]():
         assert_equal(entity.get[Position]().x, new_pos.x)
@@ -587,7 +587,7 @@ def test_world_apply_SIMD() raises:
 
     def operation[
         simd_width: Int
-    ](accessor: MutableEntityAccessor) raises capturing:
+    ](accessor: MutableEntityAccessor) raises:
         ref pos2 = accessor.get[Position]()
         ref vel2 = accessor.get[Velocity]()
 
@@ -603,8 +603,9 @@ def test_world_apply_SIMD() raises:
         _store(pos2.x, x)
         _store(pos2.y, y)
 
-    world.apply[operation, simd_width=4, unroll_factor=3](
-        world.query[Position, Velocity]()
+    world.apply[simd_width=4, unroll_factor=3](
+        world.query[Position, Velocity](),
+        operation
     )
 
     i = 0

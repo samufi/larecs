@@ -229,8 +229,7 @@ def benchmark_apply_expexp_1_comp_100_000(
             _ = world.add_entity(pos, vel)
 
         @always_inline
-        @parameter
-        def operation_plus(accessor: MutableEntityAccessor) capturing:
+        def operation_plus(accessor: MutableEntityAccessor):
             try:
                 ref pos2 = accessor.get[Position]()
                 pos2.x = exp(1 - exp(pos2.x))
@@ -239,8 +238,8 @@ def benchmark_apply_expexp_1_comp_100_000(
                 pass
 
         for _ in range(100):
-            world.apply[operation_plus, unroll_factor=3](
-                world.query[Position]()
+            world.apply[unroll_factor=3](
+                world.query[Position](), operation_plus
             )
 
     bencher.iter[bench_fn]()
@@ -260,10 +259,9 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
             _ = world.add_entity(pos, vel)
 
         @always_inline
-        @parameter
         def operation_plus[
             simd_width: Int
-        ](accessor: MutableEntityAccessor) capturing:
+        ](accessor: MutableEntityAccessor):
             comptime _load = load2[simd_width]
             comptime _store = store2[simd_width]
 
@@ -276,10 +274,9 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
 
         for _ in range(100):
             world.apply[
-                operation_plus,
                 simd_width=16,
                 unroll_factor=3,
-            ](world.query[Position, Velocity]())
+            ](world.query[Position, Velocity](), operation_plus)
 
     bencher.iter[bench_fn]()
 
