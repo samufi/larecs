@@ -13,8 +13,8 @@ Larecs is a high-performance Entity Component System (ECS) library written in Mo
 
 ## Build/Test Commands
 
-- Run all tests: `pixi run mojo run -D ASSERT=all -I src/ test/_all.mojo`
-- Run single test: `pixi run mojo run -D ASSERT=all -I src/ test/<filename>.mojo`
+- Run all tests: `pixi run tests test`
+- Run single test: `pixi run tests test/<filename>.mojo`
 - Format code: `pixi run mojo format src test benchmark`
 - Generate docs: `pixi run mojo doc -o docs/src/larecs.json src/larecs`
 - Run the complete benchmark suite: `pixi run mojo run -I src benchmark/run_benchmarks.mojo`
