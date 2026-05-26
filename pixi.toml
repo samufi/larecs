@@ -11,6 +11,13 @@ platforms = ["linux-64", "osx-arm64"]
 version = "0.4.0"
 
 [tasks]
+tests = { cmd = "test/run_tests.sh", default-environment = "test" }
 
 [dependencies]
 mojo = ">1.0.0b1, <=1.0.0b2"
+
+[feature.test.dependencies]
+compiler-rt = ">=22.1.6,<23"
+
+[environments]
+test = ["test"] # An environment covering the "test" feature

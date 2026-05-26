@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests
         run: |
-          scripts/run_tests.sh test
+          pixi run tests test
 
       - name: Check formatting
         run: |

@@ -36,7 +36,7 @@ jobs:
 
       - name: Test package
         run: |
-          scripts/run_tests.sh test
+          pixi run tests test
 
       - name: Upload package
         if: ${{ github.event_name == 'release' }}
