@@ -3,7 +3,6 @@ from std.testing import *
 from std.benchmark import keep
 from larecs.bitmask import BitMask
 from std.io.write import Writable, Writer
-from std.memory import Span
 
 
 # ------ Helper functions ------
@@ -20,11 +19,16 @@ def get_random_bitmask() -> BitMask:
 
 @always_inline
 def get_random_int_list(size: Int, out vals: List[Int]):
-    vals = List[Int](capacity=size)
+    """Create a list of random bit indices.
+
+    Args:
+        size: The number of random indices to generate.
+    """
+    vals = List[Int](length=size, fill=0)
     std.random.randint(
         Span(ptr=vals.unsafe_ptr().bitcast[Scalar[DType.int]](), length=size),
         0,
-        Int(BitMask.total_bits),
+        Int(BitMask.total_bits - 1),
     )
 
 
@@ -66,7 +70,9 @@ def get_random_1_true_bitmasks(size: Int, out vals: List[BitMask]):
     vals = List[BitMask](capacity=size)
     for _ in range(size):
         vals.append(
-            BitMask(Int(std.random.random_si64(0, Int64(BitMask.total_bits))))
+            BitMask(
+                Int(std.random.random_si64(0, Int64(BitMask.total_bits - 1)))
+            )
         )
 
 
