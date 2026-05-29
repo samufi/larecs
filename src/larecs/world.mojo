@@ -1,4 +1,4 @@
-from std.memory import UnsafePointer, Span, memcpy
+from std.memory import UnsafePointer, Span
 from std.sys import size_of
 from std.algorithm.backend.vectorize import vectorize
 

@@ -1,7 +1,7 @@
 from std.sys.intrinsics import _type_is_eq
 from std.sys.defines import is_defined
 from std.reflection import reflect
-from std.memory import memcpy, UnsafePointer
+from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
 from .entity import Entity
 from .component import (
@@ -278,6 +278,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         def free_component_storage[
             T: ComponentType, id: ComponentId
         ](ptr: UnsafePointer[T, MutExternalOrigin]) capturing:
+            destroy_n(ptr, count=self.size)
             ptr.free()
 
         self._for_active_components[
@@ -292,15 +293,18 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         new_storage = Self(copy=self)
 
-        def memcpy_component[
+        def copy_component[
             T: ComponentType, id: ComponentId
         ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
             new_ptr = alloc[T](self.capacity)
-            memcpy(dest=new_ptr, src=ptr.value(), count=self.capacity)
+            if self.size > 0:
+                uninit_copy_n[overlapping=False](
+                    dest=new_ptr, src=ptr.value(), count=self.size
+                )
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         new_storage._for_active_components[
-            is_mutating=True, func=memcpy_component
+            is_mutating=True, func=copy_component
         ]()
 
     def unsafe_init_components(mut self, read init_component_mask: BitMask):
@@ -384,7 +388,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ]:
             var new_ptr = alloc[T](new_pow2_capacity)
             if self.size > 0:
-                memcpy(dest=new_ptr, src=old_ptr.value(), count=self.size)
+                uninit_move_n[overlapping=False](
+                    dest=new_ptr, src=old_ptr.value(), count=self.size
+                )
             old_ptr.value().free()
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
@@ -424,22 +430,23 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self.size -= 1
 
-        if remove_idx == self.size:
-            return False
+        need_swap = remove_idx != self.size
 
         def swap_component_data[
             T: ComponentType, id: ComponentId
         ](ptr: UnsafePointer[T, MutExternalOrigin]) capturing:
-            memcpy(
-                dest=ptr + remove_idx,
-                src=ptr + self.size,
-                count=1,
-            )
+            destroy_n(ptr + remove_idx, count=1)
+            if need_swap:
+                uninit_move_n[overlapping=False](
+                    dest=ptr + remove_idx,
+                    src=ptr + self.size,
+                    count=1,
+                )
 
         self._for_active_components[
             is_mutating=False, func=swap_component_data
         ]()
-        return True
+        return need_swap
 
     def get_component_ptr[
         T: ComponentType,
@@ -569,7 +576,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Args:
             to_idx: The index of the first entity to set.
-            storage: The storage to copy components from.
+            storage: The storage to copy components from. Must not be the same as self!
             count: The number of elements to set.
             from_idx: The index of the first entity in the storage to copy from.
         """
@@ -579,7 +586,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         if count == 0:
             return
 
-        memcpy(
+        destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+
+        uninit_copy_n[overlapping=False](
             dest=self.get_component_ptr[T]() + to_idx,
             src=storage.get_component_ptr[T]() + from_idx,
             count=count,
@@ -602,7 +611,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Args:
             to_idx: The index of the first destination row.
-            source: An unsafe pointer to the source storage.
+            source: An unsafe pointer to the source storage. Must not point to self!
             count: The number of rows to copy.
             from_idx: The index of the first source row.
 
@@ -620,7 +629,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]() and source[].has_component[T]():
-                memcpy(
+                destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+                uninit_copy_n[overlapping=False](
                     dest=self.get_component_ptr[T]() + to_idx,
                     src=source[].get_component_ptr[T]() + from_idx,
                     count=count,
@@ -1218,7 +1228,7 @@ struct Archetype[
         distinct, but Mojo's alias analysis cannot express that relationship.
 
         Args:
-            source: An unsafe pointer to the source archetype.
+            source: An unsafe pointer to the source archetype. Must not point to self!
             count: The number of entities to append.
             from_idx: The index of the first source entity to append.
 
@@ -1261,7 +1271,7 @@ struct Archetype[
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]() and source[].has_component[T]():
-                memcpy(
+                uninit_copy_n[overlapping=False](
                     dest=self._storage.get_component_ptr[T]() + start_index,
                     src=UnsafePointer(to=source[].get_component[T](from_idx)),
                     count=count,

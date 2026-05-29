@@ -1,4 +1,4 @@
-from std.memory import memcpy
+from std.memory import uninit_copy_n
 from std.sys.defines import is_defined
 from std.time import global_perf_counter_ns
 
@@ -13,9 +13,9 @@ def concatenate_inline_arrays[
 ):
     result = {uninitialized = True}
 
-    memcpy(dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size)
+    uninit_copy_n[overlapping=False](dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size)
 
-    memcpy(
+    uninit_copy_n[overlapping=False](
         dest=result.unsafe_ptr() + a_size,
         src=b.unsafe_ptr(),
         count=b_size,
