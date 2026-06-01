@@ -184,14 +184,14 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     Internal struct to store component data for an archetype.
 
     UnsafePointers to the component buffers are stored in a sparse tuple indexed by component ID (position in the ComponentTypes TypeList).
-    Only pointers for active components (those contained in the archetype) are allocated and valid; the rest are dangling pointers that must not be dereferenced!
+    Only pointers for active components (those contained in the archetype) are allocated and valid; inactive components are stored as None and must not be dereferenced.
 
     Layout example for 3 component types where only components 0 and 2 are active:
     ```
     +========================+==================================+========================+
     |      Component 0       |      Component 1 (inactive)      |      Component 2       |
     +========================+==================================+========================+
-    | alloc[Type0](capacity) | dangling pointer (not allocated) | alloc[Type2](capacity) |
+    | alloc[Type0](capacity) | None (inactive)                  | alloc[Type2](capacity) |
     +------------------------+----------------------------------+------------------------+
     ```
 
