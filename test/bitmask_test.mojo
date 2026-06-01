@@ -1,7 +1,7 @@
 import std.random
 from std.testing import *
 from std.benchmark import keep
-from larecs.bitmask import BitMask
+from larecs.bitmask import BitMask, _BitMask
 from std.io.write import Writable, Writer
 
 
@@ -209,6 +209,25 @@ def test_bitmask_get_indices() raises:
         size += 1
 
     assert_equal(len(unique_indices), size)
+
+
+def test_bitmask_get_indices_non_256() raises:
+    """A non-default bitmask yields indices from all of its bytes."""
+    comptime SmallBitMask = _BitMask[64]
+    mask = SmallBitMask(0, 7, 8, 31, 32, 63)
+    actual = List[Int]()
+    for idx in mask.get_indices():
+        actual.append(idx)
+
+    assert_equal(6, len(actual))
+    expected: List[Int] = [0, 7, 8, 31, 32, 63]
+    for expected_idx in expected:
+        found = False
+        for idx in actual:
+            if idx == expected_idx:
+                found = True
+                break
+        assert_true(found, String(expected_idx) + " not found.")
 
 
 def test_bitmask_writable() raises:
