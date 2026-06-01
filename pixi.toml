@@ -12,6 +12,7 @@ version = "0.4.0"
 
 [tasks]
 tests = { cmd = "test/run_tests.sh", default-environment = "test" }
+benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
 mojo = ">1.0.0b1, <=1.0.0b2"
