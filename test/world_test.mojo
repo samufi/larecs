@@ -585,9 +585,7 @@ def test_world_apply_SIMD() raises:
         new_pos.y += vel.dy
         comparison.append(new_pos)
 
-    def operation[
-        simd_width: Int
-    ](accessor: MutableEntityAccessor) raises:
+    def operation[simd_width: Int](accessor: MutableEntityAccessor) raises:
         ref pos2 = accessor.get[Position]()
         ref vel2 = accessor.get[Velocity]()
 
@@ -604,8 +602,7 @@ def test_world_apply_SIMD() raises:
         _store(pos2.y, y)
 
     world.apply[simd_width=4, unroll_factor=3](
-        world.query[Position, Velocity](),
-        operation
+        world.query[Position, Velocity](), operation
     )
 
     i = 0

@@ -61,7 +61,9 @@ struct TestSystem[copies: Int, count: Int = 10](System):
         for entity in world.query[Int]():
             sum += entity.get[Int]()
             counter += 1
-        world.resources.set[add_if_not_found=True](MeanState(Float64(sum) / Float64(counter)))
+        world.resources.set[add_if_not_found=True](
+            MeanState(Float64(sum) / Float64(counter))
+        )
 
 
 def test_test_system() raises:
@@ -73,6 +75,7 @@ def test_test_system() raises:
         scheduler.world.resources.get[MeanState]().value,
         6,
     )
+
 
 comptime functions = __functions_in_module()
 

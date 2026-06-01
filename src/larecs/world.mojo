@@ -1677,13 +1677,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     @always_inline
     def apply[
-        OperationType: def(
-            accessor: MutableEntityAccessor
-        ) raises -> None, //,
+        OperationType: def(accessor: MutableEntityAccessor) raises -> None,
+        //,
         has_without_mask: Bool = False,
         *,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo[has_without_mask=has_without_mask], operation: OperationType) raises:
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        operation: OperationType,
+    ) raises:
         """
         Applies an operation to all entities with the given components.
 
@@ -1721,12 +1724,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def apply[
         OperationType: def[simd_width: Int](
             accessor: MutableEntityAccessor
-        ) raises -> None, //,
+        ) raises -> None,
+        //,
         has_without_mask: Bool = False,
         *,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
-    ](mut self, query: QueryInfo[has_without_mask=has_without_mask], operation: OperationType) raises:
+    ](
+        mut self,
+        query: QueryInfo[has_without_mask=has_without_mask],
+        operation: OperationType,
+    ) raises:
         """
         Applies an operation to all entities with the given components.
 

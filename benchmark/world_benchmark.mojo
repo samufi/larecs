@@ -259,9 +259,7 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
             _ = world.add_entity(pos, vel)
 
         @always_inline
-        def operation_plus[
-            simd_width: Int
-        ](accessor: MutableEntityAccessor):
+        def operation_plus[simd_width: Int](accessor: MutableEntityAccessor):
             comptime _load = load2[simd_width]
             comptime _store = store2[simd_width]
 
