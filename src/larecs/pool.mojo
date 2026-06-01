@@ -1,7 +1,6 @@
 from std.collections.check_bounds import check_bounds
 from .types import EntityId
 from .entity import Entity
-from .constants import MAX_UINT16
 
 
 struct EntityPool(Copyable, Movable, Sized):
@@ -17,7 +16,7 @@ struct EntityPool(Copyable, Movable, Sized):
     @always_inline
     def __init__(out self):
         self._entities = List[Entity]()
-        self._entities.append(Entity(0, MAX_UINT16))
+        self._entities.append(Entity(0, UInt32(UInt16.MAX)))
         self._next = 0
         self._available = 0
 

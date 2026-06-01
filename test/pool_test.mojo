@@ -5,7 +5,6 @@ from std.random import random_float64
 from std.collections import Dict
 from larecs.pool import EntityPool, BitPool, IntPool
 from larecs.entity import Entity
-from larecs.constants import MAX_UINT16, MASK_TOTAL_BITS
 
 
 def test_entity_pool_constructor() raises:
@@ -23,7 +22,7 @@ def test_entity_pool() raises:
         Entity(4),
         Entity(5),
     ]
-    expected_all[0]._generation = MAX_UINT16
+    expected_all[0]._generation = UInt32(UInt16.MAX)
 
     for _ in range(5):
         _ = p.get()

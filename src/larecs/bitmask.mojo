@@ -46,7 +46,7 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
         mut self,
     ) -> Int:
         for i in range(self._offset_index, 8):
-            for j in range(self._byte_index, 32):
+            for j in range(self._byte_index, Self.bitmask.total_bytes):
                 if self._compare[j]:
                     self._offset_index = i
                     self._byte_index = j + 1
