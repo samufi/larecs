@@ -3,6 +3,7 @@ from std.sys.defines import is_defined
 from std.reflection import reflect
 from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
+from std.collections.check_bounds import check_bounds
 from .entity import Entity
 from .component import (
     ComponentType,
@@ -12,7 +13,6 @@ from .component import (
 from .bitmask import BitMask
 from .pool import EntityPool
 from ._utils import (
-    _assert_index_in_bounds,
     _assert_range_in_bounds,
     _trace_function,
 )
@@ -429,7 +429,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             Whether a swap was performed (i.e. idx was not the last entity).
         """
-        _assert_index_in_bounds(remove_idx, self.size)
+        check_bounds(remove_idx, self.size)
 
         self.size -= 1
 
@@ -548,7 +548,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime assert constrain_components_unique[
             *Ts
         ](), "Component types must be unique."
-        _assert_index_in_bounds(entity_idx, self.size)
+        check_bounds(entity_idx, self.size)
 
         Self.component_manager.assert_valid_components[*Ts]()
         self.assert_has_components[*Ts]()
@@ -746,7 +746,7 @@ struct Archetype[
         debug_assert(
             0 <= capacity, "Capacity must be greater or equal to zero."
         )
-        _assert_index_in_bounds(node_index, Self.max_size)
+        check_bounds(node_index, Self.max_size)
 
         self._mask = mask
 
@@ -919,7 +919,7 @@ struct Archetype[
         """
         _trace_function["IN"]("Archetype.get_entity")
 
-        _assert_index_in_bounds(idx, self._storage.size)
+        check_bounds(idx, self._storage.size)
 
         _trace_function["OUT"]("Archetype.get_entity")
         return self._entities[idx]
@@ -941,7 +941,7 @@ struct Archetype[
         """
         _trace_function["IN"]("Archetype.get_entity_accessor")
 
-        _assert_index_in_bounds(idx, self._storage.size)
+        check_bounds(idx, self._storage.size)
 
         accessor = Self.EntityAccessor(
             Pointer(to=self),
@@ -966,7 +966,7 @@ struct Archetype[
         """
         _trace_function["IN"]("Archetype.get_component")
 
-        _assert_index_in_bounds(entity_idx, self._storage.size)
+        check_bounds(entity_idx, self._storage.size)
 
         _trace_function["OUT"]("Archetype.get_component")
         return self._storage.get_component_ptr[T]()[entity_idx]

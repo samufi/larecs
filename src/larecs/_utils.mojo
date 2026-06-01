@@ -1,3 +1,4 @@
+from std.collections.check_bounds import check_bounds
 from std.memory import uninit_copy_n
 from std.sys.defines import is_defined
 from std.time import global_perf_counter_ns
@@ -13,7 +14,9 @@ def concatenate_inline_arrays[
 ):
     result = {uninitialized = True}
 
-    uninit_copy_n[overlapping=False](dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size)
+    uninit_copy_n[overlapping=False](
+        dest=result.unsafe_ptr(), src=a.unsafe_ptr(), count=a_size
+    )
 
     uninit_copy_n[overlapping=False](
         dest=result.unsafe_ptr() + a_size,
@@ -22,16 +25,7 @@ def concatenate_inline_arrays[
     )
 
 
-def _assert_index_in_bounds(index: Int, size: Int):
-    """Asserts that an index refers to a valid element.
-
-    Args:
-        index: The candidate index to validate.
-        size: The logical number of available elements.
-    """
-    assert 0 <= index and index < size, "Index out of bounds"
-
-
+@always_inline
 def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
     """Asserts that a consecutive range fits into a logical size.
 
@@ -45,8 +39,8 @@ def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
     if count == 0:
         return
 
-    _assert_index_in_bounds(start_index, size)
-    _assert_index_in_bounds(start_index + count - 1, size)
+    check_bounds(start_index, size)
+    check_bounds(start_index + count - 1, size)
 
 
 @always_inline
