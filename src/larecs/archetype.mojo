@@ -264,6 +264,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self._for_active_components[is_mutating=True, func=copy_component_ptr]()
 
+    @always_inline
     def __len__(self) -> Int:
         """
         Gets the current size (number of stored entities) of the component storage.
@@ -271,8 +272,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The current size of the component storage.
         """
-        result = self.size
-        return result
+        return self.size
 
     def __del__(deinit self):
         def free_component_storage[
@@ -285,7 +285,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             is_mutating=False, func=free_component_storage
         ]()
 
-    def copy_deep(self, out new_storage: Self):
+    def deep_copy(self, out new_storage: Self):
         """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
 
         Returns:
@@ -317,6 +317,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Args:
             init_component_mask: A bit mask indicating which components should be initialized.
+
+        Note:
+            Only active components in this storage are initialized.
         """
 
         def init_component_ptr[
@@ -331,14 +334,14 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self._for_active_components[is_mutating=True, func=init_component_ptr]()
 
+    @always_inline
     def get_component_count(self) -> Int:
         """Returns the number of active components in the storage.
 
         Returns:
             The number of active component types.
         """
-        result = self.active_component_mask.total_bits_set()
-        return result
+        return self.active_component_mask.total_bits_set()
 
     def add_entity(mut self) -> Int:
         """Adds an entity to the storage (increments size, checks capacity).
@@ -448,6 +451,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ]()
         return need_swap
 
+    @always_inline
     def get_component_ptr[
         T: ComponentType,
     ](ref self) -> UnsafePointer[T, MutExternalOrigin]:
@@ -466,13 +470,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self.assert_has_component[T]()
 
-        optional_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
-        assert (
-            optional_ptr is not None
-        ), "Active component storage must be initialized"
-        result = optional_ptr.value()
-        return result
+        return rebind[Self.ComponentPointer[T]](self.data[id]).value()
 
+    @always_inline
     def has_component[T: ComponentType](self) -> Bool:
         """Returns whether the storage contains the given component type.
 
@@ -484,16 +484,15 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         Self.component_manager.assert_valid_components[T]()
         comptime id = Self.component_manager.get_id[T]()
-        result = self.active_component_mask.get(id)
-        return result
+        return self.active_component_mask.get(id)
 
+    @always_inline
     def has_components[*Ts: ComponentType](self) -> Bool:
         """Returns whether the storage contains all the given component types.
         """
         Self.component_manager.assert_valid_components[*Ts]()
         comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
-        result = self.active_component_mask.contains(comp_mask)
-        return result
+        return self.active_component_mask.contains(comp_mask)
 
     def assert_has_component[T: ComponentType](self):
         """Asserts if the storage does not contain the given component type.
@@ -703,14 +702,14 @@ struct Archetype[
     var _storage: _ComponentStorage[*Self.ComponentTypes]
     """The component storage of the archetype."""
 
-    # The entities in the archetype
     var _entities: List[Entity]
+    """The entities stored in this archetype."""
 
-    # Index of the the archetype's node in the archetype graph
     var _node_index: Int
+    """Index of this archetype's node in the archetype graph."""
 
-    # Mask of the the archetype's node in the archetype graph
     var _mask: BitMask
+    """Component mask represented by this archetype."""
 
     def __init__(
         out self,
@@ -811,7 +810,7 @@ struct Archetype[
         self._mask = copy._mask
 
         # Copy the data
-        self._storage = copy._storage.copy_deep()
+        self._storage = copy._storage.deep_copy()
 
         _trace_function["OUT"]("Archetype.__init__ copy")
 
@@ -950,65 +949,6 @@ struct Archetype[
         )
 
         _trace_function["OUT"]("Archetype.get_entity_accessor")
-
-    #
-    # def unsafe_take_data_from_parts[](
-    #     mut self,
-    #     ids: InlineArray[Self.Id, Self.max_size],
-    #     data: InlineArray[
-    #         UnsafePointer[UInt8, MutExternalOrigin], Self.max_size
-    #     ],
-    #     item_sizes: InlineArray[Int, Self.max_size],
-    #     component_count: Int,
-    #     capacity: Int,
-    # ):
-    #     """Unsafely takes ownership of component storage described by raw archetype parts.
-
-    #     This helper transfers pointer ownership into `self` without cloning the underlying
-    #     component buffers. It is therefore only valid for internal handoff paths where the
-    #     caller guarantees that the source storage will not remain managed by another
-    #     archetype after this call. In practice, the source archetype must either be
-    #     reinitialized immediately (by calling [.Archetype.unsafe_reinit_components]) or
-    #     otherwise prevented from freeing or mutating the same pointers.
-
-    #     Args:
-    #         ids: The component IDs whose metadata and storage ownership are being taken.
-    #         data: The component storage pointers to transfer into this archetype.
-    #         item_sizes: The byte width for each component ID in `ids`.
-    #         component_count: The number of valid component entries contained in `ids`,
-    #             `data`, and `item_sizes`.
-    #         capacity: The storage capacity that the transferred buffers were allocated for.
-    #     """
-    #     for i in range(self._storage.get_component_count()):
-    #         var id = self._storage.active_component_ids[i]
-    #         check_bounds(id, Self.max_size)
-    #         var found = False
-    #         for j in range(component_count):
-    #             if ids[j] == id:
-    #                 var old_ptr_untyped = self.data[id].bitcast[UInt8]()
-    #                 if old_ptr_untyped != data[j]:
-    #                     # Free old pointer if different
-    #                     comptime for comp_id, T in enumerate(Self.ComponentTypes):
-    #                         if comp_id == id:
-    #                             old_ptr_untyped.bitcast[T]().free()
-    #                 # Store new typed pointer
-    #                 comptime for comp_id, T in enumerate(Self.ComponentTypes):
-    #                     if comp_id == id:
-    #                         self.data[comp_id] = data[j].bitcast[T]()
-    #                 self.item_sizes[id] = item_sizes[j]
-    #                 found = True
-    #                 break
-
-    #         if not found and self.capacity < capacity:
-    #             # Reallocate if sizes don't match
-    #             comptime for comp_id, T in enumerate(Self.ComponentTypes):
-    #                 if comp_id == id:
-    #                     var old_ptr = self.data[comp_id]
-    #                     old_ptr.free()
-    #                     var new_ptr = alloc[T](capacity)
-    #                     self.data[comp_id] = new_ptr
-
-    #     self.capacity = capacity
 
     def get_component[
         T: ComponentType
