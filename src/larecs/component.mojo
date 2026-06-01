@@ -66,7 +66,11 @@ struct ComponentManager[
     """The sizes of the component types handled by this ComponentManager."""
 
     def __init__(out self):
-        """Construct a component manager for the configured component types."""
+        """Construct a component manager for the configured component types.
+
+        Constraints:
+            The component count must fit into the bitmask capacity.
+        """
         comptime assert Self.component_count <= Int(Self.max_size)
 
     comptime _ContainsComponent[
