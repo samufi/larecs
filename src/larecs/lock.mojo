@@ -14,7 +14,7 @@ struct LockError(Equatable, ImplicitlyCopyable, Writable):
     comptime out_of_locks = LockError(_variant=1)
     comptime unbalanced_unlock = LockError(_variant=2)
 
-    def variant_name(self) -> String:
+    def variant_name(self) -> StaticString:
         """
         Returns the variant name.
 
@@ -28,7 +28,7 @@ struct LockError(Equatable, ImplicitlyCopyable, Writable):
         else:
             return "unknown"
 
-    def msg(self) -> String:
+    def msg(self) -> StaticString:
         """
         Returns the error message.
 

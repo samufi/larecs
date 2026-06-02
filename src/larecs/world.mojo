@@ -1,6 +1,7 @@
 from std.memory import UnsafePointer, Span
 from std.sys import size_of
 from std.algorithm.backend.vectorize import vectorize
+from std.builtin.globals import global_constant
 
 from .pool import EntityPool
 from .entity import Entity, EntityLocation
@@ -57,59 +58,45 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
             return Self.UNKNOWN
 
     @always_inline
-    def variant_name(self) -> String:
-        comptime VARIANT_NAMES = {
-            Self.UNKNOWN._variant: "unknown",
-            Self.non_existent_entity._variant: "non_existent_entity",
-            Self.world_is_locked._variant: "world_is_locked",
-            Self.missing_components_for_removal_entity._variant: (
-                "missing_components_for_removal_entity"
-            ),
-            Self.missing_components_for_removal_query._variant: (
-                "missing_components_for_removal_query"
-            ),
-            Self.duplicate_components_for_addition_entity._variant: (
-                "duplicate_components_for_addition_entity"
-            ),
-            Self.duplicate_components_for_addition_query._variant: (
-                "duplicate_components_for_addition_query"
-            ),
-            Self.out_of_locks._variant: "out_of_locks",
-            Self.unbalanced_unlock._variant: "unbalanced_unlock",
-        }
-        return materialize[VARIANT_NAMES]().get(self._variant, "unknown")
+    def variant_name(self) -> StaticString:
+        comptime VARIANT_NAMES: InlineArray[StaticString, 9] = [
+            "unknown",
+            "non_existent_entity",
+            "world_is_locked",
+            "missing_components_for_removal_entity",
+            "missing_components_for_removal_query",
+            "duplicate_components_for_addition_entity",
+            "duplicate_components_for_addition_query",
+            "out_of_locks",
+            "unbalanced_unlock",
+        ]
+        ref global_variant_names = global_constant[VARIANT_NAMES]()
+        return global_variant_names[self._variant]
 
     @always_inline
-    def msg(self) -> String:
-        comptime VARIANT_MESSAGES = {
-            Self.UNKNOWN._variant: "unknown",
-            Self.non_existent_entity._variant: (
-                "The considered entity does not exist anymore."
-            ),
-            Self.world_is_locked._variant: "Attempt to modify a locked world.",
-            Self.missing_components_for_removal_entity._variant: (
-                "Entity does not have all the components to remove."
-            ),
-            Self.missing_components_for_removal_query._variant: (
+    def msg(self) -> StaticString:
+        comptime VARIANT_MESSAGES: InlineArray[StaticString, 9] = [
+            "Unknown error.",
+            "The considered entity does not exist anymore.",
+            "Attempt to modify a locked world.",
+            "Entity does not have all the components to remove.",
+            (
                 "Query matches entities that do not have all the components to"
                 " remove. Use `Query[Component, ...]()` to include those"
                 " components."
             ),
-            Self.duplicate_components_for_addition_entity._variant: (
-                "Entity already has one of the components to add."
-            ),
-            Self.duplicate_components_for_addition_query._variant: (
+            "Entity already has one of the components to add.",
+            (
                 "Query matches entities that already have some of the"
                 " components to add. Use `Query.without[Component, ...]()` to"
                 " exclude those components."
             ),
-            Self.out_of_locks._variant: LockError.out_of_locks.msg(),
-            Self.unbalanced_unlock._variant: LockError.unbalanced_unlock.msg(),
-        }
+            LockError.out_of_locks.msg(),
+            LockError.unbalanced_unlock.msg(),
+        ]
 
-        return materialize[VARIANT_MESSAGES]().get(
-            self._variant, "Unknown error."
-        )
+        ref global_variant_messages = global_constant[VARIANT_MESSAGES]()
+        return global_variant_messages[self._variant]
 
     def write_to(self, mut writer: Some[Writer]):
         writer.write("WorldError.", self.variant_name(), ": ", self.msg())
