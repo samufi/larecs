@@ -6,10 +6,9 @@ from .bitmask import BitMask
 comptime NodeDataType = KeyElement & Copyable & ImplicitlyDestructible
 """The trait that the data stored in the graph nodes must conform to."""
 
+
 @fieldwise_init
-struct Node[DataType: NodeDataType](
-    ImplicitlyCopyable
-):
+struct Node[DataType: NodeDataType](ImplicitlyCopyable):
     """Node in a BitMaskGraph.
 
     Parameters:
