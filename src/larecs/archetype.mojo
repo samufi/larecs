@@ -1,6 +1,7 @@
 from std.sys.intrinsics import _type_is_eq
 from std.sys.defines import is_defined
 from std.reflection import reflect
+from std.reflection.traits import AllCopyable
 from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
 from .entity import Entity
@@ -251,23 +252,27 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self._unsafe_init_components(active_component_mask)
 
     def __init__(out self, *, copy: Self):
-        """Shallow-copies another component storage instance.
+        """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
 
-        Args:
-            copy: The storage instance to clone.
+        Returns:
+            A deep copy of the component storage with its own allocations.
         """
-        self.capacity = copy.capacity
-        self.size = copy.size
-        self.active_component_mask = copy.active_component_mask
-        self.data = Self._PointerTuple()
+        self = copy.shallow_copy()
 
         @always_inline
-        def copy_component_ptr[
+        def copy_component[
             T: ComponentType, id: ComponentId
-        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) {read} -> Self.ComponentPointer[T]:
-            return rebind[Self.ComponentPointer[T]](copy.data[id])
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) -> Self.ComponentPointer[T]:
+            new_ptr = alloc[T](storage_capacity)
+            if storage_size > 0:
+                uninit_copy_n[overlapping=False](
+                    dest=new_ptr, src=comp_ptr.value(), count=storage_size
+                )
+            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
-        self._for_active_components[is_mutating=True](copy_component_ptr)
+        self._for_active_components[
+            is_mutating=True
+        ](copy_component)
 
     @always_inline
     def __len__(self) -> Int:
@@ -294,28 +299,18 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             free_component_storage
         )
 
-    def deep_copy(self, out new_storage: Self):
-        """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
+    def shallow_copy(self, out new_storage: Self):
+        """Shallow-copies another component storage instance.
 
         Returns:
-            A deep copy of the component storage with its own allocations.
+            A shallow copy of the component storage.
         """
-        new_storage = Self(copy=self)
-
-        @always_inline
-        def copy_component[
-            T: ComponentType, id: ComponentId
-        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) -> Self.ComponentPointer[T]:
-            new_ptr = alloc[T](storage_capacity)
-            if storage_size > 0:
-                uninit_copy_n[overlapping=False](
-                    dest=new_ptr, src=comp_ptr.value(), count=storage_size
-                )
-            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
-
-        new_storage._for_active_components[
-            is_mutating=True
-        ](copy_component)
+        new_storage = Self(active_component_mask=self.active_component_mask, capacity=0)
+        new_storage.capacity = self.capacity
+        new_storage.size = self.size
+        new_storage.active_component_mask = self.active_component_mask
+        comptime assert AllCopyable[*Self.ComponentTypes.map[Self._PointerMapper]()]
+        new_storage.data = self.data.copy()
 
     def _unsafe_init_components(mut self, read init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
@@ -336,9 +331,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             T: ComponentType, id: ComponentId
         ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) {read} -> Self.ComponentPointer[T]:
             if init_component_mask.get(id):
-                return rebind[Self.ComponentPointer[T]](
-                    Optional(alloc[T](storage_capacity))
-                )
+                if storage_capacity > 0:
+                    return rebind[Self.ComponentPointer[T]](
+                        Optional(alloc[T](storage_capacity))
+                    )
+                return None
             else:
                 return comp_ptr
 
@@ -843,7 +840,7 @@ struct Archetype[
         self._mask = copy._mask
 
         # Copy the data
-        self._storage = copy._storage.deep_copy()
+        self._storage = copy._storage.copy()
 
         _trace_function["OUT"]("Archetype.__init__ copy")
 
