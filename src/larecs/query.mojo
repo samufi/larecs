@@ -211,16 +211,11 @@ struct Query[
         )
 
         try:
-            iterator = Self.World.Iterator[
-                origin_of(self._world[]._archetypes),
-                origin_of(self._world[]._locks),
-                has_start_indices=False,
-                has_without_mask=Self.has_without_mask,
-            ](
+            iterator = {
                 it^,
                 Pointer(to=self._world[]._locks),
                 None,
-            )
+            }
             _trace_function["OUT"]("Query.__iter__")
         except _:
             _trace_function["OUT"]("Query.__iter__")
