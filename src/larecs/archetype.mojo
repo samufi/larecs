@@ -207,7 +207,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
     comptime _PointerMapper[
         T: ComponentType
-    ]: ImplicitlyCopyable & RegisterPassable & Defaultable = Self.ComponentPointer[
+    ]: ImplicitlyCopyable & ImplicitlyDestructible & RegisterPassable & Defaultable = Self.ComponentPointer[
         T
     ]
 
