@@ -1,7 +1,20 @@
-from std.collections.check_bounds import check_bounds
 from std.memory import uninit_copy_n
 from std.sys.defines import is_defined
 from std.time import global_perf_counter_ns
+from std.collections.check_bounds import check_bounds
+
+
+# FIXME: This is needed because of this [bug](https://github.com/modular/modular/issues/6636). Remove this and use `check_bounds` directly once the bug is fixed.
+@always_inline
+def _assert_index_in_bounds(index: Int, size: Int):
+    """Asserts that an index refers to a valid element.
+
+    Args:
+        index: The candidate index to validate.
+        size: The logical number of available elements.
+    """
+    # assert 0 <= index and index < size, "Index out of bounds"
+    check_bounds(index, size)
 
 
 @always_inline
