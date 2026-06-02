@@ -46,37 +46,7 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
         _variant=6,
     )
     comptime out_of_locks = WorldError(_variant=7)
-    comptime unbalanced_unlock = WorldError(_variant=7)
-
-    def variant_name(self) -> String:
-        if self._variant == Self.non_existent_entity._variant:
-            return "non_existent_entity"
-        elif self._variant == Self.world_is_locked._variant:
-            return "world_is_locked"
-        elif (
-            self._variant == Self.missing_components_for_removal_entity._variant
-        ):
-            return "missing_components_for_removal_entity"
-        elif (
-            self._variant == Self.missing_components_for_removal_query._variant
-        ):
-            return "missing_components_for_removal_query"
-        elif (
-            self._variant
-            == Self.duplicate_components_for_addition_entity._variant
-        ):
-            return "duplicate_components_for_addition_entity"
-        elif (
-            self._variant
-            == Self.duplicate_components_for_addition_query._variant
-        ):
-            return "duplicate_components_for_addition_query"
-        elif self._variant == Self.out_of_locks._variant:
-            return LockError.out_of_locks.variant_name()
-        elif self._variant == Self.unbalanced_unlock._variant:
-            return LockError.unbalanced_unlock.variant_name()
-        else:
-            return "unknown"
+    comptime unbalanced_unlock = WorldError(_variant=8)
 
     def __init__(out self, e: LockError):
         if e._variant == LockError.out_of_locks._variant:
@@ -86,43 +56,60 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
         else:
             return Self.UNKNOWN
 
+    @always_inline
+    def variant_name(self) -> String:
+        comptime VARIANT_NAMES = {
+            Self.UNKNOWN._variant: "unknown",
+            Self.non_existent_entity._variant: "non_existent_entity",
+            Self.world_is_locked._variant: "world_is_locked",
+            Self.missing_components_for_removal_entity._variant: (
+                "missing_components_for_removal_entity"
+            ),
+            Self.missing_components_for_removal_query._variant: (
+                "missing_components_for_removal_query"
+            ),
+            Self.duplicate_components_for_addition_entity._variant: (
+                "duplicate_components_for_addition_entity"
+            ),
+            Self.duplicate_components_for_addition_query._variant: (
+                "duplicate_components_for_addition_query"
+            ),
+            Self.out_of_locks._variant: "out_of_locks",
+            Self.unbalanced_unlock._variant: "unbalanced_unlock",
+        }
+        return materialize[VARIANT_NAMES]().get(self._variant, "unknown")
+
+    @always_inline
     def msg(self) -> String:
-        if self._variant == Self.non_existent_entity._variant:
-            return "The considered entity does not exist anymore."
-        elif self._variant == Self.world_is_locked._variant:
-            return "Attempt to modify a locked world."
-        elif (
-            self._variant == Self.missing_components_for_removal_entity._variant
-        ):
-            return "Entity does not have all the components to remove."
-        elif (
-            self._variant == Self.missing_components_for_removal_query._variant
-        ):
-            return (
+        comptime VARIANT_MESSAGES = {
+            Self.UNKNOWN._variant: "unknown",
+            Self.non_existent_entity._variant: (
+                "The considered entity does not exist anymore."
+            ),
+            Self.world_is_locked._variant: "Attempt to modify a locked world.",
+            Self.missing_components_for_removal_entity._variant: (
+                "Entity does not have all the components to remove."
+            ),
+            Self.missing_components_for_removal_query._variant: (
                 "Query matches entities that do not have all the components to"
                 " remove. Use `Query[Component, ...]()` to include those"
                 " components."
-            )
-        elif (
-            self._variant
-            == Self.duplicate_components_for_addition_entity._variant
-        ):
-            return "Entity already has one of the components to add."
-        elif (
-            self._variant
-            == Self.duplicate_components_for_addition_query._variant
-        ):
-            return (
+            ),
+            Self.duplicate_components_for_addition_entity._variant: (
+                "Entity already has one of the components to add."
+            ),
+            Self.duplicate_components_for_addition_query._variant: (
                 "Query matches entities that already have some of the"
                 " components to add. Use `Query.without[Component, ...]()` to"
                 " exclude those components."
-            )
-        elif self._variant == Self.out_of_locks._variant:
-            return LockError.out_of_locks.msg()
-        elif self._variant == Self.unbalanced_unlock._variant:
-            return LockError.unbalanced_unlock.msg()
-        else:
-            return "Unknown error."
+            ),
+            Self.out_of_locks._variant: LockError.out_of_locks.msg(),
+            Self.unbalanced_unlock._variant: LockError.unbalanced_unlock.msg(),
+        }
+
+        return materialize[VARIANT_MESSAGES]().get(
+            self._variant, "Unknown error."
+        )
 
     def write_to(self, mut writer: Some[Writer]):
         writer.write("WorldError.", self.variant_name(), ": ", self.msg())
