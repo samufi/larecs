@@ -30,7 +30,8 @@ from .query import (
 )
 from .lock import LockManager, LockedContext, LockError
 from .resource import Resources
-from ._utils import concatenate_inline_arrays, _trace_function
+from ._utils import concatenate_inline_arrays
+from ._tracing import TraceGuard
 
 
 @fieldwise_init
@@ -424,25 +425,24 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Creates a new [.World].
         """
-        _trace_function["IN"]("World.__init__")
-        self._archetype_map = BitMaskGraph[-1](0)
-        self._archetypes = [Self.Archetype()]
-        self._entities = [EntityLocation(0, 0)]
-        self._entity_pool = EntityPool()
-        self._locks = LockManager()
-        self.resources = Resources()
+        with TraceGuard(name="World.__init__"):
+            self._archetype_map = BitMaskGraph[-1](0)
+            self._archetypes = [Self.Archetype()]
+            self._entities = [EntityLocation(0, 0)]
+            self._entity_pool = EntityPool()
+            self._locks = LockManager()
+            self.resources = Resources()
 
-        # TODO
-        # var _tarquery = bitSet
-        # _tarquery.ExtendTo(1)
-        # self._tarquery = _tarquery
+            # TODO
+            # var _tarquery = bitSet
+            # _tarquery.ExtendTo(1)
+            # self._tarquery = _tarquery
 
-        # self._listener:       nil,
-        # self._resources:      newResources(),
-        # self._filter_cache:    newCache(),
+            # self._listener:       nil,
+            # self._resources:      newResources(),
+            # self._filter_cache:    newCache(),
 
-        # var node = self.createArchetypeNode(Mask, ID, false)
-        _trace_function["OUT"]("World.__init__")
+            # var node = self.createArchetypeNode(Mask, ID, false)
 
     def __len__(self) -> Int:
         """
@@ -451,12 +451,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Note that this requires iterating over all archetypes and
         may be an expensive operation.
         """
-        _trace_function["IN"]("World.__len__")
-        size = 0
-        for archetype in self._archetypes:
-            size += len(archetype)
-        _trace_function["OUT"]("World.__len__")
-        return size
+        with TraceGuard(name="World.__len__"):
+            size = 0
+            for archetype in self._archetypes:
+                size += len(archetype)
+            return size
 
     @always_inline
     def _get_archetype_index[
@@ -474,24 +473,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The archetype list index of the archetype differing from the start
             archetype by the components at the given indices.
         """
-        _trace_function["IN"]("World._get_archetype_index root")
-        node_index = self._archetype_map.get_node_index(components, 0)
-        if self._archetype_map.has_value(node_index):
-            _trace_function["OUT"]("World._get_archetype_index root")
-            return self._archetype_map[node_index]
+        with TraceGuard(name="World._get_archetype_index root"):
+            node_index = self._archetype_map.get_node_index(components, 0)
+            if self._archetype_map.has_value(node_index):
+                return self._archetype_map[node_index]
 
-        archetype_index = len(self._archetypes)
-        self._archetypes.append(
-            Self.Archetype(
-                node_index,
-                components,
+            archetype_index = len(self._archetypes)
+            self._archetypes.append(
+                Self.Archetype(
+                    node_index,
+                    components,
+                )
             )
-        )
 
-        self._archetype_map[node_index] = archetype_index
+            self._archetype_map[node_index] = archetype_index
 
-        _trace_function["OUT"]("World._get_archetype_index root")
-        return archetype_index
+            return archetype_index
 
     @always_inline
     def _get_archetype_index[
@@ -517,27 +514,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Constraints:
             `size` must be non-negative.
         """
-        _trace_function["IN"]("World._get_archetype_index start")
-        comptime assert 0 <= size, "Size must be non-negative."
-        node_index = self._archetype_map.get_node_index(
-            components, start_node_index
-        )
-        if self._archetype_map.has_value(node_index):
-            _trace_function["OUT"]("World._get_archetype_index start")
-            return self._archetype_map[node_index]
-
-        archetype_index = len(self._archetypes)
-        self._archetypes.append(
-            Self.Archetype(
-                node_index,
-                self._archetype_map.get_node_mask(node_index),
+        with TraceGuard(name="World._get_archetype_index start"):
+            comptime assert 0 <= size, "Size must be non-negative."
+            node_index = self._archetype_map.get_node_index(
+                components, start_node_index
             )
-        )
+            if self._archetype_map.has_value(node_index):
+                return self._archetype_map[node_index]
 
-        self._archetype_map[node_index] = archetype_index
+            archetype_index = len(self._archetypes)
+            self._archetypes.append(
+                Self.Archetype(
+                    node_index,
+                    self._archetype_map.get_node_mask(node_index),
+                )
+            )
 
-        _trace_function["OUT"]("World._get_archetype_index start")
-        return archetype_index
+            self._archetype_map[node_index] = archetype_index
+
+            return archetype_index
 
     def add_entity[
         *Ts: ComponentType
@@ -587,46 +582,45 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The new or recycled [..entity.Entity].
 
         """
-        _trace_function["IN"]("World.add_entity")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "Not all component types are in the component manager."
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in add_entity are not allowed."
+        with TraceGuard(name="World.add_entity"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "Not all component types are in the component manager."
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in add_entity are not allowed."
 
-        self._assert_unlocked()
+            self._assert_unlocked()
 
-        comptime component_count = len(Ts)
+            comptime component_count = len(Ts)
 
-        comptime if component_count:
-            archetype_index = self._get_archetype_index(
-                Self.component_manager.get_id_arr[*Ts]()
-            )
-        else:
-            archetype_index = 0
+            comptime if component_count:
+                archetype_index = self._get_archetype_index(
+                    Self.component_manager.get_id_arr[*Ts]()
+                )
+            else:
+                archetype_index = 0
 
-        entity = self._create_entity(archetype_index)
+            entity = self._create_entity(archetype_index)
 
-        comptime if component_count:
-            entity_index = self._entities[entity.get_id()].entity_index
-            self._archetypes[archetype_index].set_components[*Ts](
-                entity_index, *components^
-            )
+            comptime if component_count:
+                entity_index = self._entities[entity.get_id()].entity_index
+                self._archetypes[archetype_index].set_components[*Ts](
+                    entity_index, *components^
+                )
 
-        # TODO
-        # if self._listener != nil:
-        #     var newRel *Id
-        #     if arch.HasRelationComponent:
-        #         newRel = &arch.RelationComponent
+            # TODO
+            # if self._listener != nil:
+            #     var newRel *Id
+            #     if arch.HasRelationComponent:
+            #         newRel = &arch.RelationComponent
 
-        #     var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
-        #     var trigger = self._listener.Subscriptions() & bits
-        #     if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
-        #         self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
+            #     var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
+            #     var trigger = self._listener.Subscriptions() & bits
+            #     if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
+            #         self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
 
-        _trace_function["OUT"]("World.add_entity")
-        return
+            return
 
     def add_entities[
         *Ts: ComponentType
@@ -686,57 +680,58 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator to the new or recycled [..entity.Entity Entities].
 
         """
-        _trace_function["IN"]("World.add_entities")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "Not all component types are in the component manager."
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in add_entities are not allowed."
+        with TraceGuard(name="World.add_entities"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "Not all component types are in the component manager."
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in add_entities are not allowed."
 
-        debug_assert(0 <= count, "Count must be non-negative.")
+            debug_assert(0 <= count, "Count must be non-negative.")
 
-        self._assert_unlocked()
+            self._assert_unlocked()
 
-        comptime component_count = len(Ts)
+            comptime component_count = len(Ts)
 
-        comptime if component_count:
-            archetype_index = self._get_archetype_index(
-                Self.component_manager.get_id_arr[*Ts]()
-            )
-        else:
-            archetype_index = 0
+            comptime if component_count:
+                archetype_index = self._get_archetype_index(
+                    Self.component_manager.get_id_arr[*Ts]()
+                )
+            else:
+                archetype_index = 0
 
-        first_index_in_archetype = self._create_entities(archetype_index, count)
-
-        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
-
-        comptime for i in range(component_count):
-            comptime T = Ts[i]
-            comptime assert Self.component_manager._ContainsComponent[
-                T
-            ], "Component type is not part of the world."
-            archetype[].set_component_range[T](
-                first_index_in_archetype, count, components[i]
+            first_index_in_archetype = self._create_entities(
+                archetype_index, count
             )
 
-        comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-            origin_of(self._archetypes)
-        ]
+            archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
 
-        try:
-            iterator = {
-                ArchetypeByListIterator(
-                    list_iterator=ArchetypeByListIterator.list_iterator(
-                        Pointer(to=self._archetypes), [archetype_index]
+            comptime for i in range(component_count):
+                comptime T = Ts[i]
+                comptime assert Self.component_manager._ContainsComponent[
+                    T
+                ], "Component type is not part of the world."
+                archetype[].set_component_range[T](
+                    first_index_in_archetype, count, components[i]
+                )
+
+            comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
+                origin_of(self._archetypes)
+            ]
+
+            try:
+                iterator = {
+                    ArchetypeByListIterator(
+                        list_iterator=ArchetypeByListIterator.list_iterator(
+                            Pointer(to=self._archetypes), [archetype_index]
+                        ),
                     ),
-                ),
-                Pointer(to=self._locks),
-                {[first_index_in_archetype]},
-            }
-        except _:
-            raise WorldError.UNKNOWN
-        _trace_function["OUT"]("World.add_entities")
+                    Pointer(to=self._locks),
+                    {[first_index_in_archetype]},
+                }
+            except _:
+                raise WorldError.UNKNOWN
 
     @always_inline
     def _create_entity(mut self, archetype_index: Int, out entity: Entity):
@@ -746,16 +741,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The new entity.
         """
-        _trace_function["IN"]("World._create_entity")
-        entity = self._entity_pool.get()
-        idx = self._archetypes.unsafe_get(archetype_index).add(entity)
-        if entity.get_id() == len(self._entities):
-            self._entities.append(EntityLocation(idx, archetype_index))
-        else:
-            self._entities[entity.get_id()] = EntityLocation(
-                idx, archetype_index
-            )
-        _trace_function["OUT"]("World._create_entity")
+        with TraceGuard(name="World._create_entity"):
+            entity = self._entity_pool.get()
+            idx = self._archetypes.unsafe_get(archetype_index).add(entity)
+            if entity.get_id() == len(self._entities):
+                self._entities.append(EntityLocation(idx, archetype_index))
+            else:
+                self._entities[entity.get_id()] = EntityLocation(
+                    idx, archetype_index
+                )
 
     @always_inline
     def _create_entities(mut self, archetype_index: Int, count: Int) -> Int:
@@ -765,29 +759,28 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The index of the first newly created entity in the archetype.
         """
-        _trace_function["IN"]("World._create_entities")
-        archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
-        arch_start_idx = archetype[].extend(count, self._entity_pool)
-        entities_size = (
-            archetype[].get_entity(arch_start_idx + count - 1).get_id() + 1
-        )
-        if entities_size > len(self._entities):
-            if entities_size > self._entities.capacity:
-                self._entities.reserve(
-                    max(entities_size, 2 * self._entities.capacity)
+        with TraceGuard(name="World._create_entities"):
+            archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
+            arch_start_idx = archetype[].extend(count, self._entity_pool)
+            entities_size = (
+                archetype[].get_entity(arch_start_idx + count - 1).get_id() + 1
+            )
+            if entities_size > len(self._entities):
+                if entities_size > self._entities.capacity:
+                    self._entities.reserve(
+                        max(entities_size, 2 * self._entities.capacity)
+                    )
+
+                self._entities.resize(
+                    entities_size, EntityLocation(0, archetype_index)
                 )
 
-            self._entities.resize(
-                entities_size, EntityLocation(0, archetype_index)
-            )
+            for i in range(arch_start_idx, arch_start_idx + count):
+                entity_id = archetype[].get_entity(i).get_id()
+                self._entities[entity_id].archetype_index = archetype_index
+                self._entities[entity_id].entity_index = arch_start_idx + i
 
-        for i in range(arch_start_idx, arch_start_idx + count):
-            entity_id = archetype[].get_entity(i).get_id()
-            self._entities[entity_id].archetype_index = archetype_index
-            self._entities[entity_id].entity_index = arch_start_idx + i
-
-        _trace_function["OUT"]("World._create_entities")
-        return arch_start_idx
+            return arch_start_idx
 
     def remove_entity(mut self, entity: Entity) raises:
         """
@@ -801,41 +794,44 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked or the entity does not exist.
         """
-        _trace_function["IN"]("World.remove_entity")
         self._assert_unlocked()
         self._assert_alive(entity)
 
-        entity_loc = self._entities[entity.get_id()]
-        old_archetype = Pointer(
-            to=self._archetypes.unsafe_get(index(entity_loc.archetype_index))
-        )
+        with TraceGuard(name="World.remove_entity"):
+            entity_loc = self._entities[entity.get_id()]
+            old_archetype = Pointer(
+                to=self._archetypes.unsafe_get(
+                    index(entity_loc.archetype_index)
+                )
+            )
 
-        # if self._listener != nil:
-        #     var oldRel *Id
-        #     if old_archetype.HasRelationComponent:
-        #         oldRel = &old_archetype.RelationComponent
+            # if self._listener != nil:
+            #     var oldRel *Id
+            #     if old_archetype.HasRelationComponent:
+            #         oldRel = &old_archetype.RelationComponent
 
-        #     var oldIds []Id
-        #     if len(old_archetype.node.Ids) > 0:
-        #         oldIds = old_archetype.node.Ids
+            #     var oldIds []Id
+            #     if len(old_archetype.node.Ids) > 0:
+            #         oldIds = old_archetype.node.Ids
 
-        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
-        #     var trigger = self._listener.Subscriptions() & bits
-        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
-        #         var lock = self.lock()
-        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
-        #         self.unlock(lock)
+            #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+            #     var trigger = self._listener.Subscriptions() & bits
+            #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
+            #         var lock = self.lock()
+            #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
+            #         self.unlock(lock)
 
-        swapped = old_archetype[].remove(entity_loc.entity_index)
+            swapped = old_archetype[].remove(entity_loc.entity_index)
 
-        self._entity_pool.recycle(entity)
+            self._entity_pool.recycle(entity)
 
-        if swapped:
-            swap_entity = old_archetype[].get_entity(entity_loc.entity_index)
-            self._entities[
-                swap_entity.get_id()
-            ].entity_index = entity_loc.entity_index
-        _trace_function["OUT"]("World.remove_entity")
+            if swapped:
+                swap_entity = old_archetype[].get_entity(
+                    entity_loc.entity_index
+                )
+                self._entities[
+                    swap_entity.get_id()
+                ].entity_index = entity_loc.entity_index
 
     def remove_entities(mut self, query: QueryInfo) raises:
         """
@@ -865,32 +861,31 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked.
         """
-        _trace_function["IN"]("World.remove_entities")
         self._assert_unlocked()
 
-        for archetype in self._get_archetype_iterator(
-            query.mask, query.without_mask
-        ):
-            for entity in archetype[].get_entities():
-                self._entity_pool.recycle(entity)
-            archetype[].clear()
+        with TraceGuard(name="World.remove_entities"):
+            for archetype in self._get_archetype_iterator(
+                query.mask, query.without_mask
+            ):
+                for entity in archetype[].get_entities():
+                    self._entity_pool.recycle(entity)
+                archetype[].clear()
 
-        # if self._listener != nil:
-        #     var oldRel *Id
-        #     if old_archetype.HasRelationComponent:
-        #         oldRel = &old_archetype.RelationComponent
+            # if self._listener != nil:
+            #     var oldRel *Id
+            #     if old_archetype.HasRelationComponent:
+            #         oldRel = &old_archetype.RelationComponent
 
-        #     var oldIds []Id
-        #     if len(old_archetype.node.Ids) > 0:
-        #         oldIds = old_archetype.node.Ids
+            #     var oldIds []Id
+            #     if len(old_archetype.node.Ids) > 0:
+            #         oldIds = old_archetype.node.Ids
 
-        #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
-        #     var trigger = self._listener.Subscriptions() & bits
-        #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
-        #         var lock = self.lock()
-        #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
-        #         self.unlock(lock)
-        _trace_function["OUT"]("World.remove_entities")
+            #     var bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+            #     var trigger = self._listener.Subscriptions() & bits
+            #     if trigger != 0 && subscribes(trigger, nil, &old_archetype.Mask, self._listener.Components(), oldRel, nil):
+            #         var lock = self.lock()
+            #         self._listener.Notify(self, EntityEventEntity: entity, Removed: old_archetype.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: old_archetype.RelationTarget, EventTypes: bits)
+            #         self.unlock(lock)
 
     @always_inline
     def is_alive(self, entity: Entity) -> Bool:
@@ -900,10 +895,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             entity: The entity to check.
         """
-        _trace_function["IN"]("World.is_alive")
-        result = self._entity_pool.is_alive(entity)
-        _trace_function["OUT"]("World.is_alive")
-        return result
+        with TraceGuard(name="World.is_alive"):
+            return self._entity_pool.is_alive(entity)
 
     @always_inline
     def has[T: ComponentType](self, entity: Entity) raises WorldError -> Bool:
@@ -919,16 +912,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
-        _trace_function["IN"]("World.has")
-        comptime assert Self.component_manager._ContainsComponent[
-            T
-        ], "Component type not in component manager"
-        self._assert_alive(entity)
-        result = self._archetypes.unsafe_get(
-            index(self._entities[entity.get_id()].archetype_index)
-        ).has_component[T]()
-        _trace_function["OUT"]("World.has")
-        return result
+        with TraceGuard(name="World.has"):
+            comptime assert Self.component_manager._ContainsComponent[
+                T
+            ], "Component type not in component manager"
+            self._assert_alive(entity)
+            return self._archetypes.unsafe_get(
+                index(self._entities[entity.get_id()].archetype_index)
+            ).has_component[T]()
 
     @always_inline
     def get[
@@ -942,22 +933,21 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity is not alive or does not have the component.
         """
-        _trace_function["IN"]("World.get")
         comptime assert Self.component_manager._ContainsComponent[
             T
         ], "Component type not in component manager"
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        if not self._archetypes.unsafe_get(
-            entity_loc.archetype_index
-        ).has_component[T]():
-            raise Error("The component is missing.")
+        with TraceGuard(name="World.get"):
+            if not self._archetypes.unsafe_get(
+                entity_loc.archetype_index
+            ).has_component[T]():
+                raise Error("The component is missing.")
 
-        _trace_function["OUT"]("World.get")
-        return self._archetypes.unsafe_get(
-            entity_loc.archetype_index
-        ).get_component[T](entity_loc.entity_index)
+            return self._archetypes.unsafe_get(
+                entity_loc.archetype_index
+            ).get_component[T](entity_loc.entity_index)
 
     @always_inline
     def set[
@@ -976,16 +966,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the [..entity.Entity] does not exist.
         """
-        _trace_function["IN"]("World.set")
-        comptime assert Self.component_manager._ContainsComponent[
-            T
-        ], "Component type not in component manager"
-        self._assert_alive(entity)
-        entity_loc = self._entities[entity.get_id()]
-        self._archetypes.unsafe_get(entity_loc.archetype_index).set_component[
-            T
-        ](entity_loc.entity_index, component^)
-        _trace_function["OUT"]("World.set")
+        with TraceGuard(name="World.set"):
+            comptime assert Self.component_manager._ContainsComponent[
+                T
+            ], "Component type not in component manager"
+            self._assert_alive(entity)
+            entity_loc = self._entities[entity.get_id()]
+            self._archetypes.unsafe_get(
+                entity_loc.archetype_index
+            ).set_component[T](entity_loc.entity_index, component^)
 
     @always_inline
     def set[
@@ -1005,20 +994,19 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the entity does not exist.
             Error: If the entity does not have one of the components.
         """
-        _trace_function["IN"]("World.set_components")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "One or more component types not in component manager"
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in set are not allowed."
+        with TraceGuard(name="World.set_components"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "One or more component types not in component manager"
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in set are not allowed."
 
-        self._assert_alive(entity)
-        entity_loc = self._entities[entity.get_id()]
-        self._archetypes.unsafe_get(entity_loc.archetype_index).set_components[
-            *Ts
-        ](entity_loc.entity_index, *components^)
-        _trace_function["OUT"]("World.set_components")
+            self._assert_alive(entity)
+            entity_loc = self._entities[entity.get_id()]
+            self._archetypes.unsafe_get(
+                entity_loc.archetype_index
+            ).set_components[*Ts](entity_loc.entity_index, *components^)
 
     def add[
         *Ts: ComponentType
@@ -1038,9 +1026,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        _trace_function["IN"]("World.add")
-        self._remove_and_add(entity, *add_components^)
-        _trace_function["OUT"]("World.add")
+        with TraceGuard(name="World.add"):
+            self._remove_and_add(entity, *add_components^)
 
     def add[
         *Ts: ComponentType
@@ -1060,9 +1047,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        _trace_function["IN"]("World.add reversed")
-        self._remove_and_add(entity, *add_components^)
-        _trace_function["OUT"]("World.add reversed")
+        with TraceGuard(name="World.add reversed"):
+            self._remove_and_add(entity, *add_components^)
 
     def add[
         has_without_mask: Bool, //, *Ts: ComponentType
@@ -1123,19 +1109,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match existing entities that already have at least one of the
                 components to add.
         """
-        _trace_function["IN"]("World.add query")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "One or more component types not in component manager"
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in add are not allowed."
+        with TraceGuard(name="World.add query"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "One or more component types not in component manager"
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in add are not allowed."
 
-        _trace_function["OUT"]("World.add query")
-        return self._batch_remove_and_add(
-            query,
-            *add_components^,
-        )
+            return self._batch_remove_and_add(
+                query,
+                *add_components^,
+            )
 
     def remove[*Ts: ComponentType](mut self, entity: Entity) raises WorldError:
         """
@@ -1152,18 +1137,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        _trace_function["IN"]("World.remove")
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in remove are not allowed."
+        with TraceGuard(name="World.remove"):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in remove are not allowed."
 
-        self._remove_and_add[
-            rem_size=len(Ts),
-            remove_ids=Self._optional_component_ids[*Ts],
-        ](
-            entity,
-        )
-        _trace_function["OUT"]("World.remove")
+            self._remove_and_add[
+                rem_size=len(Ts),
+                remove_ids=Self._optional_component_ids[*Ts],
+            ](
+                entity,
+            )
 
     def remove[
         *Ts: ComponentType, has_without_mask: Bool = False
@@ -1221,19 +1205,18 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
         #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
         #     into one.  This also enables potential parallelization optimizations.
-        _trace_function["IN"]("World.remove query")
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in remove are not allowed."
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "One or more component types not in component manager"
+        with TraceGuard(name="World.remove query"):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in remove are not allowed."
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "One or more component types not in component manager"
 
-        _trace_function["OUT"]("World.remove query")
-        return self._batch_remove_and_add[
-            rem_size=len(Ts),
-            remove_ids=Self._optional_component_ids[*Ts],
-        ](query)
+            return self._batch_remove_and_add[
+                rem_size=len(Ts),
+                remove_ids=Self._optional_component_ids[*Ts],
+            ](query)
 
     @always_inline
     def replace[
@@ -1254,13 +1237,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts: The types of the components to remove.
         """
-        _trace_function["IN"]("World.replace")
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in replace are not allowed."
+        with TraceGuard(name="World.replace"):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in replace are not allowed."
 
-        _trace_function["OUT"]("World.replace")
-        return {Pointer(to=self)}
+            return {Pointer(to=self)}
 
     @always_inline
     def _remove_and_add[
@@ -1286,108 +1268,108 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        _trace_function["IN"]("World._remove_and_add")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "One or more component types not in component manager"
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in remove are not allowed."
+        with TraceGuard(name="World._remove_and_add"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "One or more component types not in component manager"
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in remove are not allowed."
 
-        comptime add_size = len(Ts)
-        comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
+            comptime add_size = len(Ts)
+            comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
-        runtime_remove_ids = remove_ids
+            runtime_remove_ids = remove_ids
 
-        self._assert_unlocked()
-        self._assert_alive(entity)
+            self._assert_unlocked()
+            self._assert_alive(entity)
 
-        # Reserve space for the possibility that a new archetype gets created
-        # This ensure that no further allocations can happen in this function and
-        # therefore all pointers to the current memory space stay valid!
-        self._archetypes.reserve(len(self._archetypes) + 1)
+            # Reserve space for the possibility that a new archetype gets created
+            # This ensure that no further allocations can happen in this function and
+            # therefore all pointers to the current memory space stay valid!
+            self._archetypes.reserve(len(self._archetypes) + 1)
 
-        entity_loc = self._entities[entity.get_id()]
+            entity_loc = self._entities[entity.get_id()]
 
-        old_archetype_idx = entity_loc.archetype_index
-        old_archetype = Pointer(
-            to=self._archetypes.unsafe_get(index(old_archetype_idx))
-        )
-        old_archetype_mask = old_archetype[].get_mask()
-
-        comptime if rem_size:
-            if not old_archetype_mask.contains(BitMask(runtime_remove_ids)):
-                raise WorldError.missing_components_for_removal_entity
-
-        comptime if add_size:
-            compare_mask = old_archetype_mask
-
-            comptime if rem_size:
-                compare_mask.set(runtime_remove_ids, False)
-            if compare_mask.contains(BitMask(add_ids)):
-                raise WorldError.duplicate_components_for_addition_entity
-
-        comptime ComponentIdsType = InlineArray[
-            Self.ComponentId, add_size + rem_size
-        ]
-        comptime assert 0 <= add_size + rem_size
-        var component_ids: ComponentIdsType
-
-        comptime if add_size and rem_size:
-            comptime concatenated = concatenate_inline_arrays(
-                remove_ids, add_ids
+            old_archetype_idx = entity_loc.archetype_index
+            old_archetype = Pointer(
+                to=self._archetypes.unsafe_get(index(old_archetype_idx))
             )
-            component_ids = rebind[ComponentIdsType](concatenated)
-        elif Bool(add_size) and not rem_size:
-            component_ids = rebind[ComponentIdsType](add_ids)
-        elif not add_size and Bool(rem_size):
-            component_ids = rebind[ComponentIdsType](runtime_remove_ids)
-        else:
-            _trace_function["OUT"]("World._remove_and_add")
-            return
-
-        index_in_old_archetype = entity_loc.entity_index
-        comptime assert 0 <= add_size + rem_size
-        new_archetype_idx = self._get_archetype_index(
-            component_ids, old_archetype[].get_node_index()
-        )
-        new_archetype = Pointer(
-            to=self._archetypes.unsafe_get(new_archetype_idx)
-        )
-        index_in_new_archetype = new_archetype[].add(entity)
-
-        # Move component data from old archetype to new archetype.
-        comptime for id in range(Self.component_manager.component_count):
-            comptime T = Self.component_types[id]
-            if not old_archetype[].has_component[T]():
-                continue
+            old_archetype_mask = old_archetype[].get_mask()
 
             comptime if rem_size:
-                if not new_archetype[].has_component[T]():
+                if not old_archetype_mask.contains(BitMask(runtime_remove_ids)):
+                    raise WorldError.missing_components_for_removal_entity
+
+            comptime if add_size:
+                compare_mask = old_archetype_mask
+
+                comptime if rem_size:
+                    compare_mask.set(runtime_remove_ids, False)
+                if compare_mask.contains(BitMask(add_ids)):
+                    raise WorldError.duplicate_components_for_addition_entity
+
+            comptime ComponentIdsType = InlineArray[
+                Self.ComponentId, add_size + rem_size
+            ]
+            comptime assert 0 <= add_size + rem_size
+            var component_ids: ComponentIdsType
+
+            comptime if add_size and rem_size:
+                comptime concatenated = concatenate_inline_arrays(
+                    remove_ids, add_ids
+                )
+                component_ids = rebind[ComponentIdsType](concatenated)
+            elif Bool(add_size) and not rem_size:
+                component_ids = rebind[ComponentIdsType](add_ids)
+            elif not add_size and Bool(rem_size):
+                component_ids = rebind[ComponentIdsType](runtime_remove_ids)
+            else:
+                return
+
+            index_in_old_archetype = entity_loc.entity_index
+            comptime assert 0 <= add_size + rem_size
+            new_archetype_idx = self._get_archetype_index(
+                component_ids, old_archetype[].get_node_index()
+            )
+            new_archetype = Pointer(
+                to=self._archetypes.unsafe_get(new_archetype_idx)
+            )
+            index_in_new_archetype = new_archetype[].add(entity)
+
+            # Move component data from old archetype to new archetype.
+            comptime for id in range(Self.component_manager.component_count):
+                comptime T = Self.component_types[id]
+                if not old_archetype[].has_component[T]():
                     continue
 
-            new_archetype[].set_component[T](
-                index_in_new_archetype,
-                old_archetype[].get_component[T](index_in_old_archetype).copy(),
+                comptime if rem_size:
+                    if not new_archetype[].has_component[T]():
+                        continue
+
+                new_archetype[].set_component[T](
+                    index_in_new_archetype,
+                    old_archetype[]
+                    .get_component[T](index_in_old_archetype)
+                    .copy(),
+                )
+
+            new_archetype[].set_components[*Ts](
+                index_in_new_archetype, *add_components^
             )
 
-        new_archetype[].set_components[*Ts](
-            index_in_new_archetype, *add_components^
-        )
+            swapped = old_archetype[].remove(index_in_old_archetype)
+            if swapped:
+                var swap_entity = old_archetype[].get_entity(
+                    entity_loc.entity_index
+                )
+                self._entities[
+                    swap_entity.get_id()
+                ].entity_index = entity_loc.entity_index
 
-        swapped = old_archetype[].remove(index_in_old_archetype)
-        if swapped:
-            var swap_entity = old_archetype[].get_entity(
-                entity_loc.entity_index
+            self._entities[entity.get_id()] = EntityLocation(
+                index_in_new_archetype, new_archetype_idx
             )
-            self._entities[
-                swap_entity.get_id()
-            ].entity_index = entity_loc.entity_index
-
-        self._entities[entity.get_id()] = EntityLocation(
-            index_in_new_archetype, new_archetype_idx
-        )
-        _trace_function["OUT"]("World._remove_and_add")
 
     @always_inline
     def _batch_remove_and_add[
@@ -1428,199 +1410,200 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match entities that don't have all of the components to remove.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        _trace_function["IN"]("World._batch_remove_and_add")
-        comptime assert Self.component_manager._ContainsComponents[
-            *Ts
-        ], "One or more component types not in component manager"
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in add are not allowed."
+        with TraceGuard(name="World._batch_remove_and_add"):
+            comptime assert Self.component_manager._ContainsComponents[
+                *Ts
+            ], "One or more component types not in component manager"
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in add are not allowed."
 
-        comptime add_size = len(Ts)
-        comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
+            comptime add_size = len(Ts)
+            comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
-        comptime ComponentIdsType = InlineArray[
-            Self.ComponentId, add_size + rem_size
-        ]
-        comptime assert 0 <= add_size + rem_size
+            comptime ComponentIdsType = InlineArray[
+                Self.ComponentId, add_size + rem_size
+            ]
+            comptime assert 0 <= add_size + rem_size
 
-        runtime_remove_ids = materialize[remove_ids]()
+            runtime_remove_ids = materialize[remove_ids]()
 
-        var component_ids: ComponentIdsType
+            var component_ids: ComponentIdsType
 
-        # Note:
-        #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
-        #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
-        #    individually without checking for edge cases where multiple archetypes get merged into one.
-        #    This also enables potential parallelization optimizations.
+            # Note:
+            #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
+            #    must be excluded in the query. Therefore, we can apply the transformation to each matching archetype
+            #    individually without checking for edge cases where multiple archetypes get merged into one.
+            #    This also enables potential parallelization optimizations.
 
-        comptime if add_size:
-            # If query could match archetypes that already have at least one of the components, raise an error
-            # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
+            comptime if add_size:
+                # If query could match archetypes that already have at least one of the components, raise an error
+                # FIXME: When https://github.com/modular/modular/issues/5347 is fixed, we can use short-circuiting here.
 
-            var strict_check_needed: Bool
+                var strict_check_needed: Bool
 
-            comptime if has_without_mask:
-                strict_check_needed = not query.without_mask[].contains(
-                    BitMask(add_ids)
-                )
-            else:
-                strict_check_needed = True
-
-            if strict_check_needed:
-                for archetype in self._get_archetype_iterator(
-                    query.mask, query.without_mask
-                ):
-                    archetype_mask = archetype[].get_mask()
-
-                    comptime if rem_size:
-                        archetype_mask.set(runtime_remove_ids, False)
-
-                    if archetype[] and archetype_mask.contains_any(
+                comptime if has_without_mask:
+                    strict_check_needed = not query.without_mask[].contains(
                         BitMask(add_ids)
+                    )
+                else:
+                    strict_check_needed = True
+
+                if strict_check_needed:
+                    for archetype in self._get_archetype_iterator(
+                        query.mask, query.without_mask
+                    ):
+                        archetype_mask = archetype[].get_mask()
+
+                        comptime if rem_size:
+                            archetype_mask.set(runtime_remove_ids, False)
+
+                        if archetype[] and archetype_mask.contains_any(
+                            BitMask(add_ids)
+                        ):
+                            raise WorldError.duplicate_components_for_addition_query
+
+            comptime if rem_size:
+                # If query could match archetypes that don't have all of the components, raise an error
+                if not query.mask.contains(BitMask(runtime_remove_ids)):
+                    raise WorldError.missing_components_for_removal_query
+
+                comptime if has_without_mask:
+                    if query.without_mask[].contains_any(
+                        BitMask(runtime_remove_ids)
                     ):
                         raise WorldError.duplicate_components_for_addition_query
 
-        comptime if rem_size:
-            # If query could match archetypes that don't have all of the components, raise an error
-            if not query.mask.contains(BitMask(runtime_remove_ids)):
-                raise WorldError.missing_components_for_removal_query
+            comptime if add_size and rem_size:
+                comptime concatenated = concatenate_inline_arrays(
+                    remove_ids, add_ids
+                )
+                component_ids = rebind[ComponentIdsType](concatenated)
+            elif Bool(add_size) and not rem_size:
+                component_ids = rebind[ComponentIdsType](add_ids)
+            elif not add_size and Bool(rem_size):
+                component_ids = rebind[ComponentIdsType](runtime_remove_ids)
+            else:
+                comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
+                    origin_of(self._archetypes)
+                ]
+                try:
+                    iterator = {
+                        ArchetypeByListIterator(
+                            list_iterator=ArchetypeByListIterator.list_iterator(
+                                Pointer(to=self._archetypes), List[Int]()
+                            )
+                        ),
+                        Pointer(to=self._locks),
+                        List[Int](),
+                    }
+                except _:
+                    raise WorldError.UNKNOWN
+                return
 
-            comptime if has_without_mask:
-                if query.without_mask[].contains_any(
-                    BitMask(runtime_remove_ids)
-                ):
-                    raise WorldError.duplicate_components_for_addition_query
+            self._assert_unlocked()
 
-        comptime if add_size and rem_size:
-            comptime concatenated = concatenate_inline_arrays(
-                remove_ids, add_ids
+            comptime _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
+            arch_start_idcs = List[Int](
+                capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
             )
-            component_ids = rebind[ComponentIdsType](concatenated)
-        elif Bool(add_size) and not rem_size:
-            component_ids = rebind[ComponentIdsType](add_ids)
-        elif not add_size and Bool(rem_size):
-            component_ids = rebind[ComponentIdsType](runtime_remove_ids)
-        else:
-            comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-                origin_of(self._archetypes)
-            ]
+            changed_archetype_idcs = List[Int](
+                capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
+            )
+
+            # Search for the archetype that matches the query mask
             try:
-                iterator = {
-                    ArchetypeByListIterator(
-                        list_iterator=ArchetypeByListIterator.list_iterator(
-                            Pointer(to=self._archetypes), List[Int]()
+                with self._locked():
+                    for var old_archetype in self._get_archetype_iterator(
+                        query.mask, query.without_mask
+                    ):
+                        # Two cases per matching archetype A:
+                        # 1. If an archetype B with the new component combination exists, move entities from A to B
+                        #    and insert new component data for moved entities.
+                        # 2. If an archetype with the new component combination does not exist yet,
+                        #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
+                        old_node_index = old_archetype[].get_node_index()
+                        new_archetype_idx = self._get_archetype_index[
+                            add_size + rem_size
+                        ](component_ids, old_node_index)
+
+                        # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
+                        # resized during the call to `_get_archetype_index`.
+                        old_archetype_idx = self._archetype_map[old_node_index]
+                        old_archetype = Pointer(
+                            to=self._archetypes.unsafe_get(
+                                index(old_archetype_idx)
+                            )
                         )
-                    ),
-                    Pointer(to=self._locks),
-                    List[Int](),
-                }
-            except _:
-                raise WorldError.UNKNOWN
-            _trace_function["OUT"]("World._batch_remove_and_add")
-            return
 
-        self._assert_unlocked()
+                        new_archetype = Pointer(
+                            to=self._archetypes.unsafe_get(new_archetype_idx)
+                        )
 
-        comptime _2kb_of_UInt_or_Int = (1024 * 2) // size_of[UInt]()
-        arch_start_idcs = List[Int](
-            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
-        )
-        changed_archetype_idcs = List[Int](
-            capacity=min(len(self._archetypes), _2kb_of_UInt_or_Int)
-        )
+                        # TODO: Optimization: If `new_archetype` is empty we can just shallow-copy the _ComponentStorage of `old_archetype` to `new_archetype` and reinit `old_archetype`.
 
-        # Search for the archetype that matches the query mask
-        try:
-            with self._locked():
-                for var old_archetype in self._get_archetype_iterator(
-                    query.mask, query.without_mask
-                ):
-                    # Two cases per matching archetype A:
-                    # 1. If an archetype B with the new component combination exists, move entities from A to B
-                    #    and insert new component data for moved entities.
-                    # 2. If an archetype with the new component combination does not exist yet,
-                    #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
-                    old_node_index = old_archetype[].get_node_index()
-                    new_archetype_idx = self._get_archetype_index[
-                        add_size + rem_size
-                    ](component_ids, old_node_index)
+                        old_archetype_size = len(old_archetype[])
+                        if old_archetype_idx == new_archetype_idx:
+                            arch_start_idcs.append(0)
+                            changed_archetype_idcs.append(new_archetype_idx)
 
-                    # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
-                    # resized during the call to `_get_archetype_index`.
-                    old_archetype_idx = self._archetype_map[old_node_index]
-                    old_archetype = Pointer(
-                        to=self._archetypes.unsafe_get(index(old_archetype_idx))
-                    )
+                            comptime for i in range(add_size):
+                                comptime T = Ts[i]
+                                new_archetype[].set_component_range[T](
+                                    0,
+                                    old_archetype_size,
+                                    add_components[i].copy(),
+                                )
+                            continue
 
-                    new_archetype = Pointer(
-                        to=self._archetypes.unsafe_get(new_archetype_idx)
-                    )
-
-                    # TODO: Optimization: If `new_archetype` is empty we can just shallow-copy the _ComponentStorage of `old_archetype` to `new_archetype` and reinit `old_archetype`.
-
-                    old_archetype_size = len(old_archetype[])
-                    if old_archetype_idx == new_archetype_idx:
-                        arch_start_idcs.append(0)
+                        old_archetype_unsafe = UnsafePointer(
+                            to=old_archetype[]
+                        ).as_any_origin()
+                        arch_start_idx = (
+                            new_archetype[].extend_from_archetype_unsafe(
+                                old_archetype_unsafe, old_archetype_size
+                            )
+                        )
+                        arch_start_idcs.append(arch_start_idx)
                         changed_archetype_idcs.append(new_archetype_idx)
 
                         comptime for i in range(add_size):
                             comptime T = Ts[i]
                             new_archetype[].set_component_range[T](
-                                0,
+                                arch_start_idx,
                                 old_archetype_size,
                                 add_components[i].copy(),
                             )
-                        continue
 
-                    old_archetype_unsafe = UnsafePointer(
-                        to=old_archetype[]
-                    ).as_any_origin()
-                    arch_start_idx = (
-                        new_archetype[].extend_from_archetype_unsafe(
-                            old_archetype_unsafe, old_archetype_size
+                        # Update entity index mappings for the moved entity range.
+                        for entity_idx in range(old_archetype_size):
+                            entity = old_archetype[].get_entity(entity_idx)
+                            self._entities[entity.get_id()] = EntityLocation(
+                                arch_start_idx + entity_idx, new_archetype_idx
+                            )
+
+                        old_archetype[].clear()
+            except:
+                raise WorldError.UNKNOWN
+
+            comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
+                origin_of(self._archetypes)
+            ]
+
+            # Return iterator to iterate over the changed entities.
+            try:
+                iterator = {
+                    ArchetypeByListIterator(
+                        list_iterator=ArchetypeByListIterator.list_iterator(
+                            Pointer(to=self._archetypes),
+                            changed_archetype_idcs^,
                         )
-                    )
-                    arch_start_idcs.append(arch_start_idx)
-                    changed_archetype_idcs.append(new_archetype_idx)
-
-                    comptime for i in range(add_size):
-                        comptime T = Ts[i]
-                        new_archetype[].set_component_range[T](
-                            arch_start_idx,
-                            old_archetype_size,
-                            add_components[i].copy(),
-                        )
-
-                    # Update entity index mappings for the moved entity range.
-                    for entity_idx in range(old_archetype_size):
-                        entity = old_archetype[].get_entity(entity_idx)
-                        self._entities[entity.get_id()] = EntityLocation(
-                            arch_start_idx + entity_idx, new_archetype_idx
-                        )
-
-                    old_archetype[].clear()
-        except:
-            raise WorldError.UNKNOWN
-
-        comptime ArchetypeByListIterator = Self.ArchetypeByListIterator[
-            origin_of(self._archetypes)
-        ]
-
-        # Return iterator to iterate over the changed entities.
-        try:
-            iterator = {
-                ArchetypeByListIterator(
-                    list_iterator=ArchetypeByListIterator.list_iterator(
-                        Pointer(to=self._archetypes), changed_archetype_idcs^
-                    )
-                ),
-                Pointer(to=self._locks),
-                arch_start_idcs^,
-            }
-        except _:
-            raise WorldError.UNKNOWN
-        _trace_function["OUT"]("World._batch_remove_and_add")
+                    ),
+                    Pointer(to=self._locks),
+                    arch_start_idcs^,
+                }
+            except _:
+                raise WorldError.UNKNOWN
 
     @always_inline
     def _assert_unlocked(self) raises WorldError:
@@ -1630,10 +1613,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked.
         """
-        _trace_function["IN"]("World._assert_unlocked")
-        if self.is_locked():
-            raise WorldError.world_is_locked
-        _trace_function["OUT"]("World._assert_unlocked")
+        with TraceGuard(name="World._assert_unlocked"):
+            if self.is_locked():
+                raise WorldError.world_is_locked
 
     @always_inline
     def _assert_alive(self, entity: Entity) raises WorldError:
@@ -1646,10 +1628,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
-        _trace_function["IN"]("World._assert_alive")
-        if not self._entity_pool.is_alive(entity):
-            raise WorldError.non_existent_entity
-        _trace_function["OUT"]("World._assert_alive")
+        with TraceGuard(name="World._assert_alive"):
+            if not self._entity_pool.is_alive(entity):
+                raise WorldError.non_existent_entity
 
     @always_inline
     def apply[
@@ -1681,21 +1662,20 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the operation raises.
         """
 
-        _trace_function["IN"]("World.apply")
-        self._assert_unlocked()
+        with TraceGuard(name="World.apply"):
+            self._assert_unlocked()
 
-        try:
-            with self._locked():
-                for archetype in _ArchetypeByMaskIterator(
-                    Pointer(to=self._archetypes),
-                    query.mask,
-                    query.without_mask.copy(),
-                ):
-                    for i in range(len(archetype[])):
-                        operation(archetype[].get_entity_accessor(i))
-        except:
-            raise WorldError.UNKNOWN
-        _trace_function["OUT"]("World.apply")
+            try:
+                with self._locked():
+                    for archetype in _ArchetypeByMaskIterator(
+                        Pointer(to=self._archetypes),
+                        query.mask,
+                        query.without_mask.copy(),
+                    ):
+                        for i in range(len(archetype[])):
+                            operation(archetype[].get_entity_accessor(i))
+            except:
+                raise WorldError.UNKNOWN
 
     def apply[
         OperationType: def[simd_width: Int](
@@ -1791,32 +1771,31 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         """
-        _trace_function["IN"]("World.apply simd")
-        self._assert_unlocked()
+        with TraceGuard(name="World.apply simd"):
+            self._assert_unlocked()
 
-        try:
-            with self._locked():
-                for archetype in _ArchetypeByMaskIterator(
-                    Pointer(to=self._archetypes),
-                    query.mask,
-                    query.without_mask.copy(),
-                ):
+            try:
+                with self._locked():
+                    for archetype in _ArchetypeByMaskIterator(
+                        Pointer(to=self._archetypes),
+                        query.mask,
+                        query.without_mask.copy(),
+                    ):
 
-                    @always_inline
-                    def closure[width: Int](i: Int) {read}:
-                        accessor = archetype[].get_entity_accessor(i)
-                        try:
-                            operation[width](accessor)
-                        except:
-                            # Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
-                            pass
+                        @always_inline
+                        def closure[width: Int](i: Int) {read}:
+                            accessor = archetype[].get_entity_accessor(i)
+                            try:
+                                operation[width](accessor)
+                            except:
+                                # Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
+                                pass
 
-                    vectorize[simd_width, unroll_factor=unroll_factor](
-                        len(archetype[]), closure
-                    )
-        except:
-            raise WorldError.UNKNOWN
-        _trace_function["OUT"]("World.apply simd")
+                        vectorize[simd_width, unroll_factor=unroll_factor](
+                            len(archetype[]), closure
+                        )
+            except:
+                raise WorldError.UNKNOWN
 
     # def Reset(self):
     #     """
@@ -1905,21 +1884,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A [..query.Query] for all entities with the given components.
         """
-        _trace_function["IN"]("World.query")
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Duplicate component types in query are not allowed."
-        comptime component_count = len(Ts)
+        with TraceGuard(name="World.query"):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Duplicate component types in query are not allowed."
+            comptime component_count = len(Ts)
 
-        var bitmask: BitMask
+            var bitmask: BitMask
 
-        comptime if not component_count:
-            bitmask = BitMask()
-        else:
-            bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+            comptime if not component_count:
+                bitmask = BitMask()
+            else:
+                bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
-        iterator = Self.Query[has_without_mask=False](Pointer(to=self), bitmask)
-        _trace_function["OUT"]("World.query")
+            iterator = Self.Query[has_without_mask=False](
+                Pointer(to=self), bitmask
+            )
 
     def _get_entity_iterator[
         has_without_mask: Bool = False, has_start_indices: Bool = False
@@ -1948,32 +1928,31 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._EntityIterator].
         """
-        _trace_function["IN"]("World._get_entity_iterator")
-        comptime ArchetypeByMaskIterator = Self.ArchetypeByMaskIterator[
-            origin_of(self._archetypes),
-            has_without_mask=has_without_mask,
-        ]
-
-        try:
-            iterator = Self.Iterator[
+        with TraceGuard(name="World._get_entity_iterator"):
+            comptime ArchetypeByMaskIterator = Self.ArchetypeByMaskIterator[
                 origin_of(self._archetypes),
-                origin_of(self._locks),
-                has_start_indices=has_start_indices,
                 has_without_mask=has_without_mask,
-            ](
-                ArchetypeByMaskIterator(
-                    mask_iterator=ArchetypeByMaskIterator.mask_iterator(
-                        Pointer(to=self._archetypes),
-                        mask,
-                        without_mask.copy(),
-                    )
-                ),
-                Pointer(to=self._locks),
-                start_indices^,
-            )
-        except _:
-            raise WorldError.UNKNOWN
-        _trace_function["OUT"]("World._get_entity_iterator")
+            ]
+
+            try:
+                iterator = Self.Iterator[
+                    origin_of(self._archetypes),
+                    origin_of(self._locks),
+                    has_start_indices=has_start_indices,
+                    has_without_mask=has_without_mask,
+                ](
+                    ArchetypeByMaskIterator(
+                        mask_iterator=ArchetypeByMaskIterator.mask_iterator(
+                            Pointer(to=self._archetypes),
+                            mask,
+                            without_mask.copy(),
+                        )
+                    ),
+                    Pointer(to=self._locks),
+                    start_indices^,
+                )
+            except _:
+                raise WorldError.UNKNOWN
 
     @always_inline
     def _get_archetype_iterator[
@@ -1992,53 +1971,46 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             An iterator over all archetypes that match the query.
         """
-        _trace_function["IN"]("World._get_archetype_iterator")
-        iterator = Self.ArchetypeByMaskIterator[
-            origin_of(self._archetypes), has_without_mask=has_without_mask
-        ](
-            mask_iterator=_ArchetypeByMaskIterator(
-                Pointer(to=self._archetypes),
-                mask,
-                without_mask.copy(),
+        with TraceGuard(name="World._get_archetype_iterator"):
+            iterator = Self.ArchetypeByMaskIterator[
+                origin_of(self._archetypes), has_without_mask=has_without_mask
+            ](
+                mask_iterator=_ArchetypeByMaskIterator(
+                    Pointer(to=self._archetypes),
+                    mask,
+                    without_mask.copy(),
+                )
             )
-        )
-        _trace_function["OUT"]("World._get_archetype_iterator")
 
     @always_inline
     def is_locked(self) -> Bool:
         """
         Returns whether the world is locked by any [.World.query queries].
         """
-        _trace_function["IN"]("World.is_locked")
-        result = self._locks.is_locked()
-        _trace_function["OUT"]("World.is_locked")
-        return result
+        with TraceGuard(name="World.is_locked"):
+            return self._locks.is_locked()
 
     @always_inline
     def _lock(mut self) raises WorldError -> Int:
         """
         Locks the world and gets the lock bit for later unlocking.
         """
-        _trace_function["IN"]("World._lock")
-        try:
-            result = self._locks.lock()
-            _trace_function["OUT"]("World._lock")
-            return result
-        except e:
-            raise WorldError(e)
+        with TraceGuard(name="World._lock"):
+            try:
+                return self._locks.lock()
+            except e:
+                raise WorldError(e)
 
     @always_inline
     def _unlock(mut self, lock: Int) raises WorldError:
         """
         Unlocks the given lock bit.
         """
-        _trace_function["IN"]("World._unlock")
-        try:
-            result = self._locks.unlock(lock)
-            _trace_function["OUT"]("World._unlock")
-            return result
-        except e:
-            raise WorldError(e)
+        with TraceGuard(name="World._unlock"):
+            try:
+                self._locks.unlock(lock)
+            except e:
+                raise WorldError(e)
 
     @always_inline
     def _locked(
@@ -2050,637 +2022,636 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A context manager that unlocks the world when it goes out of scope.
         """
-        _trace_function["IN"]("World._locked")
-        _trace_function["OUT"]("World._locked")
-        return self._locks.locked()
-
-    # def Mask(self, entity: Entity) -> Mask:
-    #     """
-    #     Mask returns the archetype [Mask] for the given [Entity].
-    #     """
-    #     if !self._entity_pool.Alive(entity):
-    #         panic("can't get mask for a dead entity")
-
-    #     return self._entities[entity.id].arch.Mask
-
-    # def Ids(self, entity: Entity):
-    #     """
-    #     Ids returns the component IDs for the archetype of the given [Entity].
-
-    #     Returns a copy of the archetype's component IDs slice, for safety.
-    #     This means that the result can be manipulated safely,
-    #     but also that calling the method may incur some significant cost.
-    #     """
-    #     if !self._entity_pool.Alive(entity):
-    #         panic("can't get component IDs for a dead entity")
-
-    #     return append([]Id, self._entities[entity.id].arch.node.Ids...)
-
-    # def SetListener(self, _listener: Listener):
-    #     """
-    #     SetListener sets a [Listener] for the world.
-    #     The _listener is immediately called on every [ecs.Entity] change.
-    #     Replaces the current _listener. Call with nil to remove a _listener.
-
-    #     For details, see [EntityEvent], [Listener] and sub-package [event].
-    #     """
-    #     self._listener = _listener
-
-    # def Stats(self):
-    #     """
-    #     Stats reports statistics for inspecting the World.
-
-    #     The underlying [_stats.World] object is re-used and updated between calls.
-    #     The returned pointer should thus not be stored for later analysis.
-    #     Rather, the required data should be extracted immediately.
-    #     """
-    #     self._stats.Entities = _stats.Entities
-    #         Used:     self._entity_pool.Len(),
-    #         Total:    self._entity_pool.Cap(),
-    #         Recycled: self._entity_pool.Available(),
-    #         Capacity: self._entity_pool.TotalCap(),
-
-    #     var compCount = len(self._registry.Components)
-    #     var types = append([]reflect.Type, self._registry.Types[:compCount]...)
-
-    #     var memory = cap(self._entities)*int(entityIndexSize) + self._entity_pool.TotalCap()*int(entitySize)
-
-    #     var cntOld = int32(len(self._stats.Nodes))
-    #     var cntNew = int32(self._nodes.Len())
-    #     var cntActive = 0
-    #     var i: int32
-    #     for i = 0 in range(i < cntOld, i++):
-    #         var node = self._nodes.get(i)
-    #         var nodeStats = &self._stats.Nodes[i]
-    #         node.UpdateStats(nodeStats, &self._registry)
-    #         if node.IsActive:
-    #             memory += nodeStats.Memory
-    #             cntActive++
-
-    #     for i = cntOld in range(i < cntNew, i++):
-    #         var node = self._nodes.get(i)
-    #         self._stats.Nodes = append(self._stats.Nodes, node.Stats(&self._registry))
-    #         if node.IsActive:
-    #             memory += self._stats.Nodes[i].Memory
-    #             cntActive++
-
-    #     self._stats.ComponentCount = compCount
-    #     self._stats.ComponentTypes = types
-    #     self._stats.Locked = self.is_locked()
-    #     self._stats.Memory = memory
-    #     self._stats.CachedFilters = len(self._filter_cache.filters)
-    #     self._stats.ActiveNodeCount = cntActive
-
-    #     return &self._stats
-
-    # def DumpEntities(self) -> EntityDump:
-    #     """
-    #     DumpEntities dumps entity information into an [EntityDump] object.
-    #     This dump can be used with [World.LoadEntities] to set the World's entity state.
-
-    #     For world serialization with components and _resources, see module [github.com/mlange-42/arche-serde].
-    #     """
-    #     var alive = []uint32
-
-    #     var query = self.Query(All())
-    #     for query.Next()
-    #         alive = append(alive, uint32(query.Entity().id))
-
-    #     var data = EntityDump
-    #         Entities:  append([]Entity, self._entity_pool._entities...),
-    #         Alive:     alive,
-    #         Next:      uint32(self._entity_pool.next),
-    #         Available: self._entity_pool.available,
-
-    #     return data
-
-    # def LoadEntities(self, data: *EntityDump):
-    #     """
-    #     LoadEntities resets all _entities to the state saved with [World.DumpEntities].
-
-    #     Use this only on an empty world! Can be used after [World.Reset].
-
-    #     The resulting world will have the same _entities (in terms of Id, generation and alive state)
-    #     as the original world. This is necessary for proper serialization of entity relations.
-    #     However, the _entities will not have any components.
-
-    #     Panics if the world has any dead or alive _entities.
-
-    #     For world serialization with components and _resources, see module [github.com/mlange-42/arche-serde].
-    #     """
-    #     self._assert_unlocked()
-
-    #     if len(self._entity_pool._entities) > 1 || self._entity_pool.available > 0:
-    #         panic("can set entity data only on a fresh or reset world")
-
-    #     var capacity = capacity(len(data.Entities), self.config.CapacityIncrement)
-
-    #     var _entities = make([]Entity, 0, capacity)
-    #     _entities = append(_entities, data.Entities...)
-
-    #     self._entity_pool._entities = _entities
-    #     self._entity_pool.next = eid(data.Next)
-    #     self._entity_pool.available = data.Available
-
-    #     self._entities = make([]entityIndex, len(data.Entities), capacity)
-    #     self._tarquery = bitSet
-    #     self._tarquery.ExtendTo(capacity)
-
-    #     var arch = self._archetypes.get(0)
-    #     for _, idx in enumerate(data.Alive):
-    #         var entity = self._entity_pool._entities[idx]
-    #         var archIdx = arch.Alloc(entity)
-    #         self._entities[entity.id] = entityIndexarch: arch, index: archIdx
-
-    # ----------------- from world_internal.go -----------------
-
-    # def newEntities(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
-    #     """
-    #     Creates new _entities without returning a query over them.
-    #     Used via [World.Batch].
-    #     """
-    #     arch, var startIdx = self.newEntitiesNoNotify(count, targetID, hasTarget, target, comps...)
-
-    #     if self._listener != nil:
-    #         var newRel *ID
-    #         if arch.HasRelationComponent:
-    #             newRel = &arch.RelationComponent
-
-    #         var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
-    #             var cnt = uint32(count)
-    #             var i: uint32
-    #             for i = 0 in range(i < cnt, i++):
-    #                 var idx = startIdx + i
-    #                 var entity = arch.GetEntity(idx)
-    #                 self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
-
-    #     return arch, startIdx
-
-    # def newEntitiesQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID) -> Query:
-    #     """
-    #     Creates new _entities and returns a query over them.
-    #     Used via [World.Batch].
-    #     """
-    #     arch, var startIdx = self.newEntitiesNoNotify(count, targetID, hasTarget, target, comps...)
-    #     var lock = self.lock()
-
-    #     var batches = batchArchetypes
-    #         Added:   arch.Components(),
-    #         Removed: nil,
-
-    #     batches.Add(arch, nil, startIdx, arch.Len())
-    #     return newBatchQuery(self, lock, &batches)
-
-    # def newEntitiesWith(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component):
-    #     """
-    #     Creates new _entities with component values without returning a query over them.
-    #     Used via [World.Batch].
-    #     """
-    #     var ids = make([]ID, len(comps))
-    #     for i, c in enumerate(comps):
-    #         ids[i] = c.ID
-
-    #     arch, var startIdx = self.newEntitiesWithNoNotify(count, targetID, hasTarget, target, ids, comps...)
-
-    #     if self._listener != nil:
-    #         var newRel *ID
-    #         if arch.HasRelationComponent:
-    #             newRel = &arch.RelationComponent
-
-    #         var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
-    #             var i: uint32
-    #             var cnt = uint32(count)
-    #             for i = 0 in range(i < cnt, i++):
-    #                 var idx = startIdx + i
-    #                 var entity = arch.GetEntity(idx)
-    #                 self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: ids, NewRelation: newRel, EventTypes: bits)
-
-    #     return arch, startIdx
-
-    # def newEntitiesWithQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component) -> Query:
-    #     """
-    #     Creates new _entities with component values and returns a query over them.
-    #     Used via [World.Batch].
-    #     """
-    #     var ids = make([]ID, len(comps))
-    #     for i, c in enumerate(comps):
-    #         ids[i] = c.ID
-
-    #     arch, var startIdx = self.newEntitiesWithNoNotify(count, targetID, hasTarget, target, ids, comps...)
-    #     var lock = self.lock()
-    #     var batches = batchArchetypes
-    #         Added:   arch.Components(),
-    #         Removed: nil,
-
-    #     batches.Add(arch, nil, startIdx, arch.Len())
-    #     return newBatchQuery(self, lock, &batches)
-
-    # def newEntitiesNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
-    #     """
-    #     Internal method to create new _entities.
-    #     """
-    #     self.checkLocked()
-
-    #     if count < 1:
-    #         panic("can only create a positive number of _entities")
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     var arch = self._archetypes.Get(0)
-    #     if len(comps) > 0:
-    #         arch = self._find_or_create_archetype(arch, comps, nil, target)
-
-    #     if hasTarget:
-    #         self.checkRelation(arch, targetID)
-    #         if !target.IsZero():
-    #             self._tarquery.Set(target.id, true)
-
-    #     var startIdx = arch.Len()
-    #     self.createEntities(arch, uint32(count))
-
-    #     return arch, startIdx
-
-    # def newEntitiesWithNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, ids: []ID, comps: ...Component):
-    #     """
-    #     Internal method to create new _entities with component values.
-    #     """
-    #     self.checkLocked()
-
-    #     if count < 1:
-    #         panic("can only create a positive number of _entities")
-
-    #     if !target.IsZero() && !self.entityPool.Alive(target):
-    #         panic("can't make a dead entity a relation target")
-
-    #     if len(comps) == 0:
-    #         return self.newEntitiesNoNotify(count, targetID, hasTarget, target)
-
-    #     var cnt = uint32(count)
-
-    #     var arch = self._archetypes.Get(0)
-    #     if len(comps) > 0:
-    #         arch = self._find_or_create_archetype(arch, ids, nil, target)
-
-    #     if hasTarget:
-    #         self.checkRelation(arch, targetID)
-    #         if !target.IsZero():
-    #             self._tarquery.Set(target.id, true)
-
-    #     var startIdx = arch.Len()
-    #     self.createEntities(arch, uint32(count))
-
-    #     var i: uint32
-    #     for i = 0 in range(i < cnt, i++):
-    #         var idx = startIdx + i
-    #         var entity = arch.GetEntity(idx)
-    #         for _, c in enumerate(comps):
-    #             self.copyTo(entity, c.ID, c.Comp)
-
-    #     return arch, startIdx
-
-    # def removeEntities(self, filter: Filter) -> int:
-    #     """
-    #     RemoveEntities removes and recycles all _entities matching a filter.
-
-    #     Returns the number of removed _entities.
-
-    #     Panics when called on a locked world.
-    #     Do not use during [Query] iteration!
-    #     """
-    #     self.checkLocked()
-
-    #     var lock = self.lock()
-
-    #     var bits: event.Subscription
-    #     var listen: Bool
-
-    #     var count: uint32
-
-    #     var arches = self.getArchetypes(filter)
-    #     var numArches = int32(len(arches))
-    #     var i: int32
-    #     for i = 0 in range(i < numArches, i++):
-    #         var arch = arches[i]
-    #         var ln = arch.Len()
-    #         if ln == 0:
-    #             continue
-
-    #         count += ln
-
-    #         var oldRel *ID
-    #         var oldIds []ID
-    #         if self._listener != nil:
-    #             if arch.HasRelationComponent:
-    #                 oldRel = &arch.RelationComponent
-
-    #             if len(arch.node.Ids) > 0:
-    #                 oldIds = arch.node.Ids
-
-    #             bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
-    #             var trigger = self._listener.Subscriptions() & bits
-    #             listen = trigger != 0 && subscribes(trigger, nil, &arch.Mask, self._listener.Components(), oldRel, nil)
-
-    #         var j: uint32
-    #         for j = 0 in range(j < ln, j++):
-    #             var entity = arch.GetEntity(j)
-    #             if listen:
-    #                 self._listener.Notify(self, EntityEventEntity: entity, Removed: arch.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: arch.RelationTarget, EventTypes: bits)
-
-    #             var index = &self._entities[entity.id]
-    #             index.arch = nil
-
-    #             if self._tarquery.Get(entity.id):
-    #                 self._cleanup_archetypes(entity)
-    #                 self._tarquery.Set(entity.id, false)
-
-    #             self.entityPool.Recycle(entity)
-
-    #         arch.Reset()
-    #         self._cleanup_archetype(arch)
-
-    #     self.unlock(lock)
-
-    #     return int(count)
-
-    # def notifyExchange(self, arch: *archetype, old_mask: *Mask, entity: Entity, add: []ID, rem: []ID, oldTarget: Entity, oldRel: *ID):
-    #     """
-    #     notify listeners for an exchange.
-    #     """
-    #     var newRel *ID
-    #     if arch.HasRelationComponent:
-    #         newRel = &arch.RelationComponent
-
-    #     var relChanged = false
-    #     if oldRel != nil || newRel != nil:
-    #         relChanged = (oldRel == nil) != (newRel == nil) || *oldRel != *newRel
-
-    #     var targChanged = oldTarget != arch.RelationTarget
-
-    #     var bits = subscription(false, false, len(add) > 0, len(rem) > 0, relChanged, relChanged || targChanged)
-    #     var trigger = self._listener.Subscriptions() & bits
-    #     if trigger != 0:
-    #         var changed = old_mask.Xor(&arch.Mask)
-    #         var added = arch.Mask.And(&changed)
-    #         var removed = old_mask.And(&changed)
-    #         if subscribes(trigger, &added, &removed, self._listener.Components(), oldRel, newRel):
-    #             self._listener.Notify(self,
-    #                 EntityEventEntity: entity, Added: added, Removed: removed,
-    #                     AddedIDs: add, RemovedIDs: rem, OldRelation: oldRel, NewRelation: newRel,
-    #                     OldTarget: oldTarget, EventTypes: bits,
-    #             )
-
-    # def exchangeBatch(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> int:
-    #     """
-    #     ExchangeBatch exchanges components for many _entities, matching a filter.
-
-    #     If the callback argument is given, it is called with a [Query] over the affected _entities,
-    #     one Query for each affected archetype.
-
-    #     Panics:
-    #     - when called with components that can't be added or removed because they are already present/not present, respectively.
-    #     - when called on a locked world. Do not use during [Query] iteration!
-
-    #     See also [World.Exchange].
-    #     """
-    #     var batches = batchArchetypes
-    #         Added:   add,
-    #         Removed: rem,
-
-    #     var count = self.exchangeBatchNoNotify(filter, add, rem, relation, hasRelation, target, &batches)
-
-    #     if self._listener != nil:
-    #         self.notifyQuery(&batches)
-
-    #     return count
-
-    # def exchangeBatchQuery(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> Query:
-    #     var batches = batchArchetypes
-    #         Added:   add,
-    #         Removed: rem,
-
-    #     self.exchangeBatchNoNotify(filter, add, rem, relation, hasRelation, target, &batches)
-
-    #     var lock = self.lock()
-    #     return newBatchQuery(self, lock, &batches)
-
-    # def exchangeBatchNoNotify(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity, batches: *batchArchetypes) -> int:
-    #     self.checkLocked()
-
-    #     if len(add) == 0 && len(rem) == 0:
-    #         if hasRelation:
-    #             panic("exchange operation has no effect, but a relation is specified. Use Batch.SetRelation instead")
-
-    #         return 0
-
-    #     var arches = self.getArchetypes(filter)
-    #     var lengths = make([]uint32, len(arches))
-    #     var totalEntities: uint32 = 0
-    #     for i, arch in enumerate(arches):
-    #         lengths[i] = arch.Len()
-    #         totalEntities += arch.Len()
-
-    #     for i, arch in enumerate(arches):
-    #         var archLen = lengths[i]
-
-    #         if archLen == 0:
-    #             continue
-
-    #         newArch, var start = self.exchangeArch(arch, archLen, add, rem, relation, hasRelation, target)
-    #         batches.Add(newArch, arch, start, newArch.Len())
-
-    #     return int(totalEntities)
-
-    # def exchangeArch(self, old_archetype: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity):
-    #     var mask = self._get_exchange_mask(old_archetype.Mask, add, rem)
-    #     var oldIDs = old_archetype.Components()
-
-    #     if hasRelation:
-    #         if !mask.Get(relation):
-    #             tp, var _ = self._registry.ComponentType(relation.id)
-    #             panic(fmt.Sprintf("can't add relation: resulting entity has no component %s", tp.Name()))
-
-    #         if !self._registry.IsRelation.Get(relation):
-    #             tp, var _ = self._registry.ComponentType(relation.id)
-    #             panic(fmt.Sprintf("can't add relation: %s is not a relation component", tp.Name()))
-
-    #     else
-    #         target = old_archetype.RelationTarget
-    #         if !target.IsZero() && old_archetype.Mask.ContainsAny(&self._registry.IsRelation):
-    #             for _, id in enumerate(rem):
-    #                 # Removing a relation
-    #                 if self._registry.IsRelation.Get(id):
-    #                     target = Entity
-    #                     break
-
-    #     var arch = self._find_or_create_archetype(old_archetype, add, rem, target)
-
-    #     var startIdx = arch.Len()
-    #     var count = oldArchLen
-    #     arch.AllocN(uint32(count))
-
-    #     var i: uint32
-    #     for i = 0 in range(i < count, i++):
-    #         var idx = startIdx + i
-    #         var entity = old_archetype.GetEntity(i)
-    #         var index = &self._entities[entity.id]
-    #         arch.SetEntity(idx, entity)
-    #         index.arch = arch
-    #         index.index = idx
-
-    #         for _, id in enumerate(oldIDs):
-    #             if mask.Get(id):
-    #                 var comp = old_archetype.Get(i, id)
-    #                 arch.SetPointer(idx, id, comp)
-
-    #     if !target.IsZero():
-    #         self._tarquery.Set(target.id, true)
-
-    #     # Theoretically, it could be oldArchLen < old_archetype.Len(),
-    #     # which means we can't reset the archetype.
-    #     # However, this should not be possible as processing an entity twice
-    #     # would mean an illegal component addition/removal.
-    #     old_archetype.Reset()
-    #     self._cleanup_archetype(old_archetype)
-
-    #     return arch, startIdx
-
-    # def copyTo(self, entity: Entity, id: ID, comp: interface) -> unsafe:
-    #     """
-    #     Copies a component to an entity
-    #     """
-    #     if !self.Has(entity, id):
-    #         panic("can't copy component into entity that has no such component type")
-
-    #     var index = &self._entities[entity.id]
-    #     var arch = index.arch
-
-    #     return arch.Set(index.index, id, comp)
-
-    # def getArchetypes(self, filter: Filter):
-    #     """
-    #     Returns all _archetypes that match the given filter.
-    #     """
-    #     if cached, var ok = filter.(*CachedFilter); ok:
-    #         return self._filter_cache.get(cached).Archetypes.pointers
-
-    #     var arches = []*archetype
-    #     var _nodes = self._node_pointers
-
-    #     for _, nd in enumerate(_nodes):
-    #         if !nd.IsActive || !nd.Matches(filter):
-    #             continue
-
-    #         if rf, var ok = filter.(*RelationFilter); ok:
-    #             var target = rf.Target
-    #             if arch, var ok = nd.archetypeMap[target]; ok:
-    #                 arches = append(arches, arch)
-
-    #             continue
-
-    #         var nodeArches = nd.Archetypes()
-    #         var ln2 = int32(nodeArches.Len())
-    #         var j: int32
-    #         for j = 0 in range(j < ln2, j++):
-    #             var a = nodeArches.Get(j)
-    #             if a.IsActive():
-    #                 arches = append(arches, a)
-
-    #     return arches
-
-    # def extendArchetypeLayouts(self, count: uint8):
-    #     """
-    #     Extend the number of access layouts in _archetypes.
-    #     """
-    #     var len = self._nodes.Len()
-    #     var i: int32
-    #     for i = 0 in range(i < len, i++):
-    #         self._nodes.Get(i).ExtendArchetypeLayouts(count)
-
-    # def componentID(self, tp: reflect.Type) -> ID:
-    #     """
-    #     componentID returns the ID for a component type, and registers it if not already registered.
-    #     """
-    #     id, var newID = self._registry.ComponentID(tp)
-    #     if newID:
-    #         if self.is_locked():
-    #             self._registry.unregisterLastComponent()
-    #             panic("attempt to register a new component in a locked world")
-
-    #         if id > 0 && id%layoutChunkSize == 0:
-    #             self.extendArchetypeLayouts(id + layoutChunkSize)
-
-    #     return IDid: id
-
-    # def resourceID(self, tp: reflect.Type) -> ResID:
-    #     """
-    #     resourceID returns the ID for a resource type, and registers it if not already registered.
-    #     """
-    #     id, var _ = self._resources._registry.ComponentID(tp)
-    #     return ResIDid: id
-
-    # def closeQuery(self, query: *Query):
-    #     """
-    #     closeQuery closes a query and unlocks the world.
-    #     """
-    #     query.nodeIndex = -2
-    #     query.archIndex = -2
-    #     self.unlock(query.lockBit)
-
-    #     if self._listener != nil:
-    #         if arch, var ok = query.nodeArchetypes.(*batchArchetypes); ok:
-    #             self.notifyQuery(arch)
-
-    # def notifyQuery(self, batchArch: *batchArchetypes):
-    #     """
-    #     notifies the _listener for all _entities on a batch query.
-    #     """
-    #     var count = batchArch.Len()
-    #     var i: int32
-    #     for i = 0 in range(i < count, i++):
-    #         var arch = batchArch.Get(i)
-
-    #         var newRel *ID
-    #         if arch.HasRelationComponent:
-    #             newRel = &arch.RelationComponent
-
-    #         var event = EntityEvent
-    #             Entity: Entity, Added: arch.Mask, Removed: Mask, AddedIDs: batchArch.Added, RemovedIDs: batchArch.Removed,
-    #             OldRelation: nil, NewRelation: newRel,
-    #             OldTarget: Entity, EventTypes: 0,
-
-    #         var old_archetype = batchArch.OldArchetype[i]
-    #         var relChanged = newRel != nil
-    #         var targChanged = !arch.RelationTarget.IsZero()
-
-    #         if old_archetype != nil:
-    #             var oldRel *ID
-    #             if old_archetype.HasRelationComponent:
-    #                 oldRel = &old_archetype.RelationComponent
-
-    #             relChanged = false
-    #             if oldRel != nil || newRel != nil:
-    #                 relChanged = (oldRel == nil) != (newRel == nil) || *oldRel != *newRel
-
-    #             targChanged = old_archetype.RelationTarget != arch.RelationTarget
-    #             var changed = event.Added.Xor(&old_archetype.node.Mask)
-    #             event.Added = changed.And(&event.Added)
-    #             event.Removed = changed.And(&old_archetype.node.Mask)
-    #             event.OldTarget = old_archetype.RelationTarget
-    #             event.OldRelation = oldRel
-
-    #         var bits = subscription(old_archetype == nil, false, len(batchArch.Added) > 0, len(batchArch.Removed) > 0, relChanged, relChanged || targChanged)
-    #         event.EventTypes = bits
-
-    #         var trigger = self._listener.Subscriptions() & bits
-    #         if trigger != 0 && subscribes(trigger, &event.Added, &event.Removed, self._listener.Components(), event.OldRelation, event.NewRelation):
-    #             start, var end = batchArch.StartIndex[i], batchArch.EndIndex[i]
-    #             var e: uint32
-    #             for e = start in range(e < end, e++):
-    #                 var entity = arch.GetEntity(e)
-    #                 event.Entity = entity
-    #                 self._listener.Notify(self, event)
+        with TraceGuard(name="World._locked"):
+            return self._locks.locked()
+
+        # def Mask(self, entity: Entity) -> Mask:
+        #     """
+        #     Mask returns the archetype [Mask] for the given [Entity].
+        #     """
+        #     if !self._entity_pool.Alive(entity):
+        #         panic("can't get mask for a dead entity")
+
+        #     return self._entities[entity.id].arch.Mask
+
+        # def Ids(self, entity: Entity):
+        #     """
+        #     Ids returns the component IDs for the archetype of the given [Entity].
+
+        #     Returns a copy of the archetype's component IDs slice, for safety.
+        #     This means that the result can be manipulated safely,
+        #     but also that calling the method may incur some significant cost.
+        #     """
+        #     if !self._entity_pool.Alive(entity):
+        #         panic("can't get component IDs for a dead entity")
+
+        #     return append([]Id, self._entities[entity.id].arch.node.Ids...)
+
+        # def SetListener(self, _listener: Listener):
+        #     """
+        #     SetListener sets a [Listener] for the world.
+        #     The _listener is immediately called on every [ecs.Entity] change.
+        #     Replaces the current _listener. Call with nil to remove a _listener.
+
+        #     For details, see [EntityEvent], [Listener] and sub-package [event].
+        #     """
+        #     self._listener = _listener
+
+        # def Stats(self):
+        #     """
+        #     Stats reports statistics for inspecting the World.
+
+        #     The underlying [_stats.World] object is re-used and updated between calls.
+        #     The returned pointer should thus not be stored for later analysis.
+        #     Rather, the required data should be extracted immediately.
+        #     """
+        #     self._stats.Entities = _stats.Entities
+        #         Used:     self._entity_pool.Len(),
+        #         Total:    self._entity_pool.Cap(),
+        #         Recycled: self._entity_pool.Available(),
+        #         Capacity: self._entity_pool.TotalCap(),
+
+        #     var compCount = len(self._registry.Components)
+        #     var types = append([]reflect.Type, self._registry.Types[:compCount]...)
+
+        #     var memory = cap(self._entities)*int(entityIndexSize) + self._entity_pool.TotalCap()*int(entitySize)
+
+        #     var cntOld = int32(len(self._stats.Nodes))
+        #     var cntNew = int32(self._nodes.Len())
+        #     var cntActive = 0
+        #     var i: int32
+        #     for i = 0 in range(i < cntOld, i++):
+        #         var node = self._nodes.get(i)
+        #         var nodeStats = &self._stats.Nodes[i]
+        #         node.UpdateStats(nodeStats, &self._registry)
+        #         if node.IsActive:
+        #             memory += nodeStats.Memory
+        #             cntActive++
+
+        #     for i = cntOld in range(i < cntNew, i++):
+        #         var node = self._nodes.get(i)
+        #         self._stats.Nodes = append(self._stats.Nodes, node.Stats(&self._registry))
+        #         if node.IsActive:
+        #             memory += self._stats.Nodes[i].Memory
+        #             cntActive++
+
+        #     self._stats.ComponentCount = compCount
+        #     self._stats.ComponentTypes = types
+        #     self._stats.Locked = self.is_locked()
+        #     self._stats.Memory = memory
+        #     self._stats.CachedFilters = len(self._filter_cache.filters)
+        #     self._stats.ActiveNodeCount = cntActive
+
+        #     return &self._stats
+
+        # def DumpEntities(self) -> EntityDump:
+        #     """
+        #     DumpEntities dumps entity information into an [EntityDump] object.
+        #     This dump can be used with [World.LoadEntities] to set the World's entity state.
+
+        #     For world serialization with components and _resources, see module [github.com/mlange-42/arche-serde].
+        #     """
+        #     var alive = []uint32
+
+        #     var query = self.Query(All())
+        #     for query.Next()
+        #         alive = append(alive, uint32(query.Entity().id))
+
+        #     var data = EntityDump
+        #         Entities:  append([]Entity, self._entity_pool._entities...),
+        #         Alive:     alive,
+        #         Next:      uint32(self._entity_pool.next),
+        #         Available: self._entity_pool.available,
+
+        #     return data
+
+        # def LoadEntities(self, data: *EntityDump):
+        #     """
+        #     LoadEntities resets all _entities to the state saved with [World.DumpEntities].
+
+        #     Use this only on an empty world! Can be used after [World.Reset].
+
+        #     The resulting world will have the same _entities (in terms of Id, generation and alive state)
+        #     as the original world. This is necessary for proper serialization of entity relations.
+        #     However, the _entities will not have any components.
+
+        #     Panics if the world has any dead or alive _entities.
+
+        #     For world serialization with components and _resources, see module [github.com/mlange-42/arche-serde].
+        #     """
+        #     self._assert_unlocked()
+
+        #     if len(self._entity_pool._entities) > 1 || self._entity_pool.available > 0:
+        #         panic("can set entity data only on a fresh or reset world")
+
+        #     var capacity = capacity(len(data.Entities), self.config.CapacityIncrement)
+
+        #     var _entities = make([]Entity, 0, capacity)
+        #     _entities = append(_entities, data.Entities...)
+
+        #     self._entity_pool._entities = _entities
+        #     self._entity_pool.next = eid(data.Next)
+        #     self._entity_pool.available = data.Available
+
+        #     self._entities = make([]entityIndex, len(data.Entities), capacity)
+        #     self._tarquery = bitSet
+        #     self._tarquery.ExtendTo(capacity)
+
+        #     var arch = self._archetypes.get(0)
+        #     for _, idx in enumerate(data.Alive):
+        #         var entity = self._entity_pool._entities[idx]
+        #         var archIdx = arch.Alloc(entity)
+        #         self._entities[entity.id] = entityIndexarch: arch, index: archIdx
+
+        # ----------------- from world_internal.go -----------------
+
+        # def newEntities(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
+        #     """
+        #     Creates new _entities without returning a query over them.
+        #     Used via [World.Batch].
+        #     """
+        #     arch, var startIdx = self.newEntitiesNoNotify(count, targetID, hasTarget, target, comps...)
+
+        #     if self._listener != nil:
+        #         var newRel *ID
+        #         if arch.HasRelationComponent:
+        #             newRel = &arch.RelationComponent
+
+        #         var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
+        #         var trigger = self._listener.Subscriptions() & bits
+        #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
+        #             var cnt = uint32(count)
+        #             var i: uint32
+        #             for i = 0 in range(i < cnt, i++):
+        #                 var idx = startIdx + i
+        #                 var entity = arch.GetEntity(idx)
+        #                 self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: comps, NewRelation: newRel, EventTypes: bits)
+
+        #     return arch, startIdx
+
+        # def newEntitiesQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID) -> Query:
+        #     """
+        #     Creates new _entities and returns a query over them.
+        #     Used via [World.Batch].
+        #     """
+        #     arch, var startIdx = self.newEntitiesNoNotify(count, targetID, hasTarget, target, comps...)
+        #     var lock = self.lock()
+
+        #     var batches = batchArchetypes
+        #         Added:   arch.Components(),
+        #         Removed: nil,
+
+        #     batches.Add(arch, nil, startIdx, arch.Len())
+        #     return newBatchQuery(self, lock, &batches)
+
+        # def newEntitiesWith(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component):
+        #     """
+        #     Creates new _entities with component values without returning a query over them.
+        #     Used via [World.Batch].
+        #     """
+        #     var ids = make([]ID, len(comps))
+        #     for i, c in enumerate(comps):
+        #         ids[i] = c.ID
+
+        #     arch, var startIdx = self.newEntitiesWithNoNotify(count, targetID, hasTarget, target, ids, comps...)
+
+        #     if self._listener != nil:
+        #         var newRel *ID
+        #         if arch.HasRelationComponent:
+        #             newRel = &arch.RelationComponent
+
+        #         var bits = subscription(true, false, len(comps) > 0, false, newRel != nil, newRel != nil)
+        #         var trigger = self._listener.Subscriptions() & bits
+        #         if trigger != 0 && subscribes(trigger, &arch.Mask, nil, self._listener.Components(), nil, newRel):
+        #             var i: uint32
+        #             var cnt = uint32(count)
+        #             for i = 0 in range(i < cnt, i++):
+        #                 var idx = startIdx + i
+        #                 var entity = arch.GetEntity(idx)
+        #                 self._listener.Notify(self, EntityEventEntity: entity, Added: arch.Mask, AddedIDs: ids, NewRelation: newRel, EventTypes: bits)
+
+        #     return arch, startIdx
+
+        # def newEntitiesWithQuery(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...Component) -> Query:
+        #     """
+        #     Creates new _entities with component values and returns a query over them.
+        #     Used via [World.Batch].
+        #     """
+        #     var ids = make([]ID, len(comps))
+        #     for i, c in enumerate(comps):
+        #         ids[i] = c.ID
+
+        #     arch, var startIdx = self.newEntitiesWithNoNotify(count, targetID, hasTarget, target, ids, comps...)
+        #     var lock = self.lock()
+        #     var batches = batchArchetypes
+        #         Added:   arch.Components(),
+        #         Removed: nil,
+
+        #     batches.Add(arch, nil, startIdx, arch.Len())
+        #     return newBatchQuery(self, lock, &batches)
+
+        # def newEntitiesNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, comps: ...ID):
+        #     """
+        #     Internal method to create new _entities.
+        #     """
+        #     self.checkLocked()
+
+        #     if count < 1:
+        #         panic("can only create a positive number of _entities")
+
+        #     if !target.IsZero() && !self.entityPool.Alive(target):
+        #         panic("can't make a dead entity a relation target")
+
+        #     var arch = self._archetypes.Get(0)
+        #     if len(comps) > 0:
+        #         arch = self._find_or_create_archetype(arch, comps, nil, target)
+
+        #     if hasTarget:
+        #         self.checkRelation(arch, targetID)
+        #         if !target.IsZero():
+        #             self._tarquery.Set(target.id, true)
+
+        #     var startIdx = arch.Len()
+        #     self.createEntities(arch, uint32(count))
+
+        #     return arch, startIdx
+
+        # def newEntitiesWithNoNotify(self, count: int, targetID: ID, hasTarget: Bool, target: Entity, ids: []ID, comps: ...Component):
+        #     """
+        #     Internal method to create new _entities with component values.
+        #     """
+        #     self.checkLocked()
+
+        #     if count < 1:
+        #         panic("can only create a positive number of _entities")
+
+        #     if !target.IsZero() && !self.entityPool.Alive(target):
+        #         panic("can't make a dead entity a relation target")
+
+        #     if len(comps) == 0:
+        #         return self.newEntitiesNoNotify(count, targetID, hasTarget, target)
+
+        #     var cnt = uint32(count)
+
+        #     var arch = self._archetypes.Get(0)
+        #     if len(comps) > 0:
+        #         arch = self._find_or_create_archetype(arch, ids, nil, target)
+
+        #     if hasTarget:
+        #         self.checkRelation(arch, targetID)
+        #         if !target.IsZero():
+        #             self._tarquery.Set(target.id, true)
+
+        #     var startIdx = arch.Len()
+        #     self.createEntities(arch, uint32(count))
+
+        #     var i: uint32
+        #     for i = 0 in range(i < cnt, i++):
+        #         var idx = startIdx + i
+        #         var entity = arch.GetEntity(idx)
+        #         for _, c in enumerate(comps):
+        #             self.copyTo(entity, c.ID, c.Comp)
+
+        #     return arch, startIdx
+
+        # def removeEntities(self, filter: Filter) -> int:
+        #     """
+        #     RemoveEntities removes and recycles all _entities matching a filter.
+
+        #     Returns the number of removed _entities.
+
+        #     Panics when called on a locked world.
+        #     Do not use during [Query] iteration!
+        #     """
+        #     self.checkLocked()
+
+        #     var lock = self.lock()
+
+        #     var bits: event.Subscription
+        #     var listen: Bool
+
+        #     var count: uint32
+
+        #     var arches = self.getArchetypes(filter)
+        #     var numArches = int32(len(arches))
+        #     var i: int32
+        #     for i = 0 in range(i < numArches, i++):
+        #         var arch = arches[i]
+        #         var ln = arch.Len()
+        #         if ln == 0:
+        #             continue
+
+        #         count += ln
+
+        #         var oldRel *ID
+        #         var oldIds []ID
+        #         if self._listener != nil:
+        #             if arch.HasRelationComponent:
+        #                 oldRel = &arch.RelationComponent
+
+        #             if len(arch.node.Ids) > 0:
+        #                 oldIds = arch.node.Ids
+
+        #             bits = subscription(false, true, false, len(oldIds) > 0, oldRel != nil, oldRel != nil)
+        #             var trigger = self._listener.Subscriptions() & bits
+        #             listen = trigger != 0 && subscribes(trigger, nil, &arch.Mask, self._listener.Components(), oldRel, nil)
+
+        #         var j: uint32
+        #         for j = 0 in range(j < ln, j++):
+        #             var entity = arch.GetEntity(j)
+        #             if listen:
+        #                 self._listener.Notify(self, EntityEventEntity: entity, Removed: arch.Mask, RemovedIDs: oldIds, OldRelation: oldRel, OldTarget: arch.RelationTarget, EventTypes: bits)
+
+        #             var index = &self._entities[entity.id]
+        #             index.arch = nil
+
+        #             if self._tarquery.Get(entity.id):
+        #                 self._cleanup_archetypes(entity)
+        #                 self._tarquery.Set(entity.id, false)
+
+        #             self.entityPool.Recycle(entity)
+
+        #         arch.Reset()
+        #         self._cleanup_archetype(arch)
+
+        #     self.unlock(lock)
+
+        #     return int(count)
+
+        # def notifyExchange(self, arch: *archetype, old_mask: *Mask, entity: Entity, add: []ID, rem: []ID, oldTarget: Entity, oldRel: *ID):
+        #     """
+        #     notify listeners for an exchange.
+        #     """
+        #     var newRel *ID
+        #     if arch.HasRelationComponent:
+        #         newRel = &arch.RelationComponent
+
+        #     var relChanged = false
+        #     if oldRel != nil || newRel != nil:
+        #         relChanged = (oldRel == nil) != (newRel == nil) || *oldRel != *newRel
+
+        #     var targChanged = oldTarget != arch.RelationTarget
+
+        #     var bits = subscription(false, false, len(add) > 0, len(rem) > 0, relChanged, relChanged || targChanged)
+        #     var trigger = self._listener.Subscriptions() & bits
+        #     if trigger != 0:
+        #         var changed = old_mask.Xor(&arch.Mask)
+        #         var added = arch.Mask.And(&changed)
+        #         var removed = old_mask.And(&changed)
+        #         if subscribes(trigger, &added, &removed, self._listener.Components(), oldRel, newRel):
+        #             self._listener.Notify(self,
+        #                 EntityEventEntity: entity, Added: added, Removed: removed,
+        #                     AddedIDs: add, RemovedIDs: rem, OldRelation: oldRel, NewRelation: newRel,
+        #                     OldTarget: oldTarget, EventTypes: bits,
+        #             )
+
+        # def exchangeBatch(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> int:
+        #     """
+        #     ExchangeBatch exchanges components for many _entities, matching a filter.
+
+        #     If the callback argument is given, it is called with a [Query] over the affected _entities,
+        #     one Query for each affected archetype.
+
+        #     Panics:
+        #     - when called with components that can't be added or removed because they are already present/not present, respectively.
+        #     - when called on a locked world. Do not use during [Query] iteration!
+
+        #     See also [World.Exchange].
+        #     """
+        #     var batches = batchArchetypes
+        #         Added:   add,
+        #         Removed: rem,
+
+        #     var count = self.exchangeBatchNoNotify(filter, add, rem, relation, hasRelation, target, &batches)
+
+        #     if self._listener != nil:
+        #         self.notifyQuery(&batches)
+
+        #     return count
+
+        # def exchangeBatchQuery(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity) -> Query:
+        #     var batches = batchArchetypes
+        #         Added:   add,
+        #         Removed: rem,
+
+        #     self.exchangeBatchNoNotify(filter, add, rem, relation, hasRelation, target, &batches)
+
+        #     var lock = self.lock()
+        #     return newBatchQuery(self, lock, &batches)
+
+        # def exchangeBatchNoNotify(self, filter: Filter, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity, batches: *batchArchetypes) -> int:
+        #     self.checkLocked()
+
+        #     if len(add) == 0 && len(rem) == 0:
+        #         if hasRelation:
+        #             panic("exchange operation has no effect, but a relation is specified. Use Batch.SetRelation instead")
+
+        #         return 0
+
+        #     var arches = self.getArchetypes(filter)
+        #     var lengths = make([]uint32, len(arches))
+        #     var totalEntities: uint32 = 0
+        #     for i, arch in enumerate(arches):
+        #         lengths[i] = arch.Len()
+        #         totalEntities += arch.Len()
+
+        #     for i, arch in enumerate(arches):
+        #         var archLen = lengths[i]
+
+        #         if archLen == 0:
+        #             continue
+
+        #         newArch, var start = self.exchangeArch(arch, archLen, add, rem, relation, hasRelation, target)
+        #         batches.Add(newArch, arch, start, newArch.Len())
+
+        #     return int(totalEntities)
+
+        # def exchangeArch(self, old_archetype: *archetype, oldArchLen: uint32, add: []ID, rem: []ID, relation: ID, hasRelation: Bool, target: Entity):
+        #     var mask = self._get_exchange_mask(old_archetype.Mask, add, rem)
+        #     var oldIDs = old_archetype.Components()
+
+        #     if hasRelation:
+        #         if !mask.Get(relation):
+        #             tp, var _ = self._registry.ComponentType(relation.id)
+        #             panic(fmt.Sprintf("can't add relation: resulting entity has no component %s", tp.Name()))
+
+        #         if !self._registry.IsRelation.Get(relation):
+        #             tp, var _ = self._registry.ComponentType(relation.id)
+        #             panic(fmt.Sprintf("can't add relation: %s is not a relation component", tp.Name()))
+
+        #     else
+        #         target = old_archetype.RelationTarget
+        #         if !target.IsZero() && old_archetype.Mask.ContainsAny(&self._registry.IsRelation):
+        #             for _, id in enumerate(rem):
+        #                 # Removing a relation
+        #                 if self._registry.IsRelation.Get(id):
+        #                     target = Entity
+        #                     break
+
+        #     var arch = self._find_or_create_archetype(old_archetype, add, rem, target)
+
+        #     var startIdx = arch.Len()
+        #     var count = oldArchLen
+        #     arch.AllocN(uint32(count))
+
+        #     var i: uint32
+        #     for i = 0 in range(i < count, i++):
+        #         var idx = startIdx + i
+        #         var entity = old_archetype.GetEntity(i)
+        #         var index = &self._entities[entity.id]
+        #         arch.SetEntity(idx, entity)
+        #         index.arch = arch
+        #         index.index = idx
+
+        #         for _, id in enumerate(oldIDs):
+        #             if mask.Get(id):
+        #                 var comp = old_archetype.Get(i, id)
+        #                 arch.SetPointer(idx, id, comp)
+
+        #     if !target.IsZero():
+        #         self._tarquery.Set(target.id, true)
+
+        #     # Theoretically, it could be oldArchLen < old_archetype.Len(),
+        #     # which means we can't reset the archetype.
+        #     # However, this should not be possible as processing an entity twice
+        #     # would mean an illegal component addition/removal.
+        #     old_archetype.Reset()
+        #     self._cleanup_archetype(old_archetype)
+
+        #     return arch, startIdx
+
+        # def copyTo(self, entity: Entity, id: ID, comp: interface) -> unsafe:
+        #     """
+        #     Copies a component to an entity
+        #     """
+        #     if !self.Has(entity, id):
+        #         panic("can't copy component into entity that has no such component type")
+
+        #     var index = &self._entities[entity.id]
+        #     var arch = index.arch
+
+        #     return arch.Set(index.index, id, comp)
+
+        # def getArchetypes(self, filter: Filter):
+        #     """
+        #     Returns all _archetypes that match the given filter.
+        #     """
+        #     if cached, var ok = filter.(*CachedFilter); ok:
+        #         return self._filter_cache.get(cached).Archetypes.pointers
+
+        #     var arches = []*archetype
+        #     var _nodes = self._node_pointers
+
+        #     for _, nd in enumerate(_nodes):
+        #         if !nd.IsActive || !nd.Matches(filter):
+        #             continue
+
+        #         if rf, var ok = filter.(*RelationFilter); ok:
+        #             var target = rf.Target
+        #             if arch, var ok = nd.archetypeMap[target]; ok:
+        #                 arches = append(arches, arch)
+
+        #             continue
+
+        #         var nodeArches = nd.Archetypes()
+        #         var ln2 = int32(nodeArches.Len())
+        #         var j: int32
+        #         for j = 0 in range(j < ln2, j++):
+        #             var a = nodeArches.Get(j)
+        #             if a.IsActive():
+        #                 arches = append(arches, a)
+
+        #     return arches
+
+        # def extendArchetypeLayouts(self, count: uint8):
+        #     """
+        #     Extend the number of access layouts in _archetypes.
+        #     """
+        #     var len = self._nodes.Len()
+        #     var i: int32
+        #     for i = 0 in range(i < len, i++):
+        #         self._nodes.Get(i).ExtendArchetypeLayouts(count)
+
+        # def componentID(self, tp: reflect.Type) -> ID:
+        #     """
+        #     componentID returns the ID for a component type, and registers it if not already registered.
+        #     """
+        #     id, var newID = self._registry.ComponentID(tp)
+        #     if newID:
+        #         if self.is_locked():
+        #             self._registry.unregisterLastComponent()
+        #             panic("attempt to register a new component in a locked world")
+
+        #         if id > 0 && id%layoutChunkSize == 0:
+        #             self.extendArchetypeLayouts(id + layoutChunkSize)
+
+        #     return IDid: id
+
+        # def resourceID(self, tp: reflect.Type) -> ResID:
+        #     """
+        #     resourceID returns the ID for a resource type, and registers it if not already registered.
+        #     """
+        #     id, var _ = self._resources._registry.ComponentID(tp)
+        #     return ResIDid: id
+
+        # def closeQuery(self, query: *Query):
+        #     """
+        #     closeQuery closes a query and unlocks the world.
+        #     """
+        #     query.nodeIndex = -2
+        #     query.archIndex = -2
+        #     self.unlock(query.lockBit)
+
+        #     if self._listener != nil:
+        #         if arch, var ok = query.nodeArchetypes.(*batchArchetypes); ok:
+        #             self.notifyQuery(arch)
+
+        # def notifyQuery(self, batchArch: *batchArchetypes):
+        #     """
+        #     notifies the _listener for all _entities on a batch query.
+        #     """
+        #     var count = batchArch.Len()
+        #     var i: int32
+        #     for i = 0 in range(i < count, i++):
+        #         var arch = batchArch.Get(i)
+
+        #         var newRel *ID
+        #         if arch.HasRelationComponent:
+        #             newRel = &arch.RelationComponent
+
+        #         var event = EntityEvent
+        #             Entity: Entity, Added: arch.Mask, Removed: Mask, AddedIDs: batchArch.Added, RemovedIDs: batchArch.Removed,
+        #             OldRelation: nil, NewRelation: newRel,
+        #             OldTarget: Entity, EventTypes: 0,
+
+        #         var old_archetype = batchArch.OldArchetype[i]
+        #         var relChanged = newRel != nil
+        #         var targChanged = !arch.RelationTarget.IsZero()
+
+        #         if old_archetype != nil:
+        #             var oldRel *ID
+        #             if old_archetype.HasRelationComponent:
+        #                 oldRel = &old_archetype.RelationComponent
+
+        #             relChanged = false
+        #             if oldRel != nil || newRel != nil:
+        #                 relChanged = (oldRel == nil) != (newRel == nil) || *oldRel != *newRel
+
+        #             targChanged = old_archetype.RelationTarget != arch.RelationTarget
+        #             var changed = event.Added.Xor(&old_archetype.node.Mask)
+        #             event.Added = changed.And(&event.Added)
+        #             event.Removed = changed.And(&old_archetype.node.Mask)
+        #             event.OldTarget = old_archetype.RelationTarget
+        #             event.OldRelation = oldRel
+
+        #         var bits = subscription(old_archetype == nil, false, len(batchArch.Added) > 0, len(batchArch.Removed) > 0, relChanged, relChanged || targChanged)
+        #         event.EventTypes = bits
+
+        #         var trigger = self._listener.Subscriptions() & bits
+        #         if trigger != 0 && subscribes(trigger, &event.Added, &event.Removed, self._listener.Components(), event.OldRelation, event.NewRelation):
+        #             start, var end = batchArch.StartIndex[i], batchArch.EndIndex[i]
+        #             var e: uint32
+        #             for e = start in range(e < end, e++):
+        #                 var entity = arch.GetEntity(e)
+        #                 event.Entity = entity
+        #                 self._listener.Notify(self, event)
