@@ -248,7 +248,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self.size = size
         self.active_component_mask = active_component_mask
 
-        self.unsafe_init_components(active_component_mask)
+        self._unsafe_init_components(active_component_mask)
 
     def __init__(out self, *, copy: Self):
         """Shallow-copies another component storage instance.
@@ -317,7 +317,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             is_mutating=True
         ](copy_component)
 
-    def unsafe_init_components(mut self, read init_component_mask: BitMask):
+    def _unsafe_init_components(mut self, read init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
 
         Important:
