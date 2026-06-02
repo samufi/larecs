@@ -65,6 +65,7 @@ struct EntityAccessor[
 
         _trace_function["OUT"]("EntityAccessor.__init__")
 
+    @always_inline
     def get_entity(self) -> Entity:
         """Returns the entity of the accessor.
 
@@ -79,6 +80,7 @@ struct EntityAccessor[
         _trace_function["OUT"]("EntityAccessor.get_entity")
         return result
 
+    @always_inline
     def get[T: ComponentType](ref self) raises -> ref[self.archetype_origin] T:
         """Returns a reference to the given component of the Entity.
 
@@ -102,6 +104,7 @@ struct EntityAccessor[
             self._index_in_archetype,
         )
 
+    @always_inline
     def set[
         origin: MutOrigin, *Ts: ComponentType
     ](
@@ -139,6 +142,7 @@ struct EntityAccessor[
 
         _trace_function["OUT"]("EntityAccessor.set")
 
+    @always_inline
     def has[T: ComponentType](self) -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
@@ -257,12 +261,13 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self.active_component_mask = copy.active_component_mask
         self.data = Self._PointerTuple()
 
+        @always_inline
         def copy_component_ptr[
             T: ComponentType, id: ComponentId
-        ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) {read} -> Self.ComponentPointer[T]:
             return rebind[Self.ComponentPointer[T]](copy.data[id])
 
-        self._for_active_components[is_mutating=True, func=copy_component_ptr]()
+        self._for_active_components[is_mutating=True](copy_component_ptr)
 
     @always_inline
     def __len__(self) -> Int:
@@ -274,16 +279,20 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         return self.size
 
+    @always_inline
     def __del__(deinit self):
+        @always_inline
         def free_component_storage[
             T: ComponentType, id: ComponentId
-        ](ptr: UnsafePointer[T, MutExternalOrigin]) capturing:
-            destroy_n(ptr, count=self.size)
-            ptr.free()
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: UnsafePointer[T, MutExternalOrigin]):
+            destroy_n(comp_ptr, count=storage_size)
+            comp_ptr.free()
 
         self._for_active_components[
-            is_mutating=False, func=free_component_storage
-        ]()
+            is_mutating=False,
+        ](
+            free_component_storage
+        )
 
     def deep_copy(self, out new_storage: Self):
         """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
@@ -293,19 +302,20 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         new_storage = Self(copy=self)
 
+        @always_inline
         def copy_component[
             T: ComponentType, id: ComponentId
-        ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
-            new_ptr = alloc[T](self.capacity)
-            if self.size > 0:
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) -> Self.ComponentPointer[T]:
+            new_ptr = alloc[T](storage_capacity)
+            if storage_size > 0:
                 uninit_copy_n[overlapping=False](
-                    dest=new_ptr, src=ptr.value(), count=self.size
+                    dest=new_ptr, src=comp_ptr.value(), count=storage_size
                 )
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         new_storage._for_active_components[
-            is_mutating=True, func=copy_component
-        ]()
+            is_mutating=True
+        ](copy_component)
 
     def unsafe_init_components(mut self, read init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
@@ -324,15 +334,15 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         def init_component_ptr[
             T: ComponentType, id: ComponentId
-        ](ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[T]:
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: Self.ComponentPointer[T]) {read} -> Self.ComponentPointer[T]:
             if init_component_mask.get(id):
                 return rebind[Self.ComponentPointer[T]](
-                    Optional(alloc[T](self.capacity))
+                    Optional(alloc[T](storage_capacity))
                 )
             else:
-                return ptr
+                return comp_ptr
 
-        self._for_active_components[is_mutating=True, func=init_component_ptr]()
+        self._for_active_components[is_mutating=True](init_component_ptr)
 
     @always_inline
     def get_component_count(self) -> Int:
@@ -343,6 +353,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         return self.active_component_mask.total_bits_set()
 
+    @always_inline
     def add_entity(mut self) -> Int:
         """Adds an entity to the storage (increments size, checks capacity).
 
@@ -355,6 +366,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self.size += 1
         return idx
 
+    @always_inline
     def clear(mut self):
         """Removes all entities from the storage (resets size to 0).
 
@@ -362,6 +374,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         self.size = 0
 
+    @always_inline
     def reserve(mut self, new_capacity: Int):
         """Extends the capacity of the storage to at least the specified number of entities.
 
@@ -384,26 +397,28 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         var new_pow2_capacity = next_power_of_two(new_capacity)
         var old_capacity = self.capacity
 
+        @always_inline
         def resize_component_storage[
             T: ComponentType, id: ComponentId
-        ](old_ptr: Self.ComponentPointer[T]) capturing -> Self.ComponentPointer[
+        ](storage_size: Int, storage_capacity: Int, old_ptr: Self.ComponentPointer[T]) {read} -> Self.ComponentPointer[
             T
         ]:
             var new_ptr = alloc[T](new_pow2_capacity)
-            if self.size > 0:
+            if storage_size > 0:
                 uninit_move_n[overlapping=False](
-                    dest=new_ptr, src=old_ptr.value(), count=self.size
+                    dest=new_ptr, src=old_ptr.value(), count=storage_size
                 )
             old_ptr.value().free()
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         if old_capacity > 0 or self.size == 0:
             self._for_active_components[
-                is_mutating=True, func=resize_component_storage
-            ]()
+                is_mutating=True](resize_component_storage
+            )
 
         self.capacity = new_pow2_capacity
 
+    @always_inline
     def reserve(mut self, *, add: Int):
         """
         Reserves additional capacity for at least `add` amount of entities.
@@ -418,6 +433,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self.reserve(self.size + add)
 
+    @always_inline
     def swap_remove_entity(mut self, remove_idx: Int) -> Bool:
         """Performs a swap-remove operation for entity at idx, moving last entity to idx.
 
@@ -435,20 +451,21 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         need_swap = remove_idx != self.size
 
+        @always_inline
         def swap_component_data[
             T: ComponentType, id: ComponentId
-        ](ptr: UnsafePointer[T, MutExternalOrigin]) capturing:
-            destroy_n(ptr + remove_idx, count=1)
+        ](storage_size: Int, storage_capacity: Int, comp_ptr: UnsafePointer[T, MutExternalOrigin]) {read}:
+            destroy_n(comp_ptr + remove_idx, count=1)
             if need_swap:
                 uninit_move_n[overlapping=False](
-                    dest=ptr + remove_idx,
-                    src=ptr + self.size,
+                    dest=comp_ptr + remove_idx,
+                    src=comp_ptr + storage_size,
                     count=1,
                 )
 
         self._for_active_components[
-            is_mutating=False, func=swap_component_data
-        ]()
+            is_mutating=False](swap_component_data
+        )
         return need_swap
 
     @always_inline
@@ -494,6 +511,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
         return self.active_component_mask.contains(comp_mask)
 
+    @always_inline
     def assert_has_component[T: ComponentType](self):
         """Asserts if the storage does not contain the given component type.
             Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
@@ -507,6 +525,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
             assert self.has_component[T](), MissingComponentsError[T]()
 
+    @always_inline
     def set_component[
         T: ComponentType
     ](mut self, entity_idx: Int, var component: T):
@@ -521,6 +540,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         self.get_component_ptr[T]()[entity_idx] = component^
 
+    @always_inline
     def assert_has_components[*Ts: ComponentType](self):
         """Raises if the storage does not contain all the given component types.
             Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
@@ -533,6 +553,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
             assert self.has_components[*Ts](), MissingComponentsError[*Ts]()
 
+    @always_inline
     def set_components[
         *Ts: ComponentType
     ](mut self, entity_idx: Int, var *components: *Ts):
@@ -553,12 +574,14 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Self.component_manager.assert_valid_components[*Ts]()
         self.assert_has_components[*Ts]()
 
+        @always_inline
         def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
             comptime T = Ts[comp_id]
             self.get_component_ptr[T]()[entity_idx] = component^
 
         (components^).consume_elements[set_component]()
 
+    @always_inline
     def copy_component_from[
         T: ComponentType
     ](
@@ -593,6 +616,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             count=count,
         )
 
+    @always_inline
     def copy_shared_components_from_unsafe[
         source_origin: Origin,
     ](
@@ -635,32 +659,37 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     count=count,
                 )
 
+    @always_inline
     def _for_active_components[
         is_mutating: Bool,
-        func: def[T: ComponentType, id: ComponentId](
-            ptr: Self.ComponentPointer[T]
-        ) capturing -> Self.ComponentPointer[T],
-    ](mut self) where is_mutating:
+        FuncType: def[T: ComponentType, id: ComponentId](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: Self.ComponentPointer[T]
+        ) -> Self.ComponentPointer[T],
+    ](mut self, func: FuncType) where is_mutating:
         """Helper to iterate over active components and their pointers.
 
         Parameters:
             is_mutating: Whether the function mutates the component pointers. This determines whether the pointers passed to the function are mutable or not.
-            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
+            FuncType: The type of the function to apply to each active component.
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]():
                 comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
                 self.data[id] = rebind[Self._PointerTuple.element_types[id]](
-                    func[T, id](comp_ptr)
+                    func[T, id](self.size, self.capacity, comp_ptr)
                 )
 
     def _for_active_components[
         is_mutating: Bool,
-        func: def[T: ComponentType, id: ComponentId](
-            ptr: UnsafePointer[T, MutExternalOrigin]
-        ) capturing,
-    ](self) where not is_mutating:
+        FuncType: def[T: ComponentType, id: ComponentId](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: UnsafePointer[T, MutExternalOrigin]
+        ),
+    ](self, func: FuncType) where not is_mutating:
         """Helper to iterate over active components and their pointers.
 
         Parameters:
@@ -674,7 +703,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 assert (
                     comp_ptr is not None
                 ), "Active component storage must be initialized"
-                func[T, id](comp_ptr.value())
+                func[T, id](self.size, self.capacity, comp_ptr.value())
 
 
 struct Archetype[
@@ -711,6 +740,7 @@ struct Archetype[
     var _mask: BitMask
     """Component mask represented by this archetype."""
 
+    @always_inline
     def __init__(
         out self,
     ):
@@ -725,6 +755,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.__init__ zero")
 
+    @always_inline
     def __init__(
         out self,
         node_index: Int,
@@ -759,6 +790,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.__init__ mask")
 
+    @always_inline
     def __init__[
         component_count: Int
     ](
@@ -795,6 +827,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.__init__ components")
 
+    @always_inline
     def __init__(out self, *, copy: Self):
         """Copies the data from an existing archetype to a new one.
 
@@ -814,6 +847,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.__init__ copy")
 
+    @always_inline
     def __len__(self) -> Int:
         """Returns the number of entities in the archetype.
 
@@ -827,6 +861,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.__len__")
         return result
 
+    @always_inline
     def __bool__(self) -> Bool:
         """Returns whether the archetype contains entities.
 
@@ -840,6 +875,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.__bool__")
         return result
 
+    @always_inline
     def get_node_index(self) -> Int:
         """Returns the index of the archetype's node in the archetype graph.
 
@@ -853,6 +889,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.get_node_index")
         return result
 
+    @always_inline
     def get_mask(self) -> ref[self._mask] BitMask:
         """Returns the mask of the archetype's node in the archetype graph.
 
@@ -864,6 +901,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.get_mask")
         return self._mask
 
+    @always_inline
     def reserve(mut self):
         """Extends the capacity of the archetype by factor 2 using power-of-2 allocation strategy.
 
@@ -877,6 +915,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.reserve")
 
+    @always_inline
     def reserve(mut self, new_capacity: Int):
         """Extends the capacity of the archetype to at least the specified number of entities.
 
@@ -908,6 +947,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.reserve capacity")
 
+    @always_inline
     def get_entity(self, idx: Int) -> ref[self._entities] Entity:
         """Returns the entity at the given index.
 
@@ -924,6 +964,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.get_entity")
         return self._entities[idx]
 
+    @always_inline
     def get_entity_accessor[
         mut: Bool, //, origin: Origin[mut=mut]
     ](
@@ -950,6 +991,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.get_entity_accessor")
 
+    @always_inline
     def get_component[
         T: ComponentType
     ](ref self, entity_idx: Int) -> ref[self] T:
@@ -971,6 +1013,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.get_component")
         return self._storage.get_component_ptr[T]()[entity_idx]
 
+    @always_inline
     def set_component[
         T: ComponentType
     ](mut self, entity_idx: Int, var component: T):
@@ -989,6 +1032,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.set_component")
 
+    @always_inline
     def set_components[
         *Ts: ComponentType
     ](mut self, entity_idx: Int, var *components: *Ts):
@@ -1007,6 +1051,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.set_components")
 
+    @always_inline
     def set_component_range[
         T: ComponentType
     ](mut self, start_entity_idx: Int, count: Int, value: T):
@@ -1033,6 +1078,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.set_component_range")
 
+    @always_inline
     def copy_component_from[
         T: ComponentType
     ](
@@ -1061,6 +1107,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.copy_component_from")
 
+    @always_inline
     def get_entities(self) -> ref[self._entities] List[Entity]:
         """Returns the entities in the archetype.
 
@@ -1072,6 +1119,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.get_entities")
         return self._entities
 
+    @always_inline
     def has_component[T: ComponentType](self) -> Bool:
         """Returns whether the archetype contains the given component id.
 
@@ -1088,6 +1136,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.has_component")
         return result
 
+    @always_inline
     def assert_has_component[T: ComponentType](self):
         """Raises if the archetype does not contain the given component id.
 
@@ -1100,6 +1149,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.assert_has_component")
 
+    @always_inline
     def remove(mut self, idx: Int) -> Bool:
         """Removes an entity and its components from the archetype.
 
@@ -1124,6 +1174,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.remove")
         return swapped
 
+    @always_inline
     def clear(mut self):
         """Removes all entities from the archetype.
 
@@ -1136,6 +1187,7 @@ struct Archetype[
 
         _trace_function["OUT"]("Archetype.clear")
 
+    @always_inline
     def add(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
 
@@ -1153,6 +1205,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.add")
         return idx
 
+    @always_inline
     def extend_from_archetype_unsafe[
         source_origin: Origin,
     ](
@@ -1220,6 +1273,7 @@ struct Archetype[
         _trace_function["OUT"]("Archetype.extend_from_archetype_unsafe")
         return start_index
 
+    @always_inline
     def extend(
         mut self,
         count: Int,
