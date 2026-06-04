@@ -52,4 +52,3 @@ def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
 
     check_bounds(start_index, size)
     check_bounds(start_index + count - 1, size)
-

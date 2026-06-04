@@ -1,6 +1,7 @@
 from std.sys.defines import is_defined
 from std.time import global_perf_counter_ns
 
+
 @always_inline
 def _trace_function[inout: StaticString](name: StaticString):
     """Prints a function trace when tracing is enabled.
@@ -34,7 +35,7 @@ struct TraceGuard(ImplicitlyCopyable):
     """
 
     var name: StaticString
-    
+
     def __enter__(mut self):
         _trace_function["IN"](self.name)
 
