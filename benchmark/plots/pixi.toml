@@ -9,7 +9,7 @@ version = "0.4.0"
 [tasks]
 
 [dependencies]
-mojo = ">=0.26.2, <1.0.0"
+mojo = ">1.0.0b1, <=1.0.0b2"
 python = "==3.12"
 matplotlib = ">=3.10.0,<4"
 pandas = ">=2.2"
