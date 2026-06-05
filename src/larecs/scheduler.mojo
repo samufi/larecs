@@ -178,11 +178,13 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
     """The index of the finalize function in the systems storage."""
 
     var world: Self.World
+    """The world updated by the scheduler."""
     var _systems: List[
         Tuple[
             UnsafeBox, Self.FunctionType, Self.FunctionType, Self.FunctionType
         ]
     ]
+    """Registered systems with their lifecycle function adapters."""
 
     def __init__(out self) raises:
         """

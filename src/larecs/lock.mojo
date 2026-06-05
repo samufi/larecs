@@ -9,10 +9,14 @@ struct LockError(Equatable, ImplicitlyCopyable, Writable):
     """
 
     var _variant: Int
+    """Numeric discriminator for the lock error variant."""
 
     comptime UNKNOWN = LockError(_variant=0)
+    """Fallback lock error variant."""
     comptime out_of_locks = LockError(_variant=1)
+    """Error raised when no lock bits remain available."""
     comptime unbalanced_unlock = LockError(_variant=2)
+    """Error raised when unlocking a bit that is not locked."""
 
     def variant_name(self) -> StaticString:
         """
@@ -64,10 +68,13 @@ struct LockManager(Copyable, Movable):
     """
 
     var locks: BitMask  # The actual locks.
+    """The active lock bits."""
     var bit_pool: BitPool  # The bit pool for getting and recycling bits.
+    """Pool used to allocate and recycle lock bit indices."""
 
     @always_inline
     def __init__(out self):
+        """Initializes an unlocked lock manager."""
         self.locks = BitMask()
         self.bit_pool = BitPool()
 
@@ -133,7 +140,9 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
     """
 
     var _locks: Pointer[LockManager, Self.origin]
+    """Pointer to the lock manager controlled by this context."""
     var _lock: Int
+    """The lock bit acquired by this context."""
 
     @always_inline
     def __init__(out self, locks: Pointer[LockManager, Self.origin]):

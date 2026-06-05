@@ -23,6 +23,20 @@ def concatenate_inline_arrays[
     b: InlineArray[ElementType, b_size],
     out result: InlineArray[ElementType, a_size + b_size],
 ):
+    """Concatenates two inline arrays into an output inline array.
+
+    Parameters:
+        ElementType: The element type stored in both arrays.
+        a_size: The compile-time length of the first array.
+        b_size: The compile-time length of the second array.
+
+    Args:
+        a: The first array.
+        b: The second array.
+    
+    Returns:
+        The output array containing `a` followed by `b`.
+    """
     result = {uninitialized = True}
 
     uninit_copy_n[overlapping=False](

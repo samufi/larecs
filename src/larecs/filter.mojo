@@ -21,9 +21,12 @@ struct MaskFilter[total_bits: Int]:
     """
 
     comptime bitmask = _BitMask[Self.total_bits]
+    """The concrete bitmask type matched by this filter."""
 
     var include: Self.bitmask  # Components to include.
+    """Component bits that must be present."""
     var exclude: Self.bitmask  # Components to exclude.
+    """Component bits that must be absent."""
 
     def matches(self, bits: Self.bitmask) -> Bool:
         """Matches the filter against a mask."""

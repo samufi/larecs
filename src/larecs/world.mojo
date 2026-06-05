@@ -36,21 +36,38 @@ from ._tracing import TraceGuard
 
 @fieldwise_init
 struct WorldError(Equatable, ImplicitlyCopyable, Writable):
+    """Typed errors raised by world operations."""
+
     var _variant: Int
+    """Numeric discriminator for the world error variant."""
 
     comptime UNKNOWN = WorldError(_variant=0)
+    """Fallback world error variant."""
     comptime non_existent_entity = WorldError(_variant=1)
+    """Error raised when an entity is no longer alive."""
     comptime world_is_locked = WorldError(_variant=2)
+    """Error raised when mutating a world while it is locked."""
     comptime missing_components_for_removal_entity = WorldError(_variant=3)
+    """Error raised when an entity lacks components requested for removal."""
     comptime missing_components_for_removal_query = WorldError(_variant=4)
+    """Error raised when a removal query may match entities missing components."""
     comptime duplicate_components_for_addition_entity = WorldError(_variant=5)
+    """Error raised when adding components already present on an entity."""
     comptime duplicate_components_for_addition_query = WorldError(
         _variant=6,
     )
+    """Error raised when an addition query may match entities with duplicate components."""
     comptime out_of_locks = WorldError(_variant=7)
+    """Error raised when the world cannot allocate another lock."""
     comptime unbalanced_unlock = WorldError(_variant=8)
+    """Error raised when unlocking a lock that is not active."""
 
     def __init__(out self, e: LockError):
+        """Converts a lock error into a world error.
+
+        Args:
+            e: The lock error to convert.
+        """
         if e._variant == LockError.out_of_locks._variant:
             return Self.out_of_locks
         elif e._variant == LockError.unbalanced_unlock._variant:
@@ -60,6 +77,11 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
 
     @always_inline
     def variant_name(self) -> StaticString:
+        """Returns the world error variant name.
+
+        Returns:
+            The static string name for the variant.
+        """
         comptime VARIANT_NAMES: InlineArray[StaticString, 9] = [
             "unknown",
             "non_existent_entity",
@@ -76,6 +98,11 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
 
     @always_inline
     def msg(self) -> StaticString:
+        """Returns the world error message.
+
+        Returns:
+            The human-readable message for the variant.
+        """
         comptime VARIANT_MESSAGES: InlineArray[StaticString, 9] = [
             "Unknown error.",
             "The considered entity does not exist anymore.",
@@ -100,6 +127,11 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
         return global_variant_messages[self._variant]
 
     def write_to(self, mut writer: Some[Writer]):
+        """Writes the world error to a writer.
+
+        Args:
+            writer: The destination writer.
+        """
         writer.write("WorldError.", self.variant_name(), ": ", self.msg())
 
 
@@ -124,8 +156,10 @@ struct Replacer[
     """
 
     comptime World = World[*Self.component_types]
+    """The world type modified by this replacer."""
 
     var _world: Pointer[Self.World, Self.world_origin]
+    """Pointer to the world modified by this replacer."""
 
     def by(self, entity: Entity) raises WorldError:
         """
@@ -276,24 +310,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """
 
     comptime component_manager = ComponentManager[*Self.component_types]()
+    """Component manager for this world's component type set."""
     comptime ComponentId = Self.component_manager.Id
+    """Component identifier type used by this world."""
 
-    """
-    Internal type aliases for component ID management and archetype handling.
-
-    If *Ts is empty, this results in a zero-sized InlineArray, else this
-    results in an InlineArray of component IDs.
-    """
+    # If *Ts is empty, this results in a zero-sized InlineArray, else this
+    # results in an InlineArray of component IDs.
     comptime _optional_component_ids[
         *Ts: ComponentType
     ] = Self.component_manager.get_id_arr[*Ts]()
+    """Component ID array type for an optional component type pack."""
 
     comptime Archetype = _Archetype[*Self.component_types]
+    """Archetype type used by this world."""
     comptime Query = Query[
         _,
         *Self.component_types,
         has_without_mask=_,
     ]
+    """Query builder type for this world's component type set."""
 
     comptime Iterator[
         archetype_mutability: Bool,
@@ -396,6 +431,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         has_without_mask=False,
         archetype_iterator_variant_id=ArchetypeIteratorVariant.by_list.id,
     ]
+    """Primary entity iterator type for predetermined archetype lists."""
 
     # _listener       Listener                  # EntityEvent _listener.
     # _node_pointers   []*archNode               # Helper list of all node pointers for queries.
@@ -407,19 +443,25 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     # _node_data       pagedSlice[_node_data]      # The archetype graph's data.
     # _stats          _stats.World               # Cached world statistics.
     var _entity_pool: EntityPool  # Pool for entities.
+    """Pool used to allocate and recycle entity IDs."""
     var _entities: List[
         EntityLocation
     ]  # Mapping from entities to archetype and index.
+    """Mapping from entity IDs to their current archetype location."""
     var _archetype_map: BitMaskGraph[
         -1
     ]  # Mapping from component masks to archetypes.
+    """Graph mapping component masks to archetype indices."""
     var _locks: LockManager  # World _locks.
+    """Lock manager guarding mutation during active iteration."""
 
     var _archetypes: List[
         Self.Archetype
     ]  # Archetypes that have no relations components.
+    """Storage for all archetypes owned by the world."""
 
     var resources: Resources  # The resources of the world.
+    """Resource storage associated with the world."""
 
     def __init__(out self) raises:
         """

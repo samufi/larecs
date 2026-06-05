@@ -1,17 +1,10 @@
 # Eid is the entity identifier/index type.
 comptime EntityId = Int
+"""The integer type used for entity identifiers."""
 
 # ID is the component identifier type.
 comptime Id = UInt8
-
-
-def get_max_size[dType: DType]() -> Int:
-    """Returns how many different numbers could be expressed with a Int with the same size as dType.
-
-    Parameters:
-        dType: The type to get the size of.
-    """
-    return Int(Scalar[dType].MAX) + 1
+"""The integer type used for compact component identifiers."""
 
 
 # # ResID is the resource identifier type.

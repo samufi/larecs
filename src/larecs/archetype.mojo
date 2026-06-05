@@ -46,7 +46,9 @@ struct EntityAccessor[
     """The archetype of the entity."""
 
     var _archetype: Pointer[Self.Archetype, Self.archetype_origin]
+    """Pointer to the archetype that owns this entity row."""
     var _index_in_archetype: Int
+    """Index of the entity row within the archetype."""
 
     @doc_hidden
     def __init__(
@@ -148,7 +150,18 @@ struct EntityAccessor[
 
 @fieldwise_init
 struct MissingComponentsError[*Ts: ComponentType](Writable):
+    """Error message writer for missing component requirements.
+
+    Parameters:
+        Ts: The component types that were required but missing.
+    """
+
     def write_to(self, mut writer: Some[Writer]):
+        """Writes a missing-components diagnostic.
+
+        Args:
+            writer: The destination writer.
+        """
         comptime if len(Self.Ts) <= 1:
             writer.write("The component [")
             comptime for i in range(len(Self.Ts)):
@@ -164,6 +177,7 @@ struct MissingComponentsError[*Ts: ComponentType](Writable):
 
 
 comptime ComponentId = Int
+"""The integer identifier assigned to a component type."""
 
 
 struct _ComponentStorage[*ComponentTypes: ComponentType](
@@ -189,20 +203,28 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     """
 
     comptime component_manager = ComponentManager[*Self.ComponentTypes]
+    """The component manager for the component types. Provides utilities for mapping component types to IDs and validating component types.
+    """
 
     comptime ComponentPointer[T: ComponentType] = Optional[
         UnsafePointer[T, MutExternalOrigin]
     ]
+    """The type of the component buffer pointer for a given component type T. Is an optional UnsafePointer, where a present pointer indicates an active component with allocated storage, and None indicates an inactive component without storage.
+    """
 
     comptime _PointerMapper[
         T: ComponentType
     ]: ImplicitlyCopyable & ImplicitlyDestructible & RegisterPassable & Defaultable = Self.ComponentPointer[
         T
     ]
+    """Helper type-level function to map component types to their corresponding pointer types in the storage tuple.
+    """
 
     comptime _PointerTuple = Tuple[
         *Self.ComponentTypes.map[Self._PointerMapper]()
     ]
+    """The type of the tuple storing component pointers for all component types. See the description of [._ComponentStorage] for the layout and semantics of this tuple.
+    """
 
     var capacity: Int
     """The capacity of the component storage, i.e. how many entities can be stored without reallocating."""
@@ -272,6 +294,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
     @always_inline
     def __del__(deinit self):
+        """Destroys and frees all active component buffers."""
+
         @always_inline
         def free_component_storage[
             T: ComponentType, id: ComponentId

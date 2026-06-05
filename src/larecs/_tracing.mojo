@@ -7,13 +7,11 @@ def _trace_function[inout: StaticString](name: StaticString):
     """Prints a function trace when tracing is enabled.
 
     Parameters:
-        inout: The trace marker direction. Supported values are `"IN"` and `"OUT"`.
+        inout: The trace marker direction. Constraints: `inout` must be either `"IN"` or `"OUT"`.
 
     Args:
         name: The function name to emit.
 
-    Constraints:
-        `inout` must be either `"IN"` or `"OUT"`.
     """
     comptime assert (
         inout == "IN" or inout == "OUT"
@@ -35,9 +33,12 @@ struct TraceGuard(ImplicitlyCopyable):
     """
 
     var name: StaticString
+    """The function name emitted by the trace guard."""
 
     def __enter__(mut self):
+        """Emits the function-entry trace message."""
         _trace_function["IN"](self.name)
 
     def __exit__(mut self):
+        """Emits the function-exit trace message."""
         _trace_function["OUT"](self.name)

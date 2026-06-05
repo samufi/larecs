@@ -22,9 +22,12 @@ struct QueryError(Equatable, ImplicitlyCopyable, Writable):
     """
 
     var _variant: Int
+    """Numeric discriminator for the query error variant."""
 
     comptime UNKNOWN = QueryError(_variant=0)
+    """Fallback query error variant."""
     comptime could_not_create_iterator = QueryError(_variant=1)
+    """Error raised when an iterator cannot be constructed."""
 
     def variant_name(self) -> String:
         """
@@ -93,16 +96,21 @@ struct Query[
     """
 
     comptime World = World[*Self.ComponentTypes]
+    """The world type queried by this query builder."""
 
     comptime QueryWithWithout = Query[
         Self.world_origin,
         *Self.ComponentTypes,
         has_without_mask=True,
     ]
+    """The query type with an active exclusion mask."""
 
     var _world: Pointer[Self.World, Self.world_origin]
+    """Pointer to the world being queried."""
     var _mask: BitMask
+    """Component mask that archetypes must contain."""
     var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
+    """Optional component mask that archetypes must not contain."""
 
     @doc_hidden
     def __init__(
@@ -278,7 +286,9 @@ struct QueryInfo[
     """
 
     var mask: BitMask
+    """Component mask that matching archetypes must contain."""
     var without_mask: StaticOptional[BitMask, Self.has_without_mask]
+    """Optional component mask that matching archetypes must not contain."""
 
     @implicit
     def __init__(

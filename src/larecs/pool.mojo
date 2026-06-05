@@ -10,11 +10,15 @@ struct EntityPool(Copyable, Movable, Sized):
     """
 
     var _entities: List[Entity]
+    """Entity storage and free-list links for recycled IDs."""
     var _next: EntityId
+    """Next recycled entity ID or fresh allocation index."""
     var _available: Int
+    """Number of recycled entities available for reuse."""
 
     @always_inline
     def __init__(out self):
+        """Initializes an empty entity pool with the reserved zero entity."""
         self._entities = List[Entity]()
         self._entities.append(Entity(0, UInt32(UInt16.MAX)))
         self._next = 0
@@ -202,8 +206,11 @@ struct IntPool:
     """
 
     var _pool: List[Int]
+    """Integer storage and free-list links for recycled values."""
     var _next: Int
+    """Next recycled integer or fresh allocation index."""
     var _available: UInt32
+    """Number of recycled integers available for reuse."""
 
     @always_inline
     def __init__(out self):

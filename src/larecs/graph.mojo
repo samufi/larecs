@@ -17,17 +17,21 @@ struct Node[DataType: NodeDataType](ImplicitlyCopyable):
 
     # The index indicating a non-established link.
     comptime null_index = -1
+    """Sentinel index for a neighbour link that has not been created."""
 
     # The value stored in the node.
     var value: Self.DataType
+    """The value stored for this graph node."""
 
     # The indices of the neighbouring nodes.
     # The node at index i difffers from the
     # current node by the i-th bit.
     var neighbours: InlineArray[Int, 256]
+    """Neighbour node indices keyed by the bit that differs."""
 
     # The mask of the node.
     var bit_mask: BitMask
+    """The bitmask represented by this graph node."""
 
     def __init__(out self, bit_mask: BitMask, var value: Self.DataType):
         """Initializes the node with the given mask and value.
@@ -41,6 +45,11 @@ struct Node[DataType: NodeDataType](ImplicitlyCopyable):
         self.bit_mask = bit_mask
 
     def __init__(out self, *, copy: Self):
+        """Copies a graph node.
+
+        Args:
+            copy: The node to copy.
+        """
         self = Self(copy.bit_mask, copy.value.copy())
 
 
@@ -65,13 +74,16 @@ struct BitMaskGraph[
 
     # The node index indicating a non-established link.
     comptime null_index = Node[Self.DataType].null_index
+    """Sentinel index for graph links that have not been established."""
 
     # The list of nodes in the graph.
     var _nodes: List[Node[Self.DataType]]
+    """All graph nodes, indexed by node ID."""
 
     # A mapping for random lookup of nodes by their mask.
     # Used for slow lookup of nodes.
     var _map: Dict[BitMask, Int]
+    """Lookup table from bitmask to node index."""
 
     def __init__(out self, var first_value: Self.DataType = Self.null_value):
         """Initializes the graph.

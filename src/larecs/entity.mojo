@@ -41,6 +41,12 @@ struct Entity(
     @doc_hidden
     @always_inline
     def __init__(out self, id: EntityId = 0, generation: UInt32 = 0):
+        """Initializes an entity from an ID and generation.
+
+        Args:
+            id: The entity ID.
+            generation: The entity generation.
+        """
         self._id = id
         self._generation = generation
 
@@ -120,6 +126,8 @@ struct EntityLocation(ImplicitlyCopyable, TrivialRegisterPassable):
 
     # Entity's current index in the archetype
     var entity_index: Int
+    """Entity's current index in its archetype."""
 
     # Entity's current archetype
     var archetype_index: Int
+    """Index of the archetype currently storing the entity."""

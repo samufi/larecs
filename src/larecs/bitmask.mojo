@@ -18,16 +18,32 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
     """
 
     comptime bitmask = _BitMask[Self.total_bits]
+    """The bitmask type iterated by this index iterator."""
 
     var _byte_index: Int
+    """Current byte index while scanning the byte vector."""
     var _offset_index: Int
+    """Current bit offset within the active byte."""
     var _index: Int
+    """Number of set-bit indices already yielded."""
     var _size: Int
+    """Total number of set bits available to yield."""
     var _bytes: Self.bitmask.BytesType
+    """The bytes being scanned for set bits."""
     var _mask: Self.bitmask.BytesType
+    """The per-byte bit mask for the current bit offset."""
     var _compare: Self.bitmask.BytesType
+    """The masked byte vector used to find set bits at the current offset."""
 
     def __init__(out self, var bytes: Self.bitmask.BytesType):
+        """Initializes an index iterator over raw bitmask bytes.
+
+        Args:
+            bytes: The bytes to scan for set bits.
+
+        Constraints:
+            `total_bits` must be a power of two.
+        """
         comptime assert (
             Self.total_bits.is_power_of_two()
         ), "BitMask size must be a power of two."
@@ -40,11 +56,17 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
         self._size = self._bytes.reduce_bit_count()
 
     def __iter__(self) -> Self:
+        """Returns this iterator."""
         return self
 
     def __next__(
         mut self,
     ) -> Int:
+        """Returns the next set-bit index or the sentinel end index.
+
+        Returns:
+            The next set-bit index, or `total_bits` when iteration is complete.
+        """
         for i in range(self._offset_index, 8):
             for j in range(self._byte_index, Self.bitmask.total_bytes):
                 if self._compare[j]:
@@ -59,14 +81,17 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
 
     @always_inline
     def __has_next__(self) -> Bool:
+        """Returns whether another set-bit index is available."""
         return self._index < self._size
 
     @always_inline
     def __len__(self) -> Int:
+        """Returns the number of set bits in the iterated mask."""
         return self._size
 
 
 comptime BitMask = _BitMask[256]
+"""The default 256-bit ECS component mask type."""
 
 
 struct _BitMask[total_bits: Int](
@@ -80,9 +105,12 @@ struct _BitMask[total_bits: Int](
     """A 256-bit bitmask for efficient set operations."""
 
     comptime total_bytes = Self.total_bits // 8
+    """The number of bytes required to store the bitmask."""
     comptime BytesType = SIMD[DType.uint8, Self.total_bytes]
+    """The SIMD byte vector used as bitmask storage."""
 
     var _bytes: Self.BytesType
+    """Raw byte storage for the bitmask."""
 
     @always_inline
     def __init__(out self, *, bytes: Self.BytesType):

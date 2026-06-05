@@ -98,12 +98,16 @@ struct UnsafeBox(Copyable, Movable):
     """The type of the data stored in the box."""
 
     comptime EltType = Copyable & Movable & ImplicitlyDestructible
+    """Trait requirements for values that can be stored in the box."""
 
     var _data: Self.data_type
+    """Pointer to the boxed allocation, or None for empty storage."""
     var _destructor: def(self: Self.data_type) thin
+    """Type-erased destructor for the boxed allocation."""
     var _copy_initializer: def(
         existing_box: Self.data_type
     ) thin -> Self.data_type
+    """Type-erased copy initializer for the boxed allocation."""
 
     def __init__[used_internally: Bool = False](out self):
         """

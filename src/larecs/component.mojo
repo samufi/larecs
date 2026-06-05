@@ -5,7 +5,6 @@ from std.sys.intrinsics import _type_is_eq
 # from collections import Dict
 from std.memory import UnsafePointer
 
-from .types import get_max_size
 from .bitmask import BitMask
 
 
