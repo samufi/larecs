@@ -689,11 +689,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Parameters:
             is_mutating: Whether the function mutates the component pointers. This determines whether the pointers passed to the function are mutable or not.
             FuncType: The type of the function to apply to each active component.
-        
+
         Args:
-            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation. 
-                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly. 
-                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.   
+            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
+                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
+                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
@@ -718,9 +718,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             FuncType: The type of the function to apply to each active component.
 
         Args:
-            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation. 
-                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly. 
-                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.   
+            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
+                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
+                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]

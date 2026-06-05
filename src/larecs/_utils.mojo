@@ -33,7 +33,7 @@ def concatenate_inline_arrays[
     Args:
         a: The first array.
         b: The second array.
-    
+
     Returns:
         The output array containing `a` followed by `b`.
     """
