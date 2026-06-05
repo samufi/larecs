@@ -35,10 +35,12 @@ struct TraceGuard(ImplicitlyCopyable):
     var name: StaticString
     """The function name emitted by the trace guard."""
 
+    @always_inline
     def __enter__(mut self):
         """Emits the function-entry trace message."""
         _trace_function["IN"](self.name)
 
+    @always_inline
     def __exit__(mut self):
         """Emits the function-exit trace message."""
         _trace_function["OUT"](self.name)
