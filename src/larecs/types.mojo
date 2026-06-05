@@ -2,8 +2,8 @@
 comptime EntityId = Int
 """The integer type used for entity identifiers."""
 
-# ID is the component identifier type.
-comptime Id = UInt8
+# ComponentId is the component identifier type.
+comptime ComponentId = Int
 """The integer type used for compact component identifiers."""
 
 

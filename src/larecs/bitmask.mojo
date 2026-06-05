@@ -1,6 +1,7 @@
 from std.bit import pop_count, bit_not
 from std.collections.check_bounds import check_bounds
 from .filter import MaskFilter
+from .types import ComponentId
 from std.hashlib import Hasher
 from std.io.write import Writable, Writer
 from std.sys import bit_width_of

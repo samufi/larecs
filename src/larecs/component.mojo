@@ -6,6 +6,7 @@ from std.sys.intrinsics import _type_is_eq
 from std.memory import UnsafePointer
 
 from .bitmask import BitMask
+from .types import ComponentId
 
 
 comptime ComponentType = Copyable & Movable & ImplicitlyDestructible
@@ -51,9 +52,6 @@ struct ComponentManager[
         ComponentTypes: The component types that the manager should handle.
     """
 
-    comptime Id = Int
-    """The type of the component ID."""
-
     comptime max_size = BitMask.total_bits
     """The maximal number of component types."""
 
@@ -88,7 +86,7 @@ struct ComponentManager[
 
     @staticmethod
     @always_inline
-    def get_id[T: ComponentType]() -> Self.Id:
+    def get_id[T: ComponentType]() -> ComponentId:
         """Get the ID of a component type.
 
         Parameters:
@@ -103,7 +101,7 @@ struct ComponentManager[
 
         comptime for i in range(len(Self.ComponentTypes)):
             comptime if _type_is_eq[T, Self.ComponentTypes[i]]():
-                return Self.Id(i)
+                return i
 
         # This is unreachable.
         return -1
@@ -112,7 +110,7 @@ struct ComponentManager[
     @always_inline
     def get_id_arr[
         *Ts: ComponentType
-    ](out ids: InlineArray[Self.Id, len(Ts),]):
+    ](out ids: InlineArray[ComponentId, len(Ts)]):
         """Get the IDs of multiple component types.
 
         Parameters:
@@ -127,7 +125,7 @@ struct ComponentManager[
         comptime assert constrain_components_unique[
             *Ts
         ](), "Duplicate component types in get_id_arr are not allowed."
-        ids = InlineArray[Self.Id, len(Ts)](uninitialized=True)
+        ids = InlineArray[ComponentId, len(Ts)](uninitialized=True)
 
         comptime for i in range(len(Ts)):
             comptime assert Self._ContainsComponent[

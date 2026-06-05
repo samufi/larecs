@@ -13,6 +13,7 @@ from .component import (
 from .bitmask import BitMask
 from .pool import EntityPool
 from ._tracing import TraceGuard
+from .types import ComponentId
 from ._utils import (
     _assert_index_in_bounds,
     _assert_range_in_bounds,
@@ -174,10 +175,6 @@ struct MissingComponentsError[*Ts: ComponentType](Writable):
                 comptime T = Self.Ts[i]
                 writer.write(reflect[T].name(), ", ")
             writer.write("] is missing.")
-
-
-comptime ComponentId = Int
-"""The integer identifier assigned to a component type."""
 
 
 struct _ComponentStorage[*ComponentTypes: ComponentType](

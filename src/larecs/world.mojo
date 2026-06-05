@@ -32,6 +32,7 @@ from .lock import LockManager, LockedContext, LockError
 from .resource import Resources
 from ._utils import concatenate_inline_arrays
 from ._tracing import TraceGuard
+from .types import ComponentId
 
 
 @fieldwise_init
@@ -140,7 +141,7 @@ struct Replacer[
     world_origin: MutOrigin,
     size: Int,
     *component_types: ComponentType,
-    remove_ids: InlineArray[World[*component_types].ComponentId, size],
+    remove_ids: InlineArray[ComponentId, size],
 ]:
     """
     Replacer is a helper struct for removing and adding components to an [..entity.Entity].
@@ -311,8 +312,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     comptime component_manager = ComponentManager[*Self.component_types]()
     """Component manager for this world's component type set."""
-    comptime ComponentId = Self.component_manager.Id
-    """Component identifier type used by this world."""
 
     # If *Ts is empty, this results in a zero-sized InlineArray, else this
     # results in an InlineArray of component IDs.
@@ -502,7 +501,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def _get_archetype_index[
         size: Int
-    ](mut self, components: InlineArray[Self.ComponentId, size]) -> Int:
+    ](mut self, components: InlineArray[ComponentId, size]) -> Int:
         """Returns the archetype list index of the archetype differing from
         the archetype at the start node by the given indices.
 
@@ -537,7 +536,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         size: Int
     ](
         mut self,
-        components: InlineArray[Self.ComponentId, size],
+        components: InlineArray[ComponentId, size],
         start_node_index: Int,
     ) -> Int:
         """Returns the archetype list index of the archetype
@@ -1290,7 +1289,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def _remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
+        remove_ids: InlineArray[ComponentId, rem_size] = [],
     ](mut self, entity: Entity, var *add_components: *Ts) raises WorldError:
         """
         Adds and removes components to an [..entity.Entity].
@@ -1352,7 +1351,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     raise WorldError.duplicate_components_for_addition_entity
 
             comptime ComponentIdsType = InlineArray[
-                Self.ComponentId, add_size + rem_size
+                ComponentId, add_size + rem_size
             ]
             comptime assert 0 <= add_size + rem_size
             var component_ids: ComponentIdsType
@@ -1417,7 +1416,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def _batch_remove_and_add[
         *Ts: ComponentType,
         rem_size: Int = 0,
-        remove_ids: InlineArray[Self.ComponentId, rem_size] = [],
+        remove_ids: InlineArray[ComponentId, rem_size] = [],
         has_without_mask: Bool = False,
     ](
         mut self,
@@ -1464,7 +1463,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
             comptime ComponentIdsType = InlineArray[
-                Self.ComponentId, add_size + rem_size
+                ComponentId, add_size + rem_size
             ]
             comptime assert 0 <= add_size + rem_size
 
