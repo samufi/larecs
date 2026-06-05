@@ -6,7 +6,6 @@ from larecs.component import (
     ComponentManager,
     constrain_components_unique,
     constrain_valid_components,
-    get_sizes,
 )
 
 
@@ -32,32 +31,6 @@ struct TestVelocity(ComponentType & ImplicitlyCopyable):
 comptime component_manager = ComponentManager[
     TestLargerComponent, TestPosition, TestVelocity
 ]()
-
-
-def test_component_manager_component_sizes() raises:
-    assert_true(component_manager.component_count >= 3)
-    assert_equal(
-        component_manager.component_sizes[0], size_of[TestLargerComponent]()
-    )
-    assert_equal(component_manager.component_sizes[1], size_of[TestPosition]())
-    assert_equal(component_manager.component_sizes[2], size_of[TestVelocity]())
-    assert_equal(
-        component_manager.get_size[0](), size_of[TestLargerComponent]()
-    )
-    assert_equal(component_manager.get_size[1](), size_of[TestPosition]())
-    assert_equal(component_manager.get_size[2](), size_of[TestVelocity]())
-    assert_equal(component_manager.get_size(0), size_of[TestLargerComponent]())
-    assert_equal(component_manager.get_size(1), size_of[TestPosition]())
-    assert_equal(component_manager.get_size(2), size_of[TestVelocity]())
-
-
-def test_get_sizes() raises:
-    sizes = get_sizes[TestLargerComponent, TestPosition, TestVelocity]()
-
-    assert_equal(len(sizes), 3)
-    assert_equal(sizes[0], size_of[TestLargerComponent]())
-    assert_equal(sizes[1], size_of[TestPosition]())
-    assert_equal(sizes[2], size_of[TestVelocity]())
 
 
 def test_constrain_components_unique() raises:

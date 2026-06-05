@@ -13,17 +13,16 @@ comptime ComponentType = Copyable & Movable & ImplicitlyDestructible
 """The trait that components must conform to."""
 
 
-def get_sizes[*Ts: ComponentType]() -> InlineArray[Int, len(Ts)]:
-    sizes = InlineArray[Int, len(Ts)](fill=0)
-
-    comptime for i in range(len(Ts)):
-        sizes[i] = size_of[Ts[i]]()
-
-    return sizes
-
-
 @always_inline
 def constrain_components_unique[*Ts: ComponentType]() -> Bool:
+    """Checks whether all component types are unique.
+
+    Parameters:
+        Ts: The component types to compare.
+
+    Returns:
+        True when no component type appears more than once.
+    """
     comptime for i in range(len(Ts)):
         comptime for j in range(i + 1, len(Ts)):
             if _type_is_eq[Ts[i], Ts[j]]():
@@ -62,9 +61,6 @@ struct ComponentManager[
     comptime component_count = len(Self.ComponentTypes)
     """The number of component types handled by this ComponentManager."""
 
-    comptime component_sizes = get_sizes[*Self.ComponentTypes]()
-    """The sizes of the component types handled by this ComponentManager."""
-
     def __init__(out self):
         """Construct a component manager for the configured component types.
 
@@ -76,10 +72,12 @@ struct ComponentManager[
     comptime _ContainsComponent[
         T: ComponentType
     ] = Self.ComponentTypes.contains[T]()
+    """Whether a component type is registered in this manager."""
 
     comptime _ContainsComponents[*Ts: ComponentType] = Ts.all_satisfies[
         Self._ContainsComponent
     ]()
+    """Whether all component types are registered in this manager."""
 
     @staticmethod
     @always_inline
@@ -137,33 +135,3 @@ struct ComponentManager[
                 Ts[i]
             ], "Component type not in component manager"
             ids[i] = Self.get_id[Ts[i]]()
-
-    @staticmethod
-    @always_inline
-    def get_size[i: Self.Id]() -> Int:
-        """Get the size of a component type.
-
-        Parameters:
-            i: The ID of the component type.
-
-        Returns:
-            The size of the component type.
-        """
-        comptime assert (
-            0 <= i < Self.component_count
-        ), "Component ID out of bounds."
-        return size_of[Self.ComponentTypes[i]]()
-
-    @staticmethod
-    @always_inline
-    def get_size(i: Self.Id) -> Int:
-        """Get the size of a component type.
-
-        Args:
-            i: The ID of the component type.
-
-        Returns:
-            The size of the component type.
-        """
-        check_bounds(i, Self.component_count)
-        return Self.component_sizes[i]
