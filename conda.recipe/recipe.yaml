@@ -7,6 +7,15 @@ package:
 
 source:
   path: ../
+  filter:
+    - src/
+    - scripts/
+    - test/
+    - pixi.toml
+    - pixi.lock
+    - LICENSE
+    - changelog.md
+    - README.md
 
 build:
   number: 0
@@ -25,9 +34,10 @@ tests:
   - script:
       - if: unix
         then:
-          - scripts/run_tests.sh test
+          - test/run_tests.sh test
     requirements:
       run:
+        - clang >=22.1.7, <23
         - ${{ pin_compatible('mojo-compiler') }}
     files:
       source:

@@ -19,7 +19,7 @@ benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-en
 mojo = ">1.0.0b1, <=1.0.0b2"
 
 [feature.test.dependencies]
-compiler-rt = ">=22.1.6,<23"
+clang = ">=22.1.7,<23"
 
 [environments]
 test = ["test"] # An environment covering the "test" feature

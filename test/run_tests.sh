@@ -32,31 +32,62 @@ any_failed=false
 build_dir=".build"
 mkdir -p "$build_dir"
 
-# Locate the ASAN runtime from the pixi environment. This is needed because the
-# system clang's ASAN library may be a different version than the one used to
-# compile the binaries, causing symbol lookup errors at link or runtime.
+# Locate the ASAN runtime through clang's compiler resource directory. The
+# libclang_rt family is compiler-rt runtime state, not a normal shared library
+# to discover beside ordinary package libraries.
 platform=$(uname -s)
 arch=$(uname -m)
 asan_lib=""
-asan_preload_var=""
-asan_install_hint="Install a compatible compiler-rt package in .pixi/envs/test."
+asan_install_hint="Install a compatible clang package."
 asan_build_args=()
+clang_cmd="${CC:-clang}"
+clang_resource_dir=""
+asan_pattern=""
+
+resolve_clang_resource_dir() {
+    local resource_dir
+    if ! resource_dir=$("$clang_cmd" --print-resource-dir 2>/dev/null); then
+        return 1
+    fi
+    if [ -z "$resource_dir" ]; then
+        return 1
+    fi
+    printf "%s\n" "$resource_dir"
+}
+
+find_libclang_rt_asan() {
+    local resource_dir="$1"
+    local pattern="$2"
+    local lib_dir="$resource_dir/lib"
+
+    if [ ! -d "$lib_dir" ]; then
+        return 1
+    fi
+
+    find "$lib_dir" -name "$pattern" -type f 2>/dev/null | sort | head -n 1
+}
 
 case "$platform:$arch" in
     Darwin:arm64)
-        asan_lib=$(find .pixi/envs/test -name "libclang_rt.asan_osx_dynamic.dylib" 2>/dev/null | head -1 || true)
-        asan_preload_var="DYLD_INSERT_LIBRARIES"
+        asan_pattern="libclang_rt.asan_osx_dynamic.dylib"
         asan_install_hint="Install it with: pixi add compiler-rt --platform osx-arm64"
         ;;
     Linux:x86_64)
-        asan_lib=$(find .pixi/envs/test -name "libclang_rt.asan-x86_64.so" 2>/dev/null | head -1 || true)
-        asan_preload_var="LD_PRELOAD"
+        asan_pattern="libclang_rt.asan*.so"
         asan_install_hint="Install it with: pixi add compiler-rt --platform linux-64"
         ;;
 esac
 
+if [ -n "$asan_pattern" ]; then
+    clang_resource_dir=$(resolve_clang_resource_dir || true)
+    if [ -n "$clang_resource_dir" ]; then
+        asan_lib=$(find_libclang_rt_asan "$clang_resource_dir" "$asan_pattern" || true)
+    fi
+fi
+
 if [ -n "$asan_lib" ]; then
     asan_build_args=(--external-libasan "$asan_lib")
+    echo "Using ASAN runtime: $asan_lib"
 fi
 
 echo "### ------------------------------------------------------------- ###"
@@ -86,14 +117,21 @@ for test_file in "${test_files[@]}"; do
     if [ "$use_asan" = true ]; then
         if [ -z "$asan_lib" ]; then
             echo "Error: compatible ASAN runtime not found for $platform/$arch"
+            echo "Compiler queried: $clang_cmd --print-resource-dir"
+            if [ -n "$clang_resource_dir" ]; then
+                echo "Compiler resource dir: $clang_resource_dir"
+                echo "Searched below: $clang_resource_dir/lib"
+            else
+                echo "Compiler resource dir: <unavailable>"
+            fi
             echo "$asan_install_hint"
             failed_tests+=("$test_file")
             echo "### ------------------------------------------------------------- ###"
             continue
         fi
-        build_cmd=(pixi run mojo build -g --Werror -D ASSERT=all --sanitize address "${asan_build_args[@]}" -I src "$test_file" -o "$binary")
+        build_cmd=(mojo build -g --Werror -D ASSERT=all --sanitize address "${asan_build_args[@]}" -I src "$test_file" -o "$binary")
     else
-        build_cmd=(pixi run mojo build -g --Werror -D ASSERT=all -I src "$test_file" -o "$binary")
+        build_cmd=(mojo build -g --Werror -D ASSERT=all -I src "$test_file" -o "$binary")
     fi
     if ! "${build_cmd[@]}" ; then
         failed_tests+=("$test_file")
@@ -101,39 +139,23 @@ for test_file in "${test_files[@]}"; do
         continue
     fi
 
-    if [ "$use_asan" = true ]; then
-        # Run the binary inside `script` to allocate a PTY, so ASAN auto-enables
-        # colored output. The typescript file is only used for ASAN error detection
-        # and is removed immediately after.
-        tmpout=$(mktemp)
-        runner=$(mktemp)
-        printf "#!/bin/sh\n%s='%s' pixi run '%s'\n" "$asan_preload_var" "$asan_lib" "$binary" > "$runner"
-        chmod +x "$runner"
-        set +e
-        if [ "$platform" = "Darwin" ]; then
-            script -q -e "$tmpout" "$runner"
-        else
-            script -q -e -c "$runner" "$tmpout"
-        fi
-        run_exit=$?
-        set -e
-        rm -f "$runner"
-
-        # Fail if the binary exited non-zero or if ASAN reported an error.
-        if [ $run_exit -ne 0 ] || { grep -q "ERROR:" "$tmpout" && grep -q "AddressSanitizer" "$tmpout"; }; then
-            failed_tests+=("$test_file")
-        fi
-        rm -f "$tmpout"
+    # Run the binary inside `script` to allocate a PTY, so ASAN auto-enables
+    # colored output. 
+    tmpout=$(mktemp)
+    set +e
+    if [ "$platform" = "Darwin" ]; then
+        script -q -e "$tmpout" "$binary"
     else
-        # Run without ASAN preload.
-        set +e
-        pixi run "$binary"
-        run_exit=$?
-        set -e
-        if [ $run_exit -ne 0 ]; then
-            failed_tests+=("$test_file")
-        fi
+        script -q -e -c "$binary" "$tmpout"
     fi
+    run_exit=$?
+    set -e
+
+    # Fail if the binary exited non-zero or if ASAN reported an error.
+    if [ $run_exit -ne 0 ] || { grep -q "ERROR:" "$tmpout" && grep -q "AddressSanitizer" "$tmpout"; }; then
+        failed_tests+=("$test_file")
+    fi
+    rm -f "$tmpout"
 
     rm -f "$binary"
     echo "### ------------------------------------------------------------- ###"
