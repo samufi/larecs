@@ -17,6 +17,9 @@
 # comment anywhere in that file:
 #
 #   # SKIP_ASAN
+#
+# AddressSanitizer is enabled by default on Linux. On Darwin, it can be enabled
+# explicitly with LARECS_ENABLE_ASAN=1.
 set -e
 
 # Get test directory or file from first argument
@@ -40,6 +43,9 @@ arch=$(uname -m)
 asan_lib=""
 asan_install_hint="Install a compatible clang package."
 asan_build_args=()
+asan_run_env=()
+linker_build_args=()
+asan_default_enabled=true
 clang_cmd="${CC:-clang}"
 clang_resource_dir=""
 asan_pattern=""
@@ -71,6 +77,7 @@ case "$platform:$arch" in
     Darwin:arm64)
         asan_pattern="libclang_rt.asan_osx_dynamic.dylib"
         asan_install_hint="Install it with: pixi add compiler-rt --platform osx-arm64"
+        asan_default_enabled=false
         ;;
     Linux:x86_64)
         asan_pattern="libclang_rt.asan*.so"
@@ -87,7 +94,17 @@ fi
 
 if [ -n "$asan_lib" ]; then
     asan_build_args=(--external-libasan "$asan_lib")
+    if [ "$platform" = "Darwin" ]; then
+        asan_run_env=(DYLD_LIBRARY_PATH="$(dirname "$asan_lib")${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}")
+        linker_build_args=(-Xlinker -rpath -Xlinker "$(dirname "$asan_lib")")
+    elif [ "$platform" = "Linux" ]; then
+        asan_run_env=(LD_PRELOAD="$asan_lib${LD_PRELOAD:+:$LD_PRELOAD}")
+    fi
     echo "Using ASAN runtime: $asan_lib"
+fi
+
+if [ "$asan_default_enabled" = false ] && [ "${LARECS_ENABLE_ASAN:-}" != "1" ]; then
+    echo "ASAN disabled by default for $platform/$arch; set LARECS_ENABLE_ASAN=1 to opt in."
 fi
 
 echo "### ------------------------------------------------------------- ###"
@@ -107,10 +124,12 @@ for test_file in "${test_files[@]}"; do
     binary="$build_dir/$(basename "${test_file%.mojo}")"
 
     # Check if this test opts out of AddressSanitizer via a "# SKIP_ASAN" comment.
-    if grep -q "# SKIP_ASAN" "$test_file"; then
+    if [ "${LARECS_DISABLE_ASAN:-}" = "1" ] || grep -q "# SKIP_ASAN" "$test_file"; then
         use_asan=false
-    else
+    elif [ "${LARECS_ENABLE_ASAN:-}" = "1" ]; then
         use_asan=true
+    else
+        use_asan=$asan_default_enabled
     fi
 
     # Build the test binary, with or without AddressSanitizer instrumentation.
@@ -129,7 +148,7 @@ for test_file in "${test_files[@]}"; do
             echo "### ------------------------------------------------------------- ###"
             continue
         fi
-        build_cmd=(mojo build -g --Werror -D ASSERT=all --sanitize address "${asan_build_args[@]}" -I src "$test_file" -o "$binary")
+        build_cmd=(mojo build -g --Werror -D ASSERT=all "${linker_build_args[@]}" --sanitize address "${asan_build_args[@]}" -I src "$test_file" -o "$binary")
     else
         build_cmd=(mojo build -g --Werror -D ASSERT=all -I src "$test_file" -o "$binary")
     fi
@@ -144,9 +163,9 @@ for test_file in "${test_files[@]}"; do
     tmpout=$(mktemp)
     set +e
     if [ "$platform" = "Darwin" ]; then
-        script -q -e "$tmpout" "$binary"
+        env "${asan_run_env[@]}" script -q -e "$tmpout" "$binary"
     else
-        script -q -e -c "$binary" "$tmpout"
+        env "${asan_run_env[@]}" script -q -e -c "$binary" "$tmpout"
     fi
     run_exit=$?
     set -e
