@@ -767,23 +767,20 @@ struct _WorldIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        _trace_function["IN"]("_EntityIterator.__has_next__")
-        if (
-            self._entity_iterator
-            and self._entity_iterator.unsafe_value().__has_next__()
-        ):
-            _trace_function["OUT"]("_EntityIterator.__has_next__")
-            return True
+        with TraceGuard(name="_EntityIterator.__has_next__"):
+            if (
+                self._entity_iterator
+                and self._entity_iterator.unsafe_value().__has_next__()
+            ):
+                return True
 
-        if self._archetype_iterator.__has_next__():
-            _trace_function["OUT"]("_EntityIterator.__has_next__")
-            return True
+            if self._archetype_iterator.__has_next__():
+                return True
 
-        _trace_function["OUT"]("_EntityIterator.__has_next__")
-        return False
+            return False
 
     @always_inline
-    def __bool__(self, out result: Bool):
+    def __bool__(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
@@ -792,8 +789,3 @@ struct _WorldIterator[
         """
         with TraceGuard(name="_EntityIterator.__bool__"):
             return self.__has_next__()
-        _trace_function["IN"]("_EntityIterator.__bool__")
-
-        result = self.__has_next__()
-
-        _trace_function["OUT"]("_EntityIterator.__bool__")
