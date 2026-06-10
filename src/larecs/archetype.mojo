@@ -223,9 +223,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     """The type of the tuple storing component pointers for all component types. See the description of [._ComponentStorage] for the layout and semantics of this tuple.
     """
 
-    var capacity: Int
+    var _capacity: Int
     """The capacity of the component storage, i.e. how many entities can be stored without reallocating."""
-    var size: Int
+    var _size: Int
     """The current size of the component storage, i.e. how many entities are currently stored."""
     var data: Self._PointerTuple
     """The component data, stored as typed pointers to component buffers."""
@@ -248,8 +248,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             capacity: The initial storage capacity.
         """
         self.data = Self._PointerTuple()
-        self.capacity = capacity
-        self.size = size
+        self._capacity = capacity
+        self._size = size
         self.active_component_mask = active_component_mask
 
         self._unsafe_init_components(active_component_mask)
@@ -287,7 +287,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The current size of the component storage.
         """
-        return self.size
+        return self._size
 
     @always_inline
     def __del__(deinit self):
@@ -304,7 +304,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             destroy_n(comp_ptr, count=storage_size)
             comp_ptr.free()
 
-        self._for_active_components[is_mutating=False,](free_component_storage)
+        self._for_active_components[is_mutating=False](free_component_storage)
 
     def shallow_copy(self, out new_storage: Self):
         """Shallow-copies another component storage instance.
@@ -312,11 +312,12 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             A shallow copy of the component storage.
         """
+        # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
         new_storage = Self(
             active_component_mask=self.active_component_mask, capacity=0
         )
-        new_storage.capacity = self.capacity
-        new_storage.size = self.size
+        new_storage._capacity = self._capacity
+        new_storage._size = self._size
         new_storage.active_component_mask = self.active_component_mask
         comptime assert AllCopyable[
             *Self.ComponentTypes.map[Self._PointerMapper]()
@@ -372,10 +373,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The index of the newly added entity.
         """
-        if self.size == self.capacity:
-            self.reserve(max(self.capacity * 2, 8))
-        var idx = self.size
-        self.size += 1
+        if self._size == self._capacity:
+            self.reserve(max(self._capacity * 2, 8))
+        var idx = self._size
+        self._size += 1
         return idx
 
     @always_inline
@@ -384,7 +385,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Note: does not free any memory.
         """
-        self.size = 0
+        self._size = 0
 
     @always_inline
     def reserve(mut self, new_capacity: Int):
@@ -403,11 +404,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             0 < new_capacity, "New capacity must be greater than zero."
         )
 
-        if new_capacity <= self.capacity:
+        if new_capacity <= self._capacity:
             return
 
         var new_pow2_capacity = next_power_of_two(new_capacity)
-        var old_capacity = self.capacity
+        var old_capacity = self._capacity
 
         @always_inline
         def resize_component_storage[
@@ -430,7 +431,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 resize_component_storage
             )
 
-        self.capacity = new_pow2_capacity
+        self._capacity = new_pow2_capacity
 
     @always_inline
     def reserve(mut self, *, add: Int):
@@ -445,7 +446,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             0 <= add, "Amount of additional entities must be non-negative"
         )
 
-        self.reserve(self.size + add)
+        self.reserve(self._size + add)
 
     @always_inline
     def swap_remove_entity(mut self, remove_idx: Int) -> Bool:
@@ -459,11 +460,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             Whether a swap was performed (i.e. idx was not the last entity).
         """
-        _assert_index_in_bounds(remove_idx, self.size)
+        _assert_index_in_bounds(remove_idx, self._size)
 
-        self.size -= 1
+        self._size -= 1
 
-        need_swap = remove_idx != self.size
+        need_swap = remove_idx != self._size
 
         @always_inline
         def swap_component_data[
@@ -585,7 +586,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime assert constrain_components_unique[
             *Ts
         ](), "Component types must be unique."
-        _assert_index_in_bounds(entity_idx, self.size)
+        _assert_index_in_bounds(entity_idx, self._size)
 
         Self.component_manager.assert_valid_components[*Ts]()
         self.assert_has_components[*Ts]()
@@ -618,8 +619,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             count: The number of elements to set.
             from_idx: The index of the first entity in the storage to copy from.
         """
-        _assert_range_in_bounds(to_idx, count, self.size)
-        _assert_range_in_bounds(from_idx, count, storage.size)
+        _assert_range_in_bounds(to_idx, count, self._size)
+        _assert_range_in_bounds(from_idx, count, storage._size)
 
         if count == 0:
             return
@@ -659,8 +660,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             shared component columns must have identical layouts.
         """
         debug_assert(0 <= count, "Count must be non-negative.")
-        _assert_range_in_bounds(to_idx, count, self.size)
-        _assert_range_in_bounds(from_idx, count, source[].size)
+        _assert_range_in_bounds(to_idx, count, self._size)
+        _assert_range_in_bounds(from_idx, count, source[]._size)
 
         if count == 0:
             return
@@ -700,7 +701,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             if self.has_component[T]():
                 comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
                 self.data[id] = rebind[Self._PointerTuple.element_types[id]](
-                    func[T, id](self.size, self.capacity, comp_ptr)
+                    func[T, id](self._size, self._capacity, comp_ptr)
                 )
 
     def _for_active_components[
@@ -726,10 +727,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]():
                 comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
-                assert (
-                    comp_ptr is not None
-                ), "Active component storage must be initialized"
-                func[T, id](self.size, self.capacity, comp_ptr.value())
+                func[T, id](self._size, self._capacity, comp_ptr.value())
 
 
 struct Archetype[
