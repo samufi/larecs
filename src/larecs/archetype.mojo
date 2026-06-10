@@ -427,9 +427,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
         if old_capacity > 0 or self._size == 0:
-            self._apply_mut_to_active_components(
-                resize_component_storage
-            )
+            self._apply_mut_to_active_components(resize_component_storage)
 
         self._capacity = new_pow2_capacity
 
@@ -1038,7 +1036,9 @@ struct Archetype[
             value: The value to fill the component with.
         """
         with TraceGuard(name="Archetype.set_component_range"):
-            _assert_range_in_bounds(start_entity_idx, count, self._storage._size)
+            _assert_range_in_bounds(
+                start_entity_idx, count, self._storage._size
+            )
 
             if count == 0:
                 return
