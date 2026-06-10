@@ -120,7 +120,7 @@ def init_tracked_component(
 def test_archetype_init() raises:
     var archetype = Archetype(4, mask2, capacity=10)
 
-    assert_equal(archetype._storage.capacity, 10)
+    assert_equal(archetype._storage._capacity, 10)
     assert_equal(len(archetype), 0)
     assert_equal(archetype.get_node_index(), 4)
     assert_equal(archetype._storage.get_component_count(), 2)
@@ -133,17 +133,17 @@ def test_archetype_reserve() raises:
     assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(50)
-    assert_equal(archetype._storage.capacity, 64)
+    assert_equal(archetype._storage._capacity, 64)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(5)
-    assert_equal(archetype._storage.capacity, 64)
+    assert_equal(archetype._storage._capacity, 64)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(70)
-    assert_equal(archetype._storage.capacity, 128)
+    assert_equal(archetype._storage._capacity, 128)
     assert_equal(len(archetype), 0)
     assert_equal(archetype._storage.get_component_count(), 2)
 

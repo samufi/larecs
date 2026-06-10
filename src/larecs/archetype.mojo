@@ -277,7 +277,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 )
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
-        self._for_active_components[is_mutating=True](copy_component)
+        self._apply_mut_to_active_components(copy_component)
 
     @always_inline
     def __len__(self) -> Int:
@@ -304,7 +304,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             destroy_n(comp_ptr, count=storage_size)
             comp_ptr.free()
 
-        self._for_active_components[is_mutating=False](free_component_storage)
+        self._apply_to_active_components(free_component_storage)
 
     def shallow_copy(self, out new_storage: Self):
         """Shallow-copies another component storage instance.
@@ -355,7 +355,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             else:
                 return comp_ptr
 
-        self._for_active_components[is_mutating=True](init_component_ptr)
+        self._apply_mut_to_active_components(init_component_ptr)
 
     @always_inline
     def get_component_count(self) -> Int:
@@ -426,8 +426,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             old_ptr.value().free()
             return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
-        if old_capacity > 0 or self.size == 0:
-            self._for_active_components[is_mutating=True](
+        if old_capacity > 0 or self._size == 0:
+            self._apply_mut_to_active_components(
                 resize_component_storage
             )
 
@@ -482,7 +482,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     count=1,
                 )
 
-        self._for_active_components[is_mutating=False](swap_component_data)
+        self._apply_to_active_components(swap_component_data)
         return need_swap
 
     @always_inline
@@ -677,24 +677,21 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 )
 
     @always_inline
-    def _for_active_components[
-        is_mutating: Bool,
+    def _apply_mut_to_active_components[
         FuncType: def[T: ComponentType, id: ComponentId](
             storage_size: Int,
             storage_capacity: Int,
             comp_ptr: Self.ComponentPointer[T],
         ) -> Self.ComponentPointer[T],
-    ](mut self, func: FuncType) where is_mutating:
-        """Helper to iterate over active components and their pointers.
+    ](mut self, func: FuncType):
+        """Applies a function to each active component pointer, allowing mutation of the pointers by returning new pointers.
 
         Parameters:
-            is_mutating: Whether the function mutates the component pointers. This determines whether the pointers passed to the function are mutable or not.
-            FuncType: The type of the function to apply to each active component.
+            FuncType: The type of the function to apply to each active component pointer.
 
         Args:
-            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
-                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
-                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.
+            func: A function that takes a component ID and the corresponding typed pointer, and performs some mutating operation.
+                The function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
@@ -704,24 +701,20 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     func[T, id](self._size, self._capacity, comp_ptr)
                 )
 
-    def _for_active_components[
-        is_mutating: Bool,
+    def _apply_to_active_components[
         FuncType: def[T: ComponentType, id: ComponentId](
             storage_size: Int,
             storage_capacity: Int,
             comp_ptr: UnsafePointer[T, MutExternalOrigin],
         ),
-    ](self, func: FuncType) where not is_mutating:
-        """Helper to iterate over active components and their pointers.
+    ](self, func: FuncType):
+        """Applies a function to each active component pointer, allowing mutation of the data pointed to by the pointer but not changing the pointers themselves.
 
         Parameters:
-            is_mutating: Whether the function mutates the component pointers. This determines whether the pointers passed to the function are mutable or not.
             FuncType: The type of the function to apply to each active component.
 
         Args:
             func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
-                If `is_mutating` is True, the function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
-                If `is_mutating` is False, the function must not return anything and the pointers passed to it must not be modified.
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
@@ -908,7 +901,7 @@ struct Archetype[
         This follows standard container growth patterns optimized for amortized performance.
         """
         with TraceGuard(name="Archetype.reserve"):
-            self.reserve(max(self._storage.capacity * 2, 8))
+            self.reserve(max(self._storage._capacity * 2, 8))
 
     @always_inline
     def reserve(mut self, new_capacity: Int):
@@ -937,7 +930,7 @@ struct Archetype[
         """
         with TraceGuard(name="Archetype.reserve capacity"):
             self._storage.reserve(new_capacity)
-            self._entities.reserve(self._storage.capacity)
+            self._entities.reserve(self._storage._capacity)
 
     @always_inline
     def get_entity(self, idx: Int) -> ref[self._entities] Entity:
@@ -950,7 +943,7 @@ struct Archetype[
             A reference to the entity at the given index.
         """
         with TraceGuard(name="Archetype.get_entity"):
-            _assert_index_in_bounds(idx, self._storage.size)
+            _assert_index_in_bounds(idx, self._storage._size)
 
             return self._entities[idx]
 
@@ -971,7 +964,7 @@ struct Archetype[
             An accessor for the entity at the given index.
         """
         with TraceGuard(name="Archetype.get_entity_accessor"):
-            _assert_index_in_bounds(idx, self._storage.size)
+            _assert_index_in_bounds(idx, self._storage._size)
 
             accessor = Self.EntityAccessor(
                 Pointer(to=self),
@@ -994,7 +987,7 @@ struct Archetype[
             A reference to the component.
         """
         with TraceGuard(name="Archetype.get_component"):
-            _assert_index_in_bounds(entity_idx, self._storage.size)
+            _assert_index_in_bounds(entity_idx, self._storage._size)
 
             return self._storage.get_component_ptr[T]()[entity_idx]
 
@@ -1045,7 +1038,7 @@ struct Archetype[
             value: The value to fill the component with.
         """
         with TraceGuard(name="Archetype.set_component_range"):
-            _assert_range_in_bounds(start_entity_idx, count, self._storage.size)
+            _assert_range_in_bounds(start_entity_idx, count, self._storage._size)
 
             if count == 0:
                 return
@@ -1199,20 +1192,20 @@ struct Archetype[
             )
             _assert_range_in_bounds(from_idx, count, len(source[]))
 
-            start_index = self._storage.size
+            start_index = self._storage._size
 
             if count == 0:
                 return start_index
 
             self._storage.reserve(add=count)
-            self._storage.size += count
-            self._entities.reserve(self._storage.capacity)
+            self._storage._size += count
+            self._entities.reserve(self._storage._capacity)
 
             for i in range(count):
                 self._entities.append(source[]._entities[from_idx + i])
 
             debug_assert(
-                start_index + count <= self._storage.size,
+                start_index + count <= self._storage._size,
                 "Destination range must be valid after extending the storage.",
             )
 
@@ -1248,16 +1241,16 @@ struct Archetype[
         """
         with TraceGuard(name="Archetype.extend"):
             if count <= 0:
-                return self._storage.size - 1
+                return self._storage._size - 1
 
-            start_index = self._storage.size
+            start_index = self._storage._size
 
             self._storage.reserve(
                 add=count
             )  # `reserve` handles calculating a good capacity to use
-            self._storage.size += count
+            self._storage._size += count
             self._entities.reserve(
-                self._storage.capacity
+                self._storage._capacity
             )  # use the capacity calculated by `reserve` for the entities list as well
 
             for _ in range(count):
