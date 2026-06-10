@@ -19,12 +19,12 @@ benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-en
 mojo = ">=1.0.0b2.dev2026061006,<2"
 
 [feature.test.dependencies]
-clang = ">=22.1.7, <23"
-clangxx = ">=22.1.7, <23"
+clang = ">=22.1.7,<23"
+clangxx = ">=22.1.7,<23"
 
 [feature.test.dependencies.mogo-tester]
 git = "https://github.com/moseschmiedel/mogo_tester"
-tag = "v2.2.1"
+tag = "v2.3.0"
 
 [feature.test.activation.env]
 CC = "clang"
