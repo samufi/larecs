@@ -16,7 +16,7 @@ tests = { cmd = "test/run_tests.sh", default-environment = "test" }
 benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
-mojo = ">1.0.0b1, <=1.0.0b2"
+mojo = ">=1.0.0b2.dev2026061006,<2"
 
 [feature.test.dependencies]
 clang = ">=22.1.7, <23"
