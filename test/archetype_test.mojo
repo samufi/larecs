@@ -26,7 +26,7 @@ comptime Archetype = _Archetype[
 comptime mask2 = BitMask(1, 2)
 comptime mask3 = BitMask(1, 2, 3)
 comptime TrackedComponent = MemTestStruct[
-    MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+    MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
 ]
 comptime NonTrivialArchetype = _Archetype[TrackedComponent]
 comptime tracked_mask = BitMask(0)
@@ -35,13 +35,13 @@ comptime tracked_mask = BitMask(0)
 struct LifecycleCounters(Movable):
     """Lifecycle operation counters for non-trivial component tests."""
 
-    var copy_counter: UnsafePointer[Int, MutExternalOrigin]
+    var copy_counter: UnsafePointer[Int, MutUntrackedOrigin]
     """The number of copy initializations."""
 
-    var move_counter: UnsafePointer[Int, MutExternalOrigin]
+    var move_counter: UnsafePointer[Int, MutUntrackedOrigin]
     """The number of move initializations."""
 
-    var del_counter: UnsafePointer[Int, MutExternalOrigin]
+    var del_counter: UnsafePointer[Int, MutUntrackedOrigin]
     """The number of destructor calls."""
 
     def __init__(out self):

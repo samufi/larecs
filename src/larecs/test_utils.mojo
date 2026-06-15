@@ -541,7 +541,7 @@ def test_copy_move_del[
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
-    The tracked value uses `MutExternalOrigin` for its counters intentionally.
+    The tracked value uses `MutUntrackedOrigin` for its counters intentionally.
     This keeps the produced container type fixed across call sites. The purpose
     of this helper is to verify lifecycle behavior, not caller-origin
     propagation.

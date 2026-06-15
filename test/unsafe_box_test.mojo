@@ -13,7 +13,7 @@ struct TestStruct:
 def test_unsafe_box_copy_move_del() raises:
     def factory(
         var val: MemTestStruct[
-            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+            MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
         ],
         out result: UnsafeBox,
     ):
