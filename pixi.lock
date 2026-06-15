@@ -182,7 +182,7 @@ environments:
       - conda: https://repo.prefix.dev/max-nightly/linux-64/mojo-compiler-1.0.0b3.dev2026061407-release.conda
       - conda: https://repo.prefix.dev/max-nightly/noarch/mblack-26.5.0.dev2026061407-release.conda
       - conda: https://repo.prefix.dev/max-nightly/noarch/mojo-python-1.0.0b3.dev2026061407-release.conda
-      - conda_source: mogo-tester[baec69f2] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.0#fd48e6bd3bc05a9681c7539a3d9b14c55716e12c
+      - conda_source: mogo-tester[e72b2351] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.3#4fb7aab516a02ce5706084a81af6fff9b4dba5bb
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/_python_abi3_support-1.0-hd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.5.20-hbd8a1cb_0.conda
@@ -256,7 +256,7 @@ environments:
       - conda: https://repo.prefix.dev/max-nightly/noarch/mojo-python-1.0.0b3.dev2026061407-release.conda
       - conda: https://repo.prefix.dev/max-nightly/osx-arm64/mojo-1.0.0b3.dev2026061407-release.conda
       - conda: https://repo.prefix.dev/max-nightly/osx-arm64/mojo-compiler-1.0.0b3.dev2026061407-release.conda
-      - conda_source: mogo-tester[35d6ba33] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.0#fd48e6bd3bc05a9681c7539a3d9b14c55716e12c
+      - conda_source: mogo-tester[8f5ef2dd] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.3#4fb7aab516a02ce5706084a81af6fff9b4dba5bb
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_go_select-2.2.0-nocgo.tar.bz2
   sha256: ca4a3553e5e97e63db3c6f327cf2ce25e4fb88288ef9743cef52887a2deb745f
@@ -1786,8 +1786,8 @@ packages:
   run_exports: {}
   size: 62843432
   timestamp: 1781424219142
-- conda_source: mogo-tester[35d6ba33] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.0#fd48e6bd3bc05a9681c7539a3d9b14c55716e12c
-  version: 2.3.0
+- conda_source: mogo-tester[8f5ef2dd] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.3#4fb7aab516a02ce5706084a81af6fff9b4dba5bb
+  version: 2.3.3
   build: h60d57d3_0
   subdir: osx-arm64
   variants:
@@ -1800,8 +1800,8 @@ packages:
   - conda: https://conda.anaconda.org/conda-forge/osx-arm64/go-1.26.4-h3513735_0.conda
   - conda: https://conda.anaconda.org/conda-forge/osx-arm64/go-licenses-2.0.1-he136d79_0.conda
   - conda: https://conda.anaconda.org/conda-forge/osx-arm64/go-nocgo_osx-arm64-1.26.4-hedafc44_0.conda
-- conda_source: mogo-tester[baec69f2] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.0#fd48e6bd3bc05a9681c7539a3d9b14c55716e12c
-  version: 2.3.0
+- conda_source: mogo-tester[e72b2351] @ git+https://github.com/moseschmiedel/mogo_tester?tag=v2.3.3#4fb7aab516a02ce5706084a81af6fff9b4dba5bb
+  version: 2.3.3
   build: hb0f4dca_0
   subdir: linux-64
   variants:

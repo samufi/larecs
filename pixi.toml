@@ -24,7 +24,7 @@ clangxx = ">=22.1.7,<23"
 
 [feature.test.dependencies.mogo-tester]
 git = "https://github.com/moseschmiedel/mogo_tester"
-tag = "v2.3.0"
+tag = "v2.3.3"
 
 [feature.test.activation.env]
 CC = "clang"
