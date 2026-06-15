@@ -3,7 +3,7 @@ from std.collections.check_bounds import check_bounds
 from .bitmask import BitMask
 
 
-comptime NodeDataType = KeyElement & Copyable & ImplicitlyDestructible
+comptime NodeDataType = KeyElement & Copyable & ImplicitlyDeletable
 """The trait that the data stored in the graph nodes must conform to."""
 
 

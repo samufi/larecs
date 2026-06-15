@@ -175,7 +175,7 @@ struct MissingComponentsError[*Ts: ComponentType](Writable):
 
 
 struct _ComponentStorage[*ComponentTypes: ComponentType](
-    Copyable, ImplicitlyDestructible, Movable, Sized
+    Copyable, ImplicitlyDeletable, Movable, Sized
 ):
     """
     Internal struct to store component data for an archetype.
@@ -201,14 +201,14 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     """
 
     comptime ComponentPointer[T: ComponentType] = Optional[
-        UnsafePointer[T, MutExternalOrigin]
+        UnsafePointer[T, MutUntrackedOrigin]
     ]
     """The type of the component buffer pointer for a given component type T. Is an optional UnsafePointer, where a present pointer indicates an active component with allocated storage, and None indicates an inactive component without storage.
     """
 
     comptime _PointerMapper[
         T: ComponentType
-    ]: ImplicitlyCopyable & ImplicitlyDestructible & RegisterPassable & Defaultable = Self.ComponentPointer[
+    ]: ImplicitlyCopyable & ImplicitlyDeletable & RegisterPassable & Defaultable = Self.ComponentPointer[
         T
     ]
     """Helper type-level function to map component types to their corresponding pointer types in the storage tuple.
@@ -296,7 +296,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ](
             storage_size: Int,
             storage_capacity: Int,
-            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+            comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
         ):
             destroy_n(comp_ptr, count=storage_size)
             comp_ptr.free()
@@ -467,7 +467,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ](
             storage_size: Int,
             storage_capacity: Int,
-            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+            comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
         ) {read}:
             destroy_n(comp_ptr + remove_idx, count=1)
             if need_swap:
@@ -483,7 +483,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     @always_inline
     def get_component_ptr[
         T: ComponentType,
-    ](ref self) -> UnsafePointer[T, MutExternalOrigin]:
+    ](ref self) -> UnsafePointer[T, MutUntrackedOrigin]:
         """Returns the base pointer for the given component type.
 
         Parameters:
@@ -700,7 +700,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         FuncType: def[T: ComponentType, id: ComponentId](
             storage_size: Int,
             storage_capacity: Int,
-            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+            comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
         ),
     ](self, func: FuncType):
         """Applies a function to each active component pointer, allowing mutation of the data pointed to by the pointer but not changing the pointers themselves.

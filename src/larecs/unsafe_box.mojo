@@ -2,7 +2,7 @@ from std.memory import UnsafePointer
 from std.sys import size_of
 
 
-def _destructor[T: ImplicitlyDestructible](box_storage: UnsafeBox.data_type):
+def _destructor[T: ImplicitlyDeletable](box_storage: UnsafeBox.data_type):
     """
     Destructor for the UnsafeBox.
 
@@ -54,10 +54,10 @@ def _copy_initializer[
     """
 
     comptime if size_of[T]() == 0:
-        return Optional[UnsafePointer[Byte, MutExternalOrigin]]()
+        return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
     else:
         if existing_box is None:
-            return Optional[UnsafePointer[Byte, MutExternalOrigin]]()
+            return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
         else:
             ptr = alloc[T](1)
             ptr.init_pointee_copy(existing_box.unsafe_value().bitcast[T]()[])
@@ -79,7 +79,7 @@ def _dummy_copy_initializer(
     Returns:
         A null pointer.
     """
-    return Optional[UnsafePointer[Byte, MutExternalOrigin]]()
+    return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
 
 
 struct UnsafeBox(Copyable, Movable):
@@ -94,10 +94,10 @@ struct UnsafeBox(Copyable, Movable):
     wrong type is used, it can lead to undefined behavior.
     """
 
-    comptime data_type = Optional[UnsafePointer[Byte, MutExternalOrigin]]
+    comptime data_type = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]
     """The type of the data stored in the box."""
 
-    comptime EltType = Copyable & Movable & ImplicitlyDestructible
+    comptime EltType = Copyable & Movable & ImplicitlyDeletable
     """Trait requirements for values that can be stored in the box."""
 
     var _data: Self.data_type
@@ -123,7 +123,7 @@ struct UnsafeBox(Copyable, Movable):
         comptime assert (
             used_internally
         ), "This constructor is meant for internal use only."
-        self._data = Optional[UnsafePointer[Byte, MutExternalOrigin]]()
+        self._data = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
 
@@ -139,7 +139,7 @@ struct UnsafeBox(Copyable, Movable):
         """
 
         comptime if size_of[T]() == 0:
-            ptr = Optional[UnsafePointer[T, MutExternalOrigin]]()
+            ptr = Optional[UnsafePointer[T, MutUntrackedOrigin]]()
         else:
             ptr = alloc[T](1)
             ptr.unsafe_value().init_pointee_move(data^)

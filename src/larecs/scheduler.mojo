@@ -4,7 +4,7 @@ from .world import World
 from .unsafe_box import UnsafeBox
 
 
-trait System(Copyable, ImplicitlyDestructible, Movable):
+trait System(Copyable, ImplicitlyDeletable, Movable):
     """Trait for systems in the scheduler."""
 
     def initialize[

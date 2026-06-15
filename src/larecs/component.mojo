@@ -9,7 +9,7 @@ from .bitmask import BitMask
 from .types import ComponentId
 
 
-comptime ComponentType = Copyable & Movable & ImplicitlyDestructible
+comptime ComponentType = Copyable & Movable & ImplicitlyDeletable
 """The trait that components must conform to."""
 
 

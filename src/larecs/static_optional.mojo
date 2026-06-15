@@ -4,7 +4,7 @@ from std.utils.type_functions import ConditionalType
 
 @fieldwise_init
 struct _EmptyStaticOptionalStorage(
-    Copyable, ImplicitlyDestructible, Movable, Writable
+    Copyable, ImplicitlyDeletable, Movable, Writable
 ):
     """Zero-sized backing storage for an absent `StaticOptional` value.
 
@@ -28,7 +28,7 @@ struct _EmptyStaticOptionalStorage(
 
 @fieldwise_init
 struct StaticOptional[
-    ElementType: Copyable & Movable & ImplicitlyDestructible,
+    ElementType: Copyable & Movable & ImplicitlyDeletable,
     has_value: Bool = True,
 ](
     Boolable,
@@ -47,7 +47,7 @@ struct StaticOptional[
     """
 
     comptime Storage = ConditionalType[
-        Trait=Copyable & Movable & ImplicitlyDestructible,
+        Trait=Copyable & Movable & ImplicitlyDeletable,
         If=Self.has_value,
         Then=Self.ElementType,
         Else=_EmptyStaticOptionalStorage,
