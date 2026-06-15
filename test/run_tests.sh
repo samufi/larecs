@@ -4,6 +4,7 @@
 # Usage:
 #   ./test/run_tests.sh <test_directory>   # Run all test_*.mojo files in a directory
 #   ./test/run_tests.sh <test_file.mojo>   # Run a single test file
+#   ./test/run_tests.sh --no-precompile <test_file.mojo>
 #
 # Each test file is compiled with debug info, all assertions, and AddressSanitizer,
 # then executed via `script` so it runs in a PTY. This preserves ASAN's colored
@@ -20,5 +21,18 @@
 #
 set -e
 
-mogo-tester --precompile src/larecs --asan --mojo-build-args="-g" $@
+precompile_args=(--precompile src/larecs)
+test_args=()
 
+for arg in "$@"; do
+    case "$arg" in
+        --no-precompile)
+            precompile_args=()
+            ;;
+        *)
+            test_args+=("$arg")
+            ;;
+    esac
+done
+
+mogo-tester "${precompile_args[@]}" --asan --mojo-build-args="-g" "${test_args[@]}"
