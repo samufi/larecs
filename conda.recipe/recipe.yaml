@@ -38,7 +38,7 @@ tests:
     requirements:
       run:
         - clang >=22.1.7, <23
-        - mogo-tester
+        - mogo-tester >= 2.3.2
         - ${{ pin_compatible('mojo-compiler') }}
     files:
       source:
