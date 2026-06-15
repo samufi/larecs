@@ -2,17 +2,16 @@ name: Release
 
 on:
   release:
-    types: [ created ]
+    types: [created]
   push:
     branches:
-    - main
+      - main
   pull_request:
 
 permissions:
   contents: write
 
 jobs:
-
   release:
     name: Build and publish package
     runs-on: ubuntu-latest
@@ -29,4 +28,4 @@ jobs:
       - name: Build conda package
         uses: prefix-dev/rattler-build-action@v0.2.37
         with:
-          build-args: --channel conda-forge --channel https://repo.prefix.dev/max-nightly
+          build-args: --channel conda-forge --channel https://repo.prefix.dev/max-nightly --channel https://repo.prefix.dev/modular-community --channel https://prefix.dev/tree-d
