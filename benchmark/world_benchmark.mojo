@@ -445,9 +445,8 @@ def benchmark_add_remove_1_comp_1_000_000(
             for _ in range(1000):
                 entities.append(world.add_entity(component0))
 
-            @parameter
-            for i in range(20):
-                component = FlexibleComponent[i + 1](i, 2.0)
+            comptime for i in range(20):
+                component = FlexibleComponent[i + 1](Float64(i), 2.0)
                 for entity in entities:
                     world.add(entity, component)
                 for entity in entities:
@@ -473,7 +472,7 @@ def benchmark_add_remove_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
-    comp = FlexibleComponent[1](1, 42.0)
+    comp = FlexibleComponent[1](1.0, 42.0)
 
     @always_inline
     @parameter
@@ -675,9 +674,8 @@ def benchmark_replace_1_comp_1_000_000(
             for _ in range(1000):
                 entities.append(world.add_entity(component0))
 
-            @parameter
-            for i in range(20):
-                component = FlexibleComponent[i + 1](i, 2.0)
+            comptime for i in range(20):
+                component = FlexibleComponent[i + 1](Float64(i), 2.0)
                 for entity in entities:
                     world.replace[FlexibleComponent[i]]().by(
                         component, entity=entity
@@ -745,8 +743,7 @@ def benchmark_replace_5_comp_1_000_000(
                     )
                 )
 
-            @parameter
-            for i in range(20):
+            comptime for i in range(20):
                 comptime base = i * 5
                 for entity in entities:
                     world.replace[
@@ -757,19 +754,19 @@ def benchmark_replace_5_comp_1_000_000(
                         FlexibleComponent[base + 4],
                     ]().by(
                         FlexibleComponent[base + 5](
-                            i + 11.0, Float32(i + 12.0)
+                            Float64(i) + 11.0, Float32(i) + 12.0
                         ),
                         FlexibleComponent[base + 6](
-                            i + 13.0, Float32(i + 14.0)
+                            Float64(i) + 13.0, Float32(i) + 14.0
                         ),
                         FlexibleComponent[base + 7](
-                            i + 15.0, Float32(i + 16.0)
+                            Float64(i) + 15.0, Float32(i) + 16.0
                         ),
                         FlexibleComponent[base + 8](
-                            i + 17.0, Float32(i + 18.0)
+                            Float64(i) + 17.0, Float32(i) + 18.0
                         ),
                         FlexibleComponent[base + 9](
-                            i + 19.0, Float32(i + 20.0)
+                            Float64(i) + 19.0, Float32(i) + 20.0
                         ),
                         entity=entity,
                     )
