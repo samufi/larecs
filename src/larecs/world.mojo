@@ -1627,12 +1627,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             try:
                 with self._locked():
-                    for archetype in Self.Query(
+                    for archetype in Self.ArchetypeIterator(
                         Pointer(to=self._archetypes),
-                        Pointer(to=self._locks),
-                        query.mask,
-                        query.without_mask.copy(),
-                    )._iter_archetypes():
+                        query.copy(),
+                    ):
                         for i in range(len(archetype[])):
                             operation(archetype[].get_entity_accessor(i))
             except:
@@ -1737,12 +1735,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             try:
                 with self._locked():
-                    for archetype in Self.Query(
+                    for archetype in Self.ArchetypeIterator(
                         Pointer(to=self._archetypes),
-                        Pointer(to=self._locks),
-                        query.mask,
-                        query.without_mask.copy(),
-                    )._iter_archetypes():
+                        query.copy(),
+                    ):
 
                         @always_inline
                         def closure[width: Int](i: Int) {read}:
@@ -1900,12 +1896,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     origin_of(self._locks),
                     has_start_indices=has_start_indices,
                 ](
-                    Self.Query(
+                    Self.ArchetypeIterator(
                         Pointer(to=self._archetypes),
-                        Pointer(to=self._locks),
-                        mask,
-                        without_mask.copy(),
-                    )._iter_archetypes(),
+                        QueryInfo(
+                            mask,
+                            without_mask.copy(),
+                        ),
+                    ),
                     Pointer(to=self._locks),
                     start_indices^,
                 )
@@ -1916,7 +1913,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     def _get_archetype_iterator[
         has_without_mask: Bool = False
     ](
-        mut self,
+        ref self,
         mask: BitMask,
         without_mask: StaticOptional[BitMask, has_without_mask] = None,
         out iterator: Self.ArchetypeIterator[
@@ -1930,12 +1927,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator over all archetypes that match the query.
         """
         with TraceGuard(name="World._get_archetype_iterator"):
-            iterator = Self.Query(
+            iterator = Self.ArchetypeIterator(
                 Pointer(to=self._archetypes),
-                Pointer(to=self._locks),
-                mask,
-                without_mask.copy(),
-            )._iter_archetypes()
+                QueryInfo(
+                    mask,
+                    without_mask.copy(),
+                ),
+            )
 
     @always_inline
     def is_locked(self, out result: Bool):

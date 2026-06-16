@@ -204,34 +204,9 @@ struct Query[
                 if archetype[] and self._info.matches(archetype[].get_mask()):
                     size += len(archetype[])
 
-    def _iter_archetypes(
-        self,
-        out iterator: Self.ArchetypeIterator[Self.archetypes_origin],
-    ):
-        """
-        Creates an archetype iterator for the query.
-
-        Note: For internal use only! Do not expose to users.
-
-        Returns:
-            An archetype iterator for the query.
-        """
-        with TraceGuard(name="Query._archetype_iterator"):
-            archetype_indices = List[Int]()
-
-            for i in range(len(self._archetypes[])):
-                archetype = Pointer(to=self._archetypes[].unsafe_get(i))
-                if archetype[] and self._info.matches(archetype[].get_mask()):
-                    archetype_indices.append(i)
-
-            iterator = {
-                self._archetypes,
-                archetype_indices^,
-            }
-
     @always_inline
     def __iter__(
-        var self,
+        deinit self,
         out iterator: _WorldIterator[
             Self.archetypes_origin,
             Self.locks_origin,
@@ -251,7 +226,7 @@ struct Query[
         with TraceGuard(name="Query.__iter__"):
             try:
                 iterator = {
-                    self._iter_archetypes(),
+                    Self.ArchetypeIterator(self._archetypes, self._info^),
                     self._lock_ptr,
                     None,
                 }
@@ -483,6 +458,23 @@ struct _ArchetypeIterator[
             self._archetypes = archetypes
             self._archetype_indices = archetype_indices^
             self._index = 0
+
+    def __init__(
+        out self,
+        archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
+        var query_info: QueryInfo[has_without_mask=_],
+    ):
+        """
+        Creates an archetype iterator from a list of archetypes and a query info.
+        """
+        self._archetypes = archetypes
+        self._archetype_indices = List[Int]()
+        self._index = 0
+
+        for i in range(len(self._archetypes[])):
+            ref archetype = self._archetypes[].unsafe_get(i)
+            if archetype and query_info.matches(archetype.get_mask()):
+                self._archetype_indices.append(i)
 
     @doc_hidden
     @always_inline
