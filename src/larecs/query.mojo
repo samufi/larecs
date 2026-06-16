@@ -67,7 +67,10 @@ struct QueryError(Equatable, ImplicitlyCopyable, Writable):
 
 
 struct Query[
-    world_origin: MutOrigin,
+    archetype_mutability: Bool,
+    //,
+    archetypes_origin: Origin[mut=archetype_mutability],
+    locks_origin: MutOrigin,
     *ComponentTypes: ComponentType,
     has_without_mask: Bool = False,
 ](ImplicitlyCopyable, SizedRaising):
@@ -90,30 +93,39 @@ struct Query[
     ```
 
     Parameters:
-        world_origin: The origin of the world.
+        archetype_mutability: Whether the archetypes are mutable.
+        archetypes_origin: The origin of the archetypes.
+        locks_origin: The origin of the lock manager.
         ComponentTypes: The types of the components to include in the query.
         has_without_mask: Whether the query has excluded components.
     """
 
     comptime World = World[*Self.ComponentTypes]
+    """The world type for this query."""
     comptime ArchetypeIterator = _ArchetypeIterator[
         _,
         *Self.ComponentTypes,
     ]
+    """The archetype iterator type for this query."""
     comptime EntityIterator = _EntityIterator[
         _,
         *Self.ComponentTypes,
     ]
+    """The entity iterator type for this query."""
 
     comptime QueryWithWithout = Query[
-        Self.world_origin,
+        Self.archetypes_origin,
+        Self.locks_origin,
         *Self.ComponentTypes,
         has_without_mask=True,
     ]
     """The query type with an active exclusion mask."""
 
-    var _world: Pointer[Self.World, Self.world_origin]
-    """Pointer to the world being queried."""
+    var _archetypes: Pointer[Self.World.Archetypes, Self.archetypes_origin]
+    """Pointer to the world's archetypes."""
+    var _lock_ptr: Pointer[LockManager, Self.locks_origin]
+    """Pointer to the world's lock manager."""
+
     var _mask: BitMask
     """Component mask that archetypes must contain."""
     var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
@@ -122,7 +134,8 @@ struct Query[
     @doc_hidden
     def __init__(
         out self,
-        world: Pointer[Self.World, Self.world_origin],
+        archetypes: Pointer[Self.World.Archetypes, Self.archetypes_origin],
+        lock_ptr: Pointer[LockManager, Self.locks_origin],
         var mask: BitMask,
         var without_mask: StaticOptional[BitMask, Self.has_without_mask] = None,
     ):
@@ -132,12 +145,14 @@ struct Query[
         The constructors should not be used directly, but through the [..world.World.query] method.
 
         Args:
-            world: A pointer to the world.
+            archetypes: A pointer to the world's archetypes.
+            lock_ptr: A pointer to the world's lock manager.
             mask: The mask of the components to iterate over.
             without_mask: The mask for components to exclude.
         """
         with TraceGuard(name="Query.__init__"):
-            self._world = world
+            self._archetypes = archetypes
+            self._lock_ptr = lock_ptr
             self._mask = mask^
             self._without_mask = without_mask^
 
@@ -149,7 +164,8 @@ struct Query[
             copy: The query to copy.
         """
         with TraceGuard(name="Query.__init__ copy"):
-            self._world = copy._world
+            self._archetypes = copy._archetypes
+            self._lock_ptr = copy._lock_ptr
             self._mask = copy._mask
             self._without_mask = copy._without_mask.copy()
 
@@ -167,16 +183,14 @@ struct Query[
                 self._mask,
                 self._without_mask,
             )
-            for i in range(len(self._world[]._archetypes)):
-                archetype = Pointer(to=self._world[]._archetypes.unsafe_get(i))
+            for i in range(len(self._archetypes[])):
+                archetype = Pointer(to=self._archetypes[].unsafe_get(i))
                 if archetype[] and query_info.matches(archetype[].get_mask()):
                     size += len(archetype[])
 
     def _iter_archetypes(
         self,
-        out iterator: Self.ArchetypeIterator[
-            origin_of(self._world[]._archetypes)
-        ],
+        out iterator: Self.ArchetypeIterator[Self.archetypes_origin],
     ):
         """
         Creates an archetype iterator for the query.
@@ -194,13 +208,13 @@ struct Query[
 
             archetype_indices = List[Int]()
 
-            for i in range(len(self._world[]._archetypes)):
-                archetype = Pointer(to=self._world[]._archetypes.unsafe_get(i))
+            for i in range(len(self._archetypes[])):
+                archetype = Pointer(to=self._archetypes[].unsafe_get(i))
                 if archetype[] and query_info.matches(archetype[].get_mask()):
                     archetype_indices.append(i)
 
             iterator = {
-                Pointer(to=self._world[]._archetypes),
+                self._archetypes,
                 archetype_indices^,
             }
 
@@ -208,8 +222,8 @@ struct Query[
     def __iter__(
         var self,
         out iterator: _WorldIterator[
-            origin_of(self._world[]._archetypes),
-            origin_of(self._world[]._locks),
+            Self.archetypes_origin,
+            Self.locks_origin,
             *Self.ComponentTypes,
             has_start_indices=False,
         ],
@@ -227,7 +241,7 @@ struct Query[
             try:
                 iterator = {
                     self._iter_archetypes(),
-                    Pointer(to=self._world[]._locks),
+                    self._lock_ptr,
                     None,
                 }
             except _:
@@ -264,7 +278,8 @@ struct Query[
             ](), "Duplicate component types in query are not allowed."
 
             query = Self.QueryWithWithout(
-                self._world,
+                self._archetypes,
+                self._lock_ptr,
                 self._mask,
                 BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
             )
@@ -292,7 +307,9 @@ struct Query[
             The query, made exclusive.
         """
         with TraceGuard(name="Query.exclusive"):
-            query = Self.QueryWithWithout(self._world, self._mask, ~self._mask)
+            query = Self.QueryWithWithout(
+                self._archetypes, self._lock_ptr, self._mask, ~self._mask
+            )
 
 
 struct QueryInfo[
@@ -394,7 +411,7 @@ struct _ArchetypeIterator[
         ComponentTypes: The types of the components.
     """
 
-    comptime Archetype = _Archetype[*Self.ComponentTypes,]
+    comptime Archetype = _Archetype[*Self.ComponentTypes]
     comptime Element = Pointer[Self.Archetype, Self.archetype_origin]
     var _archetypes: Pointer[List[Self.Archetype], Self.archetype_origin]
     var _archetype_indices: List[Int]

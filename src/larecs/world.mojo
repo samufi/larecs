@@ -321,6 +321,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     """Archetype type used by this world."""
     comptime Query = Query[
         _,
+        _,
         *Self.component_types,
         has_without_mask=_,
     ]
@@ -389,9 +390,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     var _locks: LockManager  # World _locks.
     """Lock manager guarding mutation during active iteration."""
 
-    var _archetypes: List[
-        Self.Archetype
-    ]  # Archetypes that have no relations components.
+    comptime Archetypes = List[Self.Archetype]
+    """Type alias for the list of archetypes owned by the world."""
+
+    var _archetypes: Self.Archetypes
     """Storage for all archetypes owned by the world."""
 
     var resources: Resources  # The resources of the world.
@@ -1626,7 +1628,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             try:
                 with self._locked():
                     for archetype in Self.Query(
-                        Pointer(to=self),
+                        Pointer(to=self._archetypes),
+                        Pointer(to=self._locks),
                         query.mask,
                         query.without_mask.copy(),
                     )._iter_archetypes():
@@ -1735,7 +1738,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             try:
                 with self._locked():
                     for archetype in Self.Query(
-                        Pointer(to=self),
+                        Pointer(to=self._archetypes),
+                        Pointer(to=self._locks),
                         query.mask,
                         query.without_mask.copy(),
                     )._iter_archetypes():
@@ -1831,7 +1835,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType
     ](
         mut self,
-        out iterator: Self.Query[origin_of(self), has_without_mask=False],
+        out iterator: Self.Query[
+            origin_of(self._archetypes),
+            origin_of(self._locks),
+            has_without_mask=False,
+        ],
     ):
         """
         Returns an [..query.Query] for all [..entity.Entity Entities] with the given components.
@@ -1856,7 +1864,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 bitmask = BitMask(Self.component_manager.get_id_arr[*Ts]())
 
             iterator = Self.Query[has_without_mask=False](
-                Pointer(to=self), bitmask
+                Pointer(to=self._archetypes), Pointer(to=self._locks), bitmask
             )
 
     def _get_entity_iterator[
@@ -1893,7 +1901,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     has_start_indices=has_start_indices,
                 ](
                     Self.Query(
-                        Pointer(to=self),
+                        Pointer(to=self._archetypes),
+                        Pointer(to=self._locks),
                         mask,
                         without_mask.copy(),
                     )._iter_archetypes(),
@@ -1922,7 +1931,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         with TraceGuard(name="World._get_archetype_iterator"):
             iterator = Self.Query(
-                Pointer(to=self),
+                Pointer(to=self._archetypes),
+                Pointer(to=self._locks),
                 mask,
                 without_mask.copy(),
             )._iter_archetypes()
