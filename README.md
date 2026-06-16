@@ -103,6 +103,45 @@ fn main() raises:
 ```
 
 
+## Development utilities
+
+### Update Mojo dependency pins
+
+Use the `update-mojo` Pixi task to update every configured Mojo dependency pin
+in the repository to the same version. The task runs `scripts/update_mojo.py`,
+which updates `mojo` entries in Pixi manifests and `mojo-compiler` entries in
+conda recipes.
+
+To update to the newest Mojo version available from the configured channels:
+
+```sh
+pixi run update-mojo
+```
+
+To choose the Mojo version explicitly:
+
+```sh
+pixi run update-mojo 1.0.0b3.dev2026061606
+```
+
+By default, the script writes constraints with an exclusive upper bound of
+`<2`. Use `--max-version` to choose a different upper bound:
+
+```sh
+pixi run update-mojo --max-version 3 1.0.0b3.dev2026061606
+```
+
+The script only updates dependency files by default. To also refresh the Pixi
+lockfiles for configured Pixi projects, pass `--update-locks`:
+
+```sh
+pixi run update-mojo --update-locks
+```
+
+The list of files that may contain Mojo versions is configured at the top of
+`scripts/update_mojo.py` in `MOJO_VERSION_FILES`. The channels used for
+newest-version discovery are configured in `MOJO_SEARCH_CHANNELS`.
+
 ## Limitations
 
 ### Only trivial types can be components
