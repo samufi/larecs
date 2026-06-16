@@ -570,9 +570,9 @@ def test_copy_move_del[
     var test_move_counter = init_moves
     var test_copy_counter = 0
     container = container_factory(
-        MemTestStruct[MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin](
-            copy_counter, move_counter, del_counter
-        )
+        MemTestStruct[
+            MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
+        ](copy_counter, move_counter, del_counter)
     )
 
     # Initialize
