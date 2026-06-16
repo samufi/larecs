@@ -227,10 +227,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     """The capacity of the component storage, i.e. how many entities can be stored without reallocating."""
     var _size: Int
     """The current size of the component storage, i.e. how many entities are currently stored."""
-    var data: Self._PointerTuple
+    var _data: Self._PointerTuple
     """The component data, stored as typed pointers to component buffers."""
 
-    var active_component_mask: BitMask
+    var _active_component_mask: BitMask
     """Ids of the active components in the archetype."""
 
     def __init__(
@@ -247,10 +247,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             size: The initial number of populated entity rows.
             capacity: The initial storage capacity.
         """
-        self.data = Self._PointerTuple()
+        self._data = Self._PointerTuple()
         self._capacity = capacity
         self._size = size
-        self.active_component_mask = active_component_mask
+        self._active_component_mask = active_component_mask
 
         self._unsafe_init_components(active_component_mask)
 
@@ -314,15 +314,15 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
         new_storage = Self(
-            active_component_mask=self.active_component_mask, capacity=0
+            active_component_mask=self._active_component_mask, capacity=0
         )
         new_storage._capacity = self._capacity
         new_storage._size = self._size
-        new_storage.active_component_mask = self.active_component_mask
+        new_storage._active_component_mask = self._active_component_mask
         comptime assert AllCopyable[
             *Self.ComponentTypes.map[Self._PointerMapper]()
         ]
-        new_storage.data = self.data.copy()
+        new_storage._data = self._data.copy()
 
     def _unsafe_init_components(mut self, read init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
@@ -364,7 +364,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The number of active component types.
         """
-        return self.active_component_mask.total_bits_set()
+        return self._active_component_mask.total_bits_set()
 
     @always_inline
     def add_entity(mut self) -> Int:
@@ -502,7 +502,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         self.assert_has_component[T]()
 
-        return rebind[Self.ComponentPointer[T]](self.data[id]).value()
+        return rebind[Self.ComponentPointer[T]](self._data[id]).value()
 
     @always_inline
     def has_component[T: ComponentType](self) -> Bool:
@@ -516,7 +516,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         Self.component_manager.assert_valid_components[T]()
         comptime id = Self.component_manager.get_id[T]()
-        return self.active_component_mask.get(id)
+        return self._active_component_mask.get(id)
 
     @always_inline
     def has_components[*Ts: ComponentType](self) -> Bool:
@@ -524,7 +524,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         Self.component_manager.assert_valid_components[*Ts]()
         comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
-        return self.active_component_mask.contains(comp_mask)
+        return self._active_component_mask.contains(comp_mask)
 
     @always_inline
     def assert_has_component[T: ComponentType](self):
@@ -694,8 +694,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]():
-                comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
-                self.data[id] = rebind[Self._PointerTuple.element_types[id]](
+                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
+                self._data[id] = rebind[Self._PointerTuple.element_types[id]](
                     func[T, id](self._size, self._capacity, comp_ptr)
                 )
 
@@ -717,7 +717,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]():
-                comp_ptr = rebind[Self.ComponentPointer[T]](self.data[id])
+                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
                 func[T, id](self._size, self._capacity, comp_ptr.value())
 
 
