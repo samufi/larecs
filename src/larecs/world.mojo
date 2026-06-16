@@ -1944,7 +1944,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The lock bit for later unlocking.
 
         Raises:
-            WorldError: when the world is already locked by the maximum number of locks (255).
+            WorldError: when the world is already locked by the maximum number of locks (256 in the current implementation).
         """
         with TraceGuard(name="World._lock"):
             try:
