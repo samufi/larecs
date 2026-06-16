@@ -126,10 +126,8 @@ struct Query[
     var _lock_ptr: Pointer[LockManager, Self.locks_origin]
     """Pointer to the world's lock manager."""
 
-    var _mask: BitMask
-    """Component mask that archetypes must contain."""
-    var _without_mask: StaticOptional[BitMask, Self.has_without_mask]
-    """Optional component mask that archetypes must not contain."""
+    var _info: QueryInfo[has_without_mask=Self.has_without_mask]
+    """Component matching information for this query."""
 
     @doc_hidden
     def __init__(
@@ -153,8 +151,31 @@ struct Query[
         with TraceGuard(name="Query.__init__"):
             self._archetypes = archetypes
             self._lock_ptr = lock_ptr
-            self._mask = mask^
-            self._without_mask = without_mask^
+            self._info = QueryInfo[has_without_mask=Self.has_without_mask](
+                mask^, without_mask^
+            )
+
+    @doc_hidden
+    def __init__(
+        out self,
+        archetypes: Pointer[Self.World.Archetypes, Self.archetypes_origin],
+        lock_ptr: Pointer[LockManager, Self.locks_origin],
+        var info: QueryInfo[has_without_mask=Self.has_without_mask],
+    ):
+        """
+        Creates a new query from existing query information.
+
+        The constructors should not be used directly, but through the [..world.World.query] method.
+
+        Args:
+            archetypes: A pointer to the world's archetypes.
+            lock_ptr: A pointer to the world's lock manager.
+            info: The query information to use for matching.
+        """
+        with TraceGuard(name="Query.__init__ info"):
+            self._archetypes = archetypes
+            self._lock_ptr = lock_ptr
+            self._info = info^
 
     def __init__(out self, *, copy: Self):
         """
@@ -166,8 +187,7 @@ struct Query[
         with TraceGuard(name="Query.__init__ copy"):
             self._archetypes = copy._archetypes
             self._lock_ptr = copy._lock_ptr
-            self._mask = copy._mask
-            self._without_mask = copy._without_mask.copy()
+            self._info = copy._info.copy()
 
     def __len__(self, out size: Int):
         """
@@ -179,13 +199,9 @@ struct Query[
         """
         with TraceGuard(name="Query.__len__"):
             size = 0
-            query_info = QueryInfo[has_without_mask=Self.has_without_mask](
-                self._mask,
-                self._without_mask,
-            )
             for i in range(len(self._archetypes[])):
                 archetype = Pointer(to=self._archetypes[].unsafe_get(i))
-                if archetype[] and query_info.matches(archetype[].get_mask()):
+                if archetype[] and self._info.matches(archetype[].get_mask()):
                     size += len(archetype[])
 
     def _iter_archetypes(
@@ -201,16 +217,11 @@ struct Query[
             An archetype iterator for the query.
         """
         with TraceGuard(name="Query._archetype_iterator"):
-            query_info = QueryInfo[has_without_mask=Self.has_without_mask](
-                self._mask,
-                self._without_mask,
-            )
-
             archetype_indices = List[Int]()
 
             for i in range(len(self._archetypes[])):
                 archetype = Pointer(to=self._archetypes[].unsafe_get(i))
-                if archetype[] and query_info.matches(archetype[].get_mask()):
+                if archetype[] and self._info.matches(archetype[].get_mask()):
                     archetype_indices.append(i)
 
             iterator = {
@@ -248,7 +259,7 @@ struct Query[
                 raise QueryError.could_not_create_iterator
 
     @always_inline
-    def without[*Ts: ComponentType](var self, out query: Self.QueryWithWithout):
+    def without[*Ts: ComponentType](deinit self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -280,12 +291,13 @@ struct Query[
             query = Self.QueryWithWithout(
                 self._archetypes,
                 self._lock_ptr,
-                self._mask,
-                BitMask(Self.World.component_manager.get_id_arr[*Ts]()),
+                self._info^.without(
+                    BitMask(Self.World.component_manager.get_id_arr[*Ts]())
+                ),
             )
 
     @always_inline
-    def exclusive(var self, out query: Self.QueryWithWithout):
+    def exclusive(deinit self, out query: Self.QueryWithWithout):
         """
         Makes the query only match entities with exactly the query's components.
 
@@ -308,7 +320,7 @@ struct Query[
         """
         with TraceGuard(name="Query.exclusive"):
             query = Self.QueryWithWithout(
-                self._archetypes, self._lock_ptr, self._mask, ~self._mask
+                self._archetypes, self._lock_ptr, self._info^.exclusive()
             )
 
 
@@ -331,6 +343,9 @@ struct QueryInfo[
     var without_mask: StaticOptional[BitMask, Self.has_without_mask]
     """Optional component mask that matching archetypes must not contain."""
 
+    comptime QueryInfoWithWithout = QueryInfo[has_without_mask=True]
+    """Query information type with an active exclusion mask."""
+
     @implicit
     def __init__(
         out self,
@@ -343,8 +358,8 @@ struct QueryInfo[
             query: The query the information should be taken from.
         """
         with TraceGuard(name="QueryInfo.__init__"):
-            self.mask = query._mask
-            self.without_mask = query._without_mask.copy()
+            self.mask = query._info.mask
+            self.without_mask = query._info.without_mask.copy()
 
     def __init__(
         out self,
@@ -376,6 +391,41 @@ struct QueryInfo[
         with TraceGuard(name="QueryInfo.__init__ copy"):
             self.mask = copy.mask
             self.without_mask = copy.without_mask.copy()
+
+    @always_inline
+    def without(
+        deinit self, var without_mask: BitMask, out query_info: Self.QueryInfoWithWithout
+    ):
+        """
+        Adds excluded components to the query information.
+
+        Args:
+            without_mask: The component mask to exclude.
+
+        Returns:
+            Query information with an active exclusion mask.
+        """
+        with TraceGuard(name="QueryInfo.without"):
+            comptime if Self.has_without_mask:
+                self.without_mask[] |= without_mask
+                query_info = Self.QueryInfoWithWithout(self.mask^, self.without_mask[])
+            else:
+                query_info = Self.QueryInfoWithWithout(self.mask^, without_mask^)
+
+    @always_inline
+    def exclusive(deinit self, out query_info: Self.QueryInfoWithWithout):
+        """
+        Makes the query information match exactly the included components.
+
+        Returns:
+            Query information with an exclusion mask for all non-included components.
+        """
+        with TraceGuard(name="QueryInfo.exclusive"):
+            comptime if Self.has_without_mask:
+                self.without_mask = ~self.mask
+                query_info = Self.QueryInfoWithWithout(self.mask^, self.without_mask[])
+            else:
+                query_info = Self.QueryInfoWithWithout(self.mask^, ~self.mask)
 
     def matches(self, archetype_mask: BitMask, out is_valid: Bool):
         """

@@ -296,6 +296,44 @@ def test_query_exclusive() raises:
     assert_false(world.is_locked())
 
 
+def test_query_without_builder_ownership() raises:
+    world = SmallWorld()
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    n = 10
+
+    for _ in range(n):
+        _ = world.add_entity(c0)
+        _ = world.add_entity(c0, c1)
+        _ = world.add_entity(c0, c2)
+        _ = world.add_entity(c0, c1, c2)
+
+    chained = (
+        world.query[FlexibleComponent[0]]()
+        .without[FlexibleComponent[1]]()
+        .without[FlexibleComponent[2]]()
+    )
+    assert_equal(len(chained), n)
+
+    query = world.query[FlexibleComponent[0]]()
+    copied = query.copy().without[FlexibleComponent[1]]()
+    assert_equal(len(copied), 2 * n)
+    assert_equal(len(query), 4 * n)
+
+    moved_source = world.query[FlexibleComponent[0]]()
+    moved = moved_source^.without[FlexibleComponent[2]]()
+    assert_equal(len(moved), 2 * n)
+
+    exclusive = (
+        world.query[FlexibleComponent[0]]()
+        .without[FlexibleComponent[1]]()
+        .exclusive()
+    )
+    assert_equal(len(exclusive), n)
+
+
 def test_query_lock() raises:
     world = SmallWorld()
 
