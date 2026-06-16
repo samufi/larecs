@@ -29,6 +29,9 @@ CC = "clang"
 CXX = "clang++"
 #clang = ">=22.1.7,<23"
 
+[target.linux-64.dependencies]
+sysroot_linux-64 = "2.34.*"
+
 [environments]
 test = ["test"] # An environment covering the "test" feature
 
