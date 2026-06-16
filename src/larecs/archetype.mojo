@@ -126,9 +126,6 @@ struct EntityAccessor[
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Component types must be unique."
-            # comptime assert Self.component_manager._ContainsComponents[
-            #     *Ts
-            # ], "All component types must be contained in the component manager."
 
             self._archetype[].set_components[*Ts](
                 self._index_in_archetype, *components^
