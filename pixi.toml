@@ -4,7 +4,7 @@ authors = [
     "Martin Lange <martin_lange_@gmx.net>",
     "Mose Schmiedel <mose@schmiednet.de>",
 ]
-channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly", "https://prefix.dev/tree-d"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
 platforms = ["linux-64", "osx-arm64"]
@@ -16,15 +16,12 @@ tests = { cmd = "test/run_tests.sh", default-environment = "test" }
 benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
-mojo = ">=1.0.0b3.dev2026061407,<2"
+mojo = ">=1.0.0b3.dev2026061606,<2"
 
 [feature.test.dependencies]
 clang = ">=22.1.7,<23"
 clangxx = ">=22.1.7,<23"
-
-[feature.test.dependencies.mogo-tester]
-git = "https://github.com/moseschmiedel/mogo_tester"
-tag = "v2.3.3"
+mogo-tester = ">=2.3.3,<3"
 
 [feature.test.activation.env]
 CC = "clang"
@@ -41,7 +38,7 @@ version = {workspace = true}
 [package.build.backend]
 name = "pixi-build-rattler-build"
 version = "*"
-channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly", "https://prefix.dev/tree-d"]
 
 [package.build.config]
 recipe = "conda.recipe/recipe.yaml"
