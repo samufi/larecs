@@ -1,82 +1,81 @@
-from testing import assert_true, assert_false, assert_equal
-from random import random
-from memory import UnsafePointer
-from sys.info import sizeof
+"""Test helpers and shared component fixtures for larecs tests."""
+
+from std.testing import assert_true, assert_false, assert_equal
+from std.random import random
+from std.memory import UnsafePointer
 from .component import ComponentType
 from .bitmask import BitMask
 from .world import World
 from .resource import Resources
 
 
-# TODO: Revisit the function parameters of `load` and `store` when crash report: https://github.com/modular/modular/issues/5361 is resolved.
 @always_inline
-fn load[
+def load[
     dType: DType,
-    is_mut: Bool,
-    origin: Origin[is_mut],
-    address_space: AddressSpace, //,
+    //,
     simd_width: Int,
     stride: Int = 1,
-](
-    ref [origin, address_space]val: SIMD[dType, 1],
-    out simd: SIMD[dType, simd_width],
-):
-    """
-    Load multiple values from a SIMD.
+](ref val: SIMD[dType, 1], out simd: SIMD[dType, simd_width],):
+    """Load multiple values from a SIMD.
 
     Parameters:
         dType: The data type of the SIMD.
-        is_mut: Whether the value is mutable.
-        origin: The origin of the value.
-        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
     Args:
         val: The SIMD to load from.
+
+    Returns:
+        The loaded SIMD value.
     """
     return UnsafePointer(to=val).strided_load[width=simd_width](stride)
 
 
 @always_inline
-fn store[
+def store[
     dType: DType,
-    is_mut: Bool,
-    origin: Origin[is_mut],
-    address_space: AddressSpace, //,
+    //,
     simd_width: Int,
     stride: Int = 1,
-](
-    ref [origin, address_space]val: SIMD[dType, 1],
-    simd: SIMD[dType, simd_width],
-):
-    """
-    Store the values of a SIMD into memory with a given start SIMD value.
+](mut val: SIMD[dType, 1], simd: SIMD[dType, simd_width],):
+    """Store the values of a SIMD into memory with a given start SIMD value.
 
     Parameters:
         dType: The data type of the SIMD.
-        is_mut: Whether the value is mutable.
-        origin: The origin of the value.
-        address_space: The address space of the value.
         simd_width: The number of values to load.
         stride: The stride between the values.
 
     Args:
         val: The SIMD at the first entry where the data should be stored.
         simd: The SIMD to store.
+
+    The SIMD values are written through the pointer to `val`.
     """
     return UnsafePointer(to=val).strided_store[width=simd_width](simd, stride)
 
 
-alias load2 = load[_, 2]
-alias store2 = store[_, 2]
+comptime load2 = load[_, 2]
+"""A two-stride specialization of `load` for SIMD tests.
+
+Parameters:
+    dType: The data type of the SIMD.
+    simd_width: The number of values to load.
+"""
+
+comptime store2 = store[_, 2]
+"""A two-stride specialization of `store` for SIMD tests.
+
+Parameters:
+    dType: The data type of the SIMD.
+    simd_width: The number of values to store.
+"""
 
 
-fn is_mutable[
-    mut: Bool, //, T: AnyType, origin: Origin[mut]
-](ref [origin]val: T) -> Bool:
-    """
-    Check if the value is mutable.
+def is_mutable[
+    mut: Bool, //, T: AnyType, origin: Origin[mut=mut]
+](ref[origin] val: T) -> Bool:
+    """Check if the value is mutable.
 
     Parameters:
         mut: Whether the value is mutable.
@@ -85,71 +84,119 @@ fn is_mutable[
 
     Args:
         val: The value to check.
+
+    Returns:
+        True if the value has a mutable origin, False otherwise.
     """
     return mut
 
 
-fn get_random_bitmask_list(
+def get_random_bitmask_list(
     count: Int,
     range_start: Int = 0,
     range_end: Int = 1000,
     out list: List[BitMask],
 ):
+    """Creates a list of random bitmasks.
+
+    Args:
+        count: The number of bitmasks to create.
+        range_start: The inclusive lower bound for the generated `Int`.
+        range_end: The exclusive upper bound for the generated `Int`.
+
+    Returns:
+        The generated list of bitmasks.
+        Result is undefined if either condition is violated:
+            - `count` must be non-negative.
+            - `range_start` must be non-negative.
+            - `range_end` must be at most 2^64.
+            - `range_start` must be less than `range_end`.
+    """
+    debug_assert(range_start >= 0, "range_start must be non-negative")
+    debug_assert(range_end <= 2**64, "range_end must be at most 2^64")
+    debug_assert(
+        range_start < range_end, "range_start must be less than range_end"
+    )
+    debug_assert(count >= 0, "count must be non-negative")
+
     list = List[BitMask]()
     list.reserve(count)
     for _ in range(count):
-        bytes = SIMD[DType.uint64, 4]()
-        bytes[0] = Int(random.random_ui64(range_start, range_end))
+        bytes = InlineArray[Scalar[DType.int], BitMask.total_bytes // 4]()
+        random.randint(bytes.unsafe_ptr(), 4, range_start, range_end)
         list.append(
             BitMask(
-                bytes=UnsafePointer(to=bytes).bitcast[SIMD[DType.uint8, 32]]()[]
+                bytes=UnsafePointer(to=bytes).bitcast[BitMask.BytesType]()[]
             )
         )
 
 
 @always_inline
-fn get_random_bitmask() -> BitMask:
+def get_random_bitmask() -> BitMask:
+    """Create a random bitmask.
+
+    Returns:
+        A bitmask with each bit set independently at random.
+    """
     mask = BitMask()
     for i in range(BitMask.total_bits):
         if random.random_float64() < 0.5:
-            mask.set(UInt8(i), True)
+            mask.set[True](i)
     return mask
-
-
-fn assert_equal_lists[
-    T: EqualityComparable & Copyable & Movable & Stringable
-](a: List[T], b: List[T], msg: String = "") raises:
-    assert_equal(len(a), len(b), msg)
-    for i in range(len(a)):
-        assert_equal(a[i], b[i], msg)
 
 
 @fieldwise_init
 struct Position(ComponentType & ImplicitlyCopyable):
+    """A position component used by tests."""
+
     var x: Float64
+    """The horizontal position coordinate."""
+
     var y: Float64
+    """The vertical position coordinate."""
 
 
 @fieldwise_init
 struct Velocity(ComponentType & ImplicitlyCopyable):
+    """A velocity component used by tests."""
+
     var dx: Float64
+    """The horizontal velocity component."""
+
     var dy: Float64
+    """The vertical velocity component."""
 
 
 @fieldwise_init
 struct LargerComponent(ComponentType & ImplicitlyCopyable):
+    """A larger three-field component used by tests."""
+
     var x: Float64
+    """The first component value."""
+
     var y: Float64
+    """The second component value."""
+
     var z: Float64
+    """The third component value."""
 
 
 @fieldwise_init
 struct FlexibleComponent[i: Int](ComponentType & ImplicitlyCopyable):
+    """A parameterized component used to build larger test worlds.
+
+    Parameters:
+        i: The compile-time component variant index.
+    """
+
     var x: Float64
+    """The Float64 test value."""
+
     var y: Float32
+    """The Float32 test value."""
 
 
-alias SmallWorld = World[
+comptime SmallWorld = World[
     LargerComponent,
     Position,
     Velocity,
@@ -165,8 +212,9 @@ alias SmallWorld = World[
     FlexibleComponent[9],
     FlexibleComponent[10],
 ]
+"""A compact world type used by most ECS tests."""
 
-alias FullWorld = World[
+comptime FullWorld = World[
     LargerComponent,
     Position,
     Velocity,
@@ -424,44 +472,79 @@ alias FullWorld = World[
     FlexibleComponent[251],
     FlexibleComponent[252],
 ]
+"""A large world type used to test many component registrations."""
 
 
 @fieldwise_init
-struct MemTestStruct(Copyable, Movable):
-    var copy_counter: UnsafePointer[Int]
-    var move_counter: UnsafePointer[Int]
-    var del_counter: UnsafePointer[Int]
+struct MemTestStruct[
+    copy_origin: MutOrigin, move_origin: MutOrigin, del_origin: MutOrigin
+](Copyable, Movable):
+    """A value that records copy, move, and delete lifecycle operations.
 
-    fn __moveinit__(out self, deinit other: Self):
-        self.move_counter = other.move_counter
-        self.del_counter = other.del_counter
-        self.copy_counter = other.copy_counter
+    Parameters:
+        copy_origin: The origin used for the copy counter pointer.
+        move_origin: The origin used for the move counter pointer.
+        del_origin: The origin used for the delete counter pointer.
+    """
+
+    var copy_counter: UnsafePointer[Int, Self.copy_origin]
+    """The counter incremented on copy initialization."""
+
+    var move_counter: UnsafePointer[Int, Self.move_origin]
+    """The counter incremented on move initialization."""
+
+    var del_counter: UnsafePointer[Int, Self.del_origin]
+    """The counter incremented on deletion."""
+
+    def __init__(out self, *, deinit take: Self):
+        """Move-initialize a lifecycle-counting test value.
+
+        Args:
+            take: The value whose counters are transferred into this value.
+
+        The source value is consumed by this initializer.
+        """
+        self.move_counter = take.move_counter
+        self.del_counter = take.del_counter
+        self.copy_counter = take.copy_counter
         self.move_counter[] += 1
 
-    fn __copyinit__(out self, other: Self):
-        self.move_counter = other.move_counter
-        self.del_counter = other.del_counter
-        self.copy_counter = other.copy_counter
+    def __init__(out self, *, copy: Self):
+        """Copy-initialize a lifecycle-counting test value.
+
+        Args:
+            copy: The value whose counters are copied into this value.
+
+        The new value shares the same lifecycle counters as the source value.
+        """
+        self.move_counter = copy.move_counter
+        self.del_counter = copy.del_counter
+        self.copy_counter = copy.copy_counter
         self.copy_counter[] += 1
 
-    fn __del__(deinit self):
+    def __del__(deinit self):
+        """Destroy a lifecycle-counting test value.
+
+        The delete counter is incremented in place.
+        """
         self.del_counter[] += 1
 
 
-fn test_copy_move_del[
-    Container: Copyable & Movable, //,
-    container_factory: fn (var val: MemTestStruct) -> Container,
+def test_copy_move_del[
+    Container: Copyable & Movable & ImplicitlyDestructible,
+    //,
+    container_factory: def(
+        var val: MemTestStruct[
+            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+        ]
+    ) thin -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
-    This function tests that the copy, move, and delete methods of
-    the elements of a container are called the expected number of times.
-    Note that some containers need to move the elements during initialization or
-    while copying. This can be specified with the `init_moves` parameter.
-
-    Similarly, elements may not be moved if the container is moved,
-    since the underlying storage may stay constant. In other instances,
-    the storage is moved as well, which can be specified with the `move_moves` parameter.
+    The tracked value uses `MutExternalOrigin` for its counters intentionally.
+    This keeps the produced container type fixed across call sites. The purpose
+    of this helper is to verify lifecycle behavior, not caller-origin
+    propagation.
 
     Parameters:
         Container: The type of the container to test.
@@ -471,53 +554,64 @@ fn test_copy_move_del[
         init_moves: The expected number of element move operations during initialization.
         copy_moves: The expected number of element move operations during copying.
         move_moves: The expected number of element move operations during moving.
+
+    Raises:
+        AssertionError: If any copy, move, or delete count differs from the expected value.
     """
 
-    var del_counter = 0
-    var move_counter = 0
-    var copy_counter = 0
+    copy_counter = alloc[Int](1)
+    move_counter = alloc[Int](1)
+    del_counter = alloc[Int](1)
+    copy_counter.init_pointee_copy(0)
+    move_counter.init_pointee_copy(0)
+    del_counter.init_pointee_copy(0)
+
     var test_del_counter = 0
     var test_move_counter = init_moves
     var test_copy_counter = 0
-
     container = container_factory(
-        MemTestStruct(
-            UnsafePointer(to=copy_counter),
-            UnsafePointer(to=move_counter),
-            UnsafePointer(to=del_counter),
+        MemTestStruct[MutExternalOrigin, MutExternalOrigin, MutExternalOrigin](
+            copy_counter, move_counter, del_counter
         )
     )
 
     # Initialize
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Copy
     container2 = container.copy()
     test_copy_counter += 1
     test_move_counter += copy_moves
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Delete
     _ = container2^
     test_del_counter += 1
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Move
     container2 = container^
     test_move_counter += move_moves
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
 
     # Delete
     _ = container2^
     test_del_counter += 1
-    assert_equal(del_counter, test_del_counter)
-    assert_equal(move_counter, test_move_counter)
-    assert_equal(copy_counter, test_copy_counter)
+    assert_equal(del_counter[], test_del_counter)
+    assert_equal(move_counter[], test_move_counter)
+    assert_equal(copy_counter[], test_copy_counter)
+
+    copy_counter.destroy_pointee()
+    move_counter.destroy_pointee()
+    del_counter.destroy_pointee()
+    copy_counter.free()
+    move_counter.free()
+    del_counter.free()

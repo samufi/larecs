@@ -1,25 +1,37 @@
-from sys.intrinsics import _type_is_eq
-from memory import memcpy, UnsafePointer
-from .component import ComponentManager, constrain_components_unique
+from std.sys.intrinsics import _type_is_eq
+from std.sys.defines import is_defined
+from std.reflection import reflect
+from std.reflection.traits import AllCopyable
+from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
+from std.bit import next_power_of_two
 from .entity import Entity
+from .component import (
+    ComponentType,
+    constrain_components_unique,
+    ComponentManager,
+)
 from .bitmask import BitMask
 from .pool import EntityPool
-from .types import get_max_size
-from ._utils import next_pow2
+from ._tracing import TraceGuard
+from .types import ComponentId
+from ._utils import (
+    _assert_index_in_bounds,
+    _assert_range_in_bounds,
+)
 
-alias DEFAULT_CAPACITY = 32
+comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
 
-alias MutableEntityAccessor = EntityAccessor[True]
+comptime MutableEntityAccessor = EntityAccessor[archetype_mutability=True, ...]
 """An entity accessor with mutable references to the components."""
 
 
 struct EntityAccessor[
     archetype_mutability: Bool,
-    archetype_origin: Origin[archetype_mutability],
+    //,
+    archetype_origin: Origin[mut=archetype_mutability],
     *ComponentTypes: ComponentType,
-    component_manager: ComponentManager[*ComponentTypes],
-]:
+](Movable):
     """Accessor for an Entity.
 
     Caution: use this only in the context it was created in.
@@ -29,22 +41,20 @@ struct EntityAccessor[
         archetype_mutability: Whether the reference to the list is mutable.
         archetype_origin: The lifetime of the List.
         ComponentTypes: The types of the components.
-        component_manager: The component manager.
     """
 
-    alias Archetype = Archetype[
-        *ComponentTypes, component_manager=component_manager
-    ]
+    comptime Archetype = Archetype[*Self.ComponentTypes]
     """The archetype of the entity."""
 
-    var _archetype: Pointer[Self.Archetype, archetype_origin]
+    var _archetype: Pointer[Self.Archetype, Self.archetype_origin]
+    """Pointer to the archetype that owns this entity row."""
     var _index_in_archetype: Int
+    """Index of the entity row within the archetype."""
 
-    @doc_private
-    @always_inline
-    fn __init__(
+    @doc_hidden
+    def __init__(
         out self,
-        archetype: Pointer[Self.Archetype, archetype_origin],
+        archetype: Pointer[Self.Archetype, Self.archetype_origin],
         index_in_archetype: Int,
     ):
         """
@@ -52,66 +62,77 @@ struct EntityAccessor[
             archetype: The archetype of the entity.
             index_in_archetype: The index of the entity in the archetype.
         """
-        self._archetype = archetype
-        self._index_in_archetype = index_in_archetype
+        with TraceGuard(name="EntityAccessor.__init__"):
+            self._archetype = archetype
+            self._index_in_archetype = index_in_archetype
 
     @always_inline
-    fn get_entity(self) -> Entity:
+    def get_entity(self) -> Entity:
         """Returns the entity of the accessor.
 
         Returns:
             The entity of the accessor.
         """
-        return self._archetype[].get_entity(self._index_in_archetype)
+
+        with TraceGuard(name="EntityAccessor.get_entity"):
+            return self._archetype[].get_entity(self._index_in_archetype)
 
     @always_inline
-    fn get[
-        T: ComponentType
-    ](ref self) raises -> ref [self._archetype[]._data] T:
+    def get[T: ComponentType](ref self) raises -> ref[self.archetype_origin] T:
         """Returns a reference to the given component of the Entity.
 
         Parameters:
             T: The type of the component.
 
+        Raises:
+            Error: If the entity's archetype does not contain the component.
+
         Returns:
             A reference to the component of the entity.
-
-        Raises:
-            Error: If the entity does not have the component.
         """
-        return self._archetype[].get_component[T=T](
-            self._index_in_archetype,
-        )
+
+        with TraceGuard(name="EntityAccessor.get"):
+            if not self._archetype[].has_component[T]():
+                raise Error("The component is missing.")
+
+            return self._archetype[].get_component[T](
+                self._index_in_archetype,
+            )
 
     @always_inline
-    fn set[
-        *Ts: ComponentType
+    def set[
+        origin: MutOrigin, *Ts: ComponentType
     ](
-        mut self: EntityAccessor[archetype_mutability=True],
+        mut self: EntityAccessor[
+            origin,
+            *Self.ComponentTypes,
+        ],
         var *components: *Ts,
     ) raises:
         """
         Overwrites components for an [..entity.Entity], using the given content.
 
         Parameters:
+            origin: The origin of the accessor.
             Ts:        The types of the components.
 
         Args:
             components: The new components.
 
         Raises:
-            Error: If the entity does not exist or does not have the component.
+            Error: If the entity's archetype does not contain one of the components.
         """
-        constrain_components_unique[*Ts]()
+        with TraceGuard(name="EntityAccessor.set"):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Component types must be unique."
 
-        @parameter
-        for i in range(components.__len__()):
-            self._archetype[].get_component[T = Ts[i]](
-                self._index_in_archetype
-            ) = components[i].copy()
+            self._archetype[].set_components[*Ts](
+                self._index_in_archetype, *components^
+            )
 
     @always_inline
-    fn has[T: ComponentType](self) -> Bool:
+    def has[T: ComponentType](self) -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
@@ -121,66 +142,618 @@ struct EntityAccessor[
         Returns:
             Whether the entity has the component.
         """
-        return self._archetype[].has_component[T]()
+        with TraceGuard(name="EntityAccessor.has"):
+            return self._archetype[].has_component[T]()
+
+
+@fieldwise_init
+struct MissingComponentsError[*Ts: ComponentType](Writable):
+    """Error message writer for missing component requirements.
+
+    Parameters:
+        Ts: The component types that were required but missing.
+    """
+
+    def write_to(self, mut writer: Some[Writer]):
+        """Writes a missing-components diagnostic.
+
+        Args:
+            writer: The destination writer.
+        """
+        comptime if len(Self.Ts) <= 1:
+            writer.write("The component [")
+            comptime for i in range(len(Self.Ts)):
+                comptime T = Self.Ts[i]
+                writer.write(reflect[T].name())
+            writer.write("] is missing.")
+        else:
+            writer.write("At least one of the components [")
+            comptime for i in range(len(Self.Ts)):
+                comptime T = Self.Ts[i]
+                writer.write(reflect[T].name(), ", ")
+            writer.write("] is missing.")
+
+
+struct _ComponentStorage[*ComponentTypes: ComponentType](
+    Copyable, ImplicitlyDestructible, Movable, Sized
+):
+    """
+    Internal struct to store component data for an archetype.
+
+    UnsafePointers to the component buffers are stored in a sparse tuple indexed by component ID (position in the ComponentTypes TypeList).
+    Only pointers for active components (those contained in the archetype) are allocated and valid; inactive components are stored as None and must not be dereferenced.
+
+    Layout example for 3 component types where only components 0 and 2 are active:
+    ```
+    +========================+==================================+========================+
+    |      Component 0       |      Component 1 (inactive)      |      Component 2       |
+    +========================+==================================+========================+
+    | alloc[Type0](capacity) | None (inactive)                  | alloc[Type2](capacity) |
+    +------------------------+----------------------------------+------------------------+
+    ```
+
+    Parameters:
+        ComponentTypes: The component types of the world.
+    """
+
+    comptime component_manager = ComponentManager[*Self.ComponentTypes]
+    """The component manager for the component types. Provides utilities for mapping component types to IDs and validating component types.
+    """
+
+    comptime ComponentPointer[T: ComponentType] = Optional[
+        UnsafePointer[T, MutExternalOrigin]
+    ]
+    """The type of the component buffer pointer for a given component type T. Is an optional UnsafePointer, where a present pointer indicates an active component with allocated storage, and None indicates an inactive component without storage.
+    """
+
+    comptime _PointerMapper[
+        T: ComponentType
+    ]: ImplicitlyCopyable & ImplicitlyDestructible & RegisterPassable & Defaultable = Self.ComponentPointer[
+        T
+    ]
+    """Helper type-level function to map component types to their corresponding pointer types in the storage tuple.
+    """
+
+    comptime _PointerTuple = Tuple[
+        *Self.ComponentTypes.map[Self._PointerMapper]()
+    ]
+    """The type of the tuple storing component pointers for all component types. See the description of [._ComponentStorage] for the layout and semantics of this tuple.
+    """
+
+    var _capacity: Int
+    """The capacity of the component storage, i.e. how many entities can be stored without reallocating."""
+    var _size: Int
+    """The current size of the component storage, i.e. how many entities are currently stored."""
+    var _data: Self._PointerTuple
+    """The component data, stored as typed pointers to component buffers."""
+
+    var _active_component_mask: BitMask
+    """Ids of the active components in the archetype."""
+
+    def __init__(
+        out self,
+        active_component_mask: BitMask,
+        *,
+        size: Int = 0,
+        capacity: Int = DEFAULT_CAPACITY,
+    ):
+        """Initializes component storage for a specific archetype mask.
+
+        Args:
+            active_component_mask: The mask describing which component buffers are active.
+            size: The initial number of populated entity rows.
+            capacity: The initial storage capacity.
+        """
+        self._data = Self._PointerTuple()
+        self._capacity = capacity
+        self._size = size
+        self._active_component_mask = active_component_mask
+
+        self._unsafe_init_components(active_component_mask)
+
+    def __init__(out self, *, copy: Self):
+        """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
+
+        Returns:
+            A deep copy of the component storage with its own allocations.
+        """
+        self = copy.shallow_copy()
+
+        @always_inline
+        def copy_component[
+            T: ComponentType, id: ComponentId
+        ](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: Self.ComponentPointer[T],
+        ) -> Self.ComponentPointer[T]:
+            new_ptr = alloc[T](storage_capacity)
+            if storage_size > 0:
+                uninit_copy_n[overlapping=False](
+                    dest=new_ptr, src=comp_ptr.value(), count=storage_size
+                )
+            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
+
+        self._apply_mut_to_active_components(copy_component)
+
+    @always_inline
+    def __len__(self) -> Int:
+        """
+        Gets the current size (number of stored entities) of the component storage.
+
+        Returns:
+            The current size of the component storage.
+        """
+        return self._size
+
+    @always_inline
+    def __del__(deinit self):
+        """Destroys and frees all active component buffers."""
+
+        @always_inline
+        def free_component_storage[
+            T: ComponentType, id: ComponentId
+        ](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+        ):
+            destroy_n(comp_ptr, count=storage_size)
+            comp_ptr.free()
+
+        self._apply_to_active_components(free_component_storage)
+
+    def shallow_copy(self, out new_storage: Self):
+        """Shallow-copies another component storage instance.
+
+        Returns:
+            A shallow copy of the component storage.
+        """
+        # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
+        new_storage = Self(
+            active_component_mask=self._active_component_mask, capacity=0
+        )
+        new_storage._capacity = self._capacity
+        new_storage._size = self._size
+        new_storage._active_component_mask = self._active_component_mask
+        comptime assert AllCopyable[
+            *Self.ComponentTypes.map[Self._PointerMapper]()
+        ]
+        new_storage._data = self._data.copy()
+
+    def _unsafe_init_components(mut self, read init_component_mask: BitMask):
+        """(Re)Initializes owned component storage while keeping the component layout intact.
+
+        Important:
+        This is intended for internal ownership-transfer flows where another archetype has
+        taken over the old storage pointers and this archetype must regain valid, uniquely
+        owned allocations before continuing.
+
+        Args:
+            init_component_mask: A bit mask indicating which components should be initialized.
+
+        Note:
+            Only active components in this storage are initialized.
+        """
+
+        def init_component_ptr[
+            T: ComponentType, id: ComponentId
+        ](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: Self.ComponentPointer[T],
+        ) {read} -> Self.ComponentPointer[T]:
+            if init_component_mask.get(id):
+                if storage_capacity > 0:
+                    return rebind[Self.ComponentPointer[T]](
+                        Optional(alloc[T](storage_capacity))
+                    )
+                return None
+            else:
+                return comp_ptr
+
+        self._apply_mut_to_active_components(init_component_ptr)
+
+    @always_inline
+    def get_component_count(self) -> Int:
+        """Returns the number of active components in the storage.
+
+        Returns:
+            The number of active component types.
+        """
+        return self._active_component_mask.total_bits_set()
+
+    @always_inline
+    def add_entity(mut self) -> Int:
+        """Adds an entity to the storage (increments size, checks capacity).
+
+        Returns:
+            The index of the newly added entity.
+        """
+        if self._size == self._capacity:
+            self.reserve(max(self._capacity * 2, 8))
+        var idx = self._size
+        self._size += 1
+        return idx
+
+    @always_inline
+    def clear(mut self):
+        """Removes all entities from the storage (resets size to 0).
+
+        Note: does not free any memory.
+        """
+        self._size = 0
+
+    @always_inline
+    def reserve(mut self, new_capacity: Int):
+        """Extends the capacity of the storage to at least the specified number of entities.
+
+        Uses a power-of-2 allocation strategy. The actual allocated capacity will be the next
+        power of 2 greater than or equal to the requested capacity.
+
+        Does nothing if the requested capacity is not larger than the current capacity.
+
+        Args:
+            new_capacity: The minimum required capacity. The actual allocated capacity
+                         will be `next_power_of_two(new_capacity)` to maintain power-of-2 growth.
+        """
+        debug_assert(
+            0 < new_capacity, "New capacity must be greater than zero."
+        )
+
+        if new_capacity <= self._capacity:
+            return
+
+        var new_pow2_capacity = next_power_of_two(new_capacity)
+        var old_capacity = self._capacity
+
+        @always_inline
+        def resize_component_storage[
+            T: ComponentType, id: ComponentId
+        ](
+            storage_size: Int,
+            storage_capacity: Int,
+            old_ptr: Self.ComponentPointer[T],
+        ) {read} -> Self.ComponentPointer[T]:
+            var new_ptr = alloc[T](new_pow2_capacity)
+            if storage_size > 0:
+                uninit_move_n[overlapping=False](
+                    dest=new_ptr, src=old_ptr.value(), count=storage_size
+                )
+            old_ptr.value().free()
+            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
+
+        if old_capacity > 0 or self._size == 0:
+            self._apply_mut_to_active_components(resize_component_storage)
+
+        self._capacity = new_pow2_capacity
+
+    @always_inline
+    def reserve(mut self, *, add: Int):
+        """
+        Reserves additional capacity for at least `add` amount of entities.
+
+        Args:
+            add: The minimum number of additional entities to reserve capacity for.
+        """
+
+        debug_assert(
+            0 <= add, "Amount of additional entities must be non-negative"
+        )
+
+        self.reserve(self._size + add)
+
+    @always_inline
+    def swap_remove_entity(mut self, remove_idx: Int) -> Bool:
+        """Performs a swap-remove operation for entity at idx, moving last entity to idx.
+
+        Swaps component data for all active components between idx and new_size (last entity).
+
+        Args:
+            remove_idx: The index of the entity to remove.
+
+        Returns:
+            Whether a swap was performed (i.e. idx was not the last entity).
+        """
+        _assert_index_in_bounds(remove_idx, self._size)
+
+        self._size -= 1
+
+        need_swap = remove_idx != self._size
+
+        @always_inline
+        def swap_component_data[
+            T: ComponentType, id: ComponentId
+        ](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+        ) {read}:
+            destroy_n(comp_ptr + remove_idx, count=1)
+            if need_swap:
+                uninit_move_n[overlapping=False](
+                    dest=comp_ptr + remove_idx,
+                    src=comp_ptr + storage_size,
+                    count=1,
+                )
+
+        self._apply_to_active_components(swap_component_data)
+        return need_swap
+
+    @always_inline
+    def get_component_ptr[
+        T: ComponentType,
+    ](ref self) -> UnsafePointer[T, MutExternalOrigin]:
+        """Returns the base pointer for the given component type.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            The pointer to the component.
+        """
+        comptime assert Self.component_manager._ContainsComponent[
+            T
+        ], "Component type not in component manager"
+        comptime id = Self.component_manager.get_id[T]()
+
+        self.assert_has_component[T]()
+
+        return rebind[Self.ComponentPointer[T]](self._data[id]).value()
+
+    @always_inline
+    def has_component[T: ComponentType](self) -> Bool:
+        """Returns whether the storage contains the given component type.
+
+        Parameters:
+            T: The type of the component.
+
+        Returns:
+            Whether the storage contains the component type.
+        """
+        Self.component_manager.assert_valid_components[T]()
+        comptime id = Self.component_manager.get_id[T]()
+        return self._active_component_mask.get(id)
+
+    @always_inline
+    def has_components[*Ts: ComponentType](self) -> Bool:
+        """Returns whether the storage contains all the given component types.
+        """
+        Self.component_manager.assert_valid_components[*Ts]()
+        comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
+        return self._active_component_mask.contains(comp_mask)
+
+    @always_inline
+    def assert_has_component[T: ComponentType](self):
+        """Asserts if the storage does not contain the given component type.
+            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
+
+        Parameters:
+            T: The type of the component.
+
+        """
+        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
+            Self.component_manager.assert_valid_components[T]()
+
+            assert self.has_component[T](), MissingComponentsError[T]()
+
+    @always_inline
+    def set_component[
+        T: ComponentType
+    ](mut self, entity_idx: Int, var component: T):
+        """Sets a typed component value.
+
+        Parameters:
+            T: The component type.
+
+        Args:
+            entity_idx: The entity row index.
+            component: The component value to store.
+        """
+        self.get_component_ptr[T]()[entity_idx] = component^
+
+    @always_inline
+    def assert_has_components[*Ts: ComponentType](self):
+        """Raises if the storage does not contain all the given component types.
+            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
+
+        Parameters:
+            Ts: The types of the components to check.
+        """
+        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
+            Self.component_manager.assert_valid_components[*Ts]()
+
+            assert self.has_components[*Ts](), MissingComponentsError[*Ts]()
+
+    @always_inline
+    def set_components[
+        *Ts: ComponentType
+    ](mut self, entity_idx: Int, var *components: *Ts):
+        """Sets the component with the given Type T at the given index.
+
+        Parameters:
+            Ts: The types of the components to set. Constraints: Must be contained in the component manager and must be unique.
+
+        Args:
+            entity_idx: The index of the entity.
+            components: The new values of the components.
+        """
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Component types must be unique."
+        _assert_index_in_bounds(entity_idx, self._size)
+
+        Self.component_manager.assert_valid_components[*Ts]()
+        self.assert_has_components[*Ts]()
+
+        @always_inline
+        def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
+            comptime T = Ts[comp_id]
+            self.get_component_ptr[T]()[entity_idx] = component^
+
+        (components^).consume_elements[set_component]()
+
+    @always_inline
+    def copy_component_from[
+        T: ComponentType
+    ](
+        mut self,
+        to_idx: Int,
+        storage: _ComponentStorage,
+        count: Int,
+        from_idx: Int = 0,
+    ):
+        """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            to_idx: The index of the first entity to set.
+            storage: The storage to copy components from. Must not be the same as self!
+            count: The number of elements to set.
+            from_idx: The index of the first entity in the storage to copy from.
+        """
+        _assert_range_in_bounds(to_idx, count, self._size)
+        _assert_range_in_bounds(from_idx, count, storage._size)
+
+        if count == 0:
+            return
+
+        destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+
+        uninit_copy_n[overlapping=False](
+            dest=self.get_component_ptr[T]() + to_idx,
+            src=storage.get_component_ptr[T]() + from_idx,
+            count=count,
+        )
+
+    @always_inline
+    def copy_shared_components_from_unsafe[
+        source_origin: Origin,
+    ](
+        mut self,
+        to_idx: Int,
+        source: UnsafePointer[Self, source_origin],
+        count: Int,
+        from_idx: Int = 0,
+    ):
+        """Copies shared component columns from an unsafe source storage.
+
+        This helper intentionally erases the source origin so callers can copy
+        between two distinct archetypes that originate from the same parent
+        list. Only components that are active in both storages are copied.
+
+        Args:
+            to_idx: The index of the first destination row.
+            source: An unsafe pointer to the source storage. Must not point to self!
+            count: The number of rows to copy.
+            from_idx: The index of the first source row.
+
+        Constraints:
+            The source and destination storages must be distinct and their
+            shared component columns must have identical layouts.
+        """
+        debug_assert(0 <= count, "Count must be non-negative.")
+        _assert_range_in_bounds(to_idx, count, self._size)
+        _assert_range_in_bounds(from_idx, count, source[]._size)
+
+        if count == 0:
+            return
+
+        comptime for id in range(len(Self.ComponentTypes)):
+            comptime T = Self.ComponentTypes[id]
+            if self.has_component[T]() and source[].has_component[T]():
+                destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+                uninit_copy_n[overlapping=False](
+                    dest=self.get_component_ptr[T]() + to_idx,
+                    src=source[].get_component_ptr[T]() + from_idx,
+                    count=count,
+                )
+
+    @always_inline
+    def _apply_mut_to_active_components[
+        FuncType: def[T: ComponentType, id: ComponentId](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: Self.ComponentPointer[T],
+        ) -> Self.ComponentPointer[T],
+    ](mut self, func: FuncType):
+        """Applies a function to each active component pointer, allowing mutation of the pointers by returning new pointers.
+
+        Parameters:
+            FuncType: The type of the function to apply to each active component pointer.
+
+        Args:
+            func: A function that takes a component ID and the corresponding typed pointer, and performs some mutating operation.
+                The function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
+        """
+        comptime for id in range(len(Self.ComponentTypes)):
+            comptime T = Self.ComponentTypes[id]
+            if self.has_component[T]():
+                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
+                self._data[id] = rebind[Self._PointerTuple.element_types[id]](
+                    func[T, id](self._size, self._capacity, comp_ptr)
+                )
+
+    def _apply_to_active_components[
+        FuncType: def[T: ComponentType, id: ComponentId](
+            storage_size: Int,
+            storage_capacity: Int,
+            comp_ptr: UnsafePointer[T, MutExternalOrigin],
+        ),
+    ](self, func: FuncType):
+        """Applies a function to each active component pointer, allowing mutation of the data pointed to by the pointer but not changing the pointers themselves.
+
+        Parameters:
+            FuncType: The type of the function to apply to each active component.
+
+        Args:
+            func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
+        """
+        comptime for id in range(len(Self.ComponentTypes)):
+            comptime T = Self.ComponentTypes[id]
+            if self.has_component[T]():
+                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
+                func[T, id](self._size, self._capacity, comp_ptr.value())
 
 
 struct Archetype[
-    *Ts: ComponentType,
-    component_manager: ComponentManager[*Ts],
+    *ComponentTypes: ComponentType,
 ](Boolable, Copyable, Movable, Sized):
     """
     Archetype represents an ECS archetype.
 
     Parameters:
-        Ts: The component types of the archetype.
-        component_manager: The component manager.
+        ComponentTypes: The component types of the archetype.
     """
 
-    alias dType = BitMask.IndexDType
-    """The DType of the component ids."""
-
-    alias Id = SIMD[Self.dType, 1]
-    """The type of the component ids."""
-
-    alias Index = UInt32
+    comptime Index = UInt32
     """The type of the index of entities."""
 
-    alias max_size = get_max_size[Self.dType]()
+    comptime max_size = BitMask.total_bits
     """The maximal number of components in the archetype."""
 
-    alias EntityAccessor = EntityAccessor[
-        _, _, *Ts, component_manager=component_manager
+    comptime EntityAccessor = EntityAccessor[
+        _,
+        *Self.ComponentTypes,
     ]
     """The type of the entity accessors generated by the archetype."""
 
-    # Pointers to the component data.
-    var _data: InlineArray[UnsafePointer[UInt8], Self.max_size]
+    var _storage: _ComponentStorage[*Self.ComponentTypes]
+    """The component storage of the archetype."""
 
-    # Current number of entities.
-    var _size: UInt
-
-    # Current capacity.
-    var _capacity: UInt
-
-    # number of components.
-    var _component_count: UInt
-
-    # Sizes of the component types by column
-    var _item_sizes: InlineArray[UInt32, Self.max_size]
-
-    # The indices of the present components
-    var _ids: SIMD[Self.dType, Self.max_size]
-
-    # The entities in the archetype
     var _entities: List[Entity]
+    """The entities stored in this archetype."""
 
-    # Index of the the archetype's node in the archetype graph
-    var _node_index: UInt
+    var _node_index: Int
+    """Index of this archetype's node in the archetype graph."""
 
-    # Mask of the the archetype's node in the archetype graph
     var _mask: BitMask
+    """Component mask represented by this archetype."""
 
-    fn __init__(
+    @always_inline
+    def __init__(
         out self,
     ):
         """Initializes the zero archetype without any component.
@@ -188,59 +761,51 @@ struct Archetype[
         Returns:
             The zero archetype.
         """
-        self = Self.__init__[used_internally=True](0, BitMask(), 0)
+        with TraceGuard(name="Archetype.__init__ zero"):
+            self = Self.__init__(0, BitMask(), 0)
 
-    @doc_private
-    fn __init__[
-        *, used_internally: Bool
-    ](out self, node_index: UInt, mask: BitMask, capacity: UInt):
-        """Initializes the archetype without allocating memory for components.
-
-        Note:
-            Do not use this constructor directly!
-
-        Parameters:
-            used_internally: A flag indicating whether this constructor
-                is used internally.
+    @always_inline
+    def __init__(
+        out self,
+        node_index: Int,
+        mask: BitMask,
+        capacity: Int = DEFAULT_CAPACITY,
+    ):
+        """Initializes the archetype based on a given mask.
 
         Args:
             node_index: The index of the archetype's node in the archetype graph.
             mask: The mask of the archetype's node in the archetype graph.
-            capacity:   The initial capacity of the archetype.
-
-        Constraints:
-            `used_internally` must be `True` to use this constructor.
+            capacity: The initial capacity of the archetype.
 
         Returns:
-            An archetype without allocated memory.
+            The archetype based on the given mask.
         """
-        constrained[
-            used_internally,
-            "This constructor is meant for internal use only.",
-        ]()
+        with TraceGuard(name="Archetype.__init__ mask"):
+            debug_assert(
+                0 <= capacity, "Capacity must be greater or equal to zero."
+            )
+            _assert_index_in_bounds(node_index, Self.max_size)
 
-        self._size = 0
-        self._mask = mask
-        self._component_count = 0
-        self._capacity = capacity
-        self._ids = SIMD[Self.dType, Self.max_size]()
-        self._data = InlineArray[UnsafePointer[UInt8], Self.max_size](
-            fill=UnsafePointer[UInt8]()
-        )
-        self._item_sizes = InlineArray[UInt32, Self.max_size](fill=0)
-        self._entities = List[Entity]()
-        self._node_index = node_index
+            self._mask = mask
+
+            self._storage = _ComponentStorage[*Self.ComponentTypes](
+                mask, capacity=capacity
+            )
+
+            self._entities = List[Entity]()
+            self._node_index = node_index
 
     @always_inline
-    fn __init__[
+    def __init__[
         component_count: Int
     ](
         out self,
-        node_index: UInt,
-        component_ids: InlineArray[Self.Id, component_count] = InlineArray[
-            Self.Id, component_count
-        ](fill=Self.Id(0)),
-        capacity: UInt = DEFAULT_CAPACITY,
+        node_index: Int,
+        component_ids: InlineArray[ComponentId, component_count] = InlineArray[
+            ComponentId, component_count
+        ](fill=ComponentId(0)),
+        capacity: Int = DEFAULT_CAPACITY,
     ):
         """Initializes the archetype with given components.
 
@@ -254,201 +819,87 @@ struct Archetype[
 
         Returns:
             The archetype with the given components.
+
+        Constraints:
+            `component_count` must be non-negative.
         """
-        mask_ = BitMask()
+        with TraceGuard(name="Archetype.__init__ components"):
+            comptime assert (
+                0 <= component_count
+            ), "Component count must be non-negative."
 
-        @parameter
-        for i in range(component_count):
-            mask_.set[True](component_ids[i])
-        self = Self(node_index, mask_, component_ids, capacity)
+            self = Self(node_index, BitMask(component_ids), capacity)
 
-    fn __init__[
-        component_count: Int
-    ](
-        out self,
-        node_index: UInt,
-        mask: BitMask,
-        component_ids: InlineArray[Self.Id, component_count],
-        capacity: UInt = DEFAULT_CAPACITY,
-    ):
-        """Initializes the archetype with given components and BitMask.
-
-        The components in the archetype are determined by the component_ids.
-        The mask is not checked for consistency with the component IDs.
-
-        Args:
-            node_index: The index of the archetype's node in the archetype graph.
-            mask: The mask of the archetype's node in the archetype graph
-                  (not used in initializer; not checked for consistency with component_ids).
-            component_ids: The IDs of the components of the archetype.
-            capacity: The initial capacity of the archetype.
-
-        Parameters:
-            component_count: The number of components in the archetype.
-
-        Returns:
-            The archetype with the given components and BitMask.
-        """
-        constrained[
-            Self.dType.is_integral(),
-            "The component identifier type needs to be an integral type.",
-        ]()
-
-        constrained[
-            Self.max_size >= component_count,
-            "An archetype cannot have more components than "
-            + String(Self.max_size)
-            + ".",
-        ]()
-
-        self = Self.__init__[used_internally=True](node_index, mask, capacity)
-        self._component_count = component_count
-
-        @parameter
-        for i in range(component_count):
-            id = component_ids[i]
-            self._item_sizes[id] = component_manager.component_sizes[id]
-            self._ids[i] = id
-            self._data[id] = UnsafePointer[UInt8].alloc(
-                self._capacity * index(component_manager.component_sizes[id])
-            )
-
-    fn __init__(
-        out self,
-        node_index: UInt,
-        mask: BitMask,
-        capacity: UInt = DEFAULT_CAPACITY,
-    ):
-        """Initializes the archetype based on a given mask.
-
-        Args:
-            node_index: The index of the archetype's node in the archetype graph.
-            mask: The mask of the archetype's node in the archetype graph.
-            capacity: The initial capacity of the archetype.
-
-        Returns:
-            The archetype based on the given mask.
-        """
-        self = Self.__init__[used_internally=True](node_index, mask, capacity)
-        self._component_count = 0
-
-        @parameter
-        for i in range(component_manager.component_count):
-            if mask.get(i):
-                self._item_sizes[i] = component_manager.component_sizes[i]
-                self._ids[self._component_count] = i
-                self._data[i] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(self._item_sizes[i])
-                )
-                self._component_count += 1
-
-    fn __copyinit__(out self, existing: Self):
+    @always_inline
+    def __init__(out self, *, copy: Self):
         """Copies the data from an existing archetype to a new one.
 
         Args:
-            existing: The archetype to copy from.
+            copy: The archetype to copy from.
         """
-        # Copy the attributes that can be trivially
-        # copied via a simple assignment
-        self._size = existing._size
-        self._capacity = existing._capacity
-        self._component_count = existing._component_count
-        self._item_sizes = existing._item_sizes
-        self._entities = existing._entities.copy()
-        self._ids = existing._ids
-        self._node_index = existing._node_index
-        self._mask = existing._mask
+        with TraceGuard(name="Archetype.__init__ copy"):
+            # Copy the attributes that can be trivially
+            # copied via a simple assignment
+            self._entities = copy._entities.copy()
+            self._node_index = copy._node_index
+            self._mask = copy._mask
 
-        # Copy the data
-        self._data = InlineArray[UnsafePointer[UInt8], Self.max_size](
-            fill=UnsafePointer[UInt8]()
-        )
-
-        for i in range(existing._component_count):
-            id = existing._ids[i]
-            size = existing._capacity * index(existing._item_sizes[id])
-            self._data[id] = UnsafePointer[UInt8].alloc(size)
-            memcpy(
-                self._data[id],
-                existing._data[id],
-                size,
-            )
-
-    fn __del__(deinit self):
-        """Frees the memory of the archetype."""
-        for i in range(self._component_count):
-            self._data[self._ids[i]].free()
+            # Copy the data
+            self._storage = copy._storage.copy()
 
     @always_inline
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """Returns the number of entities in the archetype.
 
         Returns:
             The number of entities in the archetype.
         """
-        return self._size
+        with TraceGuard(name="Archetype.__len__"):
+            return len(self._storage)
 
     @always_inline
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         """Returns whether the archetype contains entities.
 
         Returns:
             Whether the archetype contains entities.
         """
-        return Bool(self._size)
-
-    fn unsafe_reinit_components(mut self, ids: SIMD[Self.dType, Self.max_size]):
-        """Reinitializes owned component storage while keeping the component layout intact.
-
-        Important:
-        This is intended for internal ownership-transfer flows where another archetype has
-        taken over the old storage pointers and this archetype must regain valid, uniquely
-        owned allocations before continuing.
-
-        The component IDs themselves are not changed here; they are read from `self._ids`
-        to determine which component buffers must be reallocated.
-
-        Args:
-            ids: The IDs of the components that should get reinitialized.
-        """
-        self._capacity = DEFAULT_CAPACITY
-
-        for i in range(self._component_count):
-            id = self._ids[i]
-            if id in ids:
-                self._data[id] = UnsafePointer[UInt8].alloc(
-                    self._capacity * index(self._item_sizes[id])
-                )
+        with TraceGuard(name="Archetype.__bool__"):
+            return Bool(self._entities)
 
     @always_inline
-    fn get_node_index(self) -> UInt:
+    def get_node_index(self) -> Int:
         """Returns the index of the archetype's node in the archetype graph.
 
         Returns:
             The index of the archetype's node in the archetype graph.
         """
-        return self._node_index
+        with TraceGuard(name="Archetype.get_node_index"):
+            return self._node_index
 
     @always_inline
-    fn get_mask(self) -> ref [self._mask] BitMask:
+    def get_mask(self) -> ref[self._mask] BitMask:
         """Returns the mask of the archetype's node in the archetype graph.
 
         Returns:
             The mask of the archetype's node in the archetype graph.
         """
-        return self._mask
+        with TraceGuard(name="Archetype.get_mask"):
+            return self._mask
 
     @always_inline
-    fn reserve(mut self):
+    def reserve(mut self):
         """Extends the capacity of the archetype by factor 2 using power-of-2 allocation strategy.
 
         Doubles the current capacity (minimum 8) to provide exponential growth that minimizes
         the frequency of memory reallocations while maintaining reasonable memory usage.
         This follows standard container growth patterns optimized for amortized performance.
         """
-        self.reserve(max(self._capacity * 2, 8))
+        with TraceGuard(name="Archetype.reserve"):
+            self.reserve(max(self._storage._capacity * 2, 8))
 
-    fn reserve(mut self, new_capacity: UInt):
+    @always_inline
+    def reserve(mut self, new_capacity: Int):
         """Extends the capacity of the archetype to at least the specified number of entities.
 
         Uses a power-of-2 allocation strategy to ensure optimal memory alignment and reduce
@@ -460,7 +911,7 @@ struct Archetype[
 
         Args:
             new_capacity: The minimum required capacity. The actual allocated capacity
-                         will be `next_pow2(new_capacity)` to maintain power-of-2 growth.
+                         will be `next_power_of_two(new_capacity)` to maintain power-of-2 growth.
 
         Example:
 
@@ -472,32 +923,13 @@ struct Archetype[
         archetype.reserve(64)   # Actually reserves 64
         ```
         """
-        if new_capacity <= self._capacity:
-            return
-
-        new_pow2_capacity = next_pow2(new_capacity)
-
-        for i in range(self._component_count):
-            id = self._ids[i]
-            old_size = index(self._item_sizes[id]) * self._capacity
-            new_size = index(self._item_sizes[id]) * new_pow2_capacity
-            new_memory = UnsafePointer[UInt8].alloc(new_size)
-            memcpy(
-                new_memory,
-                self._data[id],
-                old_size,
-            )
-            self._data[id].free()
-            self._data[id] = new_memory
-
-        self._capacity = new_pow2_capacity
+        with TraceGuard(name="Archetype.reserve capacity"):
+            self._storage.reserve(new_capacity)
+            self._entities.reserve(self._storage._capacity)
 
     @always_inline
-    fn get_entity[T: Indexer](self, idx: T) -> ref [self._entities] Entity:
+    def get_entity(self, idx: Int) -> ref[self._entities] Entity:
         """Returns the entity at the given index.
-
-        Parameters:
-            T: The type of the index.
 
         Args:
             idx: The index of the entity.
@@ -505,24 +937,20 @@ struct Archetype[
         Returns:
             A reference to the entity at the given index.
         """
-        return self._entities[idx]
+        with TraceGuard(name="Archetype.get_entity"):
+            _assert_index_in_bounds(idx, self._storage._size)
+
+            return self._entities[idx]
 
     @always_inline
-    fn get_entity_accessor[
-        mutability: Bool, //,
-        T: Indexer,
-        origin: Origin[mutability],
+    def get_entity_accessor[
+        mut: Bool, //, origin: Origin[mut=mut]
     ](
-        ref [origin]self,
-        idx: T,
-        out accessor: Self.EntityAccessor[mutability, origin],
+        ref[origin] self,
+        idx: Int,
+        out accessor: Self.EntityAccessor[archetype_origin=origin],
     ):
         """Returns an accessor for the entity at the given index.
-
-        Parameters:
-            mutability: Whether the reference to the list is mutable.
-            T: The type of the index.
-            origin: The lifetime of the list.
 
         Args:
             idx: The index of the entity.
@@ -530,205 +958,157 @@ struct Archetype[
         Returns:
             An accessor for the entity at the given index.
         """
-        accessor = Self.EntityAccessor(
-            Pointer(to=self),
-            index(idx),
-        )
+        with TraceGuard(name="Archetype.get_entity_accessor"):
+            _assert_index_in_bounds(idx, self._storage._size)
+
+            accessor = Self.EntityAccessor(
+                Pointer(to=self),
+                idx,
+            )
 
     @always_inline
-    fn unsafe_set[
-        T: Indexer
-    ](mut self, idx: T, id: Self.Id, value: UnsafePointer[UInt8]):
-        """Sets the component with the given id at the given index.
+    def get_component[
+        T: ComponentType
+    ](ref self, entity_idx: Int) -> ref[self] T:
+        """Returns the component with the given Type T at the given index.
 
         Parameters:
-            T: The type of the index.
+            T: The type of the component. Constraints: Must be contained in the component manager.
 
         Args:
-            idx: The index of the entity.
-            id: The id of the component.
-            value: A pointer to the value being set.
-        """
-        memcpy(
-            self._get_component_ptr(index(idx), id),
-            value,
-            index(self._item_sizes[id]),
-        )
-
-    @always_inline
-    fn unsafe_set[
-        T: Indexer,
-    ](
-        mut self,
-        start_idx: T,
-        id: Self.Id,
-        data: UnsafePointer[UInt8],
-        count: UInt,
-    ):
-        """Sets the data of the component with the given id for multiple consecutive entities starting with the given index.
-
-        Parameters:
-            T: The type of the index.
-
-        Args:
-            start_idx: The index of the first entity to set.
-            id: The id of the component.
-            data: Pointer to the values to set the component with.
-            count: The number of elements to set.
-        """
-        memcpy(
-            self._get_component_ptr(index(start_idx), id),
-            data,
-            index(self._item_sizes[id]) * count,
-        )
-
-    @always_inline
-    fn unsafe_take_data_from_parts(
-        mut self,
-        ids: SIMD[Self.dType, Self.max_size],
-        data: InlineArray[UnsafePointer[UInt8], Self.max_size],
-        item_sizes: InlineArray[UInt32, Self.max_size],
-        component_count: Int,
-        capacity: UInt,
-    ):
-        """Unsafely takes ownership of component storage described by raw archetype parts.
-
-        This helper transfers pointer ownership into `self` without cloning the underlying
-        component buffers. It is therefore only valid for internal handoff paths where the
-        caller guarantees that the source storage will not remain managed by another
-        archetype after this call. In practice, the source archetype must either be
-        reinitialized immediately (by calling [.Archetype.unsafe_reinit_components]) or
-        otherwise prevented from freeing or mutating the same pointers.
-
-        Args:
-            ids: The component IDs whose metadata and storage ownership are being taken.
-            data: The component storage pointers to transfer into this archetype.
-            item_sizes: The byte width for each component ID in `ids`.
-            component_count: The number of valid component entries contained in `ids`,
-                `data`, and `item_sizes`.
-            capacity: The storage capacity that the transferred buffers were allocated for.
-        """
-        for i in range(self._component_count):
-            id = self._ids[i]
-            if id not in ids and self._capacity < capacity:
-                self._data[id].free()
-                self._data[id] = UnsafePointer[UInt8]().alloc(
-                    capacity * index(self._item_sizes[id])
-                )
-            else:
-                self._data[id].free()
-                self._data[id] = data[id]
-                self._item_sizes[id] = item_sizes[id]
-
-        self._capacity = capacity
-
-    @always_inline
-    fn _get_component_ptr(self, idx: UInt, id: Self.Id) -> UnsafePointer[UInt8]:
-        """Returns the component with the given id at the given index.
-
-        Does not check if the archetype contains the component.
-
-        Args:
-            idx: The index of the entity.
-            id: The id of the component.
-
-        Returns:
-            A pointer to the component.
-        """
-        return self._data[id] + idx * self._item_sizes[id]
-
-    @always_inline
-    fn get_component[
-        IndexType: Indexer, //,
-        *,
-        T: ComponentType,
-        assert_has_component: Bool = True,
-    ](ref self, idx: IndexType) raises -> ref [self._data] T:
-        """Returns the component with the given id at the given index.
-
-        Args:
-            idx: The index of the entity.
-
-        Parameters:
-            IndexType: The type of the index.
-            T: The type of the component.
-            assert_has_component: Whether to assert that the archetype
-                    contains the component.
-
-        Raises:
-            Error: If assert_has_component and the archetype does not contain the component.
+            entity_idx: The index of the entity.
 
         Returns:
             A reference to the component.
         """
-        alias id = component_manager.get_id[T]()
-        alias component_size = component_manager.component_sizes[id]
+        with TraceGuard(name="Archetype.get_component"):
+            _assert_index_in_bounds(entity_idx, self._storage._size)
 
-        @parameter
-        if assert_has_component:
-            self.assert_has_component(id)
-
-        return (self._data[id] + index(idx) * component_size).bitcast[T]()[]
+            return self._storage.get_component_ptr[T]()[entity_idx]
 
     @always_inline
-    fn get_entities(self) -> ref [self._entities] List[Entity]:
+    def set_component[
+        T: ComponentType
+    ](mut self, entity_idx: Int, var component: T):
+        """Sets the component with the given Type T at the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            entity_idx: The index of the entity.
+            component: The new value of the component.
+        """
+        with TraceGuard(name="Archetype.set_component"):
+            self._storage.set_component[T](entity_idx, component^)
+
+    @always_inline
+    def set_components[
+        *Ts: ComponentType
+    ](mut self, entity_idx: Int, var *components: *Ts):
+        """Sets the component with the given Type T at the given index.
+
+        Parameters:
+            Ts: The types of the components to set. Constraints: Must be contained in the component manager and must be unique.
+
+        Args:
+            entity_idx: The index of the entity.
+            components: The new values of the components.
+        """
+        with TraceGuard(name="Archetype.set_components"):
+            self._storage.set_components[*Ts](entity_idx, *components^)
+
+    @always_inline
+    def set_component_range[
+        T: ComponentType
+    ](mut self, start_entity_idx: Int, count: Int, value: T):
+        """Fills the component with the given Type T for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            start_entity_idx: The index of the first entity to set.
+            count: The number of elements to set.
+            value: The value to fill the component with.
+        """
+        with TraceGuard(name="Archetype.set_component_range"):
+            _assert_range_in_bounds(
+                start_entity_idx, count, self._storage._size
+            )
+
+            if count == 0:
+                return
+
+            var comp_ptr = self._storage.get_component_ptr[T]()
+            Span(ptr=comp_ptr + start_entity_idx, length=count).fill(value)
+
+    @always_inline
+    def copy_component_from[
+        T: ComponentType
+    ](
+        mut self,
+        to_idx: Int,
+        archetype: Archetype,
+        count: Int,
+        from_idx: Int = 0,
+    ):
+        """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
+
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager.
+
+        Args:
+            to_idx: The index of the first entity to set.
+            archetype: The archetype to copy components from.
+            count: The number of elements to set.
+            from_idx: The index of the first entity in the archetype to copy from.
+        """
+
+        with TraceGuard(name="Archetype.copy_component_from"):
+            self._storage.copy_component_from[T](
+                to_idx, archetype._storage, count, from_idx
+            )
+
+    @always_inline
+    def get_entities(self) -> ref[self._entities] List[Entity]:
         """Returns the entities in the archetype.
 
         Returns:
             A reference to the entities in the archetype.
         """
-        return self._entities
+        with TraceGuard(name="Archetype.get_entities"):
+            return self._entities
 
     @always_inline
-    fn has_component(self, id: Self.Id) -> Bool:
-        """Returns whether the archetype contains the given component id.
-
-        Args:
-            id: The id of the component.
-
-        Returns:
-            Whether the archetype contains the component.
-        """
-        return Bool(self._data[id])
-
-    @always_inline
-    fn has_component[T: ComponentType](self) -> Bool:
+    def has_component[T: ComponentType](self) -> Bool:
         """Returns whether the archetype contains the given component id.
 
         Parameters:
-            T: The type of the component.
+            T: The type of the component. Constraints: Must be contained in the component manager of the storage.
 
         Returns:
             Whether the archetype contains the component.
         """
-        return Bool(self._data[component_manager.get_id[T]()])
+        with TraceGuard(name="Archetype.has_component"):
+            return self._storage.has_component[T]()
 
     @always_inline
-    fn assert_has_component(self, id: Self.Id) raises:
+    def assert_has_component[T: ComponentType](self):
         """Raises if the archetype does not contain the given component id.
 
-        Args:
-            id: The id of the component.
-
-        Raises:
-            Error: If the archetype does not contain the component.
+        Parameters:
+            T: The type of the component. Constraints: Must be contained in the component manager of the storage.
         """
-        if not self.has_component(id):
-            raise Error(
-                "Archetype does not contain component with id "
-                + String(id)
-                + "."
-            )
+        with TraceGuard(name="Archetype.assert_has_component"):
+            self._storage.assert_has_component[T]()
 
     @always_inline
-    fn remove[T: Indexer](mut self, idx: T) -> Bool:
+    def remove(mut self, idx: Int) -> Bool:
         """Removes an entity and its components from the archetype.
 
         Performs a swap-remove and reports whether a swap was necessary
         (i.e. not the last entity that was removed).
-
-        Parameters:
-            T: The type of the index.
 
         Args:
             idx: The index of the entity to remove.
@@ -736,39 +1116,28 @@ struct Archetype[
         Returns:
             Whether a swap was necessary.
         """
+        with TraceGuard(name="Archetype.remove"):
+            var swapped = self._storage.swap_remove_entity(idx)
 
-        self._size -= 1
+            if swapped:
+                self._entities[idx] = self._entities.pop()
+            else:
+                _ = self._entities.pop()
 
-        var swapped = index(idx) != self._size
+            return swapped
 
-        if swapped:
-            self._entities[idx] = self._entities.pop()
-
-            for i in range(self._component_count):
-                id = self._ids[i]
-                size = self._item_sizes[id]
-                if size == 0:
-                    continue
-
-                memcpy(
-                    self._get_component_ptr(index(idx), id),
-                    self._get_component_ptr(self._size, id),
-                    index(size),
-                )
-        else:
-            _ = self._entities.pop()
-
-        return swapped
-
-    fn clear(mut self):
+    @always_inline
+    def clear(mut self):
         """Removes all entities from the archetype.
 
         Note: does not free any memory.
         """
-        self._entities.clear()
-        self._size = 0
+        with TraceGuard(name="Archetype.clear"):
+            self._entities.clear()
+            self._storage.clear()
 
-    fn add(mut self, entity: Entity) -> Int:
+    @always_inline
+    def add(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
 
         Args:
@@ -777,16 +1146,83 @@ struct Archetype[
         Returns:
             The index of the entity in the archetype.
         """
-        if self._size == self._capacity:
-            self.reserve()
+        with TraceGuard(name="Archetype.add"):
+            var idx = self._storage.add_entity()
+            self._entities.append(entity)
 
-        self._entities.append(entity)
-        self._size += 1
-        return self._size - 1
+            return idx
 
-    fn extend(
+    @always_inline
+    def extend_from_archetype_unsafe[
+        source_origin: Origin,
+    ](
         mut self,
-        count: UInt,
+        source: UnsafePointer[Self, source_origin],
+        count: Int,
+        from_idx: Int = 0,
+    ) -> Int:
+        """Appends entities and shared components from another archetype.
+
+        This helper is intended for internal batch migration paths where the
+        caller has already proven that source and destination archetypes are
+        distinct, but Mojo's alias analysis cannot express that relationship.
+
+        Args:
+            source: An unsafe pointer to the source archetype. Must not point to self!
+            count: The number of entities to append.
+            from_idx: The index of the first source entity to append.
+
+        Returns:
+            The index of the first newly appended entity.
+
+        Constraints:
+            The source and destination archetypes must be distinct and
+            contiguous ranges `[from_idx, from_idx + count)` and
+            `[return, return + count)` must be valid for the source and
+            destination storages.
+        """
+        with TraceGuard(name="Archetype.extend_from_archetype_unsafe"):
+            debug_assert(0 <= count, "Count must be non-negative.")
+            debug_assert(
+                UnsafePointer(to=self) != source,
+                "Source and destination archetypes must be distinct.",
+            )
+            _assert_range_in_bounds(from_idx, count, len(source[]))
+
+            start_index = self._storage._size
+
+            if count == 0:
+                return start_index
+
+            self._storage.reserve(add=count)
+            self._storage._size += count
+            self._entities.reserve(self._storage._capacity)
+
+            for i in range(count):
+                self._entities.append(source[]._entities[from_idx + i])
+
+            debug_assert(
+                start_index + count <= self._storage._size,
+                "Destination range must be valid after extending the storage.",
+            )
+
+            comptime for id in range(len(Self.ComponentTypes)):
+                comptime T = Self.ComponentTypes[id]
+                if self.has_component[T]() and source[].has_component[T]():
+                    uninit_copy_n[overlapping=False](
+                        dest=self._storage.get_component_ptr[T]() + start_index,
+                        src=UnsafePointer(
+                            to=source[].get_component[T](from_idx)
+                        ),
+                        count=count,
+                    )
+
+            return start_index
+
+    @always_inline
+    def extend(
+        mut self,
+        count: Int,
         mut entity_pool: EntityPool,
     ) -> Int:
         """Extends the archetype by `count` entities from the provided pool.
@@ -800,16 +1236,21 @@ struct Archetype[
             archetype. The other new entities are at consecutive
             `count` indices.
         """
-        if self._size + count >= self._capacity:
-            self.reserve(
-                self._size + count
+        with TraceGuard(name="Archetype.extend"):
+            if count <= 0:
+                return self._storage._size - 1
+
+            start_index = self._storage._size
+
+            self._storage.reserve(
+                add=count
             )  # `reserve` handles calculating a good capacity to use
+            self._storage._size += count
             self._entities.reserve(
-                self._capacity
+                self._storage._capacity
             )  # use the capacity calculated by `reserve` for the entities list as well
 
-        start_index = self._size
-        for _ in range(count):
-            self._entities.append(entity_pool.get())
-        self._size += count
-        return start_index
+            for _ in range(count):
+                self._entities.append(entity_pool.get())
+
+            return start_index

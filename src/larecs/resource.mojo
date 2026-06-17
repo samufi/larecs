@@ -1,15 +1,9 @@
-from collections import Dict
-from compile.reflection import get_type_name
+from std.collections import Dict
+from std.reflection import reflect
 
-from .component import (
-    ComponentType,
-    get_max_size,
-    constrain_components_unique,
-    contains_type,
-)
 from .unsafe_box import UnsafeBox
 
-alias ResourceType = Copyable & Movable
+comptime ResourceType = Copyable & Movable & ImplicitlyDestructible
 """The trait that resources must conform to."""
 
 
@@ -17,20 +11,20 @@ alias ResourceType = Copyable & Movable
 struct Resources(Copyable, Movable, Sized):
     """Manages resources."""
 
-    alias IdType = StringSlice[StaticConstantOrigin]
+    comptime IdType = StringSlice[StaticConstantOrigin]
     """The type of the internal type IDs."""
 
     var _storage: Dict[Self.IdType, UnsafeBox]
 
     @always_inline
-    fn __init__(out self):
+    def __init__(out self):
         """
         Constructs an empty resource container.
         """
         self._storage = Dict[Self.IdType, UnsafeBox]()
 
     @always_inline("nodebug")
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         """Gets the number of stored resources.
 
         Returns:
@@ -38,11 +32,11 @@ struct Resources(Copyable, Movable, Sized):
         """
         return len(self._storage)
 
-    fn add[*Ts: ResourceType](mut self, var *resources: *Ts) raises:
+    def add[*Ts: ResourceType](mut self, var *resources: *Ts) raises:
         """Adds resources.
 
         Parameters:
-            Ts: The Types of the resources to add.
+            Ts: The types of the resources to add.
 
         Args:
             resources: The resources to add.
@@ -53,27 +47,22 @@ struct Resources(Copyable, Movable, Sized):
 
         conflicting_ids = List[StringSlice[StaticConstantOrigin]](capacity=0)
 
-        @parameter
-        for idx in range(resources.__len__()):
-            alias id = get_type_name[Ts[idx]]()
+        comptime for idx in range(len(Ts)):
+            comptime id = reflect[Ts[idx]].name()
             if id in self._storage:
                 conflicting_ids.append(id)
 
         if conflicting_ids:
             raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
 
-        @parameter
-        fn take_resource[idx: Int](var resource: Ts[idx]) -> None:
-            self._add(get_type_name[Ts[idx]](), resource^)
+        def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
+            self._add(reflect[Ts[idx]].name(), resource^)
 
         resources^.consume_elements[take_resource]()
 
     @always_inline
-    fn _add[T: Copyable & Movable](mut self, id: Self.IdType, var resource: T):
+    def _add(mut self, id: Self.IdType, var resource: Some[ResourceType]):
         """Adds a resource by ID.
-
-        Parameters:
-            T: The type of the resource to add.
 
         Args:
             id: The ID of the resource to add. It has to be not used already.
@@ -81,7 +70,7 @@ struct Resources(Copyable, Movable, Sized):
         """
         self._storage[id] = UnsafeBox(resource^)
 
-    fn set[
+    def set[
         *Ts: ResourceType, add_if_not_found: Bool = False
     ](mut self: Resources, var *resources: *Ts) raises:
         """Sets the values of resources.
@@ -97,36 +86,32 @@ struct Resources(Copyable, Movable, Sized):
             Error: If one of the resources does not exist.
         """
 
-        @parameter
-        if not add_if_not_found:
+        comptime if not add_if_not_found:
             conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
 
-            @parameter
-            for idx in range(resources.__len__()):
-                alias id = get_type_name[Ts[idx]]()
+            comptime for idx in range(len(Ts)):
+                comptime id = reflect[Ts[idx]].name()
                 if id not in self._storage:
                     conflicting_ids.append(id)
 
             if len(conflicting_ids) > 0:
                 raise Error("Unknown resource: " + ", ".join(conflicting_ids))
 
-        @parameter
-        fn take_resource[idx: Int](var resource: Ts[idx]) -> None:
+        def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
             self._set[add_if_not_found=add_if_not_found](
-                get_type_name[Ts[idx]](),
+                reflect[Ts[idx]].name(),
                 resource^,
             )
 
         resources^.consume_elements[take_resource]()
 
     @always_inline
-    fn _set[
-        T: Copyable & Movable, //, add_if_not_found: Bool
-    ](mut self, id: Self.IdType, var resource: T):
+    def _set[
+        add_if_not_found: Bool
+    ](mut self, id: Self.IdType, var resource: Some[ResourceType]):
         """Sets the values of the resources
 
         Parameters:
-            T: The type of the resource to set.
             add_if_not_found: If true, adds resources that do not exist.
 
         Args:
@@ -135,14 +120,12 @@ struct Resources(Copyable, Movable, Sized):
         """
 
         try:
-            self._storage[id].unsafe_get[T]() = resource^
+            self._storage[id].unsafe_get[type_of(resource)]() = resource^
         except:
-
-            @parameter
-            if add_if_not_found:
+            comptime if add_if_not_found:
                 self._add(id, resource^)
 
-    fn remove[*Ts: ResourceType](mut self: Resources) raises:
+    def remove[*Ts: ResourceType](mut self: Resources) raises:
         """Removes resources.
 
         Parameters:
@@ -152,12 +135,11 @@ struct Resources(Copyable, Movable, Sized):
             Error: If one of the resources does not exist.
         """
 
-        @parameter
-        for i in range(len(VariadicList(Ts))):
-            self._remove[Ts[i]](get_type_name[Ts[i]]())
+        comptime for i in range(len(Ts)):
+            self._remove[Ts[i]](reflect[Ts[i]].name())
 
     @always_inline
-    fn _remove[T: Copyable & Movable](mut self, id: Self.IdType) raises:
+    def _remove[T: ResourceType](mut self, id: Self.IdType) raises:
         """Removes resources.
 
         Parameters:
@@ -172,11 +154,9 @@ struct Resources(Copyable, Movable, Sized):
             raise Error("The resource does not exist.")
 
     @always_inline
-    fn get[
+    def get[
         T: ResourceType
-    ](mut self) raises -> ref [
-        __origin_of(self._storage[""].unsafe_get[T]())
-    ] T:
+    ](mut self) raises -> ref[origin_of(self._storage[""].unsafe_get[T]())] T:
         """Gets a resource.
 
         Parameters:
@@ -185,10 +165,10 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             A reference to the resource.
         """
-        return self._storage[get_type_name[T]()].unsafe_get[T]()
+        return self._storage[reflect[T].name()].unsafe_get[T]()
 
     @always_inline
-    fn has[T: ResourceType](mut self) -> Bool:
+    def has[T: ResourceType](mut self) -> Bool:
         """Checks if the resource is present.
 
         Parameters:
@@ -197,4 +177,4 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             True if the resource is present, otherwise False.
         """
-        return get_type_name[T]() in self._storage
+        return reflect[T].name() in self._storage

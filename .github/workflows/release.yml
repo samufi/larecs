@@ -36,7 +36,7 @@ jobs:
 
       - name: Test package
         run: |
-          pixi run mojo test --validate-doc-strings -D ASSERT=all -I . test
+          pixi run tests test
 
       - name: Upload package
         if: ${{ github.event_name == 'release' }}

@@ -32,7 +32,7 @@ struct Velocity(Copyable, Movable):
 
 
 # Run the ECS
-fn main() raises:
+def main() raises:
     # Create a world, list all components that will / may be used
     world = World[Position, Velocity, IsStatic]()
 
@@ -66,6 +66,7 @@ Exports:
  - world.World
  - world.Replacer
  - component.ComponentType
+ - types.ComponentId
  - archetype.MutableEntityAccessor
  - archetype.EntityAccessor
  - entity.Entity
@@ -78,6 +79,7 @@ Exports:
 """
 from .world import World
 from .component import ComponentType
+from .types import ComponentId
 from .archetype import MutableEntityAccessor
 from .resource import Resources, ResourceType
 from .entity import Entity

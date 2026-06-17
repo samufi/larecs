@@ -4,13 +4,21 @@ authors = [
     "Martin Lange <martin_lange_@gmx.net>",
     "Mose Schmiedel <mose@schmiednet.de>",
 ]
-channels = ["conda-forge", "https://repo.prefix.dev/max"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 version = "0.4.0"
 
 [tasks]
+tests = { cmd = "test/run_tests.sh", default-environment = "test" }
+benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
-mojo = "==0.25.6"
+mojo = ">1.0.0b1, <=1.0.0b2"
+
+[feature.test.dependencies]
+compiler-rt = ">=22.1.6,<23"
+
+[environments]
+test = ["test"] # An environment covering the "test" feature

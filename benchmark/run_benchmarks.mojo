@@ -6,7 +6,7 @@ import resources_benchmark
 from custom_benchmark import DefaultBench
 
 
-def main():
+def main() raises:
     bench = DefaultBench()
     world_benchmark.run_all_world_benchmarks(bench)
     query_benchmark.run_all_query_benchmarks(bench)

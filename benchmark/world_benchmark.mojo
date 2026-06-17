@@ -1,4 +1,4 @@
-from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
+from std.benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 from custom_benchmark import DefaultBench
 from larecs.test_utils import *
 from larecs.world import World
@@ -7,10 +7,9 @@ from larecs.component import ComponentType
 from larecs import MutableEntityAccessor
 
 
-fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
-    @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity().get_id())
@@ -18,12 +17,12 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_entities_1_000_batch_1_000(
+def benchmark_add_entities_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
             keep(Bool(world.add_entities(count=1000)))
@@ -31,14 +30,14 @@ fn benchmark_add_entities_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_entity_1_comp_1_000_000(
+def benchmark_add_entity_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity(pos).get_id())
@@ -46,14 +45,14 @@ fn benchmark_add_entity_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_entities_1_comp_1_000_batch_1_000(
+def benchmark_add_entities_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
             keep(Bool(world.add_entities(pos, count=1000)))
@@ -61,14 +60,14 @@ fn benchmark_add_entities_1_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_entity_1_comp() raises:
+def prevent_inlining_add_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = SmallWorld()
     _ = world.add_entity(pos)
     _ = world.add_entities(pos, count=1)
 
 
-fn benchmark_add_entities_5_comp_1_000_000(
+def benchmark_add_entities_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -79,7 +78,7 @@ fn benchmark_add_entities_5_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity(c1, c2, c3, c4, c5).get_id())
@@ -87,7 +86,7 @@ fn benchmark_add_entities_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_entity_5_comp_1_000_batch_1_000(
+def benchmark_add_entity_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -98,7 +97,7 @@ fn benchmark_add_entity_5_comp_1_000_batch_1_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
             keep(Bool(world.add_entities(c1, c2, c3, c4, c5, count=1000)))
@@ -106,7 +105,7 @@ fn benchmark_add_entity_5_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_entity_5_comp() raises:
+def prevent_inlining_add_entity_5_comp() raises:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -117,13 +116,13 @@ fn prevent_inlining_add_entity_5_comp() raises:
     _ = world.add_entities(c1, c2, c3, c4, c5, count=1)
 
 
-fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
@@ -132,7 +131,7 @@ fn benchmark_get_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_get() raises:
+def prevent_inlining_get() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = SmallWorld()
@@ -140,14 +139,14 @@ fn prevent_inlining_get() raises:
     keep(world.get[Position](entity).x)
 
 
-fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(500_000):
@@ -157,7 +156,7 @@ fn benchmark_set_1_comp_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_set_1_comp() raises:
+def prevent_inlining_set_1_comp() raises:
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
@@ -167,7 +166,7 @@ fn prevent_inlining_set_1_comp() raises:
     world.set(entity, pos)
 
 
-fn benchmark_set_5_comp_1_000_000(
+def benchmark_set_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -184,7 +183,7 @@ fn benchmark_set_5_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(c1, c2, c3, c4, c5)
         for _ in range(500_000):
@@ -194,7 +193,7 @@ fn benchmark_set_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_set_5_comp() raises:
+def prevent_inlining_set_5_comp() raises:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -213,10 +212,10 @@ fn prevent_inlining_set_5_comp() raises:
     world.set(entity, c1, c2, c3, c4, c5)
 
 
-from math import exp
+from std.math import exp
 
 
-fn benchmark_apply_expexp_1_comp_100_000(
+def benchmark_apply_expexp_1_comp_100_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -224,14 +223,13 @@ fn benchmark_apply_expexp_1_comp_100_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
             _ = world.add_entity(pos, vel)
 
         @always_inline
-        @parameter
-        fn operation_plus(accessor: MutableEntityAccessor) capturing:
+        def operation_plus(accessor: MutableEntityAccessor):
             try:
                 ref pos2 = accessor.get[Position]()
                 pos2.x = exp(1 - exp(pos2.x))
@@ -240,14 +238,14 @@ fn benchmark_apply_expexp_1_comp_100_000(
                 pass
 
         for _ in range(100):
-            world.apply[operation_plus, unroll_factor=3](
-                world.query[Position]()
+            world.apply[unroll_factor=3](
+                world.query[Position](), operation_plus
             )
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_apply_simd_expexp_1_comp_100_000(
+def benchmark_apply_simd_expexp_1_comp_100_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -255,45 +253,40 @@ fn benchmark_apply_simd_expexp_1_comp_100_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000):
             _ = world.add_entity(pos, vel)
 
         @always_inline
-        @parameter
-        fn operation_plus[
-            simd_width: Int
-        ](accessor: MutableEntityAccessor) capturing:
-            alias _load = load2[simd_width]
-            alias _store = store2[simd_width]
+        def operation_plus[simd_width: Int](accessor: MutableEntityAccessor):
+            comptime _load = load2[simd_width]
+            comptime _store = store2[simd_width]
 
             try:
                 ref pos2 = accessor.get[Position]()
-
                 _store(pos2.x, exp(1 - exp(_load(pos2.x))))
                 _store(pos2.y, exp(1 - exp(_load(pos2.y))))
             except:
-                pass
+                return
 
         for _ in range(100):
             world.apply[
-                operation_plus,
                 simd_width=16,
                 unroll_factor=3,
-            ](world.query[Position, Velocity]())
+            ](world.query[Position, Velocity](), operation_plus)
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_entity_1_comp_1_000_000(
+def benchmark_add_remove_entity_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entities = List[Entity]()
         for _ in range(1000):
@@ -306,14 +299,14 @@ fn benchmark_add_remove_entity_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_entities_1_comp_1_000_batch_1000(
+def benchmark_add_remove_entities_1_comp_1_000_batch_1000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entities(pos, count=1000)
@@ -322,7 +315,7 @@ fn benchmark_add_remove_entities_1_comp_1_000_batch_1000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_remove_entity_1_comp() raises:
+def prevent_inlining_add_remove_entity_1_comp() raises:
     pos = Position(1.0, 2.0)
     world = SmallWorld()
     entity = world.add_entity(pos)
@@ -330,7 +323,7 @@ fn prevent_inlining_add_remove_entity_1_comp() raises:
     world.remove_entities(world.query[Position]())
 
 
-fn benchmark_add_remove_entity_5_comp_1_000_000(
+def benchmark_add_remove_entity_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = LargerComponent(1.0, 2.0, 3.0)
@@ -341,7 +334,7 @@ fn benchmark_add_remove_entity_5_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         _ = world.add_entity(c3, c5)
         # world = FullWorld()
@@ -359,7 +352,7 @@ fn benchmark_add_remove_entity_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
+def benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = LargerComponent(1.0, 2.0, 3.0)
@@ -370,7 +363,7 @@ fn benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entities(c1, c2, c3, c4, c5, count=1000)
@@ -387,7 +380,7 @@ fn benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_remove_entity_5_comp() raises:
+def prevent_inlining_add_remove_entity_5_comp() raises:
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -409,13 +402,13 @@ fn prevent_inlining_add_remove_entity_5_comp() raises:
     )
 
 
-fn benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
@@ -424,13 +417,13 @@ fn benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(pos, vel)
         for _ in range(1_000_000):
@@ -439,12 +432,12 @@ fn benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_1_comp_1_000_000(
+def benchmark_add_remove_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         for _ in range(50):
             world = FullWorld()
             entities = List[Entity]()
@@ -463,7 +456,7 @@ fn benchmark_add_remove_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_add_remove() raises:
+def prevent_inlining_add_remove() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = SmallWorld()
@@ -476,7 +469,7 @@ fn prevent_inlining_add_remove() raises:
     _ = world.remove[Position](query)
 
 
-fn benchmark_add_remove_1_comp_batch_1_000_000(
+def benchmark_add_remove_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -484,7 +477,7 @@ fn benchmark_add_remove_1_comp_batch_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
 
         # create 1_000_000 entities that initially do not have FlexibleComponent[1]
@@ -500,7 +493,7 @@ fn benchmark_add_remove_1_comp_batch_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_1_comp_1_000_batch_1_000(
+def benchmark_add_remove_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -508,7 +501,7 @@ fn benchmark_add_remove_1_comp_1_000_batch_1_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
 
         # create 1_000 entities that initially do not have FlexibleComponent[1]
@@ -526,7 +519,7 @@ fn benchmark_add_remove_1_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_5_comp_1_000_000(
+def benchmark_add_remove_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](1.0, 2.0)
@@ -538,7 +531,7 @@ fn benchmark_add_remove_5_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entity = world.add_entity(pos)
         for _ in range(1_000_000):
@@ -554,7 +547,7 @@ fn benchmark_add_remove_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_5_comp_batch_1_000_000(
+def benchmark_add_remove_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -566,7 +559,7 @@ fn benchmark_add_remove_5_comp_batch_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
 
         # create 1_000_000 entities that initially do not have FlexibleComponent[1]
@@ -606,7 +599,7 @@ fn benchmark_add_remove_5_comp_batch_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_add_remove_5_comp_1_000_batch_1_000(
+def benchmark_add_remove_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -618,7 +611,7 @@ fn benchmark_add_remove_5_comp_1_000_batch_1_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
 
         # create 1_000 entities that initially do not have FlexibleComponent[1...5]
@@ -659,22 +652,22 @@ fn benchmark_add_remove_5_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn prevent_inlining_replace() raises:
+def prevent_inlining_replace() raises:
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
     world = SmallWorld()
     entity = world.add_entity(pos)
-    _ = world.replace[Position]().by(entity, vel)
+    _ = world.replace[Position]().by(vel, entity=entity)
     query = world.query[Position]().without[Velocity]()
-    _ = world.replace[Position]().by(query, vel)
+    _ = world.replace[Position]().by(vel, query=query)
 
 
-fn benchmark_replace_1_comp_1_000_000(
+def benchmark_replace_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         for _ in range(50):
             world = FullWorld()
             entities = List[Entity]()
@@ -686,17 +679,19 @@ fn benchmark_replace_1_comp_1_000_000(
             for i in range(20):
                 component = FlexibleComponent[i + 1](i, 2.0)
                 for entity in entities:
-                    world.replace[FlexibleComponent[i]]().by(entity, component)
+                    world.replace[FlexibleComponent[i]]().by(
+                        component, entity=entity
+                    )
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_1_comp_batch_1_000_000(
+def benchmark_replace_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000_000)
 
@@ -708,12 +703,12 @@ fn benchmark_replace_1_comp_batch_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_1_comp_1_000_batch_1_000(
+def benchmark_replace_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
 
@@ -730,12 +725,12 @@ fn benchmark_replace_1_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_5_comp_1_000_000(
+def benchmark_replace_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         for _ in range(50):
             world = FullWorld()
             entities = List[Entity]()
@@ -752,7 +747,7 @@ fn benchmark_replace_5_comp_1_000_000(
 
             @parameter
             for i in range(20):
-                alias base = i * 5
+                comptime base = i * 5
                 for entity in entities:
                     world.replace[
                         FlexibleComponent[base + 0],
@@ -761,7 +756,6 @@ fn benchmark_replace_5_comp_1_000_000(
                         FlexibleComponent[base + 3],
                         FlexibleComponent[base + 4],
                     ]().by(
-                        entity,
                         FlexibleComponent[base + 5](
                             i + 11.0, Float32(i + 12.0)
                         ),
@@ -777,17 +771,18 @@ fn benchmark_replace_5_comp_1_000_000(
                         FlexibleComponent[base + 9](
                             i + 19.0, Float32(i + 20.0)
                         ),
+                        entity=entity,
                     )
 
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_5_comp_batch_1_000_000(
+def benchmark_replace_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entities(
             FlexibleComponent[0](1.0, 2.0),
@@ -822,12 +817,12 @@ fn benchmark_replace_5_comp_batch_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_5_comp_1_000_batch_1_000(
+def benchmark_replace_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entities(
             FlexibleComponent[0](1.0, 2.0),
@@ -903,14 +898,14 @@ fn benchmark_replace_5_comp_1_000_batch_1_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_replace_1_comp_1_000_000_extra(
+def benchmark_replace_1_comp_1_000_000_extra(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         entities = List[Entity]()
         for _ in range(1000):
@@ -919,13 +914,13 @@ fn benchmark_replace_1_comp_1_000_000_extra(
     bencher.iter[bench_fn]()
 
 
-fn run_all_world_benchmarks() raises:
+def run_all_world_benchmarks() raises:
     bench = DefaultBench()
     run_all_world_benchmarks(bench)
     bench.dump_report()
 
 
-fn run_all_world_benchmarks(mut bench: Bench) raises:
+def run_all_world_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_add_entity_1_000_000](
         BenchId("10^6 * add_entity")
     )
@@ -1025,5 +1020,5 @@ fn run_all_world_benchmarks(mut bench: Bench) raises:
     prevent_inlining_replace()
 
 
-def main():
+def main() raises:
     run_all_world_benchmarks()

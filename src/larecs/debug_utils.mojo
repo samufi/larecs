@@ -1,16 +1,15 @@
-from sys.param_env import is_defined
+from std.sys.defines import is_defined
 
 
 @always_inline
-fn warn(msg: String) -> None:
+def warn(msg: Some[Writable]) -> None:
     """Prints a warning message."""
-    print("Warning: " + msg)
+    print("Warning: ", msg)
 
 
 @always_inline
-fn debug_warn(msg: String) -> None:
+def debug_warn(msg: Some[Writable]) -> None:
     """Prints a debug warning message."""
 
-    @parameter
-    if is_defined["DEBUG_MODE"]():
+    comptime if is_defined["DEBUG_MODE"]():
         warn(msg)

@@ -1,18 +1,18 @@
+from std.python import Python
+from std.sys import argv
 from larecs import World, Resources
 from parameters import Parameters
 from systems import move, accelerate, add_satellites, position_to_numpy
 from components import Position, Velocity
-from python import Python
-from sys import argv
 
 
-fn update(mut world: World, step: Float64) raises:
+def update(mut world: World, step: Float64) raises:
     for _ in range(Int(step / world.resources.get[Parameters]().dt)):
         move(world)
         accelerate(world)
 
 
-fn main() raises:
+def main() raises:
     world = World[Position, Velocity]()
 
     world.resources.add(Parameters(dt=0.1, mass=5.972e24))

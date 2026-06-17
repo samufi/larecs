@@ -1,11 +1,11 @@
-from random import random
+from std.random import random
+from std.python import PythonObject, Python
 from larecs import World
 from components import Position, Velocity
 from parameters import Parameters, GRAVITATIONAL_CONSTANT
-from python import PythonObject, Python
 
 
-fn move(mut world: World) raises:
+def move(mut world: World) raises:
     ref parameters = world.resources.get[Parameters]()
 
     for entity in world.query[Position, Velocity]():
@@ -16,7 +16,7 @@ fn move(mut world: World) raises:
         position.y += velocity.y * parameters.dt
 
 
-fn accelerate(mut world: World) raises:
+def accelerate(mut world: World) raises:
     ref parameters = world.resources.get[Parameters]()
     constant = -GRAVITATIONAL_CONSTANT * parameters.mass * parameters.dt
 
@@ -30,27 +30,27 @@ fn accelerate(mut world: World) raises:
         velocity.y += position.y * multiplier
 
 
-fn get_random_position() -> Position:
+def get_random_position() -> Position:
     return Position(
-        x=random.random_float64(-1_000_000, 1_000_000),
-        y=random.random_float64(30_000_000, 40_000_000),
+        x=std.random.random_float64(-1_000_000, 1_000_000),
+        y=std.random.random_float64(30_000_000, 40_000_000),
     )
 
 
-fn get_random_velocity() -> Velocity:
+def get_random_velocity() -> Velocity:
     return Velocity(
-        random.random_float64(2000, 4000)
-        * (random.random_si64(0, 1) * 2 - 1).cast[DType.float64](),
-        random.random_float64(-500, 500),
+        std.random.random_float64(2000, 4000)
+        * (std.random.random_si64(0, 1) * 2 - 1).cast[DType.float64](),
+        std.random.random_float64(-500, 500),
     )
 
 
-fn add_satellites(mut world: World, count: Int) raises:
+def add_satellites(mut world: World, count: Int) raises:
     for _ in range(count):
         _ = world.add_entity(get_random_position(), get_random_velocity())
 
 
-fn position_to_numpy(mut world: World, out numpy_array: PythonObject) raises:
+def position_to_numpy(mut world: World, out numpy_array: PythonObject) raises:
     iterator = world.query[Position]()
 
     np = Python.import_module("numpy")

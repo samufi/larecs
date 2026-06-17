@@ -1,11 +1,11 @@
-from testing import *
+from std.testing import *
 
 from larecs._utils import concatenate_inline_arrays
 
 
-def test_concatenate_inline_arrays_uint8():
-    left = InlineArray[UInt8, 3](1, 2, 3)
-    right = InlineArray[UInt8, 2](4, 5)
+def test_concatenate_inline_arrays_uint8() raises:
+    left: InlineArray[UInt8, 3] = [1, 2, 3]
+    right: InlineArray[UInt8, 2] = [4, 5]
 
     result = concatenate_inline_arrays(left, right)
 
@@ -17,9 +17,9 @@ def test_concatenate_inline_arrays_uint8():
     assert_equal(result[4], 5)
 
 
-def test_concatenate_inline_arrays_uint16():
-    left = InlineArray[UInt16, 0](uninitialized = True)
-    right = InlineArray[UInt16, 2](3003, 4004)
+def test_concatenate_inline_arrays_uint16() raises:
+    left: InlineArray[UInt16, 0] = []
+    right: InlineArray[UInt16, 2] = [3003, 4004]
 
     result = concatenate_inline_arrays(left, right)
 
@@ -28,8 +28,8 @@ def test_concatenate_inline_arrays_uint16():
     assert_equal(result[1], 4004)
 
 
-def main():
-    print("Running tests...")
-    test_concatenate_inline_arrays_uint8()
-    test_concatenate_inline_arrays_uint16()
-    print("All tests passed.")
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()

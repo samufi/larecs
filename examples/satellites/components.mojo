@@ -1,12 +1,10 @@
 @fieldwise_init
-@register_passable("trivial")
-struct Position(ImplicitlyCopyable, Movable):
+struct Position(ImplicitlyCopyable, Movable, TrivialRegisterPassable):
     var x: Float64
     var y: Float64
 
 
 @fieldwise_init
-@register_passable("trivial")
-struct Velocity(ImplicitlyCopyable, Movable):
+struct Velocity(ImplicitlyCopyable, Movable, TrivialRegisterPassable):
     var x: Float64
     var y: Float64

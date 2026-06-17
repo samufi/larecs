@@ -1,4 +1,4 @@
-from benchmark import Bench, BenchConfig, Bencher, keep, BenchId
+from std.benchmark import Bench, BenchConfig, Bencher, keep, BenchId
 from custom_benchmark import DefaultBench
 from larecs.world import World
 from larecs.entity import Entity
@@ -6,10 +6,10 @@ from larecs.component import ComponentType
 from larecs.test_utils import *
 
 
-fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1_000_000):
             keep(world.add_entity().get_id())
@@ -17,14 +17,14 @@ fn benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_1_comp_1_000_000(
+def benchmark_query_1_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entity(pos)
@@ -35,7 +35,7 @@ fn benchmark_query_1_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_2_comp_1_000_000(
+def benchmark_query_2_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     pos = Position(1.0, 2.0)
@@ -43,7 +43,7 @@ fn benchmark_query_2_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = SmallWorld()
         for _ in range(1000):
             _ = world.add_entity(pos, vel)
@@ -55,7 +55,7 @@ fn benchmark_query_2_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_5_comp_1_000_000(
+def benchmark_query_5_comp_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -66,7 +66,7 @@ fn benchmark_query_5_comp_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         for _ in range(1000):
             _ = world.add_entity(c1, c2, c3, c4, c5)
@@ -87,7 +87,7 @@ fn benchmark_query_5_comp_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_get_iter_1_000_000(
+def benchmark_query_get_iter_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -98,7 +98,7 @@ fn benchmark_query_get_iter_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entity(c1, c2, c3, c4, c5)
         for _ in range(1_000_000):
@@ -107,7 +107,7 @@ fn benchmark_query_get_iter_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn benchmark_query_has_1_000_000(
+def benchmark_query_has_1_000_000(
     mut bencher: Bencher,
 ) raises capturing:
     c1 = FlexibleComponent[1](3.0, 4.0)
@@ -118,7 +118,7 @@ fn benchmark_query_has_1_000_000(
 
     @always_inline
     @parameter
-    fn bench_fn() capturing raises:
+    def bench_fn() capturing raises:
         world = FullWorld()
         _ = world.add_entity(c1, c2, c3, c4, c5)
         for entity in world.query[FlexibleComponent[1]]():
@@ -128,13 +128,13 @@ fn benchmark_query_has_1_000_000(
     bencher.iter[bench_fn]()
 
 
-fn run_all_query_benchmarks() raises:
+def run_all_query_benchmarks() raises:
     bench = DefaultBench()
     run_all_query_benchmarks(bench)
     bench.dump_report()
 
 
-fn run_all_query_benchmarks(mut bench: Bench) raises:
+def run_all_query_benchmarks(mut bench: Bench) raises:
     bench.bench_function[benchmark_query_has_1_000_000](
         BenchId("10^6 * query has")
     )
@@ -152,5 +152,5 @@ fn run_all_query_benchmarks(mut bench: Bench) raises:
     )
 
 
-def main():
+def main() raises:
     run_all_query_benchmarks()

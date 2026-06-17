@@ -1,4 +1,5 @@
-from testing import *
+from std.testing import *
+from std.sys.info import size_of
 
 from larecs.archetype import Archetype as _Archetype
 from larecs.bitmask import BitMask
@@ -8,16 +9,7 @@ from larecs.pool import EntityPool
 from larecs.test_utils import *
 
 
-# ToDo: Remove this when the benchmark tools
-# are updated
-@fieldwise_init
-struct LargerComponent(ComponentType):
-    var x: Float64
-    var y: Float64
-    var z: Float64
-
-
-alias Archetype = _Archetype[
+comptime Archetype = _Archetype[
     FlexibleComponent[0],
     LargerComponent,
     FlexibleComponent[1],
@@ -29,191 +21,244 @@ alias Archetype = _Archetype[
     FlexibleComponent[7],
     FlexibleComponent[9],
     FlexibleComponent[10],
-    component_manager = ComponentManager[
-        FlexibleComponent[0],
-        LargerComponent,
-        FlexibleComponent[1],
-        FlexibleComponent[2],
-        FlexibleComponent[3],
-        FlexibleComponent[4],
-        FlexibleComponent[5],
-        FlexibleComponent[6],
-        FlexibleComponent[7],
-        FlexibleComponent[9],
-        FlexibleComponent[10],
-    ](),
 ]
 
-alias id2Arr = InlineArray[UInt8, 2](1, 2)
-alias id3Arr = InlineArray[UInt8, 3](1, 2, 3)
+comptime mask2 = BitMask(1, 2)
+comptime mask3 = BitMask(1, 2, 3)
+comptime TrackedComponent = MemTestStruct[
+    MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+]
+comptime NonTrivialArchetype = _Archetype[TrackedComponent]
+comptime tracked_mask = BitMask(0)
 
-alias size2Arr = InlineArray[UInt32, 2](4, 8)
-alias size3Arr = InlineArray[UInt32, 3](4, 8, 8)
+
+struct LifecycleCounters(Movable):
+    """Lifecycle operation counters for non-trivial component tests."""
+
+    var copy_counter: UnsafePointer[Int, MutExternalOrigin]
+    """The number of copy initializations."""
+
+    var move_counter: UnsafePointer[Int, MutExternalOrigin]
+    """The number of move initializations."""
+
+    var del_counter: UnsafePointer[Int, MutExternalOrigin]
+    """The number of destructor calls."""
+
+    def __init__(out self):
+        """Initializes copy, move, and delete counters to zero."""
+        self.copy_counter = alloc[Int](1)
+        self.move_counter = alloc[Int](1)
+        self.del_counter = alloc[Int](1)
+        self.copy_counter.init_pointee_copy(0)
+        self.move_counter.init_pointee_copy(0)
+        self.del_counter.init_pointee_copy(0)
+
+    def __del__(deinit self):
+        """Destroys and frees the allocated lifecycle counters."""
+        self.copy_counter.destroy_pointee()
+        self.move_counter.destroy_pointee()
+        self.del_counter.destroy_pointee()
+        self.copy_counter.free()
+        self.move_counter.free()
+        self.del_counter.free()
+
+    def component(ref self) -> TrackedComponent:
+        """Creates a tracked component connected to these counters.
+
+        Returns:
+            A component whose copy, move, and destructor operations increment
+            this counter set.
+        """
+        return TrackedComponent(
+            self.copy_counter, self.move_counter, self.del_counter
+        )
+
+    def assert_delta(
+        ref self,
+        base_copies: Int,
+        base_moves: Int,
+        base_dels: Int,
+        expected_copies: Int,
+        expected_moves: Int,
+        expected_dels: Int,
+    ) raises:
+        """Asserts lifecycle counter deltas from a captured baseline.
+
+        Args:
+            base_copies: The copy counter baseline.
+            base_moves: The move counter baseline.
+            base_dels: The destructor counter baseline.
+            expected_copies: The expected number of additional copies.
+            expected_moves: The expected number of additional moves.
+            expected_dels: The expected number of additional destructor calls.
+
+        Raises:
+            AssertionError: If any lifecycle delta differs from expectation.
+        """
+        assert_equal(self.copy_counter[] - base_copies, expected_copies)
+        assert_equal(self.move_counter[] - base_moves, expected_moves)
+        assert_equal(self.del_counter[] - base_dels, expected_dels)
 
 
-def test_archetype_init():
-    var archetype = Archetype(4, id2Arr, capacity=10)
+def init_tracked_component(
+    mut archetype: NonTrivialArchetype,
+    idx: Int,
+    var component: TrackedComponent,
+):
+    """Move-initializes a tracked component row in an archetype.
 
-    assert_equal(archetype._capacity, 10)
+    Args:
+        archetype: The archetype whose component storage is initialized.
+        idx: The initialized entity row.
+        component: The component value to move into the uninitialized row.
+    """
+    (
+        archetype._storage.get_component_ptr[TrackedComponent]() + idx
+    ).init_pointee_move(component^)
+
+
+def test_archetype_init() raises:
+    var archetype = Archetype(4, mask2, capacity=10)
+
+    assert_equal(archetype._storage._capacity, 10)
     assert_equal(len(archetype), 0)
     assert_equal(archetype.get_node_index(), 4)
-    assert_equal(archetype._component_count, 2)
-    assert_equal(archetype._item_sizes[1], 24)
-    assert_equal(archetype._item_sizes[2], 16)
+    assert_equal(archetype._storage.get_component_count(), 2)
 
 
-def test_archetype_reserve():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_reserve() raises:
+    var archetype = Archetype(0, mask2)
 
     assert_equal(len(archetype), 0)
-    assert_equal(archetype._component_count, 2)
-    assert_equal(archetype._item_sizes[1], 24)
-    assert_equal(archetype._item_sizes[2], 16)
+    assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(50)
-    assert_equal(archetype._capacity, 64)
+    assert_equal(archetype._storage._capacity, 64)
     assert_equal(len(archetype), 0)
-    assert_equal(archetype._component_count, 2)
-    assert_equal(archetype._item_sizes[1], 24)
-    assert_equal(archetype._item_sizes[2], 16)
+    assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(5)
-    assert_equal(archetype._capacity, 64)
+    assert_equal(archetype._storage._capacity, 64)
     assert_equal(len(archetype), 0)
-    assert_equal(archetype._component_count, 2)
-    assert_equal(archetype._item_sizes[1], 24)
-    assert_equal(archetype._item_sizes[2], 16)
+    assert_equal(archetype._storage.get_component_count(), 2)
 
     archetype.reserve(70)
-    assert_equal(archetype._capacity, 128)
+    assert_equal(archetype._storage._capacity, 128)
     assert_equal(len(archetype), 0)
-    assert_equal(archetype._component_count, 2)
-    assert_equal(archetype._item_sizes[2], 16)
+    assert_equal(archetype._storage.get_component_count(), 2)
 
 
-def test_archetype_get_entity():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_get_entity() raises:
+    var archetype = Archetype(0, mask2)
 
     var entity = Entity(0, 0)
-    archetype._entities.append(entity)
-    assert_equal(archetype.get_entity(0), entity)
+    idx = archetype.add(entity)
+    assert_equal(archetype.get_entity(idx), entity)
 
 
-def test_archetype_remove():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_remove() raises:
+    var archetype = Archetype(0, mask2)
 
     var entity1 = Entity(0, 0)
     var entity2 = Entity(1, 0)
-    archetype._entities.append(entity1)
-    archetype._entities.append(entity2)
-    archetype._size = 2
+    _ = archetype.add(entity1)
+    _ = archetype.add(entity2)
 
     assert_equal(len(archetype), 2)
     assert_equal(archetype._entities[0], entity1)
     assert_equal(archetype._entities[1], entity2)
 
     var swapped = archetype.remove(0)
-    assert_equal(swapped, True)
+    assert_true(swapped)
     assert_equal(len(archetype), 1)
     assert_equal(archetype._entities[0], entity2)
 
     swapped = archetype.remove(0)
-    assert_equal(swapped, False)
+    assert_false(swapped)
     assert_equal(len(archetype), 0)
     assert_equal(len(archetype._entities), 0)
 
 
-def test_archetype_has_component():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_has_component() raises:
+    var archetype = Archetype(0, mask2)
 
-    assert_equal(archetype.has_component(1), True)
-    assert_equal(archetype.has_component(2), True)
-    assert_equal(archetype.has_component(3), False)
-
-
-def test_archetype_get_component_ptr():
-    var archetype = Archetype(0, id2Arr)
-
-    var entity = Entity(0, 0)
-    archetype._entities.append(entity)
-    archetype._size = 1
-
-    var ptr = archetype._get_component_ptr(0, 1)
-    assert_equal(ptr != UnsafePointer[UInt8](), True)
+    assert_true(archetype.has_component[Archetype.ComponentTypes[1]]())
+    assert_true(archetype.has_component[Archetype.ComponentTypes[2]]())
+    assert_false(archetype.has_component[Archetype.ComponentTypes[3]]())
 
 
-def test_archetype_move():
-    # TODO: not all fields are tested
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_move() raises:
+    var archetype = Archetype(0, mask2)
 
-    ptr1 = archetype._get_component_ptr(0, 1)
-    ptr2 = archetype._get_component_ptr(0, 5)
-    id1 = archetype._ids[0]
-    id2 = archetype._ids[1]
+    idx = archetype.add(Entity())
+    archetype.set_components(
+        idx,
+        LargerComponent(1.0, 2.0, 3.0),
+        FlexibleComponent[1](4.0, 5.0),
+    )
+
+    storage_ptr_large = (
+        archetype._storage.get_component_ptr[LargerComponent]() + idx
+    )
+    storage_ptr_flex = (
+        archetype._storage.get_component_ptr[FlexibleComponent[1]]() + idx
+    )
 
     var archetype2 = archetype^
 
-    assert_equal(ptr1, archetype2._get_component_ptr(0, 1))
-    assert_equal(ptr2, archetype2._get_component_ptr(0, 5))
-    assert_equal(id1, archetype2._ids[0])
-    assert_equal(id2, archetype2._ids[1])
+    assert_equal(
+        storage_ptr_large,
+        archetype2._storage.get_component_ptr[LargerComponent]() + idx,
+    )
+    assert_equal(
+        storage_ptr_flex,
+        archetype2._storage.get_component_ptr[FlexibleComponent[1]]() + idx,
+    )
+    assert_equal(archetype2.get_component[LargerComponent](idx).x, 1.0)
+    assert_equal(archetype2.get_component[FlexibleComponent[1]](idx).x, 4.0)
 
 
-def test_archetype_copy():
-    # TODO: not all fields are tested
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_copy() raises:
+    var archetype = Archetype(0, mask2)
+    idx = archetype.add(Entity())
+    archetype.set_components(
+        idx,
+        LargerComponent(1.0, 2.0, 3.0),
+        FlexibleComponent[1](4.0, 5.0),
+    )
 
     var archetype2 = archetype.copy()
 
     assert_not_equal(
-        archetype._get_component_ptr(0, 1), archetype2._get_component_ptr(0, 1)
+        archetype._storage.get_component_ptr[LargerComponent]() + idx,
+        archetype2._storage.get_component_ptr[LargerComponent]() + idx,
     )
     assert_not_equal(
-        archetype._get_component_ptr(0, 2), archetype2._get_component_ptr(0, 2)
+        archetype._storage.get_component_ptr[FlexibleComponent[1]]() + idx,
+        archetype2._storage.get_component_ptr[FlexibleComponent[1]]() + idx,
     )
-    assert_equal(archetype._ids[0], archetype2._ids[0])
-    assert_equal(archetype._ids[1], archetype2._ids[1])
+    assert_equal(archetype2.get_component[LargerComponent](idx).x, 1.0)
+    assert_equal(archetype2.get_component[FlexibleComponent[1]](idx).x, 4.0)
 
 
-def test_archetype_shallow_copy():
-    var archetype1 = Archetype(0, id2Arr)
-    entity_idx = archetype1.add(Entity(10, 3))
-    entity = archetype1.get_entity_accessor(entity_idx)
-    comp = LargerComponent(1.0, 2.0, 3.0)
-    entity.set(comp.copy())
+def test_entity_accessor_set_components() raises:
+    var archetype = Archetype(0, mask2)
+    entity_idx = archetype.add(Entity(10, 3))
+    entity = archetype.get_entity_accessor(entity_idx)
 
-    comp_id = archetype1._ids[0]
-    comp_size = archetype1._item_sizes[comp_id]
-    assert_equal(
-        archetype1._data[comp_id]
-        .offset(entity_idx * comp_size)
-        .bitcast[LargerComponent]()[]
-        .x,
-        comp.x,
+    entity.set(
+        LargerComponent(1.0, 2.0, 3.0),
+        FlexibleComponent[1](4.0, 5.0),
     )
 
-    var archetype2 = Archetype(0, id3Arr)
-    archetype2.unsafe_take_data_from_parts(
-        archetype1._ids,
-        archetype1._data,
-        archetype1._item_sizes,
-        archetype1._component_count,
-        archetype1._capacity,
-    )
-
-    comp_id = archetype2._ids[0]
-    comp_size = archetype2._item_sizes[comp_id]
-    assert_equal(
-        archetype2._data[comp_id]
-        .offset(entity_idx * comp_size)
-        .bitcast[LargerComponent]()[]
-        .x,
-        comp.x,
-    )
+    assert_equal(entity.get[LargerComponent]().x, 1.0)
+    assert_equal(entity.get[LargerComponent]().y, 2.0)
+    assert_equal(entity.get[FlexibleComponent[1]]().x, 4.0)
+    assert_equal(entity.get[FlexibleComponent[1]]().y, 5.0)
 
 
-def test_archetype_add():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_add() raises:
+    var archetype = Archetype(0, mask2)
 
     var entity = Entity(10, 3)
     var index = archetype.add(entity)
@@ -223,8 +268,8 @@ def test_archetype_add():
     assert_equal(archetype.get_entity(0), entity)
 
 
-def test_archetype_extend():
-    var archetype = Archetype(0, id2Arr)
+def test_archetype_extend() raises:
+    var archetype = Archetype(0, mask2)
     var entity_pool = EntityPool()
 
     var start_index = archetype.extend(5, entity_pool)
@@ -240,8 +285,8 @@ def test_archetype_extend():
         assert_equal(archetype.get_entity(i)._id, i + 1)
 
 
-def test_archetype_get_mask():
-    var archetype = Archetype(0, id3Arr)
+def test_archetype_get_mask() raises:
+    var archetype = Archetype(0, mask3)
 
     var entity = Entity(10, 3)
     _ = archetype.add(entity)
@@ -250,27 +295,172 @@ def test_archetype_get_mask():
     assert_equal(mask, BitMask(1, 2, 3))
 
     var mask2 = BitMask(1, 2, 3)
-    assert_equal(mask == mask2, True)
+    assert_equal(mask, mask2)
 
     mask2 = BitMask(1, 2, 4)
-    assert_equal(mask == mask2, False)
+    assert_not_equal(mask, mask2)
 
     mask2 = BitMask(1, 2)
-    assert_equal(mask == mask2, False)
+    assert_not_equal(mask, mask2)
 
 
-def main():
-    print("Running tests...")
-    test_archetype_get_mask()
-    test_archetype_init()
-    test_archetype_reserve()
-    test_archetype_get_entity()
-    test_archetype_remove()
-    test_archetype_has_component()
-    test_archetype_get_component_ptr()
-    test_archetype_move()
-    test_archetype_copy()
-    test_archetype_shallow_copy()
-    test_archetype_add()
-    test_archetype_extend()
-    print("All tests passed!")
+def test_archetype_reserve_non_trivial_component() raises:
+    """Verify reserve moves initialized non-trivial component rows."""
+    var counters = LifecycleCounters()
+    var archetype = NonTrivialArchetype(0, tracked_mask, capacity=2)
+
+    var idx0 = archetype.add(Entity(0, 0))
+    init_tracked_component(archetype, idx0, counters.component())
+    var idx1 = archetype.add(Entity(1, 0))
+    init_tracked_component(archetype, idx1, counters.component())
+
+    var base_copies = counters.copy_counter[]
+    var base_moves = counters.move_counter[]
+    var base_dels = counters.del_counter[]
+
+    archetype.reserve(4)
+
+    counters.assert_delta(
+        base_copies,
+        base_moves,
+        base_dels,
+        expected_copies=0,
+        expected_moves=2,
+        expected_dels=0,
+    )
+    _ = archetype^
+    _ = counters.del_counter[]
+
+
+def test_archetype_copy_non_trivial_component() raises:
+    """Verify copying an archetype deep-copies initialized component rows."""
+    var counters = LifecycleCounters()
+    var archetype = NonTrivialArchetype(0, tracked_mask, capacity=4)
+
+    var idx0 = archetype.add(Entity(0, 0))
+    init_tracked_component(archetype, idx0, counters.component())
+    var idx1 = archetype.add(Entity(1, 0))
+    init_tracked_component(archetype, idx1, counters.component())
+
+    var base_copies = counters.copy_counter[]
+    var base_moves = counters.move_counter[]
+    var base_dels = counters.del_counter[]
+
+    var archetype2 = archetype.copy()
+
+    counters.assert_delta(
+        base_copies,
+        base_moves,
+        base_dels,
+        expected_copies=2,
+        expected_moves=0,
+        expected_dels=0,
+    )
+    assert_not_equal(
+        archetype._storage.get_component_ptr[TrackedComponent](),
+        archetype2._storage.get_component_ptr[TrackedComponent](),
+    )
+    _ = archetype2^
+    _ = archetype^
+    _ = counters.del_counter[]
+
+
+def test_archetype_remove_non_trivial_component() raises:
+    """Verify swap-remove destroys and moves non-trivial component rows."""
+    var counters = LifecycleCounters()
+    var archetype = NonTrivialArchetype(0, tracked_mask, capacity=4)
+
+    var idx0 = archetype.add(Entity(0, 0))
+    init_tracked_component(archetype, idx0, counters.component())
+    var idx1 = archetype.add(Entity(1, 0))
+    init_tracked_component(archetype, idx1, counters.component())
+
+    var base_copies = counters.copy_counter[]
+    var base_moves = counters.move_counter[]
+    var base_dels = counters.del_counter[]
+
+    var swapped = archetype.remove(0)
+
+    assert_true(swapped)
+    assert_equal(len(archetype), 1)
+    counters.assert_delta(
+        base_copies,
+        base_moves,
+        base_dels,
+        expected_copies=0,
+        expected_moves=1,
+        expected_dels=1,
+    )
+    _ = archetype^
+    _ = counters.del_counter[]
+
+
+def test_archetype_copy_component_from_non_trivial_component() raises:
+    """Verify copying over a row destroys destination then copies source."""
+    var counters = LifecycleCounters()
+    var source = NonTrivialArchetype(0, tracked_mask, capacity=2)
+    var destination = NonTrivialArchetype(1, tracked_mask, capacity=2)
+
+    var source_idx = source.add(Entity(0, 0))
+    init_tracked_component(source, source_idx, counters.component())
+    var destination_idx = destination.add(Entity(1, 0))
+    init_tracked_component(destination, destination_idx, counters.component())
+
+    var base_copies = counters.copy_counter[]
+    var base_moves = counters.move_counter[]
+    var base_dels = counters.del_counter[]
+
+    destination.copy_component_from[TrackedComponent](0, source, 1)
+
+    counters.assert_delta(
+        base_copies,
+        base_moves,
+        base_dels,
+        expected_copies=1,
+        expected_moves=0,
+        expected_dels=1,
+    )
+    _ = destination^
+    _ = source^
+    _ = counters.del_counter[]
+
+
+def test_archetype_extend_from_archetype_unsafe_non_trivial_component() raises:
+    """Verify unsafe extension copies shared non-trivial component rows."""
+    var counters = LifecycleCounters()
+    var source = NonTrivialArchetype(0, tracked_mask, capacity=4)
+    var destination = NonTrivialArchetype(1, tracked_mask, capacity=1)
+
+    var idx0 = source.add(Entity(0, 0))
+    init_tracked_component(source, idx0, counters.component())
+    var idx1 = source.add(Entity(1, 0))
+    init_tracked_component(source, idx1, counters.component())
+
+    var base_copies = counters.copy_counter[]
+    var base_moves = counters.move_counter[]
+    var base_dels = counters.del_counter[]
+
+    var start = destination.extend_from_archetype_unsafe(
+        UnsafePointer(to=source), 2
+    )
+
+    assert_equal(start, 0)
+    assert_equal(len(destination), 2)
+    counters.assert_delta(
+        base_copies,
+        base_moves,
+        base_dels,
+        expected_copies=2,
+        expected_moves=0,
+        expected_dels=0,
+    )
+    _ = destination^
+    _ = source^
+    _ = counters.del_counter[]
+
+
+comptime functions = __functions_in_module()
+
+
+def main() raises:
+    TestSuite.discover_tests[functions]().run()
