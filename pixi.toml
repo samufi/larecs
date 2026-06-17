@@ -4,21 +4,45 @@ authors = [
     "Martin Lange <martin_lange_@gmx.net>",
     "Mose Schmiedel <mose@schmiednet.de>",
 ]
-channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly", "https://prefix.dev/tree-d"]
 description = "Larecs🌲 is a performance-oriented archetype-based ECS for Mojo🔥."
 name = "larecs"
 platforms = ["linux-64", "osx-arm64"]
-version = "0.4.0"
+version = "0.5.0"
+preview = ["pixi-build"]
 
 [tasks]
 tests = { cmd = "test/run_tests.sh", default-environment = "test" }
 benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
+update-mojo = { cmd = "python scripts/update_mojo.py", default-environment = "default" }
 
 [dependencies]
-mojo = ">1.0.0b1, <=1.0.0b2"
+mojo = ">=1.0.0b3.dev2026061606,<2"
 
 [feature.test.dependencies]
-compiler-rt = ">=22.1.6,<23"
+clang = ">=22.1.7,<23"
+clangxx = ">=22.1.7,<23"
+mogo-tester = ">=2.3.3,<3"
+
+[feature.test.activation.env]
+CC = "clang"
+CXX = "clang++"
+#clang = ">=22.1.7,<23"
+
+[target.linux-64.dependencies]
+sysroot_linux-64 = "2.34.*"
 
 [environments]
 test = ["test"] # An environment covering the "test" feature
+
+[package]
+name = {workspace = true}
+version = {workspace = true}
+
+[package.build.backend]
+name = "pixi-build-rattler-build"
+version = "*"
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly", "https://prefix.dev/tree-d"]
+
+[package.build.config]
+recipe = "conda.recipe/recipe.yaml"

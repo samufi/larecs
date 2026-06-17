@@ -10,10 +10,11 @@ struct TestStruct:
     var value_2: Float32
 
 
+# BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
 def test_unsafe_box_copy_move_del() raises:
     def factory(
         var val: MemTestStruct[
-            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+            MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
         ],
         out result: UnsafeBox,
     ):
@@ -31,4 +32,7 @@ comptime functions = __functions_in_module()
 
 
 def main() raises:
-    TestSuite.discover_tests[functions]().run()
+    suite = TestSuite.discover_tests[functions]()
+    # BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
+    suite.skip[test_unsafe_box_copy_move_del]()
+    suite^.run()

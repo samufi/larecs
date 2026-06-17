@@ -1599,7 +1599,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
                         old_archetype_unsafe = UnsafePointer(
                             to=old_archetype[]
-                        ).as_any_origin()
+                        ).as_unsafe_any_origin()
                         arch_start_idx = (
                             new_archetype[].extend_from_archetype_unsafe(
                                 old_archetype_unsafe, old_archetype_size

@@ -531,17 +531,17 @@ struct MemTestStruct[
 
 
 def test_copy_move_del[
-    Container: Copyable & Movable & ImplicitlyDestructible,
+    Container: Copyable & Movable & ImplicitlyDeletable,
     //,
     container_factory: def(
         var val: MemTestStruct[
-            MutExternalOrigin, MutExternalOrigin, MutExternalOrigin
+            MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
         ]
     ) thin -> Container,
 ](*, init_moves: Int = 0, copy_moves: Int = 0, move_moves: Int = 0) raises:
     """Test the copy, move, and delete operations of a container.
 
-    The tracked value uses `MutExternalOrigin` for its counters intentionally.
+    The tracked value uses `MutUntrackedOrigin` for its counters intentionally.
     This keeps the produced container type fixed across call sites. The purpose
     of this helper is to verify lifecycle behavior, not caller-origin
     propagation.
@@ -570,9 +570,9 @@ def test_copy_move_del[
     var test_move_counter = init_moves
     var test_copy_counter = 0
     container = container_factory(
-        MemTestStruct[MutExternalOrigin, MutExternalOrigin, MutExternalOrigin](
-            copy_counter, move_counter, del_counter
-        )
+        MemTestStruct[
+            MutUntrackedOrigin, MutUntrackedOrigin, MutUntrackedOrigin
+        ](copy_counter, move_counter, del_counter)
     )
 
     # Initialize
