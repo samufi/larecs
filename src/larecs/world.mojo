@@ -1896,12 +1896,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     origin_of(self._locks),
                     has_start_indices=has_start_indices,
                 ](
-                    Self.ArchetypeIterator(
-                        Pointer(to=self._archetypes),
-                        QueryInfo(
-                            mask,
-                            without_mask.copy(),
-                        ),
+                    Pointer(to=self._archetypes),
+                    QueryInfo(
+                        mask,
+                        without_mask.copy(),
                     ),
                     Pointer(to=self._locks),
                     start_indices^,

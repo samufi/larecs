@@ -226,7 +226,8 @@ struct Query[
         with TraceGuard(name="Query.__iter__"):
             try:
                 iterator = {
-                    Self.ArchetypeIterator(self._archetypes, self._info^),
+                    self._archetypes,
+                    self._info^,
                     self._lock_ptr,
                     None,
                 }
@@ -234,7 +235,9 @@ struct Query[
                 raise QueryError.could_not_create_iterator
 
     @always_inline
-    def without[*Ts: ComponentType](deinit self, out query: Self.QueryWithWithout):
+    def without[
+        *Ts: ComponentType
+    ](deinit self, out query: Self.QueryWithWithout):
         """
         Excludes the given components from the query.
 
@@ -266,7 +269,8 @@ struct Query[
             query = Self.QueryWithWithout(
                 self._archetypes,
                 self._lock_ptr,
-                self._info^.without(
+                self._info
+                ^.without(
                     BitMask(Self.World.component_manager.get_id_arr[*Ts]())
                 ),
             )
@@ -369,7 +373,9 @@ struct QueryInfo[
 
     @always_inline
     def without(
-        deinit self, var without_mask: BitMask, out query_info: Self.QueryInfoWithWithout
+        deinit self,
+        var without_mask: BitMask,
+        out query_info: Self.QueryInfoWithWithout,
     ):
         """
         Adds excluded components to the query information.
@@ -383,9 +389,13 @@ struct QueryInfo[
         with TraceGuard(name="QueryInfo.without"):
             comptime if Self.has_without_mask:
                 self.without_mask[] |= without_mask
-                query_info = Self.QueryInfoWithWithout(self.mask^, self.without_mask[])
+                query_info = Self.QueryInfoWithWithout(
+                    self.mask^, self.without_mask[]
+                )
             else:
-                query_info = Self.QueryInfoWithWithout(self.mask^, without_mask^)
+                query_info = Self.QueryInfoWithWithout(
+                    self.mask^, without_mask^
+                )
 
     @always_inline
     def exclusive(deinit self, out query_info: Self.QueryInfoWithWithout):
@@ -398,7 +408,9 @@ struct QueryInfo[
         with TraceGuard(name="QueryInfo.exclusive"):
             comptime if Self.has_without_mask:
                 self.without_mask = ~self.mask
-                query_info = Self.QueryInfoWithWithout(self.mask^, self.without_mask[])
+                query_info = Self.QueryInfoWithWithout(
+                    self.mask^, self.without_mask[]
+                )
             else:
                 query_info = Self.QueryInfoWithWithout(self.mask^, ~self.mask)
 
@@ -510,7 +522,7 @@ struct _ArchetypeIterator[
             The next archetype as a pointer.
         """
         with TraceGuard(name="_ArchetypeIterator.__next__"):
-            if not self.__has_next__():
+            if not self._has_next():
                 raise StopIteration()
             archetype = Pointer(
                 to=self._archetypes[].unsafe_get(
@@ -527,14 +539,14 @@ struct _ArchetypeIterator[
             return len(self._archetype_indices) - self._index
 
     @always_inline
-    def __has_next__(self) -> Bool:
+    def _has_next(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_ArchetypeIterator.__has_next__"):
+        with TraceGuard(name="_ArchetypeIterator._has_next"):
             return self._index < len(self._archetype_indices)
 
     @always_inline
@@ -546,7 +558,7 @@ struct _ArchetypeIterator[
             Whether there are more elements to iterate.
         """
         with TraceGuard(name="_ArchetypeIterator.__bool__"):
-            return self.__has_next__()
+            return self._has_next()
 
 
 struct _EntityIterator[
@@ -590,14 +602,14 @@ struct _EntityIterator[
             self.archetype = archetype
             self._index = _index
 
-    def __has_next__(self) -> Bool:
+    def _has_next(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_EntityIterator.__has_next__"):
+        with TraceGuard(name="_EntityIterator._has_next"):
             return self._index < len(self.archetype[])
 
     def __bool__(self) -> Bool:
@@ -608,7 +620,7 @@ struct _EntityIterator[
             Whether there are more elements to iterate.
         """
         with TraceGuard(name="_EntityIterator.__bool__"):
-            return self.__has_next__()
+            return self._has_next()
 
     def __len__(self) -> Int:
         """
@@ -638,7 +650,7 @@ struct _EntityIterator[
             An [..archetype.EntityAccessor] to the entity.
         """
         with TraceGuard(name="_EntityIterator.__next__"):
-            if not self.__has_next__():
+            if not self._has_next():
                 raise StopIteration()
             accessor = self.archetype[].get_entity_accessor(
                 self._index,
@@ -717,7 +729,7 @@ struct _WorldIterator[
         Raises:
             Error: If the lock cannot be acquired.
         """
-        with TraceGuard(name="_EntityIterator.__init__"):
+        with TraceGuard(name="_WorldIterator.__init__"):
             self._lock_ptr = lock_ptr
             self._lock = self._lock_ptr[].lock()
             self._start_indices = start_indices^
@@ -727,11 +739,44 @@ struct _WorldIterator[
 
             self._current_archetype_index = 0
 
+    def __init__(
+        out self,
+        archetypes: Pointer[List[Self.Archetype], Self.archetype_origin],
+        var query_info: QueryInfo[has_without_mask=_],
+        lock_ptr: Pointer[LockManager, Self.lock_origin],
+        var start_indices: Self.StartIndices = None,
+    ) raises:
+        """
+        Creates an entity iterator from query information after acquiring a lock.
+
+        Args:
+            archetypes: A pointer to the world's archetypes.
+            query_info: The query information used to select archetypes.
+            lock_ptr: A pointer to the world's locks.
+            start_indices: The indices where the iterator starts iterating the
+                           archetypes. Caution: the index order must match the
+                           order of the archetypes that are iterated.
+
+        Raises:
+            Error: If the lock cannot be acquired.
+        """
+        with TraceGuard(name="_WorldIterator.__init__ query"):
+            self._lock_ptr = lock_ptr
+            self._lock = self._lock_ptr[].lock()
+            self._start_indices = start_indices^
+
+            self._archetype_iterator = Self.ArchetypeIterator(
+                archetypes, query_info^
+            )
+            self._entity_iterator = None
+
+            self._current_archetype_index = 0
+
     def __del__(deinit self):
         """
         Releases the lock.
         """
-        with TraceGuard(name="_EntityIterator.__del__"):
+        with TraceGuard(name="_WorldIterator.__del__"):
             try:
                 self._lock_ptr[].unlock(self._lock)
             except _:
@@ -748,7 +793,7 @@ struct _WorldIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_EntityIterator.__iter__"):
+        with TraceGuard(name="_WorldIterator.__iter__"):
             iterator = self^
 
     @always_inline
@@ -762,12 +807,12 @@ struct _WorldIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
-        with TraceGuard(name="_EntityIterator.__next__"):
+        with TraceGuard(name="_WorldIterator.__next__"):
             if (
                 not self._entity_iterator
-                or not self._entity_iterator.unsafe_value().__has_next__()
+                or not self._entity_iterator.unsafe_value()._has_next()
             ):
-                if not self._archetype_iterator.__has_next__():
+                if not self._archetype_iterator._has_next():
                     raise StopIteration()
 
                 comptime if Self.has_start_indices:
@@ -793,10 +838,10 @@ struct _WorldIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
-        with TraceGuard(name="_EntityIterator.__len__"):
+        with TraceGuard(name="_WorldIterator.__len__"):
             size = 0
 
-            if not self.__has_next__():
+            if not self._has_next():
                 return
 
             if self._entity_iterator:
@@ -819,21 +864,21 @@ struct _WorldIterator[
                 size += len(entity_iter)
 
     @always_inline
-    def __has_next__(self) -> Bool:
+    def _has_next(self) -> Bool:
         """
         Returns whether the iterator has at least one more element.
 
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_EntityIterator.__has_next__"):
+        with TraceGuard(name="_WorldIterator._has_next"):
             if (
                 self._entity_iterator
-                and self._entity_iterator.unsafe_value().__has_next__()
+                and self._entity_iterator.unsafe_value()._has_next()
             ):
                 return True
 
-            if self._archetype_iterator.__has_next__():
+            if self._archetype_iterator._has_next():
                 return True
 
             return False
@@ -846,5 +891,5 @@ struct _WorldIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_EntityIterator.__bool__"):
-            return self.__has_next__()
+        with TraceGuard(name="_WorldIterator.__bool__"):
+            return self._has_next()

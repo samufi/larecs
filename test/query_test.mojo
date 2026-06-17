@@ -101,7 +101,7 @@ def test_query_length() raises:
 
     iterator = world.query[FlexibleComponent[0]]().__iter__()
     size = len(iterator)
-    while iterator.__has_next__():
+    while iterator:
         _ = iterator.__next__()
         size -= 1
         assert_equal(size, len(iterator))
@@ -223,6 +223,28 @@ def test_query_empty() raises:
         assert_true(world.is_locked())
         cnt += 1
     assert_equal(cnt, 0)
+    assert_false(world.is_locked())
+
+
+def test_query_iterator_locks_on_creation() raises:
+    world = SmallWorld()
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    _ = world.add_entity(c0)
+
+    iterator = world.query[FlexibleComponent[0]]().__iter__()
+    assert_true(world.is_locked())
+
+    with assert_raises():
+        _ = world.add_entity(c0, c1)
+
+    count = 0
+    while iterator:
+        _ = iterator.__next__()
+        count += 1
+
+    assert_equal(count, 1)
 
 
 def test_query_without() raises:
