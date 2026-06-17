@@ -7,7 +7,7 @@ def benchmark_add_remove_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
     @always_inline
-    def bench_fn() :
+    def bench_fn() {read}:
         try:
             world = SmallWorld()
 
@@ -54,7 +54,7 @@ def benchmark_add_remove_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
     @always_inline
-    def bench_fn():
+    def bench_fn() {read}:
         try:
             world = SmallWorld()
 
@@ -105,11 +105,13 @@ def run_all_world_component_multi_batch_benchmarks() raises:
 
 
 def run_all_world_component_multi_batch_benchmarks(mut bench: Bench) raises:
-    bench.bench_function(benchmark_add_remove_5_comp_batch_1_000_000,
-        BenchId("10^0 * add & remove 5 components 10^6 batch")
+    bench.bench_function(
+        benchmark_add_remove_5_comp_batch_1_000_000,
+        BenchId("10^0 * add & remove 5 components 10^6 batch"),
     )
-    bench.bench_function(benchmark_add_remove_5_comp_1_000_batch_1_000,
-        BenchId("10^3 * add & remove 5 components 10^3 batch")
+    bench.bench_function(
+        benchmark_add_remove_5_comp_1_000_batch_1_000,
+        BenchId("10^3 * add & remove 5 components 10^3 batch"),
     )
 
 

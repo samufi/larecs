@@ -15,41 +15,49 @@ def prevent_inlining_replace_batch() raises:
 
 def benchmark_replace_1_comp_batch_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000_000)
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            _ = world.add_entities(
+                FlexibleComponent[0](1.0, 2.0), count=1_000_000
+            )
 
-        _ = world.replace[FlexibleComponent[0]]().by(
-            world.query[FlexibleComponent[0]](),
-            FlexibleComponent[1](3.0, 4.0),
-        )
-
-    bencher.iter[bench_fn]()
-
-
-def benchmark_replace_1_comp_1_000_batch_1_000(
-    mut bencher: Bencher,
-) raises capturing:
-    @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
-
-        for _ in range(500):
             _ = world.replace[FlexibleComponent[0]]().by(
                 world.query[FlexibleComponent[0]](),
                 FlexibleComponent[1](3.0, 4.0),
             )
-            _ = world.replace[FlexibleComponent[1]]().by(
-                world.query[FlexibleComponent[1]](),
-                FlexibleComponent[0](1.0, 2.0),
-            )
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
+
+
+def benchmark_replace_1_comp_1_000_batch_1_000(
+    mut bencher: Bencher,
+):
+    @always_inline
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
+
+            for _ in range(500):
+                _ = world.replace[FlexibleComponent[0]]().by(
+                    world.query[FlexibleComponent[0]](),
+                    FlexibleComponent[1](3.0, 4.0),
+                )
+                _ = world.replace[FlexibleComponent[1]]().by(
+                    world.query[FlexibleComponent[1]](),
+                    FlexibleComponent[0](1.0, 2.0),
+                )
+
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def run_all_world_replace_single_batch_benchmarks() raises:
@@ -59,11 +67,13 @@ def run_all_world_replace_single_batch_benchmarks() raises:
 
 
 def run_all_world_replace_single_batch_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_replace_1_comp_batch_1_000_000](
-        BenchId("10^0 * replace 1 component 10^6 batch")
+    bench.bench_function(
+        benchmark_replace_1_comp_batch_1_000_000,
+        BenchId("10^0 * replace 1 component 10^6 batch"),
     )
-    bench.bench_function[benchmark_replace_1_comp_1_000_batch_1_000](
-        BenchId("10^3 * replace 1 component 10^3 batch")
+    bench.bench_function(
+        benchmark_replace_1_comp_1_000_batch_1_000,
+        BenchId("10^3 * replace 1 component 10^3 batch"),
     )
     prevent_inlining_replace_batch()
 

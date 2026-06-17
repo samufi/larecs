@@ -4,57 +4,70 @@ from larecs.test_utils import *
 from larecs.entity import Entity
 
 
-def benchmark_add_entity_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_add_entity_1_000_000(mut bencher: Bencher):
     @always_inline
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000_000):
-            keep(world.add_entity().get_id())
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000_000):
+                keep(world.add_entity().get_id())
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_entities_1_000_batch_1_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000):
-            keep(Bool(world.add_entities(count=1000)))
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000):
+                keep(Bool(world.add_entities(count=1000)))
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_entity_1_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     pos = Position(1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000_000):
-            keep(world.add_entity(pos).get_id())
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000_000):
+                keep(world.add_entity(pos).get_id())
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_entities_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     pos = Position(1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000):
-            keep(Bool(world.add_entities(pos, count=1000)))
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000):
+                keep(Bool(world.add_entities(pos, count=1000)))
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def prevent_inlining_add_entity_1_comp() raises:
@@ -66,7 +79,7 @@ def prevent_inlining_add_entity_1_comp() raises:
 
 def benchmark_add_entities_5_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -74,18 +87,21 @@ def benchmark_add_entities_5_comp_1_000_000(
     c5 = FlexibleComponent[5](1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000_000):
-            keep(world.add_entity(c1, c2, c3, c4, c5).get_id())
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000_000):
+                keep(world.add_entity(c1, c2, c3, c4, c5).get_id())
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_entity_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     c1 = FlexibleComponent[1](1.0, 2.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -93,13 +109,16 @@ def benchmark_add_entity_5_comp_1_000_batch_1_000(
     c5 = FlexibleComponent[5](1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1_000):
-            keep(Bool(world.add_entities(c1, c2, c3, c4, c5, count=1000)))
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1_000):
+                keep(Bool(world.add_entities(c1, c2, c3, c4, c5, count=1000)))
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def prevent_inlining_add_entity_5_comp() raises:
@@ -115,38 +134,44 @@ def prevent_inlining_add_entity_5_comp() raises:
 
 def benchmark_add_remove_entity_1_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     pos = Position(1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        entities = List[Entity]()
-        for _ in range(1000):
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            entities = List[Entity]()
             for _ in range(1000):
-                entities.append(world.add_entity(pos))
-            for entity in entities:
-                world.remove_entity(entity)
-            entities.clear()
+                for _ in range(1000):
+                    entities.append(world.add_entity(pos))
+                for entity in entities:
+                    world.remove_entity(entity)
+                entities.clear()
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_remove_entities_1_comp_1_000_batch_1000(
     mut bencher: Bencher,
-) raises capturing:
+):
     pos = Position(1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1000):
-            _ = world.add_entities(pos, count=1000)
-            world.remove_entities(world.query[Position]())
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1000):
+                _ = world.add_entities(pos, count=1000)
+                world.remove_entities(world.query[Position]())
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def prevent_inlining_add_remove_entity_1_comp() raises:
@@ -159,7 +184,7 @@ def prevent_inlining_add_remove_entity_1_comp() raises:
 
 def benchmark_add_remove_entity_5_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     c1 = LargerComponent(1.0, 2.0, 3.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -167,28 +192,30 @@ def benchmark_add_remove_entity_5_comp_1_000_000(
     c5 = FlexibleComponent[5](1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        _ = world.add_entity(c3, c5)
-        # world = FullWorld()
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            _ = world.add_entity(c3, c5)
 
-        entities = List[Entity]()
-        for _ in range(1000):
+            entities = List[Entity]()
             for _ in range(1000):
-                entities.append(world.add_entity(c1, c2, c3, c4, c5))
-            e = world.add_entity(c3, c5)
-            for entity in entities:
-                world.remove_entity(entity)
-            world.remove_entity(e)
-            entities.clear()
+                for _ in range(1000):
+                    entities.append(world.add_entity(c1, c2, c3, c4, c5))
+                e = world.add_entity(c3, c5)
+                for entity in entities:
+                    world.remove_entity(entity)
+                world.remove_entity(e)
+                entities.clear()
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     c1 = LargerComponent(1.0, 2.0, 3.0)
     c2 = FlexibleComponent[2](1.0, 2.0)
     c3 = FlexibleComponent[3](1.0, 2.0)
@@ -196,22 +223,25 @@ def benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
     c5 = FlexibleComponent[5](1.0, 2.0)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        for _ in range(1000):
-            _ = world.add_entities(c1, c2, c3, c4, c5, count=1000)
-            world.remove_entities(
-                world.query[
-                    LargerComponent,
-                    FlexibleComponent[2],
-                    FlexibleComponent[3],
-                    FlexibleComponent[4],
-                    FlexibleComponent[5],
-                ]()
-            )
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            for _ in range(1000):
+                _ = world.add_entities(c1, c2, c3, c4, c5, count=1000)
+                world.remove_entities(
+                    world.query[
+                        LargerComponent,
+                        FlexibleComponent[2],
+                        FlexibleComponent[3],
+                        FlexibleComponent[4],
+                        FlexibleComponent[5],
+                    ]()
+                )
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def prevent_inlining_add_remove_entity_5_comp() raises:
@@ -224,7 +254,7 @@ def prevent_inlining_add_remove_entity_5_comp() raises:
     world = SmallWorld()
     entity = world.add_entity(c1, c2, c3, c4, c5)
     world.remove_entity(entity)
-    entity = world.add_entity(c1, c2, c3, c4, c5)
+    _ = world.add_entity(c1, c2, c3, c4, c5)
     world.remove_entities(
         world.query[
             LargerComponent,
@@ -236,34 +266,40 @@ def prevent_inlining_add_remove_entity_5_comp() raises:
     )
 
 
-def benchmark_has_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_has_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        entity = world.add_entity(pos, vel)
-        for _ in range(1_000_000):
-            keep(world.has[Position](entity))
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            entity = world.add_entity(pos, vel)
+            for _ in range(1_000_000):
+                keep(world.has[Position](entity))
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
-def benchmark_is_alive_1_000_000(mut bencher: Bencher) raises capturing:
+def benchmark_is_alive_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
 
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        world = SmallWorld()
-        entity = world.add_entity(pos, vel)
-        for _ in range(1_000_000):
-            keep(world.is_alive(entity))
+    def bench_fn() {read}:
+        try:
+            world = SmallWorld()
+            entity = world.add_entity(pos, vel)
+            for _ in range(1_000_000):
+                keep(world.is_alive(entity))
 
-    bencher.iter[bench_fn]()
+        except e:
+            print(e)
+
+    bencher.iter(bench_fn)
 
 
 def run_all_world_entity_benchmarks() raises:
@@ -273,39 +309,48 @@ def run_all_world_entity_benchmarks() raises:
 
 
 def run_all_world_entity_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_add_entity_1_000_000](
-        BenchId("10^6 * add_entity")
+    bench.bench_function(
+        benchmark_add_entity_1_000_000, BenchId("10^6 * add_entity")
     )
-    bench.bench_function[benchmark_add_entities_1_000_batch_1_000](
-        BenchId("10^3 * add_entity 1000 batch")
+    bench.bench_function(
+        benchmark_add_entities_1_000_batch_1_000,
+        BenchId("10^3 * add_entity 1000 batch"),
     )
-    bench.bench_function[benchmark_add_entity_1_comp_1_000_000](
-        BenchId("10^6 * add_entity 1 component")
+    bench.bench_function(
+        benchmark_add_entity_1_comp_1_000_000,
+        BenchId("10^6 * add_entity 1 component"),
     )
-    bench.bench_function[benchmark_add_entities_1_comp_1_000_batch_1_000](
-        BenchId("10^3 * add_entity 1 component 1000 batch")
+    bench.bench_function(
+        benchmark_add_entities_1_comp_1_000_batch_1_000,
+        BenchId("10^3 * add_entity 1 component 1000 batch"),
     )
-    bench.bench_function[benchmark_add_entities_5_comp_1_000_000](
-        BenchId("10^6 * add_entity 5 components")
+    bench.bench_function(
+        benchmark_add_entities_5_comp_1_000_000,
+        BenchId("10^6 * add_entity 5 components"),
     )
-    bench.bench_function[benchmark_add_entity_5_comp_1_000_batch_1_000](
-        BenchId("10^3 * add_entity 5 components 1000 batch")
+    bench.bench_function(
+        benchmark_add_entity_5_comp_1_000_batch_1_000,
+        BenchId("10^3 * add_entity 5 components 1000 batch"),
     )
-    bench.bench_function[benchmark_add_remove_entity_1_comp_1_000_000](
-        BenchId("10^6 * add & remove entity (1 component)")
+    bench.bench_function(
+        benchmark_add_remove_entity_1_comp_1_000_000,
+        BenchId("10^6 * add & remove entity (1 component)"),
     )
-    bench.bench_function[benchmark_add_remove_entities_1_comp_1_000_batch_1000](
-        BenchId("10^3 * add & remove entity (1 component) 1000 batch")
+    bench.bench_function(
+        benchmark_add_remove_entities_1_comp_1_000_batch_1000,
+        BenchId("10^3 * add & remove entity (1 component) 1000 batch"),
     )
-    bench.bench_function[benchmark_add_remove_entity_5_comp_1_000_000](
-        BenchId("10^6 * add & remove entity (5 components)")
+    bench.bench_function(
+        benchmark_add_remove_entity_5_comp_1_000_000,
+        BenchId("10^6 * add & remove entity (5 components)"),
     )
-    bench.bench_function[
-        benchmark_add_remove_entities_5_comp_1_000_batch_1_000
-    ](BenchId("10^3 * add & remove entity (5 components) 1000 batch"))
-    bench.bench_function[benchmark_has_1_000_000](BenchId("10^6 * has"))
-    bench.bench_function[benchmark_is_alive_1_000_000](
-        BenchId("10^6 * is_alive")
+    bench.bench_function(
+        benchmark_add_remove_entities_5_comp_1_000_batch_1_000,
+        BenchId("10^3 * add & remove entity (5 components) 1000 batch"),
+    )
+    bench.bench_function(benchmark_has_1_000_000, BenchId("10^6 * has"))
+    bench.bench_function(
+        benchmark_is_alive_1_000_000, BenchId("10^6 * is_alive")
     )
 
     # Functions to prevent inlining

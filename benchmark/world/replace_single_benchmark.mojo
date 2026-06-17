@@ -12,27 +12,33 @@ def prevent_inlining_replace() raises:
     _ = world.replace[Position]().by(vel, entity=entity)
 
 
+def _replace_1_comp_workload() raises:
+    for _ in range(100):
+        world = SmallWorld()
+        entities = List[Entity]()
+        component0 = FlexibleComponent[0](1.0, 2.0)
+        for _ in range(1000):
+            entities.append(world.add_entity(component0))
+
+        comptime for i in range(10):
+            component = FlexibleComponent[i + 1](Float64(i), 2.0)
+            for entity in entities:
+                world.replace[FlexibleComponent[i]]().by(
+                    component, entity=entity
+                )
+
+
 def benchmark_replace_1_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        for _ in range(100):
-            world = SmallWorld()
-            entities = List[Entity]()
-            component0 = FlexibleComponent[0](1.0, 2.0)
-            for _ in range(1000):
-                entities.append(world.add_entity(component0))
+    def bench_fn():
+        try:
+            _replace_1_comp_workload()
+        except e:
+            print(e)
 
-            comptime for i in range(10):
-                component = FlexibleComponent[i + 1](Float64(i), 2.0)
-                for entity in entities:
-                    world.replace[FlexibleComponent[i]]().by(
-                        component, entity=entity
-                    )
-
-    bencher.iter[bench_fn]()
+    bencher.iter(bench_fn)
 
 
 def run_all_world_replace_single_benchmarks() raises:
@@ -42,8 +48,9 @@ def run_all_world_replace_single_benchmarks() raises:
 
 
 def run_all_world_replace_single_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_replace_1_comp_1_000_000](
-        BenchId("10^6 * replace 1 component")
+    bench.bench_function(
+        benchmark_replace_1_comp_1_000_000,
+        BenchId("10^6 * replace 1 component"),
     )
     prevent_inlining_replace()
 

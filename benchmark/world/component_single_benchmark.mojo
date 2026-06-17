@@ -4,27 +4,33 @@ from larecs.test_utils import *
 from larecs.entity import Entity
 
 
+def _add_remove_1_comp_workload() raises:
+    for _ in range(100):
+        world = SmallWorld()
+        entities = List[Entity]()
+        component0 = FlexibleComponent[0](1.0, 2.0)
+        for _ in range(1000):
+            entities.append(world.add_entity(component0))
+
+        comptime for i in range(10):
+            component = FlexibleComponent[i + 1](Float64(i), 2.0)
+            for entity in entities:
+                world.add(entity, component)
+            for entity in entities:
+                world.remove[FlexibleComponent[i]](entity)
+
+
 def benchmark_add_remove_1_comp_1_000_000(
     mut bencher: Bencher,
-) raises capturing:
+):
     @always_inline
-    @parameter
-    def bench_fn() capturing raises:
-        for _ in range(100):
-            world = SmallWorld()
-            entities = List[Entity]()
-            component0 = FlexibleComponent[0](1.0, 2.0)
-            for _ in range(1000):
-                entities.append(world.add_entity(component0))
+    def bench_fn():
+        try:
+            _add_remove_1_comp_workload()
+        except e:
+            print(e)
 
-            comptime for i in range(10):
-                component = FlexibleComponent[i + 1](Float64(i), 2.0)
-                for entity in entities:
-                    world.add(entity, component)
-                for entity in entities:
-                    world.remove[FlexibleComponent[i]](entity)
-
-    bencher.iter[bench_fn]()
+    bencher.iter(bench_fn)
 
 
 def prevent_inlining_add_remove() raises:
@@ -43,8 +49,9 @@ def run_all_world_component_single_benchmarks() raises:
 
 
 def run_all_world_component_single_benchmarks(mut bench: Bench) raises:
-    bench.bench_function[benchmark_add_remove_1_comp_1_000_000](
-        BenchId("10^6 * add & remove 1 component")
+    bench.bench_function(
+        benchmark_add_remove_1_comp_1_000_000,
+        BenchId("10^6 * add & remove 1 component"),
     )
     prevent_inlining_add_remove()
 

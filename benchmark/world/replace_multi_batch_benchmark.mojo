@@ -128,13 +128,14 @@ def benchmark_replace_5_comp_1_000_batch_1_000(
 
     bencher.iter(bench_fn)
 
+
 def benchmark_replace_1_comp_1_000_000_extra(
     mut bencher: Bencher,
-) raises:
+):
     pos = Position(1.0, 2.0)
 
     @always_inline
-    def bench_fn():
+    def bench_fn() {read}:
         try:
             world = SmallWorld()
             entities = List[Entity]()
@@ -153,11 +154,13 @@ def run_all_world_replace_multi_batch_benchmarks() raises:
 
 
 def run_all_world_replace_multi_batch_benchmarks(mut bench: Bench) raises:
-    bench.bench_function(benchmark_replace_5_comp_batch_1_000_000,
-        BenchId("10^0 * replace 5 components 10^6 batch")
+    bench.bench_function(
+        benchmark_replace_5_comp_batch_1_000_000,
+        BenchId("10^0 * replace 5 components 10^6 batch"),
     )
-    bench.bench_function(benchmark_replace_5_comp_1_000_batch_1_000,
-        BenchId("10^3 * replace 5 components 10^3 batch")
+    bench.bench_function(
+        benchmark_replace_5_comp_1_000_batch_1_000,
+        BenchId("10^3 * replace 5 components 10^3 batch"),
     )
 
 
