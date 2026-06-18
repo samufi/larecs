@@ -304,7 +304,6 @@ def test_archetype_get_mask() raises:
     assert_not_equal(mask, mask2)
 
 
-# BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
 def test_archetype_reserve_non_trivial_component() raises:
     """Verify reserve moves initialized non-trivial component rows."""
     var counters = LifecycleCounters()
@@ -366,7 +365,6 @@ def test_archetype_copy_non_trivial_component() raises:
     _ = counters.del_counter[]
 
 
-# BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
 def test_archetype_remove_non_trivial_component() raises:
     """Verify swap-remove destroys and moves non-trivial component rows."""
     var counters = LifecycleCounters()
@@ -466,7 +464,5 @@ comptime functions = __functions_in_module()
 
 def main() raises:
     suite = TestSuite.discover_tests[functions]()
-    # BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
-    suite.skip[test_archetype_reserve_non_trivial_component]()
-    suite.skip[test_archetype_remove_non_trivial_component]()
+
     suite^.run()

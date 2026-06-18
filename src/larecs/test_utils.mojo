@@ -496,17 +496,17 @@ struct MemTestStruct[
     var del_counter: UnsafePointer[Int, Self.del_origin]
     """The counter incremented on deletion."""
 
-    def __init__(out self, *, deinit take: Self):
+    def __init__(out self, *, deinit move: Self):
         """Move-initialize a lifecycle-counting test value.
 
         Args:
-            take: The value whose counters are transferred into this value.
+            move: The value whose counters are transferred into this value.
 
         The source value is consumed by this initializer.
         """
-        self.move_counter = take.move_counter
-        self.del_counter = take.del_counter
-        self.copy_counter = take.copy_counter
+        self.move_counter = move.move_counter
+        self.del_counter = move.del_counter
+        self.copy_counter = move.copy_counter
         self.move_counter[] += 1
 
     def __init__(out self, *, copy: Self):

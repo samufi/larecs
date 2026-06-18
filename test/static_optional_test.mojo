@@ -25,7 +25,6 @@ def test_comptime_optional_copy() raises:
     _ = opt_copy_without._value
 
 
-# BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
 def test_comptime_optional_move_del() raises:
     def factory(
         var val: MemTestStruct[
@@ -117,6 +116,4 @@ comptime functions = Tuple(
 
 def main() raises:
     suite = TestSuite.discover_tests[functions]()
-    # BUG: Failing due to [bug with `is_trivially_movable`](https://github.com/modular/modular/issues/6682)
-    suite.skip[test_comptime_optional_move_del]()
     suite^.run()
