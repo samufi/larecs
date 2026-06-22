@@ -139,7 +139,6 @@ struct UnsafeBox(Copyable, Movable):
         """
 
         comptime if size_of[T]() == 0:
-            ptr = Optional[UnsafePointer[T, MutUntrackedOrigin]]()
             self._data = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
         else:
             ptr = alloc[T](1)
