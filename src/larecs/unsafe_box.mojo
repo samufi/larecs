@@ -140,11 +140,12 @@ struct UnsafeBox(Copyable, Movable):
 
         comptime if size_of[T]() == 0:
             ptr = Optional[UnsafePointer[T, MutUntrackedOrigin]]()
+            self._data = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
         else:
             ptr = alloc[T](1)
             ptr.unsafe_value().init_pointee_move(data^)
+            self._data = ptr.unsafe_value().bitcast[Byte]()
 
-        self._data = ptr.unsafe_value().bitcast[Byte]()
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
 
