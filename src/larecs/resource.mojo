@@ -1,4 +1,4 @@
-from std.collections import Dict
+from std.collections.dict import Dict, DictKeyError
 from std.reflection import reflect
 
 from .unsafe_box import UnsafeBox
@@ -150,8 +150,8 @@ struct Resources(Copyable, Movable, Sized):
         """
         try:
             _ = self._storage.pop(id)
-        except:
-            raise Error("The resource does not exist.")
+        except DictKeyError:
+            raise Error(t"The resource `{id}` does not exist.")
 
     @always_inline
     def get[
@@ -165,7 +165,10 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             A reference to the resource.
         """
-        return self._storage[reflect[T].name()].unsafe_get[T]()
+        try:
+            return self._storage[reflect[T].name()].unsafe_get[T]()
+        except DictKeyError:
+            raise Error(t"The resource `{reflect[T].name()}` does not exist.")
 
     @always_inline
     def has[T: ResourceType](mut self) -> Bool:
