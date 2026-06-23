@@ -1,4 +1,3 @@
-from std.memory import UnsafePointer
 from std.sys import size_of
 
 
@@ -20,7 +19,8 @@ def _destructor[T: ImplicitlyDeletable](box_storage: UnsafeBox.data_type):
     )
 
     box_storage.unsafe_value().bitcast[T]().destroy_pointee()
-    box_storage.unsafe_value().free()
+    comptime if size_of[T]() > 0:
+        box_storage.unsafe_value().free()
 
 
 def _dummy_destructor(box: UnsafeBox.data_type):
@@ -36,7 +36,7 @@ def _dummy_destructor(box: UnsafeBox.data_type):
 
 def _copy_initializer[
     T: Copyable
-](existing_box: UnsafeBox.data_type,) -> UnsafeBox.data_type:
+](existing_box: UnsafeBox.data_type, out self_data: UnsafeBox.data_type):
     """
     Copy initializer for the data in the UnsafeBox.
 
@@ -53,16 +53,21 @@ def _copy_initializer[
         A pointer to the newly allocated data.
     """
 
-    comptime if size_of[T]() == 0:
-        return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
-    else:
-        if existing_box is None:
-            return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
-        else:
-            ptr = alloc[T](1)
-            ptr.init_pointee_copy(existing_box.unsafe_value().bitcast[T]()[])
+    if existing_box is None:
+        self_data = None
+        return
 
-    return ptr.bitcast[Byte]()
+    comptime if size_of[T]() == 0:
+        self_data = None
+        self_data = {
+            UnsafePointer(to=self_data._value)
+            .bitcast[Byte]()
+            .unsafe_origin_cast[MutUntrackedOrigin]()
+        }
+    else:
+        ptr = alloc[T](1)
+        ptr.init_pointee_copy(existing_box.unsafe_value().bitcast[T]()[])
+        self_data = ptr.bitcast[Byte]()
 
 
 def _dummy_copy_initializer(
@@ -102,8 +107,10 @@ struct UnsafeBox(Copyable, Movable):
 
     var _data: Self.data_type
     """Pointer to the boxed allocation, or None for empty storage."""
+
     var _destructor: def(self: Self.data_type) thin
     """Type-erased destructor for the boxed allocation."""
+
     var _copy_initializer: def(
         existing_box: Self.data_type
     ) thin -> Self.data_type
@@ -123,7 +130,7 @@ struct UnsafeBox(Copyable, Movable):
         comptime assert (
             used_internally
         ), "This constructor is meant for internal use only."
-        self._data = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
+        self._data = None
         self._destructor = _dummy_destructor
         self._copy_initializer = _dummy_copy_initializer
 
@@ -139,11 +146,16 @@ struct UnsafeBox(Copyable, Movable):
         """
 
         comptime if size_of[T]() == 0:
-            self._data = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
+            self._data = None
+            self._data = {
+                UnsafePointer(to=self._data._value)
+                .bitcast[Byte]()
+                .unsafe_origin_cast[MutUntrackedOrigin]()
+            }
         else:
-            ptr = alloc[T](1)
-            ptr.unsafe_value().init_pointee_move(data^)
-            self._data = ptr.unsafe_value().bitcast[Byte]()
+            var ptr = alloc[T](1)
+            ptr.init_pointee_move(data^)
+            self._data = ptr.bitcast[Byte]()
 
         self._destructor = _destructor[T]
         self._copy_initializer = _copy_initializer[T]
@@ -187,6 +199,9 @@ struct UnsafeBox(Copyable, Movable):
         """
         debug_assert(
             self._data is not None,
-            "Attempting to get data from an empty UnsafeBox.",
+            (
+                t"Attempting to get `{String(reflect[T].base_name())}` from an"
+                t" empty UnsafeBox."
+            ),
         )
         return self._data.unsafe_value().bitcast[T]()[]
