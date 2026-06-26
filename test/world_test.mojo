@@ -63,7 +63,6 @@ def test_add_entities() raises:
     assert_equal(i, 0)
 
 
-
 def test_add_entities_iterator_length() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)
