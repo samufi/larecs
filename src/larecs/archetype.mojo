@@ -1237,8 +1237,7 @@ struct Archetype[
             `count` indices.
         """
         with TraceGuard(name="Archetype.extend"):
-            if count <= 0:
-                return self._storage._size - 1
+            debug_assert(count > 0, "Count must be positive.")
 
             start_index = self._storage._size
 

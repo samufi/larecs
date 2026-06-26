@@ -562,6 +562,20 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             debug_assert(0 <= count, "Count must be non-negative.")
 
+            if count == 0:
+                try:
+                    iterator = {
+                        Self.ArchetypeIterator[
+                            origin_of(self._archetypes),
+                            has_without_mask=False,
+                        ](Pointer(to=self._archetypes), []),
+                        Pointer(to=self._locks),
+                        {[]},
+                    }
+                    return
+                except _:
+                    raise WorldError.out_of_locks
+
             self._assert_unlocked()
 
             comptime component_count = len(Ts)
@@ -632,6 +646,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The index of the first newly created entity in the archetype.
         """
         with TraceGuard(name="World._create_entities"):
+            debug_assert(count > 0, "Count must be positive.")
             archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
             arch_start_idx = archetype[].extend(count, self._entity_pool)
             entities_size = (
