@@ -186,7 +186,7 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
     ]
     """Registered systems with their lifecycle function adapters."""
 
-    def __init__(out self) raises:
+    def __init__(out self):
         """
         Initializes the scheduler, creating a new world.
         """
