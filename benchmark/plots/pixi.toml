@@ -13,3 +13,4 @@ mojo = "==1.0.0b3.dev2026062206" # BUG: last working version until https://githu
 python = "==3.12"
 matplotlib = ">=3.10.0,<4"
 pandas = ">=2.2"
+mojo-tracy = ">=0.1.0"
