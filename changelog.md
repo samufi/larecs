@@ -2,7 +2,9 @@
 
 ## [Unreleased](https://github.com/samufi/larecs/compare/v0.5.0b4...main)
 
-### Breaking changes
+### Added
+
+- [`mojo-tracy`](https://github.com/moseschmiedel/mojo-tracy) integration for profiling with [Tracy](https://github.com/wolfpld/tracy)
 
 ## [0.5.0b4](https://github.com/samufi/larecs/compare/v0.5.0b3...v0.5.0b4)
 
