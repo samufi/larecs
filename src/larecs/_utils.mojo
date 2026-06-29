@@ -13,7 +13,9 @@ def _assert_index_in_bounds(index: Int, size: Int):
         index: The candidate index to validate.
         size: The logical number of available elements.
     """
-    with Zone(function_name="_utils._assert_index_in_bounds(index: Int, size: Int)"):
+    with Zone(
+        function_name="_utils._assert_index_in_bounds(index: Int, size: Int)"
+    ):
         # assert 0 <= index and index < size, "Index out of bounds"
         check_bounds(index, size)
 
@@ -72,7 +74,12 @@ def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
         count: The number of elements in the range.
         size: The logical number of available elements.
     """
-    with Zone(function_name="_utils._assert_range_in_bounds(start_index: Int, count: Int, size: Int)"):
+    with Zone(
+        function_name=(
+            "_utils._assert_range_in_bounds(start_index: Int, count: Int, size:"
+            " Int)"
+        )
+    ):
         debug_assert(0 <= count, "Count must be non-negative.")
 
         if count == 0:

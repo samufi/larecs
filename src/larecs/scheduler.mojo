@@ -62,7 +62,13 @@ def _update_system[
         system: The system to update.
         world: The world to use for the update.
     """
-    with Zone(function_name="scheduler._update_system[S: System, *ComponentTypes: ComponentType](mut system: UnsafeBox, mut world: World[*ComponentTypes])"):
+    with Zone(
+        function_name=(
+            "scheduler._update_system[S: System, *ComponentTypes:"
+            " ComponentType](mut system: UnsafeBox, mut world:"
+            " World[*ComponentTypes])"
+        )
+    ):
         with Zone(function_name=String(t"{reflect[S].name()}.update()")):
             ref concrete_system = system.unsafe_get[S]()
             S.update[*ComponentTypes](concrete_system, world)
@@ -81,7 +87,13 @@ def _initialize_system[
         system: The system to initialize.
         world: The world to use for the initialization.
     """
-    with Zone(function_name="scheduler._initialize_system[S: System, *ComponentTypes: ComponentType](mut system: UnsafeBox, mut world: World[*ComponentTypes])"):
+    with Zone(
+        function_name=(
+            "scheduler._initialize_system[S: System, *ComponentTypes:"
+            " ComponentType](mut system: UnsafeBox, mut world:"
+            " World[*ComponentTypes])"
+        )
+    ):
         with Zone(function_name=String(t"{reflect[S].name()}.initialize()")):
             ref concrete_system = system.unsafe_get[S]()
             S.initialize[*ComponentTypes](concrete_system, world)
@@ -100,7 +112,13 @@ def _finalize_system[
         system: The system to finalize.
         world: The world to use for the finalization.
     """
-    with Zone(function_name="scheduler._finalize_system[S: System, *ComponentTypes: ComponentType](mut system: UnsafeBox, mut world: World[*ComponentTypes])"):
+    with Zone(
+        function_name=(
+            "scheduler._finalize_system[S: System, *ComponentTypes:"
+            " ComponentType](mut system: UnsafeBox, mut world:"
+            " World[*ComponentTypes])"
+        )
+    ):
         with Zone(function_name=String(t"{reflect[S].name()}.finalize()")):
             ref concrete_system = system.unsafe_get[S]()
             S.finalize[*ComponentTypes](concrete_system, world)
@@ -233,7 +251,9 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         Args:
             system: The system to add.
         """
-        with Zone(function_name="Scheduler.add_system[S: System](var system: S)"):
+        with Zone(
+            function_name="Scheduler.add_system[S: System](var system: S)"
+        ):
             self._systems.append(
                 (
                     UnsafeBox(system^),

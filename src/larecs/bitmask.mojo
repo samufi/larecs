@@ -47,7 +47,11 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
         Constraints:
             `total_bits` must be a power of two.
         """
-        with Zone(function_name="_BitMaskIndexIter.__init__(var bytes: Self.bitmask.BytesType)"):
+        with Zone(
+            function_name=(
+                "_BitMaskIndexIter.__init__(var bytes: Self.bitmask.BytesType)"
+            )
+        ):
             comptime assert (
                 Self.total_bits.is_power_of_two()
             ), "BitMask size must be a power of two."
@@ -83,7 +87,9 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
                 self._mask <<= 1
                 self._compare = self._bytes & self._mask
                 self._byte_index = 0
-            return Self.total_bits  # Sentinel value indicating the end of iteration
+            return (
+                Self.total_bits
+            )  # Sentinel value indicating the end of iteration
 
     @always_inline
     def __has_next__(self) -> Bool:
@@ -147,7 +153,11 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: An inline array of bit indices to set to True.
         """
-        with Zone(function_name="BitMask.__init__[size: Int](bits: InlineArray[Int, size])"):
+        with Zone(
+            function_name=(
+                "BitMask.__init__[size: Int](bits: InlineArray[Int, size])"
+            )
+        ):
             comptime assert (
                 Self.total_bits.is_power_of_two()
             ), "BitMask size must be a power of two."
@@ -242,7 +252,9 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask containing the bitwise OR of both masks.
         """
-        with Zone(function_name="BitMask.__or__(other: Self, out result: Self)"):
+        with Zone(
+            function_name="BitMask.__or__(other: Self, out result: Self)"
+        ):
             result = self.copy()
             result |= other
 
@@ -273,7 +285,9 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask containing the bitwise AND of both masks.
         """
-        with Zone(function_name="BitMask.__and__(other: Self, out result: Self)"):
+        with Zone(
+            function_name="BitMask.__and__(other: Self, out result: Self)"
+        ):
             result = self.copy()
             result &= other
 
@@ -365,7 +379,9 @@ struct _BitMask[total_bits: Int](
         Args:
             writer: The destination writer.
         """
-        with Zone(function_name="BitMask.write_repr_to(mut writer: Some[Writer])"):
+        with Zone(
+            function_name="BitMask.write_repr_to(mut writer: Some[Writer])"
+        ):
             writer.write(
                 "BitMask[total_bits=",
                 String(self.total_bits),
@@ -510,7 +526,11 @@ struct _BitMask[total_bits: Int](
             comps: An inline array of bit indices to modify.
             value: The value to set the bits to (True or False).
         """
-        with Zone(function_name="BitMask.set(comps: InlineArray[Int, ...], value: Bool)"):
+        with Zone(
+            function_name=(
+                "BitMask.set(comps: InlineArray[Int, ...], value: Bool)"
+            )
+        ):
             self.set(Self(comps), value)
 
     @always_inline
@@ -523,7 +543,11 @@ struct _BitMask[total_bits: Int](
         Args:
             comps: An inline array of bit indices to modify.
         """
-        with Zone(function_name="BitMask.set[value: Bool](comps: InlineArray[Int, ...])"):
+        with Zone(
+            function_name=(
+                "BitMask.set[value: Bool](comps: InlineArray[Int, ...])"
+            )
+        ):
             self.set[value](Self(comps))
 
     @always_inline
@@ -651,5 +675,10 @@ struct _BitMask[total_bits: Int](
         Returns:
             An iterator over the indices of the bits that are set.
         """
-        with Zone(function_name="BitMask.get_indices(out result: _BitMaskIndexIter[Self.total_bits])"):
+        with Zone(
+            function_name=(
+                "BitMask.get_indices(out result:"
+                " _BitMaskIndexIter[Self.total_bits])"
+            )
+        ):
             result = _BitMaskIndexIter[Self.total_bits](self._bytes)

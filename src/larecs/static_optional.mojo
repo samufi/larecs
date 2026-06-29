@@ -25,7 +25,11 @@ struct _EmptyStaticOptionalStorage(
         Args:
             writer: The writer to write to.
         """
-        with Zone(function_name="_EmptyStaticOptionalStorage.write_to(mut writer: Some[Writer])"):
+        with Zone(
+            function_name=(
+                "_EmptyStaticOptionalStorage.write_to(mut writer: Some[Writer])"
+            )
+        ):
             writer.write("_EmptyStaticOptionalStorage")
 
 
@@ -95,7 +99,9 @@ struct StaticOptional[
         Returns:
             A `StaticOptional` initialized with selected backing storage.
         """
-        with Zone(function_name="StaticOptional.__init__(var value: Self.ElementType)"):
+        with Zone(
+            function_name="StaticOptional.__init__(var value: Self.ElementType)"
+        ):
             comptime assert (
                 Self.has_value
             ), "Cannot initialize with a value if `has_value` is `False`"
@@ -135,7 +141,9 @@ struct StaticOptional[
         Returns:
             The stored value when present, otherwise `value`.
         """
-        with Zone(function_name="StaticOptional.or_else(ref value: Self.ElementType)"):
+        with Zone(
+            function_name="StaticOptional.or_else(ref value: Self.ElementType)"
+        ):
             comptime if Self.has_value:
                 return self[]
             else:

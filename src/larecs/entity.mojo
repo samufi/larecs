@@ -49,7 +49,9 @@ struct Entity(
             id: The entity ID.
             generation: The entity generation.
         """
-        with Zone(function_name="Entity.__init__(id: EntityId, generation: UInt32)"):
+        with Zone(
+            function_name="Entity.__init__(id: EntityId, generation: UInt32)"
+        ):
             self._id = id
             self._generation = generation
 
@@ -74,7 +76,9 @@ struct Entity(
             other: The other entity to compare to.
         """
         with Zone(function_name="Entity.__eq__(other: Entity)"):
-            return self._id == other._id and self._generation == other._generation
+            return (
+                self._id == other._id and self._generation == other._generation
+            )
 
     @always_inline
     def __ne__(self, other: Entity) -> Bool:
@@ -103,7 +107,11 @@ struct Entity(
         """
         with Zone(function_name="Entity.__str__()"):
             return (
-                "Entity(" + String(self._id) + ", " + String(self._generation) + ")"
+                "Entity("
+                + String(self._id)
+                + ", "
+                + String(self._generation)
+                + ")"
             )
 
     @always_inline
