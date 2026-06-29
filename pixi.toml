@@ -14,23 +14,25 @@ preview = ["pixi-build"]
 [tasks]
 tests = { cmd = "test/run_tests.sh", default-environment = "test" }
 benchmarks = { cmd = "mojo run -I src benchmark/run_benchmarks.mojo", default-environment = "default" }
+satellites = { cmd = "cd examples/satellites && pixi run satellites"}
 update-mojo = { cmd = "python scripts/update_mojo.py", default-environment = "default" }
+profiling = { cmd = "mojo run -I src -Xlinker -L$CONDA_PREFIX/lib -Xlinker -lmojotracy benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
 mojo = "==1.0.0b3.dev2026062206"
+mojo-tracy = ">=0.1.0"
 
 [feature.test.dependencies]
-clang = ">=22.1.7,<23"
-clangxx = ">=22.1.7,<23"
+clang = ">=22.1.8,<23"
+clangxx = ">=22.1.8,<23"
 mogo-tester = ">=2.3.3,<3"
 
 [feature.test.activation.env]
 CC = "clang"
 CXX = "clang++"
-#clang = ">=22.1.7,<23"
 
 [target.linux-64.dependencies]
-sysroot_linux-64 = "2.34.*"
+sysroot_linux-64 = ">=2.28,<3"
 
 [environments]
 test = ["test"] # An environment covering the "test" feature

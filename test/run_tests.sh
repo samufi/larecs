@@ -23,6 +23,7 @@ set -e
 
 precompile_args=(--precompile src/larecs)
 test_args=()
+mojo_build_args="-g -DASSERT=all -Xlinker -L${CONDA_PREFIX}/lib -Xlinker -lmojotracy"
 
 for arg in "$@"; do
     case "$arg" in
@@ -35,4 +36,4 @@ for arg in "$@"; do
     esac
 done
 
-mogo-tester "${precompile_args[@]}" --asan --mojo-build-args="-g -DASSERT=all" "${test_args[@]}"
+mogo-tester "${precompile_args[@]}" --asan --mojo-build-args="${mojo_build_args}" "${test_args[@]}"
