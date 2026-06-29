@@ -6,6 +6,8 @@ from std.hashlib import Hasher
 from std.io.write import Writable, Writer
 from std.sys import bit_width_of
 
+from tracy import Zone
+
 
 # TODO: Implement `Iterable` for this
 # TODO: Implement `IterableOwned` for this
@@ -45,20 +47,22 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
         Constraints:
             `total_bits` must be a power of two.
         """
-        comptime assert (
-            Self.total_bits.is_power_of_two()
-        ), "BitMask size must be a power of two."
-        self._bytes = bytes
-        self._mask = Self.bitmask.BytesType(1)
-        self._compare = self._bytes & self._mask
-        self._byte_index = 0
-        self._offset_index = 0
-        self._index = 0
-        self._size = self._bytes.reduce_bit_count()
+        with Zone(function_name="_BitMaskIndexIter.__init__(var bytes: Self.bitmask.BytesType)"):
+            comptime assert (
+                Self.total_bits.is_power_of_two()
+            ), "BitMask size must be a power of two."
+            self._bytes = bytes
+            self._mask = Self.bitmask.BytesType(1)
+            self._compare = self._bytes & self._mask
+            self._byte_index = 0
+            self._offset_index = 0
+            self._index = 0
+            self._size = self._bytes.reduce_bit_count()
 
     def __iter__(self) -> Self:
         """Returns this iterator."""
-        return self
+        with Zone(function_name="_BitMaskIndexIter.__iter__()"):
+            return self
 
     def __next__(
         mut self,
@@ -68,27 +72,30 @@ struct _BitMaskIndexIter[total_bits: Int](ImplicitlyCopyable, Sized):
         Returns:
             The next set-bit index, or `total_bits` when iteration is complete.
         """
-        for i in range(self._offset_index, 8):
-            for j in range(self._byte_index, Self.bitmask.total_bytes):
-                if self._compare[j]:
-                    self._offset_index = i
-                    self._byte_index = j + 1
-                    self._index += 1
-                    return j * 8 + i
-            self._mask <<= 1
-            self._compare = self._bytes & self._mask
-            self._byte_index = 0
-        return Self.total_bits  # Sentinel value indicating the end of iteration
+        with Zone(function_name="_BitMaskIndexIter.__next__()"):
+            for i in range(self._offset_index, 8):
+                for j in range(self._byte_index, Self.bitmask.total_bytes):
+                    if self._compare[j]:
+                        self._offset_index = i
+                        self._byte_index = j + 1
+                        self._index += 1
+                        return j * 8 + i
+                self._mask <<= 1
+                self._compare = self._bytes & self._mask
+                self._byte_index = 0
+            return Self.total_bits  # Sentinel value indicating the end of iteration
 
     @always_inline
     def __has_next__(self) -> Bool:
         """Returns whether another set-bit index is available."""
-        return self._index < self._size
+        with Zone(function_name="_BitMaskIndexIter.__has_next__()"):
+            return self._index < self._size
 
     @always_inline
     def __len__(self) -> Int:
         """Returns the number of set bits in the iterated mask."""
-        return self._size
+        with Zone(function_name="_BitMaskIndexIter.__len__()"):
+            return self._size
 
 
 comptime BitMask = _BitMask[256]
@@ -122,10 +129,11 @@ struct _BitMask[total_bits: Int](
         Args:
             bytes: The raw byte data representing the bitmask state.
         """
-        comptime assert (
-            Self.total_bits.is_power_of_two()
-        ), "BitMask size must be a power of two."
-        self._bytes = bytes
+        with Zone(function_name="BitMask.__init__(bytes: Self.BytesType)"):
+            comptime assert (
+                Self.total_bits.is_power_of_two()
+            ), "BitMask size must be a power of two."
+            self._bytes = bytes
 
     @always_inline
     def __init__[size: Int](out self, bits: InlineArray[Int, size]):
@@ -139,13 +147,14 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: An inline array of bit indices to set to True.
         """
-        comptime assert (
-            Self.total_bits.is_power_of_two()
-        ), "BitMask size must be a power of two."
-        self._bytes = Self.BytesType()
+        with Zone(function_name="BitMask.__init__[size: Int](bits: InlineArray[Int, size])"):
+            comptime assert (
+                Self.total_bits.is_power_of_two()
+            ), "BitMask size must be a power of two."
+            self._bytes = Self.BytesType()
 
-        comptime for i in range(size):
-            self.set[True](bits[i])
+            comptime for i in range(size):
+                self.set[True](bits[i])
 
     @always_inline
     def __init__(out self, *bits: Int):
@@ -175,7 +184,8 @@ struct _BitMask[total_bits: Int](
         Args:
             hasher: The hasher to update with the mask's bytes.
         """
-        hasher.update(self._bytes)
+        with Zone(function_name="BitMask.__hash__[H: Hasher](mut hasher: H)"):
+            hasher.update(self._bytes)
 
     @always_inline
     def __eq__(self, other: Self) -> Bool:
@@ -189,7 +199,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if both masks are identical, False otherwise.
         """
-        return self._bytes == other._bytes
+        with Zone(function_name="BitMask.__eq__(other: Self)"):
+            return self._bytes == other._bytes
 
     @always_inline
     def __ne__(self, other: Self) -> Bool:
@@ -203,7 +214,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if the masks are different, False otherwise.
         """
-        return not self.__eq__(other)
+        with Zone(function_name="BitMask.__ne__(other: Self)"):
+            return not self.__eq__(other)
 
     @always_inline
     def __invert__(self) -> Self:
@@ -214,7 +226,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask with all bits inverted.
         """
-        return Self(bytes=~self._bytes)
+        with Zone(function_name="BitMask.__invert__()"):
+            return Self(bytes=~self._bytes)
 
     @always_inline
     def __or__(self, other: Self, out result: Self):
@@ -229,8 +242,9 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask containing the bitwise OR of both masks.
         """
-        result = self.copy()
-        result |= other
+        with Zone(function_name="BitMask.__or__(other: Self, out result: Self)"):
+            result = self.copy()
+            result |= other
 
     @always_inline
     def __ior__(mut self, other: Self):
@@ -243,7 +257,8 @@ struct _BitMask[total_bits: Int](
         Args:
             other: The BitMask to perform the bitwise OR operation with.
         """
-        self._bytes |= other._bytes
+        with Zone(function_name="BitMask.__ior__(other: Self)"):
+            self._bytes |= other._bytes
 
     @always_inline
     def __and__(self, other: Self, out result: Self):
@@ -258,8 +273,9 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask containing the bitwise AND of both masks.
         """
-        result = self.copy()
-        result &= other
+        with Zone(function_name="BitMask.__and__(other: Self, out result: Self)"):
+            result = self.copy()
+            result &= other
 
     @always_inline
     def __iand__(mut self, other: Self):
@@ -272,7 +288,8 @@ struct _BitMask[total_bits: Int](
         Args:
             other: The BitMask to perform the bitwise AND operation with.
         """
-        self._bytes &= other._bytes
+        with Zone(function_name="BitMask.__iand__(other: Self)"):
+            self._bytes &= other._bytes
 
     @always_inline
     def __xor__(self, other: Self, out result: Self):
@@ -312,14 +329,15 @@ struct _BitMask[total_bits: Int](
         Returns:
             A string in the format "[01101...]" showing the state of all bits.
         """
-        var result: String = "["
-        for i in range(len(self._bytes) * 8):
-            if self.get(i):
-                result += "1"
-            else:
-                result += "0"
-        result += "]"
-        return result
+        with Zone(function_name="BitMask.__str__()"):
+            var result: String = "["
+            for i in range(len(self._bytes) * 8):
+                if self.get(i):
+                    result += "1"
+                else:
+                    result += "0"
+            result += "]"
+            return result
 
     def write_to(self, mut writer: Some[Writer]):
         """Writes the mask to a writer.
@@ -330,13 +348,14 @@ struct _BitMask[total_bits: Int](
         Args:
             writer: The destination writer.
         """
-        writer.write("[")
-        for i in range(len(self._bytes) * 8):
-            if self.get(i):
-                writer.write("1")
-            else:
-                writer.write("0")
-        writer.write("]")
+        with Zone(function_name="BitMask.write_to(mut writer: Some[Writer])"):
+            writer.write("[")
+            for i in range(len(self._bytes) * 8):
+                if self.get(i):
+                    writer.write("1")
+                else:
+                    writer.write("0")
+            writer.write("]")
 
     def write_repr_to(self, mut writer: Some[Writer]):
         """Writes the mask to a writer in a debug representation.
@@ -346,13 +365,14 @@ struct _BitMask[total_bits: Int](
         Args:
             writer: The destination writer.
         """
-        writer.write(
-            "BitMask[total_bits=",
-            String(self.total_bits),
-            "](",
-            String(self._bytes),
-            ")",
-        )
+        with Zone(function_name="BitMask.write_repr_to(mut writer: Some[Writer])"):
+            writer.write(
+                "BitMask[total_bits=",
+                String(self.total_bits),
+                "](",
+                String(self._bytes),
+                ")",
+            )
 
     @deprecated(use=write_repr_to)
     @always_inline
@@ -364,13 +384,14 @@ struct _BitMask[total_bits: Int](
         Returns:
             A string in the format "BitMask(<bytes>)" for debugging.
         """
-        return (
-            "BitMask[total_bits="
-            + String(self.total_bits)
-            + "]("
-            + String(self._bytes)
-            + ")"
-        )
+        with Zone(function_name="BitMask.__repr__()"):
+            return (
+                "BitMask[total_bits="
+                + String(self.total_bits)
+                + "]("
+                + String(self._bytes)
+                + ")"
+            )
 
     @always_inline
     def matches(self, bits: Self) -> Bool:
@@ -386,7 +407,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if bits contains all bits set in this mask, False otherwise.
         """
-        return bits.contains(self)
+        with Zone(function_name="BitMask.matches(bits: Self)"):
+            return bits.contains(self)
 
     @always_inline
     def exclusive(self) -> MaskFilter[Self.total_bits]:
@@ -398,10 +420,11 @@ struct _BitMask[total_bits: Int](
         Returns:
             A [..filter.MaskFilter] configured for exact component matching.
         """
-        return MaskFilter[Self.total_bits](
-            include=self,
-            exclude=~self,
-        )
+        with Zone(function_name="BitMask.exclusive()"):
+            return MaskFilter[Self.total_bits](
+                include=self,
+                exclude=~self,
+            )
 
     @always_inline
     def get(self, bit: Int) -> Bool:
@@ -413,12 +436,13 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if the bit is set, False otherwise.
         """
-        check_bounds(bit, Self.total_bits)
+        with Zone(function_name="BitMask.get(bit: Int)"):
+            check_bounds(bit, Self.total_bits)
 
-        var idx = bit >> 3  # equivalent to bit // 8
-        var offset = bit & 7  # equivalent to bit - (8 * idx)
-        mask = 1 << UInt8(offset)
-        return (self._bytes[idx] & mask) == mask
+            var idx = bit >> 3  # equivalent to bit // 8
+            var offset = bit & 7  # equivalent to bit - (8 * idx)
+            mask = 1 << UInt8(offset)
+            return (self._bytes[idx] & mask) == mask
 
     @always_inline
     def set(mut self, bit: Int, value: Bool):
@@ -428,10 +452,11 @@ struct _BitMask[total_bits: Int](
             bit: The index of the bit to modify.
             value: The value to set the bit to (True or False).
         """
-        if value:
-            self.set[True](bit)
-        else:
-            self.set[False](bit)
+        with Zone(function_name="BitMask.set(bit: Int, value: Bool)"):
+            if value:
+                self.set[True](bit)
+            else:
+                self.set[False](bit)
 
     @always_inline
     def set[value: Bool](mut self, bit: Int):
@@ -461,7 +486,8 @@ struct _BitMask[total_bits: Int](
             comps: Variadic bit indices to modify.
             value: The value to set the bits to (True or False).
         """
-        self.set(Self(*comps), value)
+        with Zone(function_name="BitMask.set(*comps: Int, value: Bool)"):
+            self.set(Self(*comps), value)
 
     @always_inline
     def set[value: Bool](mut self, *comps: Int):
@@ -473,7 +499,8 @@ struct _BitMask[total_bits: Int](
         Args:
             comps: Variadic bit indices to modify.
         """
-        self.set[value](Self(*comps))
+        with Zone(function_name="BitMask.set[value: Bool](*comps: Int)"):
+            self.set[value](Self(*comps))
 
     @always_inline
     def set(mut self, comps: InlineArray[Int, ...], value: Bool):
@@ -483,7 +510,8 @@ struct _BitMask[total_bits: Int](
             comps: An inline array of bit indices to modify.
             value: The value to set the bits to (True or False).
         """
-        self.set(Self(comps), value)
+        with Zone(function_name="BitMask.set(comps: InlineArray[Int, ...], value: Bool)"):
+            self.set(Self(comps), value)
 
     @always_inline
     def set[value: Bool](mut self, comps: InlineArray[Int, ...]):
@@ -495,7 +523,8 @@ struct _BitMask[total_bits: Int](
         Args:
             comps: An inline array of bit indices to modify.
         """
-        self.set[value](Self(comps))
+        with Zone(function_name="BitMask.set[value: Bool](comps: InlineArray[Int, ...])"):
+            self.set[value](Self(comps))
 
     @always_inline
     def set(mut self, other: Self, value: Bool):
@@ -505,10 +534,11 @@ struct _BitMask[total_bits: Int](
             other: A [BitMask] whose set bits identify which bits to modify.
             value: The value to set the bits to (True or False).
         """
-        if value:
-            self.set[True](other)
-        else:
-            self.set[False](other)
+        with Zone(function_name="BitMask.set(other: Self, value: Bool)"):
+            if value:
+                self.set[True](other)
+            else:
+                self.set[False](other)
 
     @always_inline
     def set[value: Bool](mut self, other: Self):
@@ -524,10 +554,11 @@ struct _BitMask[total_bits: Int](
             other: A [BitMask] whose set bits identify which bits to modify.
         """
 
-        comptime if value:
-            self |= other
-        else:
-            self &= ~other
+        with Zone(function_name="BitMask.set[value: Bool](other: Self)"):
+            comptime if value:
+                self |= other
+            else:
+                self &= ~other
 
     @always_inline
     def flip(mut self, bit: Int):
@@ -538,11 +569,12 @@ struct _BitMask[total_bits: Int](
         Args:
             bit: The index of the bit to flip.
         """
-        check_bounds(bit, Self.total_bits)
+        with Zone(function_name="BitMask.flip(bit: Int)"):
+            check_bounds(bit, Self.total_bits)
 
-        var idx = bit >> 3  # equivalent to bit // 8
-        var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)
-        self._bytes[idx] ^= 1 << offset
+            var idx = bit >> 3  # equivalent to bit // 8
+            var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)
+            self._bytes[idx] ^= 1 << offset
 
     @always_inline
     def is_zero(self) -> Bool:
@@ -553,7 +585,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if no bits are set, False otherwise.
         """
-        return not self._bytes.reduce_or()
+        with Zone(function_name="BitMask.is_zero()"):
+            return not self._bytes.reduce_or()
 
     @always_inline
     def reset(mut self):
@@ -561,7 +594,8 @@ struct _BitMask[total_bits: Int](
 
         Clears all bits in the mask, setting the entire mask to zero.
         """
-        self._bytes = 0
+        with Zone(function_name="BitMask.reset()"):
+            self._bytes = 0
 
     @always_inline
     def contains(self, other: Self) -> Bool:
@@ -575,7 +609,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if all bits set in other are also set in this mask, False otherwise.
         """
-        return (self._bytes & other._bytes) == other._bytes
+        with Zone(function_name="BitMask.contains(other: Self)"):
+            return (self._bytes & other._bytes) == other._bytes
 
     @always_inline
     def contains_any(self, other: Self) -> Bool:
@@ -589,7 +624,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             True if any bit set in other is also set in this mask, False otherwise.
         """
-        return (self._bytes & other._bytes) != 0
+        with Zone(function_name="BitMask.contains_any(other: Self)"):
+            return (self._bytes & other._bytes) != 0
 
     @always_inline
     def total_bits_set(self) -> Int:
@@ -600,7 +636,8 @@ struct _BitMask[total_bits: Int](
         Returns:
             The number of bits set to True in the mask.
         """
-        return self._bytes.reduce_bit_count()
+        with Zone(function_name="BitMask.total_bits_set()"):
+            return self._bytes.reduce_bit_count()
 
     @always_inline
     def get_indices(
@@ -614,4 +651,5 @@ struct _BitMask[total_bits: Int](
         Returns:
             An iterator over the indices of the bits that are set.
         """
-        result = _BitMaskIndexIter[Self.total_bits](self._bytes)
+        with Zone(function_name="BitMask.get_indices(out result: _BitMaskIndexIter[Self.total_bits])"):
+            result = _BitMaskIndexIter[Self.total_bits](self._bytes)

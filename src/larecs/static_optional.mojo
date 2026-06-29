@@ -1,6 +1,8 @@
 from std.memory import UnsafePointer
 from std.utils.type_functions import ConditionalType
 
+from tracy import Zone
+
 
 @fieldwise_init
 struct _EmptyStaticOptionalStorage(
@@ -23,7 +25,8 @@ struct _EmptyStaticOptionalStorage(
         Args:
             writer: The writer to write to.
         """
-        writer.write("_EmptyStaticOptionalStorage")
+        with Zone(function_name="_EmptyStaticOptionalStorage.write_to(mut writer: Some[Writer])"):
+            writer.write("_EmptyStaticOptionalStorage")
 
 
 @fieldwise_init
@@ -70,13 +73,14 @@ struct StaticOptional[
         Returns:
             A `StaticOptional` with empty backing storage.
         """
-        comptime assert (
-            not Self.has_value
-        ), "Cannot initialize with `None` if `has_value` is `True`"
+        with Zone(function_name="StaticOptional.__init__(none: None)"):
+            comptime assert (
+                not Self.has_value
+            ), "Cannot initialize with `None` if `has_value` is `True`"
 
-        self._value = rebind_var[dest_type=Self.Storage](
-            _EmptyStaticOptionalStorage()
-        )
+            self._value = rebind_var[dest_type=Self.Storage](
+                _EmptyStaticOptionalStorage()
+            )
 
     @always_inline
     @implicit
@@ -91,17 +95,19 @@ struct StaticOptional[
         Returns:
             A `StaticOptional` initialized with selected backing storage.
         """
-        comptime assert (
-            Self.has_value
-        ), "Cannot initialize with a value if `has_value` is `False`"
+        with Zone(function_name="StaticOptional.__init__(var value: Self.ElementType)"):
+            comptime assert (
+                Self.has_value
+            ), "Cannot initialize with a value if `has_value` is `False`"
 
-        self._value = rebind_var[dest_type=Self.Storage](value^)
+            self._value = rebind_var[dest_type=Self.Storage](value^)
 
     @always_inline
     def __del__(deinit self):
         """Destroy the stored value when present."""
-        comptime if Self.has_value:
-            _ = self._value^
+        with Zone(function_name="StaticOptional.__del__()"):
+            comptime if Self.has_value:
+                _ = self._value^
 
     @always_inline
     def __getitem__(ref self) -> ref[self._value] Self.ElementType:
@@ -110,11 +116,12 @@ struct StaticOptional[
         Returns:
             A reference to the contained value.
         """
-        comptime assert (
-            Self.has_value
-        ), "The value is not present. Use `has_value` to check first."
+        with Zone(function_name="StaticOptional.__getitem__()"):
+            comptime assert (
+                Self.has_value
+            ), "The value is not present. Use `has_value` to check first."
 
-        return rebind[Self.ElementType](self._value)
+            return rebind[Self.ElementType](self._value)
 
     @always_inline
     def or_else(
@@ -128,10 +135,11 @@ struct StaticOptional[
         Returns:
             The stored value when present, otherwise `value`.
         """
-        comptime if Self.has_value:
-            return self[]
-        else:
-            return value
+        with Zone(function_name="StaticOptional.or_else(ref value: Self.ElementType)"):
+            comptime if Self.has_value:
+                return self[]
+            else:
+                return value
 
     @always_inline
     def unsafe_ptr(
@@ -142,11 +150,12 @@ struct StaticOptional[
         Returns:
             An `UnsafePointer` to the contained value.
         """
-        comptime assert (
-            Self.has_value
-        ), "The value is not present. Use `has_value` to check first."
+        with Zone(function_name="StaticOptional.unsafe_ptr()"):
+            comptime assert (
+                Self.has_value
+            ), "The value is not present. Use `has_value` to check first."
 
-        return UnsafePointer(to=rebind[Self.ElementType](self._value))
+            return UnsafePointer(to=rebind[Self.ElementType](self._value))
 
     @always_inline
     def __bool__(self) -> Bool:
@@ -155,4 +164,5 @@ struct StaticOptional[
         Returns:
             The value of `has_value`.
         """
-        return Self.has_value
+        with Zone(function_name="StaticOptional.__bool__()"):
+            return Self.has_value

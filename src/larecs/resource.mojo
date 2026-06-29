@@ -1,6 +1,8 @@
 from std.collections.dict import Dict, DictKeyError
 from std.reflection import reflect
 
+from tracy import Zone
+
 from .unsafe_box import UnsafeBox
 
 comptime ResourceType = Copyable & Movable & ImplicitlyDeletable
@@ -21,7 +23,8 @@ struct Resources(Copyable, Movable, Sized):
         """
         Constructs an empty resource container.
         """
-        self._storage = Dict[Self.IdType, UnsafeBox]()
+        with Zone(function_name="Resources.__init__()"):
+            self._storage = Dict[Self.IdType, UnsafeBox]()
 
     @always_inline("nodebug")
     def __len__(self) -> Int:
@@ -30,7 +33,8 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             The number of stored resources.
         """
-        return len(self._storage)
+        with Zone(function_name="Resources.__len__()"):
+            return len(self._storage)
 
     def add[*Ts: ResourceType](mut self, var *resources: *Ts) raises:
         """Adds resources.
@@ -45,20 +49,29 @@ struct Resources(Copyable, Movable, Sized):
             Error: If some resource already exists.
         """
 
-        conflicting_ids = List[StringSlice[StaticConstantOrigin]](capacity=0)
+        with Zone(
+            function_name=(
+                "Resources.add[*Ts: ResourceType](var *resources: *Ts)"
+            )
+        ):
+            conflicting_ids = List[StringSlice[StaticConstantOrigin]](
+                capacity=0
+            )
 
-        comptime for idx in range(len(Ts)):
-            comptime id = reflect[Ts[idx]].name()
-            if id in self._storage:
-                conflicting_ids.append(id)
+            comptime for idx in range(len(Ts)):
+                comptime id = reflect[Ts[idx]].name()
+                if id in self._storage:
+                    conflicting_ids.append(id)
 
-        if conflicting_ids:
-            raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
+            if conflicting_ids:
+                raise Error("Duplicate resource: " + ", ".join(conflicting_ids))
 
-        def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
-            self._add(reflect[Ts[idx]].name(), resource^)
+            def take_resource[
+                idx: Int
+            ](var resource: Ts[idx]) capturing -> None:
+                self._add(reflect[Ts[idx]].name(), resource^)
 
-        resources^.consume_elements[take_resource]()
+            resources^.consume_elements[take_resource]()
 
     @always_inline
     def _add(mut self, id: Self.IdType, var resource: Some[ResourceType]):
@@ -68,7 +81,13 @@ struct Resources(Copyable, Movable, Sized):
             id: The ID of the resource to add. It has to be not used already.
             resource: The resource to add.
         """
-        self._storage[id] = UnsafeBox(resource^)
+        with Zone(
+            function_name=(
+                "Resources._add(id: Self.IdType, var resource:"
+                " Some[ResourceType])"
+            )
+        ):
+            self._storage[id] = UnsafeBox(resource^)
 
     def set[
         *Ts: ResourceType, add_if_not_found: Bool = False
@@ -86,24 +105,34 @@ struct Resources(Copyable, Movable, Sized):
             Error: If one of the resources does not exist.
         """
 
-        comptime if not add_if_not_found:
-            conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
-
-            comptime for idx in range(len(Ts)):
-                comptime id = reflect[Ts[idx]].name()
-                if id not in self._storage:
-                    conflicting_ids.append(id)
-
-            if len(conflicting_ids) > 0:
-                raise Error("Unknown resource: " + ", ".join(conflicting_ids))
-
-        def take_resource[idx: Int](var resource: Ts[idx]) capturing -> None:
-            self._set[add_if_not_found=add_if_not_found](
-                reflect[Ts[idx]].name(),
-                resource^,
+        with Zone(
+            function_name=(
+                "Resources.set[*Ts: ResourceType, add_if_not_found: Bool](var"
+                " *resources: *Ts)"
             )
+        ):
+            comptime if not add_if_not_found:
+                conflicting_ids = List[StringSlice[StaticConstantOrigin]]()
 
-        resources^.consume_elements[take_resource]()
+                comptime for idx in range(len(Ts)):
+                    comptime id = reflect[Ts[idx]].name()
+                    if id not in self._storage:
+                        conflicting_ids.append(id)
+
+                if len(conflicting_ids) > 0:
+                    raise Error(
+                        "Unknown resource: " + ", ".join(conflicting_ids)
+                    )
+
+            def take_resource[
+                idx: Int
+            ](var resource: Ts[idx]) capturing -> None:
+                self._set[add_if_not_found=add_if_not_found](
+                    reflect[Ts[idx]].name(),
+                    resource^,
+                )
+
+            resources^.consume_elements[take_resource]()
 
     @always_inline
     def _set[
@@ -119,11 +148,17 @@ struct Resources(Copyable, Movable, Sized):
             resource: The resource to set.
         """
 
-        try:
-            self._storage[id].unsafe_get[type_of(resource)]() = resource^
-        except:
-            comptime if add_if_not_found:
-                self._add(id, resource^)
+        with Zone(
+            function_name=(
+                "Resources._set[add_if_not_found: Bool](id: Self.IdType, var"
+                " resource: Some[ResourceType])"
+            )
+        ):
+            try:
+                self._storage[id].unsafe_get[type_of(resource)]() = resource^
+            except:
+                comptime if add_if_not_found:
+                    self._add(id, resource^)
 
     def remove[*Ts: ResourceType](mut self: Resources) raises:
         """Removes resources.
@@ -135,8 +170,9 @@ struct Resources(Copyable, Movable, Sized):
             Error: If one of the resources does not exist.
         """
 
-        comptime for i in range(len(Ts)):
-            self._remove[Ts[i]](reflect[Ts[i]].name())
+        with Zone(function_name="Resources.remove[*Ts: ResourceType]()"):
+            comptime for i in range(len(Ts)):
+                self._remove[Ts[i]](reflect[Ts[i]].name())
 
     @always_inline
     def _remove[T: ResourceType](mut self, id: Self.IdType) raises:
@@ -148,10 +184,13 @@ struct Resources(Copyable, Movable, Sized):
         Raises:
             Error: If the resource does not exist.
         """
-        try:
-            _ = self._storage.pop(id)
-        except DictKeyError:
-            raise Error(t"The resource `{id}` does not exist.")
+        with Zone(
+            function_name="Resources._remove[T: ResourceType](id: Self.IdType)"
+        ):
+            try:
+                _ = self._storage.pop(id)
+            except DictKeyError:
+                raise Error(t"The resource `{id}` does not exist.")
 
     @always_inline
     def get[
@@ -165,10 +204,13 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             A reference to the resource.
         """
-        try:
-            return self._storage[reflect[T].name()].unsafe_get[T]()
-        except DictKeyError:
-            raise Error(t"The resource `{reflect[T].name()}` does not exist.")
+        with Zone(function_name="Resources.get[T: ResourceType]()"):
+            try:
+                return self._storage[reflect[T].name()].unsafe_get[T]()
+            except DictKeyError:
+                raise Error(
+                    t"The resource `{reflect[T].name()}` does not exist."
+                )
 
     @always_inline
     def has[T: ResourceType](mut self) -> Bool:
@@ -180,4 +222,5 @@ struct Resources(Copyable, Movable, Sized):
         Returns:
             True if the resource is present, otherwise False.
         """
-        return reflect[T].name() in self._storage
+        with Zone(function_name="Resources.has[T: ResourceType]()"):
+            return reflect[T].name() in self._storage

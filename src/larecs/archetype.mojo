@@ -4,6 +4,9 @@ from std.reflection import reflect
 from std.reflection.traits import AllCopyable
 from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
+
+from tracy import Zone
+
 from .entity import Entity
 from .component import (
     ComponentType,
@@ -12,7 +15,6 @@ from .component import (
 )
 from .bitmask import BitMask
 from .pool import EntityPool
-from ._tracing import TraceGuard
 from .types import ComponentId
 from ._utils import (
     _assert_index_in_bounds,
@@ -64,7 +66,12 @@ struct EntityAccessor[
             archetype: The archetype of the entity.
             index_in_archetype: The index of the entity in the archetype.
         """
-        with TraceGuard(name="EntityAccessor.__init__"):
+        with Zone(
+            function_name=(
+                "EntityAccessor.__init__(archetype: Pointer,"
+                " index_in_archetype: Int)"
+            )
+        ):
             self._archetype = archetype
             self._index_in_archetype = index_in_archetype
 
@@ -76,7 +83,7 @@ struct EntityAccessor[
             The entity of the accessor.
         """
 
-        with TraceGuard(name="EntityAccessor.get_entity"):
+        with Zone(function_name="EntityAccessor.get_entity()"):
             return self._archetype[].get_entity(self._index_in_archetype)
 
     @always_inline
@@ -95,7 +102,7 @@ struct EntityAccessor[
             A reference to the component of the entity.
         """
 
-        with TraceGuard(name="EntityAccessor.get"):
+        with Zone(function_name="EntityAccessor.get[T: ComponentType]()"):
             self._archetype[].assert_has_components[T]()
 
             return self._archetype[].get_component[T](
@@ -125,7 +132,11 @@ struct EntityAccessor[
         Raises:
             LarecsError: If the entity's archetype does not contain one of the components.
         """
-        with TraceGuard(name="EntityAccessor.set"):
+        with Zone(
+            function_name=(
+                "EntityAccessor.set[*Ts: ComponentType](var *components: *Ts)"
+            )
+        ):
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Component types must be unique."
@@ -145,7 +156,7 @@ struct EntityAccessor[
         Returns:
             Whether the entity has the component.
         """
-        with TraceGuard(name="EntityAccessor.has"):
+        with Zone(function_name="EntityAccessor.has[T: ComponentType]()"):
             return self._archetype[].has_components[T]()
 
 
@@ -219,12 +230,18 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             size: The initial number of populated entity rows.
             capacity: The initial storage capacity.
         """
-        self._data = Self._PointerTuple()
-        self._capacity = capacity
-        self._size = size
-        self._active_component_mask = active_component_mask
+        with Zone(
+            function_name=(
+                "_ComponentStorage.__init__(active_component_mask: BitMask,"
+                " size: Int, capacity: Int)"
+            )
+        ):
+            self._data = Self._PointerTuple()
+            self._capacity = capacity
+            self._size = size
+            self._active_component_mask = active_component_mask
 
-        self._unsafe_init_components(active_component_mask)
+            self._unsafe_init_components(active_component_mask)
 
     def __init__(out self, *, copy: Self):
         """Deep-copies the component storage to a new instance, including allocating new buffers and copying component data.
@@ -232,24 +249,25 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             A deep copy of the component storage with its own allocations.
         """
-        self = copy.shallow_copy()
+        with Zone(function_name="_ComponentStorage.__init__(copy: Self)"):
+            self = copy.shallow_copy()
 
-        @always_inline
-        def copy_component[
-            T: ComponentType, id: ComponentId
-        ](
-            storage_size: Int,
-            storage_capacity: Int,
-            comp_ptr: Self.ComponentPointer[T],
-        ) -> Self.ComponentPointer[T]:
-            new_ptr = alloc[T](storage_capacity)
-            if storage_size > 0:
-                uninit_copy_n[overlapping=False](
-                    dest=new_ptr, src=comp_ptr.value(), count=storage_size
-                )
-            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
+            @always_inline
+            def copy_component[
+                T: ComponentType, id: ComponentId
+            ](
+                storage_size: Int,
+                storage_capacity: Int,
+                comp_ptr: Self.ComponentPointer[T],
+            ) -> Self.ComponentPointer[T]:
+                new_ptr = alloc[T](storage_capacity)
+                if storage_size > 0:
+                    uninit_copy_n[overlapping=False](
+                        dest=new_ptr, src=comp_ptr.value(), count=storage_size
+                    )
+                return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
-        self._apply_mut_to_active_components(copy_component)
+            self._apply_mut_to_active_components(copy_component)
 
     @always_inline
     def __len__(self) -> Int:
@@ -259,24 +277,27 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The current size of the component storage.
         """
-        return self._size
+        with Zone(function_name="_ComponentStorage.__len__()"):
+            return self._size
 
     @always_inline
     def __del__(deinit self):
         """Destroys and frees all active component buffers."""
 
-        @always_inline
-        def free_component_storage[
-            T: ComponentType, id: ComponentId
-        ](
-            storage_size: Int,
-            storage_capacity: Int,
-            comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
-        ):
-            destroy_n(comp_ptr, count=storage_size)
-            comp_ptr.free()
+        with Zone(function_name="_ComponentStorage.__del__()"):
 
-        self._apply_to_active_components(free_component_storage)
+            @always_inline
+            def free_component_storage[
+                T: ComponentType, id: ComponentId
+            ](
+                storage_size: Int,
+                storage_capacity: Int,
+                comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
+            ):
+                destroy_n(comp_ptr, count=storage_size)
+                comp_ptr.free()
+
+            self._apply_to_active_components(free_component_storage)
 
     def shallow_copy(self, out new_storage: Self):
         """Shallow-copies another component storage instance.
@@ -284,19 +305,20 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             A shallow copy of the component storage.
         """
-        # Initialize with an empty active mask to avoid constructing a temporary
-        # storage whose active components intentionally have empty pointers.
-        new_storage = Self(
-            active_component_mask=BitMask(),
-            capacity=0,
-        )
-        new_storage._capacity = self._capacity
-        new_storage._size = self._size
-        new_storage._active_component_mask = self._active_component_mask
-        comptime assert AllCopyable[
-            *Self.ComponentTypes.map[Self._PointerMapper]()
-        ]
-        new_storage._data = self._data.copy()
+        with Zone(
+            function_name=(
+                "_ComponentStorage.shallow_copy(out new_storage: Self)"
+            )
+        ):
+            # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
+            new_storage = Self(active_component_mask=BitMask(), capacity=0)
+            new_storage._capacity = self._capacity
+            new_storage._size = self._size
+            new_storage._active_component_mask = self._active_component_mask
+            comptime assert AllCopyable[
+                *Self.ComponentTypes.map[Self._PointerMapper]()
+            ]
+            new_storage._data = self._data.copy()
 
     def _unsafe_init_components(mut self, read init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
@@ -313,23 +335,30 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             Only active components in this storage are initialized.
         """
 
-        def init_component_ptr[
-            T: ComponentType, id: ComponentId
-        ](
-            storage_size: Int,
-            storage_capacity: Int,
-            comp_ptr: Self.ComponentPointer[T],
-        ) {read} -> Self.ComponentPointer[T]:
-            if init_component_mask.get(id):
-                if storage_capacity > 0:
-                    return rebind[Self.ComponentPointer[T]](
-                        alloc[T](storage_capacity)
-                    )
-                return None
-            else:
-                return comp_ptr
+        with Zone(
+            function_name=(
+                "_ComponentStorage._unsafe_init_components(read"
+                " init_component_mask: BitMask)"
+            )
+        ):
 
-        self._apply_mut_to_active_components(init_component_ptr)
+            def init_component_ptr[
+                T: ComponentType, id: ComponentId
+            ](
+                storage_size: Int,
+                storage_capacity: Int,
+                comp_ptr: Self.ComponentPointer[T],
+            ) {read} -> Self.ComponentPointer[T]:
+                if init_component_mask.get(id):
+                    if storage_capacity > 0:
+                        return rebind[Self.ComponentPointer[T]](
+                            alloc[T](storage_capacity)
+                        )
+                    return None
+                else:
+                    return comp_ptr
+
+            self._apply_mut_to_active_components(init_component_ptr)
 
     @always_inline
     def get_component_count(self) -> Int:
@@ -338,7 +367,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The number of active component types.
         """
-        return self._active_component_mask.total_bits_set()
+        with Zone(function_name="_ComponentStorage.get_component_count()"):
+            return self._active_component_mask.total_bits_set()
 
     @always_inline
     def add_entity(mut self) -> Int:
@@ -347,11 +377,12 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             The index of the newly added entity.
         """
-        if self._size == self._capacity:
-            self.reserve(max(self._capacity * 2, 8))
-        var idx = self._size
-        self._size += 1
-        return idx
+        with Zone(function_name="_ComponentStorage.add_entity()"):
+            if self._size == self._capacity:
+                self.reserve(max(self._capacity * 2, 8))
+            var idx = self._size
+            self._size += 1
+            return idx
 
     @always_inline
     def clear(mut self):
@@ -359,7 +390,8 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Note: does not free any memory.
         """
-        self._size = 0
+        with Zone(function_name="_ComponentStorage.clear()"):
+            self._size = 0
 
     @always_inline
     def reserve(mut self, new_capacity: Int):
@@ -374,36 +406,37 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             new_capacity: The minimum required capacity. The actual allocated capacity
                          will be `next_power_of_two(new_capacity)` to maintain power-of-2 growth.
         """
-        debug_assert(
-            0 < new_capacity, "New capacity must be greater than zero."
-        )
+        with Zone(function_name="_ComponentStorage.reserve(new_capacity: Int)"):
+            debug_assert(
+                0 < new_capacity, "New capacity must be greater than zero."
+            )
 
-        if new_capacity <= self._capacity:
-            return
+            if new_capacity <= self._capacity:
+                return
 
-        var new_pow2_capacity = next_power_of_two(new_capacity)
-        var old_capacity = self._capacity
+            var new_pow2_capacity = next_power_of_two(new_capacity)
+            var old_capacity = self._capacity
 
-        @always_inline
-        def resize_component_storage[
-            T: ComponentType, id: ComponentId
-        ](
-            storage_size: Int,
-            storage_capacity: Int,
-            old_ptr: Self.ComponentPointer[T],
-        ) {read} -> Self.ComponentPointer[T]:
-            var new_ptr = alloc[T](new_pow2_capacity)
-            if storage_size > 0:
-                uninit_move_n[overlapping=False](
-                    dest=new_ptr, src=old_ptr.value(), count=storage_size
-                )
-            old_ptr.value().free()
-            return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
+            @always_inline
+            def resize_component_storage[
+                T: ComponentType, id: ComponentId
+            ](
+                storage_size: Int,
+                storage_capacity: Int,
+                old_ptr: Self.ComponentPointer[T],
+            ) {read} -> Self.ComponentPointer[T]:
+                var new_ptr = alloc[T](new_pow2_capacity)
+                if storage_size > 0:
+                    uninit_move_n[overlapping=False](
+                        dest=new_ptr, src=old_ptr.value(), count=storage_size
+                    )
+                old_ptr.value().free()
+                return rebind[Self.ComponentPointer[T]](Optional(new_ptr))
 
-        if old_capacity > 0 or self._size == 0:
-            self._apply_mut_to_active_components(resize_component_storage)
+            if old_capacity > 0 or self._size == 0:
+                self._apply_mut_to_active_components(resize_component_storage)
 
-        self._capacity = new_pow2_capacity
+            self._capacity = new_pow2_capacity
 
     @always_inline
     def reserve(mut self, *, add: Int):
@@ -414,11 +447,12 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             add: The minimum number of additional entities to reserve capacity for.
         """
 
-        debug_assert(
-            0 <= add, "Amount of additional entities must be non-negative"
-        )
+        with Zone(function_name="_ComponentStorage.reserve(add: Int)"):
+            debug_assert(
+                0 <= add, "Amount of additional entities must be non-negative"
+            )
 
-        self.reserve(self._size + add)
+            self.reserve(self._size + add)
 
     @always_inline
     def swap_remove_entity(mut self, remove_idx: Int) -> Bool:
@@ -432,30 +466,35 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             Whether a swap was performed (i.e. idx was not the last entity).
         """
-        _assert_index_in_bounds(remove_idx, self._size)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.swap_remove_entity(remove_idx: Int)"
+            )
+        ):
+            _assert_index_in_bounds(remove_idx, self._size)
 
-        self._size -= 1
+            self._size -= 1
 
-        need_swap = remove_idx != self._size
+            need_swap = remove_idx != self._size
 
-        @always_inline
-        def swap_component_data[
-            T: ComponentType, id: ComponentId
-        ](
-            storage_size: Int,
-            storage_capacity: Int,
-            comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
-        ) {read}:
-            destroy_n(comp_ptr + remove_idx, count=1)
-            if need_swap:
-                uninit_move_n[overlapping=False](
-                    dest=comp_ptr + remove_idx,
-                    src=comp_ptr + storage_size,
-                    count=1,
-                )
+            @always_inline
+            def swap_component_data[
+                T: ComponentType, id: ComponentId
+            ](
+                storage_size: Int,
+                storage_capacity: Int,
+                comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
+            ) {read}:
+                destroy_n(comp_ptr + remove_idx, count=1)
+                if need_swap:
+                    uninit_move_n[overlapping=False](
+                        dest=comp_ptr + remove_idx,
+                        src=comp_ptr + storage_size,
+                        count=1,
+                    )
 
-        self._apply_to_active_components(swap_component_data)
-        return need_swap
+            self._apply_to_active_components(swap_component_data)
+            return need_swap
 
     @always_inline
     def get_component_ptr[
@@ -472,22 +511,34 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Raises:
             LarecsError: If the component is not contained in the storage.
         """
-        comptime assert Self.component_manager._ContainsComponent[
-            T
-        ], "Component type not in component manager"
-        comptime id = Self.component_manager.get_id[T]()
+        with Zone(
+            function_name=(
+                "_ComponentStorage.get_component_ptr[T: ComponentType]()"
+            )
+        ):
+            comptime assert Self.component_manager._ContainsComponent[
+                T
+            ], "Component type not in component manager"
+            comptime id = Self.component_manager.get_id[T]()
 
-        self.assert_has_components[T]()
+            self.assert_has_components[T]()
 
-        return rebind[Self.ComponentPointer[T]](self._data[id]).value()
+            return rebind[Self.ComponentPointer[T]](self._data[id]).value()
 
     @always_inline
     def has_components[*Ts: ComponentType](self) -> Bool:
         """Returns whether the storage contains all the given component types.
         """
-        Self.component_manager.assert_valid_components[*Ts]()
-        comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
-        return self._active_component_mask.contains(comp_mask)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.has_components[*Ts: ComponentType]()"
+            )
+        ):
+            Self.component_manager.assert_valid_components[*Ts]()
+            comptime comp_mask = BitMask(
+                Self.component_manager.get_id_arr[*Ts]()
+            )
+            return self._active_component_mask.contains(comp_mask)
 
     @always_inline
     def assert_has_components[*Ts: ComponentType](self) raises LarecsError:
@@ -524,30 +575,37 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Raises:
             LarecsError: If at least one of the components is not present.
         """
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Component types must be unique."
-        _assert_index_in_bounds(entity_idx, self._size)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.set_components[*Ts:"
+                " ComponentType](entity_idx: Int, var *components: *Ts)"
+            )
+        ):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Component types must be unique."
+            _assert_index_in_bounds(entity_idx, self._size)
 
-        Self.component_manager.assert_valid_components[*Ts]()
-        self.assert_has_components[*Ts]()
+            Self.component_manager.assert_valid_components[*Ts]()
+            self.assert_has_components[*Ts]()
 
-        @always_inline
-        def set_component[
-            comp_id: Int
-        ](var component: Ts[comp_id]) capturing -> None:
-            comptime T = Ts[comp_id]
-            try:
-                base_comp_ptr = self.get_component_ptr[T]()
-            except:
-                return assert_unreachable(
-                    "Not reachable as component presence was asserted before."
-                )
-            entity_comp_ptr = base_comp_ptr + entity_idx
-            destroy_n(entity_comp_ptr, 1)
-            entity_comp_ptr.init_pointee_move(component^)
+            @always_inline
+            def set_component[
+                comp_id: Int
+            ](var component: Ts[comp_id]) capturing -> None:
+                comptime T = Ts[comp_id]
+                try:
+                    base_comp_ptr = self.get_component_ptr[T]()
+                except:
+                    return assert_unreachable(
+                        "Not reachable as component presence was asserted"
+                        " before."
+                    )
+                entity_comp_ptr = base_comp_ptr + entity_idx
+                destroy_n(entity_comp_ptr, 1)
+                entity_comp_ptr.init_pointee_move(component^)
 
-        (components^).consume_elements[set_component]()
+            (components^).consume_elements[set_component]()
 
     @always_inline
     def init_components[
@@ -613,19 +671,26 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Raises:
             LarecsError: If the component is not present in the storage.
         """
-        _assert_range_in_bounds(to_idx, count, self._size)
-        _assert_range_in_bounds(from_idx, count, storage._size)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.copy_component_from[T:"
+                " ComponentType](to_idx: Int, storage: _ComponentStorage,"
+                " count: Int, from_idx: Int)"
+            )
+        ):
+            _assert_range_in_bounds(to_idx, count, self._size)
+            _assert_range_in_bounds(from_idx, count, storage._size)
 
-        if count == 0:
-            return
+            if count == 0:
+                return
 
-        destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+            destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
 
-        uninit_copy_n[overlapping=False](
-            dest=self.get_component_ptr[T]() + to_idx,
-            src=storage.get_component_ptr[T]() + from_idx,
-            count=count,
-        )
+            uninit_copy_n[overlapping=False](
+                dest=self.get_component_ptr[T]() + to_idx,
+                src=storage.get_component_ptr[T]() + from_idx,
+                count=count,
+            )
 
     @always_inline
     def copy_shared_components_from_unsafe[
@@ -653,12 +718,18 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             The source and destination storages must be distinct and their
             shared component columns must have identical layouts.
         """
-        debug_assert(0 <= count, "Count must be non-negative.")
-        _assert_range_in_bounds(to_idx, count, self._size)
-        _assert_range_in_bounds(from_idx, count, source[]._size)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.copy_shared_components_from_unsafe(to_idx:"
+                " Int, source: UnsafePointer, count: Int, from_idx: Int)"
+            )
+        ):
+            debug_assert(0 <= count, "Count must be non-negative.")
+            _assert_range_in_bounds(to_idx, count, self._size)
+            _assert_range_in_bounds(from_idx, count, source[]._size)
 
-        if count == 0:
-            return
+            if count == 0:
+                return
 
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
@@ -766,7 +837,7 @@ struct Archetype[
         Returns:
             The zero archetype.
         """
-        with TraceGuard(name="Archetype.__init__ zero"):
+        with Zone(function_name="Archetype.__init__()"):
             self = Self.__init__(0, BitMask(), 0)
 
     @always_inline
@@ -786,7 +857,12 @@ struct Archetype[
         Returns:
             The archetype based on the given mask.
         """
-        with TraceGuard(name="Archetype.__init__ mask"):
+        with Zone(
+            function_name=(
+                "Archetype.__init__(node_index: Int, mask: BitMask, capacity:"
+                " Int)"
+            )
+        ):
             debug_assert(
                 0 <= capacity, "Capacity must be greater or equal to zero."
             )
@@ -808,7 +884,7 @@ struct Archetype[
         Args:
             copy: The archetype to copy from.
         """
-        with TraceGuard(name="Archetype.__init__ copy"):
+        with Zone(function_name="Archetype.__init__(copy: Self)"):
             # Copy the attributes that can be trivially
             # copied via a simple assignment
             self._entities = copy._entities.copy()
@@ -825,7 +901,7 @@ struct Archetype[
         Returns:
             The number of entities in the archetype.
         """
-        with TraceGuard(name="Archetype.__len__"):
+        with Zone(function_name="Archetype.__len__()"):
             return len(self._storage)
 
     @always_inline
@@ -835,7 +911,7 @@ struct Archetype[
         Returns:
             Whether the archetype contains entities.
         """
-        with TraceGuard(name="Archetype.__bool__"):
+        with Zone(function_name="Archetype.__bool__()"):
             return Bool(self._entities)
 
     @always_inline
@@ -845,7 +921,7 @@ struct Archetype[
         Returns:
             The index of the archetype's node in the archetype graph.
         """
-        with TraceGuard(name="Archetype.get_node_index"):
+        with Zone(function_name="Archetype.get_node_index()"):
             return self._node_index
 
     @always_inline
@@ -855,7 +931,7 @@ struct Archetype[
         Returns:
             The mask of the archetype's node in the archetype graph.
         """
-        with TraceGuard(name="Archetype.get_mask"):
+        with Zone(function_name="Archetype.get_mask()"):
             return self._mask
 
     @always_inline
@@ -866,7 +942,7 @@ struct Archetype[
         the frequency of memory reallocations while maintaining reasonable memory usage.
         This follows standard container growth patterns optimized for amortized performance.
         """
-        with TraceGuard(name="Archetype.reserve"):
+        with Zone(function_name="Archetype.reserve()"):
             self.reserve(max(self._storage._capacity * 2, 8))
 
     @always_inline
@@ -894,7 +970,7 @@ struct Archetype[
         archetype.reserve(64)   # Actually reserves 64
         ```
         """
-        with TraceGuard(name="Archetype.reserve capacity"):
+        with Zone(function_name="Archetype.reserve(new_capacity: Int)"):
             self._storage.reserve(new_capacity)
             self._entities.reserve(self._storage._capacity)
 
@@ -908,7 +984,7 @@ struct Archetype[
         Returns:
             A reference to the entity at the given index.
         """
-        with TraceGuard(name="Archetype.get_entity"):
+        with Zone(function_name="Archetype.get_entity(idx: Int)"):
             _assert_index_in_bounds(idx, self._storage._size)
 
             return self._entities[idx]
@@ -929,7 +1005,12 @@ struct Archetype[
         Returns:
             An accessor for the entity at the given index.
         """
-        with TraceGuard(name="Archetype.get_entity_accessor"):
+        with Zone(
+            function_name=(
+                "Archetype.get_entity_accessor[mut: Bool](idx: Int, out"
+                " accessor: Self.EntityAccessor)"
+            )
+        ):
             _assert_index_in_bounds(idx, self._storage._size)
 
             accessor = Self.EntityAccessor(
@@ -955,7 +1036,11 @@ struct Archetype[
         Returns:
             A reference to the component.
         """
-        with TraceGuard(name="Archetype.get_component"):
+        with Zone(
+            function_name=(
+                "Archetype.get_component[T: ComponentType](entity_idx: Int)"
+            )
+        ):
             _assert_index_in_bounds(entity_idx, self._storage._size)
 
             return self._storage.get_component_ptr[T]()[entity_idx]
@@ -976,7 +1061,12 @@ struct Archetype[
         Raises:
             LarecsError: If at least one of the components is not present.
         """
-        with TraceGuard(name="Archetype.set_components"):
+        with Zone(
+            function_name=(
+                "Archetype.set_components[*Ts: ComponentType](entity_idx: Int,"
+                " var *components: *Ts)"
+            )
+        ):
             self._storage.set_components[*Ts](entity_idx, *components^)
 
     @always_inline
@@ -995,7 +1085,12 @@ struct Archetype[
         Raises:
             LarecsError: If at least one component is not present.
         """
-        with TraceGuard(name="Archetype.init_components"):
+        with Zone(
+            function_name=(
+                "Archetype.init_components[*Ts: ComponentType](entity_idx: Int,"
+                " var *components: *Ts)"
+            )
+        ):
             self._storage.init_components[*Ts](entity_idx, *components^)
 
     @always_inline
@@ -1015,7 +1110,12 @@ struct Archetype[
         Raises:
             LarecsError: If the component is not present.
         """
-        with TraceGuard(name="Archetype.set_component_range"):
+        with Zone(
+            function_name=(
+                "Archetype.set_component_range[T:"
+                " ComponentType](start_entity_idx: Int, count: Int, value: T)"
+            )
+        ):
             _assert_range_in_bounds(
                 start_entity_idx, count, self._storage._size
             )
@@ -1051,7 +1151,12 @@ struct Archetype[
             LarecsError: If the component is not present.
         """
 
-        with TraceGuard(name="Archetype.copy_component_from"):
+        with Zone(
+            function_name=(
+                "Archetype.copy_component_from[T: ComponentType](to_idx: Int,"
+                " archetype: Archetype, count: Int, from_idx: Int)"
+            )
+        ):
             self._storage.copy_component_from[T](
                 to_idx, archetype._storage, count, from_idx
             )
@@ -1063,7 +1168,7 @@ struct Archetype[
         Returns:
             A reference to the entities in the archetype.
         """
-        with TraceGuard(name="Archetype.get_entities"):
+        with Zone(function_name="Archetype.get_entities()"):
             return self._entities
 
     @always_inline
@@ -1076,7 +1181,9 @@ struct Archetype[
         Returns:
             Whether the archetype contains the component.
         """
-        with TraceGuard(name="Archetype.has_components"):
+        with Zone(
+            function_name="Archetype.has_components[*Ts: ComponentType]()"
+        ):
             return self._storage.has_components[*Ts]()
 
     @always_inline
@@ -1089,7 +1196,11 @@ struct Archetype[
         Raises:
             LarecsError: If the archetype does not contain the component.
         """
-        with TraceGuard(name="Archetype.assert_has_components"):
+        with Zone(
+            function_name=(
+                "Archetype.assert_has_components[*Ts: ComponentType]()"
+            )
+        ):
             self._storage.assert_has_components[*Ts]()
 
     @always_inline
@@ -1105,7 +1216,7 @@ struct Archetype[
         Returns:
             Whether a swap was necessary.
         """
-        with TraceGuard(name="Archetype.remove"):
+        with Zone(function_name="Archetype.remove(idx: Int)"):
             var swapped = self._storage.swap_remove_entity(idx)
 
             if swapped:
@@ -1121,7 +1232,7 @@ struct Archetype[
 
         Note: does not free any memory.
         """
-        with TraceGuard(name="Archetype.clear"):
+        with Zone(function_name="Archetype.clear()"):
             self._entities.clear()
             self._storage.clear()
 
@@ -1135,7 +1246,7 @@ struct Archetype[
         Returns:
             The index of the entity in the archetype.
         """
-        with TraceGuard(name="Archetype.add"):
+        with Zone(function_name="Archetype.add(entity: Entity)"):
             debug_assert(
                 len(self._entities) == len(self._storage),
                 "`Archetype._entities` and `Archetype._storage` size mismatch.",
@@ -1174,7 +1285,12 @@ struct Archetype[
             `[return, return + count)` must be valid for the source and
             destination storages.
         """
-        with TraceGuard(name="Archetype.extend_from_archetype_unsafe"):
+        with Zone(
+            function_name=(
+                "Archetype.extend_from_archetype_unsafe(source: UnsafePointer,"
+                " count: Int, from_idx: Int)"
+            )
+        ):
             debug_assert(0 <= count, "Count must be non-negative.")
             debug_assert(
                 UnsafePointer(to=self) != source,
@@ -1236,7 +1352,11 @@ struct Archetype[
             archetype. The other new entities are at consecutive
             `count` indices.
         """
-        with TraceGuard(name="Archetype.extend"):
+        with Zone(
+            function_name=(
+                "Archetype.extend(count: Int, mut entity_pool: EntityPool)"
+            )
+        ):
             debug_assert(count > 0, "Count must be positive.")
 
             start_index = self._storage._size

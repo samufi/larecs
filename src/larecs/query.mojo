@@ -1,5 +1,7 @@
 from std.utils.type_functions import ConditionalType
 
+from tracy import Zone
+
 from .entity import Entity
 from .bitmask import BitMask
 from .component import (
@@ -12,7 +14,6 @@ from .world import World
 from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
-from ._tracing import TraceGuard
 from .error import LarecsError, WorldError
 
 
@@ -98,7 +99,13 @@ struct Query[
             mask: The mask of the components to iterate over.
             without_mask: The mask for components to exclude.
         """
-        with TraceGuard(name="Query.__init__"):
+        with Zone(
+            function_name=(
+                "Query.__init__(archetypes: Pointer, lock_ptr: Pointer, var"
+                " mask: BitMask, var without_mask: StaticOptional[BitMask,"
+                " Self.has_without_mask])"
+            )
+        ):
             self._archetypes = archetypes
             self._lock_ptr = lock_ptr
             self._info = QueryInfo[has_without_mask=Self.has_without_mask](
@@ -122,7 +129,12 @@ struct Query[
             lock_ptr: A pointer to the world's lock manager.
             info: The query information to use for matching.
         """
-        with TraceGuard(name="Query.__init__ info"):
+        with Zone(
+            function_name=(
+                "Query.__init__(archetypes: Pointer, lock_ptr: Pointer, var"
+                " info: QueryInfo)"
+            )
+        ):
             self._archetypes = archetypes
             self._lock_ptr = lock_ptr
             self._info = info^
@@ -134,7 +146,7 @@ struct Query[
         Args:
             copy: The query to copy.
         """
-        with TraceGuard(name="Query.__init__ copy"):
+        with Zone(function_name="Query.__init__(copy: Self)"):
             self._archetypes = copy._archetypes
             self._lock_ptr = copy._lock_ptr
             self._info = copy._info.copy()
@@ -147,7 +159,7 @@ struct Query[
         If you intend to iterate anyway, get the iterator with [.Query.__iter__],
         and call `len` on it, instead.
         """
-        with TraceGuard(name="Query.__len__"):
+        with Zone(function_name="Query.__len__(out size: Int)"):
             size = 0
             for i in range(len(self._archetypes[])):
                 archetype = Pointer(to=self._archetypes[].unsafe_get(i))
@@ -173,7 +185,7 @@ struct Query[
         Returns:
             An iterator over all entities that match the query.
         """
-        with TraceGuard(name="Query.__iter__"):
+        with Zone(function_name="Query.__iter__(out iterator: _WorldIterator)"):
             iterator = {
                 self._archetypes,
                 self._info^,
@@ -208,7 +220,12 @@ struct Query[
         Returns:
             The query, excluding the given components.
         """
-        with TraceGuard(name="Query.without"):
+        with Zone(
+            function_name=(
+                "Query.without[*Ts: ComponentType](out query:"
+                " Self.QueryWithWithout)"
+            )
+        ):
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Duplicate component types in query are not allowed."
@@ -244,7 +261,9 @@ struct Query[
         Returns:
             The query, made exclusive.
         """
-        with TraceGuard(name="Query.exclusive"):
+        with Zone(
+            function_name="Query.exclusive(out query: Self.QueryWithWithout)"
+        ):
             query = Self.QueryWithWithout(
                 self._archetypes, self._lock_ptr, self._info^.exclusive()
             )
@@ -283,7 +302,7 @@ struct QueryInfo[
         Args:
             query: The query the information should be taken from.
         """
-        with TraceGuard(name="QueryInfo.__init__"):
+        with Zone(function_name="QueryInfo.__init__(query: Query)"):
             self.mask = query._info.mask
             self.without_mask = query._info.without_mask.copy()
 
@@ -299,7 +318,12 @@ struct QueryInfo[
             mask: The mask of the components to include.
             without_mask: The optional mask of the components to exclude.
         """
-        with TraceGuard(name="QueryInfo.__init__ mask"):
+        with Zone(
+            function_name=(
+                "QueryInfo.__init__(mask: BitMask, without_mask:"
+                " StaticOptional[BitMask, Self.has_without_mask])"
+            )
+        ):
             self.mask = mask
 
             comptime if Self.has_without_mask:
@@ -314,7 +338,7 @@ struct QueryInfo[
         Args:
             copy: The query to copy.
         """
-        with TraceGuard(name="QueryInfo.__init__ copy"):
+        with Zone(function_name="QueryInfo.__init__(copy: Self)"):
             self.mask = copy.mask
             self.without_mask = copy.without_mask.copy()
 
@@ -333,7 +357,12 @@ struct QueryInfo[
         Returns:
             Query information with an active exclusion mask.
         """
-        with TraceGuard(name="QueryInfo.without"):
+        with Zone(
+            function_name=(
+                "QueryInfo.without(var without_mask: BitMask, out query_info:"
+                " Self.QueryInfoWithWithout)"
+            )
+        ):
             comptime if Self.has_without_mask:
                 self.without_mask[] |= without_mask
                 query_info = Self.QueryInfoWithWithout(
@@ -352,7 +381,11 @@ struct QueryInfo[
         Returns:
             Query information with an exclusion mask for all non-included components.
         """
-        with TraceGuard(name="QueryInfo.exclusive"):
+        with Zone(
+            function_name=(
+                "QueryInfo.exclusive(out query_info: Self.QueryInfoWithWithout)"
+            )
+        ):
             comptime if Self.has_without_mask:
                 self.without_mask = ~self.mask
                 query_info = Self.QueryInfoWithWithout(
@@ -371,7 +404,11 @@ struct QueryInfo[
         Returns:
             Whether the archetype matches the query.
         """
-        with TraceGuard(name="QueryInfo.matches"):
+        with Zone(
+            function_name=(
+                "QueryInfo.matches(archetype_mask: BitMask, out is_valid: Bool)"
+            )
+        ):
             is_valid = archetype_mask.contains(self.mask)
 
             comptime if Self.has_without_mask:
@@ -413,7 +450,13 @@ struct _ArchetypeIterator[
             archetypes: a pointer to the world's archetypes.
             archetype_indices: The indices of the archetypes in the list that are being iterated over.
         """
-        with TraceGuard(name="_ArchetypeIterator.__init__"):
+        with Zone(
+            function_name=(
+                "_ArchetypeIterator.__init__(archetypes:"
+                " Pointer[List[Self.Archetype]], var archetype_indices:"
+                " List[Int])"
+            )
+        ):
             self._archetypes = archetypes
             self._archetype_indices = archetype_indices^
             self._index = 0
@@ -426,14 +469,20 @@ struct _ArchetypeIterator[
         """
         Creates an archetype iterator from a list of archetypes and a query info.
         """
-        self._archetypes = archetypes
-        self._archetype_indices = List[Int]()
-        self._index = 0
+        with Zone(
+            function_name=(
+                "_ArchetypeIterator.__init__(archetypes:"
+                " Pointer[List[Self.Archetype]], var query_info: QueryInfo)"
+            )
+        ):
+            self._archetypes = archetypes
+            self._archetype_indices = List[Int]()
+            self._index = 0
 
-        for i in range(len(self._archetypes[])):
-            ref archetype = self._archetypes[].unsafe_get(i)
-            if archetype and query_info.matches(archetype.get_mask()):
-                self._archetype_indices.append(i)
+            for i in range(len(self._archetypes[])):
+                ref archetype = self._archetypes[].unsafe_get(i)
+                if archetype and query_info.matches(archetype.get_mask()):
+                    self._archetype_indices.append(i)
 
     @doc_hidden
     @always_inline
@@ -444,7 +493,7 @@ struct _ArchetypeIterator[
         Args:
             copy: The iterator to copy.
         """
-        with TraceGuard(name="_ArchetypeIterator.__init__ copy"):
+        with Zone(function_name="_ArchetypeIterator.__init__(copy: Self)"):
             self._archetypes = copy._archetypes
             self._archetype_indices = copy._archetype_indices.copy()
             self._index = copy._index
@@ -457,7 +506,9 @@ struct _ArchetypeIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_ArchetypeIterator.__iter__"):
+        with Zone(
+            function_name="_ArchetypeIterator.__iter__(out iterator: Self)"
+        ):
             iterator = self^
 
     @always_inline
@@ -468,7 +519,11 @@ struct _ArchetypeIterator[
         Returns:
             The next archetype as a pointer.
         """
-        with TraceGuard(name="_ArchetypeIterator.__next__"):
+        with Zone(
+            function_name=(
+                "_ArchetypeIterator.__next__(out archetype: Self.Element)"
+            )
+        ):
             if not self._has_next():
                 raise StopIteration()
             archetype = Pointer(
@@ -482,7 +537,7 @@ struct _ArchetypeIterator[
         """
         Returns the number of archetypes remaining in the iterator.
         """
-        with TraceGuard(name="_ArchetypeIterator.__len__"):
+        with Zone(function_name="_ArchetypeIterator.__len__()"):
             return len(self._archetype_indices) - self._index
 
     @always_inline
@@ -493,7 +548,7 @@ struct _ArchetypeIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_ArchetypeIterator._has_next"):
+        with Zone(function_name="_ArchetypeIterator._has_next()"):
             return self._index < len(self._archetype_indices)
 
     @always_inline
@@ -504,7 +559,7 @@ struct _ArchetypeIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_ArchetypeIterator.__bool__"):
+        with Zone(function_name="_ArchetypeIterator.__bool__()"):
             return self._has_next()
 
 
@@ -545,7 +600,12 @@ struct _ArchetypeEntityIterator[
             archetype: A pointer to the archetype to iterate over.
             _index: The index of the entity to start iterating from.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator.__init__"):
+        with Zone(
+            function_name=(
+                "_ArchetypeEntityIterator.__init__(archetype: Pointer, _index:"
+                " Int)"
+            )
+        ):
             self.archetype = archetype
             self._index = _index
 
@@ -556,7 +616,7 @@ struct _ArchetypeEntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator._has_next"):
+        with Zone(function_name="_ArchetypeEntityIterator._has_next()"):
             return self._index < len(self.archetype[])
 
     def __bool__(self) -> Bool:
@@ -566,14 +626,14 @@ struct _ArchetypeEntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator.__bool__"):
+        with Zone(function_name="_ArchetypeEntityIterator.__bool__()"):
             return self._has_next()
 
     def __len__(self) -> Int:
         """
         Returns the number of entities remaining in the iterator.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator.__len__"):
+        with Zone(function_name="_ArchetypeEntityIterator.__len__()"):
             return len(self.archetype[]) - self._index
 
     def __iter__(var self, out iterator: Self):
@@ -583,7 +643,11 @@ struct _ArchetypeEntityIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator.__iter__"):
+        with Zone(
+            function_name=(
+                "_ArchetypeEntityIterator.__iter__(out iterator: Self)"
+            )
+        ):
             iterator = self^
 
     def __next__(mut self, out accessor: Self.Element) raises StopIteration:
@@ -596,7 +660,11 @@ struct _ArchetypeEntityIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
-        with TraceGuard(name="_ArchetypeEntityIterator.__next__"):
+        with Zone(
+            function_name=(
+                "_ArchetypeEntityIterator.__next__(out accessor: Self.Element)"
+            )
+        ):
             if not self._has_next():
                 raise StopIteration()
             accessor = self.archetype[].get_entity_accessor(
@@ -676,7 +744,13 @@ struct _WorldEntityIterator[
         Raises:
             LarecsError: If the lock cannot be acquired.
         """
-        with TraceGuard(name="_WorldEntityIterator.__init__"):
+        with Zone(
+            function_name=(
+                "_WorldEntityIterator.__init__(var archetype_iter:"
+                " Self.ArchetypeIterator, lock_ptr: Pointer, var start_indices:"
+                " Self.StartIndices)"
+            )
+        ):
             self._lock_ptr = lock_ptr
             try:
                 self._lock = self._lock_ptr[].lock()
@@ -710,7 +784,13 @@ struct _WorldEntityIterator[
         Raises:
             LarecsError: If the lock cannot be acquired.
         """
-        with TraceGuard(name="_WorldEntityIterator.__init__ query"):
+        with Zone(
+            function_name=(
+                "_WorldEntityIterator.__init__(archetypes:"
+                " Pointer[List[Self.Archetype]], var query_info: QueryInfo,"
+                " lock_ptr: Pointer, var start_indices: Self.StartIndices)"
+            )
+        ):
             self._lock_ptr = lock_ptr
             try:
                 self._lock = self._lock_ptr[].lock()
@@ -729,7 +809,7 @@ struct _WorldEntityIterator[
         """
         Releases the lock.
         """
-        with TraceGuard(name="_WorldEntityIterator.__del__"):
+        with Zone(function_name="_WorldEntityIterator.__del__()"):
             try:
                 self._lock_ptr[].unlock(self._lock)
             except _:
@@ -746,7 +826,9 @@ struct _WorldEntityIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_WorldEntityIterator.__iter__"):
+        with Zone(
+            function_name="_WorldEntityIterator.__iter__(out iterator: Self)"
+        ):
             iterator = self^
 
     @always_inline
@@ -760,7 +842,11 @@ struct _WorldEntityIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
-        with TraceGuard(name="_WorldEntityIterator.__next__"):
+        with Zone(
+            function_name=(
+                "_WorldEntityIterator.__next__(out accessor: Self.Element)"
+            )
+        ):
             if (
                 not self._entity_iterator
                 or not self._entity_iterator.unsafe_value()
@@ -791,7 +877,7 @@ struct _WorldEntityIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
-        with TraceGuard(name="_WorldEntityIterator.__len__"):
+        with Zone(function_name="_WorldEntityIterator.__len__(out size: Int)"):
             size = 0
 
             if not self._has_next():
@@ -824,7 +910,7 @@ struct _WorldEntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_WorldEntityIterator._has_next"):
+        with Zone(function_name="_WorldEntityIterator._has_next()"):
             if self._entity_iterator and Bool(
                 self._entity_iterator.unsafe_value()
             ):
@@ -843,5 +929,5 @@ struct _WorldEntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_WorldEntityIterator.__bool__"):
+        with Zone(function_name="_WorldEntityIterator.__bool__()"):
             return self._has_next()

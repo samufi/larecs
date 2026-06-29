@@ -1,6 +1,8 @@
 from std.memory import uninit_copy_n
 from std.collections.check_bounds import check_bounds
 
+from tracy import Zone
+
 
 # FIXME: This is needed because of this [bug](https://github.com/modular/modular/issues/6636). Remove this and use `check_bounds` directly once the bug is fixed.
 @always_inline
@@ -11,8 +13,9 @@ def _assert_index_in_bounds(index: Int, size: Int):
         index: The candidate index to validate.
         size: The logical number of available elements.
     """
-    # assert 0 <= index and index < size, "Index out of bounds"
-    check_bounds(index, size)
+    with Zone(function_name="_utils._assert_index_in_bounds(index: Int, size: Int)"):
+        # assert 0 <= index and index < size, "Index out of bounds"
+        check_bounds(index, size)
 
 
 @always_inline
@@ -69,10 +72,11 @@ def _assert_range_in_bounds(start_index: Int, count: Int, size: Int):
         count: The number of elements in the range.
         size: The logical number of available elements.
     """
-    debug_assert(0 <= count, "Count must be non-negative.")
+    with Zone(function_name="_utils._assert_range_in_bounds(start_index: Int, count: Int, size: Int)"):
+        debug_assert(0 <= count, "Count must be non-negative.")
 
-    if count == 0:
-        return
+        if count == 0:
+            return
 
-    check_bounds(start_index, size)
-    check_bounds(start_index + count - 1, size)
+        check_bounds(start_index, size)
+        check_bounds(start_index + count - 1, size)

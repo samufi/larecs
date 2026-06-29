@@ -1,6 +1,8 @@
 from std.bit import bit_reverse
 from std.hashlib import Hasher
 
+from tracy import Zone
+
 from .types import EntityId
 from .archetype import Archetype, EntityAccessor
 
@@ -47,8 +49,9 @@ struct Entity(
             id: The entity ID.
             generation: The entity generation.
         """
-        self._id = id
-        self._generation = generation
+        with Zone(function_name="Entity.__init__(id: EntityId, generation: UInt32)"):
+            self._id = id
+            self._generation = generation
 
     @implicit
     @always_inline
@@ -59,7 +62,8 @@ struct Entity(
         Args:
             accessor: The entity accessor to initialize from.
         """
-        self = accessor.get_entity()
+        with Zone(function_name="Entity.__init__(accessor: EntityAccessor)"):
+            self = accessor.get_entity()
 
     @always_inline
     def __eq__(self, other: Entity) -> Bool:
@@ -69,7 +73,8 @@ struct Entity(
         Args:
             other: The other entity to compare to.
         """
-        return self._id == other._id and self._generation == other._generation
+        with Zone(function_name="Entity.__eq__(other: Entity)"):
+            return self._id == other._id and self._generation == other._generation
 
     @always_inline
     def __ne__(self, other: Entity) -> Bool:
@@ -79,14 +84,16 @@ struct Entity(
         Args:
             other: The other entity to compare to.
         """
-        return not (self == other)
+        with Zone(function_name="Entity.__ne__(other: Entity)"):
+            return not (self == other)
 
     @always_inline
     def __bool__(self) -> Bool:
         """
         Returns whether this entity is not the zero entity.
         """
-        return self._id != 0
+        with Zone(function_name="Entity.__bool__()"):
+            return self._id != 0
 
     @deprecated(use=write_to)
     @always_inline
@@ -94,30 +101,35 @@ struct Entity(
         """
         Returns a string representation of the entity.
         """
-        return (
-            "Entity(" + String(self._id) + ", " + String(self._generation) + ")"
-        )
+        with Zone(function_name="Entity.__str__()"):
+            return (
+                "Entity(" + String(self._id) + ", " + String(self._generation) + ")"
+            )
 
     @always_inline
     def __hash__[H: Hasher](self, mut hasher: H):
         """Returns a unique hash of the entity."""
-        hasher.update(self._id)
-        hasher.update(self._generation)
+        with Zone(function_name="Entity.__hash__[H: Hasher](mut hasher: H)"):
+            hasher.update(self._id)
+            hasher.update(self._generation)
 
     @always_inline
     def get_id(self) -> EntityId:
         """Returns the entity's ID."""
-        return self._id
+        with Zone(function_name="Entity.get_id()"):
+            return self._id
 
     @always_inline
     def get_generation(self) -> UInt32:
         """Returns the entity's generation."""
-        return self._generation
+        with Zone(function_name="Entity.get_generation()"):
+            return self._generation
 
     @always_inline
     def is_zero(self) -> Bool:
         """Returns whether this entity is the reserved zero entity."""
-        return self._id == 0
+        with Zone(function_name="Entity.is_zero()"):
+            return self._id == 0
 
 
 @fieldwise_init

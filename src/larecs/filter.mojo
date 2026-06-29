@@ -1,3 +1,5 @@
+from tracy import Zone
+
 from .bitmask import _BitMask
 
 
@@ -30,9 +32,10 @@ struct MaskFilter[total_bits: Int]:
 
     def matches(self, bits: Self.bitmask) -> Bool:
         """Matches the filter against a mask."""
-        return bits.contains(self.include) and (
-            self.exclude.is_zero() or not bits.contains_any(self.exclude)
-        )
+        with Zone(function_name="MaskFilter.matches(bits: Self.bitmask)"):
+            return bits.contains(self.include) and (
+                self.exclude.is_zero() or not bits.contains_any(self.exclude)
+            )
 
 
 # # RelationFilter is a [Filter] for a [Relation] target, in addition to components.
