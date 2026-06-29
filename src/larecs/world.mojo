@@ -1577,8 +1577,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             accessor: MutableEntityAccessor
         ) raises -> None,
         //,
-        has_without_mask: Bool = False,
         *,
+        has_without_mask: Bool = False,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
     ](
@@ -1662,7 +1662,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             # Store the SIMD at the same address
             ptr.store(val)
 
-        world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
+        world.apply[operation, simd_width=simd_width_of[Float64]()](world.query[Float64]())
         ```
 
         """
