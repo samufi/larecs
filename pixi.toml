@@ -32,7 +32,7 @@ CC = "clang"
 CXX = "clang++"
 
 [target.linux-64.dependencies]
-sysroot_linux-64 = ">=2.28,<3"
+sysroot_linux-64 = ">=2.34,<3"
 
 [environments]
 test = ["test"] # An environment covering the "test" feature
