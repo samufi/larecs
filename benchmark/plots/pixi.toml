@@ -7,10 +7,11 @@ platforms = ["linux-64", "osx-arm64"]
 version = "0.4.0"
 
 [tasks]
+plots = { cmd = "mojo run -I ../../src -Xlinker -L\"$CONDA_PREFIX/lib\" -Xlinker -lmojotracy src/aos.mojo", default-environment = "default" }
 
 [dependencies]
 mojo = "==1.0.0b3.dev2026062206" # BUG: last working version until https://github.com/modular/modular/issues/6719 is resolved
 python = "==3.12"
 matplotlib = ">=3.10.0,<4"
 pandas = ">=2.2"
-mojo-tracy = ">=0.1.0"
+mojo-tracy = ">=0.2.0"

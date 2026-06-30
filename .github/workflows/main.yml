@@ -37,11 +37,9 @@ jobs:
           pixi run tests test
 
       - name: Run benchmarks
-        run: |
-          pixi run mojo -I src/ benchmark/run_benchmarks.mojo
+        run: pixi run benchmarks
 
       - name: Run examples
         run: |
           cd examples/satellites
-          pixi install --locked
-          pixi run mojo -I ../../src/ model.mojo
+          pixi run satellites
