@@ -810,9 +810,9 @@ struct _WorldEntityIterator[
         with TraceGuard(name="_WorldEntityIterator.__next__"):
             if (
                 not self._entity_iterator
-                or not self._entity_iterator.unsafe_value()._has_next()
+                or not self._entity_iterator.unsafe_value()
             ):
-                if not self._archetype_iterator._has_next():
+                if not self._archetype_iterator:
                     raise StopIteration()
 
                 comptime if Self.has_start_indices:
@@ -874,11 +874,11 @@ struct _WorldEntityIterator[
         with TraceGuard(name="_WorldEntityIterator._has_next"):
             if (
                 self._entity_iterator
-                and self._entity_iterator.unsafe_value()._has_next()
+                and Bool(self._entity_iterator.unsafe_value())
             ):
                 return True
 
-            if self._archetype_iterator._has_next():
+            if self._archetype_iterator:
                 return True
 
             return False
