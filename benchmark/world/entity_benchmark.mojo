@@ -358,7 +358,3 @@ def run_all_world_entity_benchmarks(mut bench: Bench) raises:
     prevent_inlining_add_remove_entity_5_comp()
     prevent_inlining_add_entity_1_comp()
     prevent_inlining_add_entity_5_comp()
-
-
-def main() raises:
-    run_all_world_entity_benchmarks()

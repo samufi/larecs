@@ -76,7 +76,3 @@ def run_all_world_replace_single_batch_benchmarks(mut bench: Bench) raises:
         BenchId("10^3 * replace 1 component 10^3 batch"),
     )
     prevent_inlining_replace_batch()
-
-
-def main() raises:
-    run_all_world_replace_single_batch_benchmarks()

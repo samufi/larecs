@@ -209,7 +209,3 @@ def run_all_world_access_benchmarks(mut bench: Bench) raises:
     prevent_inlining_get()
     prevent_inlining_set_1_comp()
     prevent_inlining_set_5_comp()
-
-
-def main() raises:
-    run_all_world_access_benchmarks()

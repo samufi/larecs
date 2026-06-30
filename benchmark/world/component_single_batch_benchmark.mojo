@@ -85,7 +85,3 @@ def run_all_world_component_single_batch_benchmarks(mut bench: Bench) raises:
         BenchId("10^3 * add & remove 1 component 10^3 batch"),
     )
     prevent_inlining_add_remove_batch()
-
-
-def main() raises:
-    run_all_world_component_single_batch_benchmarks()

@@ -113,7 +113,3 @@ def run_all_world_component_multi_batch_benchmarks(mut bench: Bench) raises:
         benchmark_add_remove_5_comp_1_000_batch_1_000,
         BenchId("10^3 * add & remove 5 components 10^3 batch"),
     )
-
-
-def main() raises:
-    run_all_world_component_multi_batch_benchmarks()

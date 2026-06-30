@@ -162,7 +162,3 @@ def run_all_world_replace_multi_batch_benchmarks(mut bench: Bench) raises:
         benchmark_replace_5_comp_1_000_batch_1_000,
         BenchId("10^3 * replace 5 components 10^3 batch"),
     )
-
-
-def main() raises:
-    run_all_world_replace_multi_batch_benchmarks()

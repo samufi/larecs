@@ -54,7 +54,3 @@ def run_all_world_component_single_benchmarks(mut bench: Bench) raises:
         BenchId("10^6 * add & remove 1 component"),
     )
     prevent_inlining_add_remove()
-
-
-def main() raises:
-    run_all_world_component_single_benchmarks()

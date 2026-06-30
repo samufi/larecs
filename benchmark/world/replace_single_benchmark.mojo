@@ -53,7 +53,3 @@ def run_all_world_replace_single_benchmarks(mut bench: Bench) raises:
         BenchId("10^6 * replace 1 component"),
     )
     prevent_inlining_replace()
-
-
-def main() raises:
-    run_all_world_replace_single_benchmarks()
