@@ -22,7 +22,7 @@ from .static_optional import StaticOptional
 from .query import (
     Query,
     QueryInfo,
-    _WorldIterator,
+    _WorldEntityIterator,
     _ArchetypeIterator,
 )
 from .lock import LockManager, LockedContext, LockError
@@ -334,7 +334,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         lock_origin: MutOrigin,
         *,
         has_start_indices: Bool = False,
-    ] = _WorldIterator[
+    ] = _WorldEntityIterator[
         archetype_origin,
         lock_origin,
         *Self.component_types,
@@ -1887,7 +1887,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             mask:          The mask of components to include.
             without_mask:  The mask of components to exclude.
-            start_indices: The start indices of the iterator. See [..query._WorldIterator].
+            start_indices: The start indices of the iterator. See [..query._WorldEntityIterator].
         """
         with TraceGuard(name="World._get_entity_iterator"):
             try:

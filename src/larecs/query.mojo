@@ -107,7 +107,7 @@ struct Query[
         *Self.ComponentTypes,
     ]
     """The archetype iterator type for this query."""
-    comptime EntityIterator = _EntityIterator[
+    comptime ArchetypeEntityIterator = _ArchetypeEntityIterator[
         _,
         *Self.ComponentTypes,
     ]
@@ -207,7 +207,7 @@ struct Query[
     @always_inline
     def __iter__(
         deinit self,
-        out iterator: _WorldIterator[
+        out iterator: _WorldEntityIterator[
             Self.archetypes_origin,
             Self.locks_origin,
             *Self.ComponentTypes,
@@ -561,12 +561,12 @@ struct _ArchetypeIterator[
             return self._has_next()
 
 
-struct _EntityIterator[
+struct _ArchetypeEntityIterator[
     archetype_origin: Origin,
     *ComponentTypes: ComponentType,
 ](Boolable, IterableOwned, Iterator, Movable, Sized):
     """
-    Iterator over entities in an archetype.
+    Iterator over all entities of an archetype.
 
     Note: For internal use only! Do not expose to users.
 
@@ -578,7 +578,7 @@ struct _EntityIterator[
     comptime Archetype = _Archetype[*Self.ComponentTypes]
     comptime Element = Self.Archetype.EntityAccessor[Self.archetype_origin]
 
-    comptime IteratorOwnedType = _EntityIterator[
+    comptime IteratorOwnedType = _ArchetypeEntityIterator[
         Self.archetype_origin,
         *Self.ComponentTypes,
     ]
@@ -598,7 +598,7 @@ struct _EntityIterator[
             archetype: A pointer to the archetype to iterate over.
             _index: The index of the entity to start iterating from.
         """
-        with TraceGuard(name="_EntityIterator.__init__"):
+        with TraceGuard(name="_ArchetypeEntityIterator.__init__"):
             self.archetype = archetype
             self._index = _index
 
@@ -609,7 +609,7 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_EntityIterator._has_next"):
+        with TraceGuard(name="_ArchetypeEntityIterator._has_next"):
             return self._index < len(self.archetype[])
 
     def __bool__(self) -> Bool:
@@ -619,14 +619,14 @@ struct _EntityIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_EntityIterator.__bool__"):
+        with TraceGuard(name="_ArchetypeEntityIterator.__bool__"):
             return self._has_next()
 
     def __len__(self) -> Int:
         """
         Returns the number of entities remaining in the iterator.
         """
-        with TraceGuard(name="_EntityIterator.__len__"):
+        with TraceGuard(name="_ArchetypeEntityIterator.__len__"):
             return len(self.archetype[]) - self._index
 
     def __iter__(var self, out iterator: Self):
@@ -636,7 +636,7 @@ struct _EntityIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_EntityIterator.__iter__"):
+        with TraceGuard(name="_ArchetypeEntityIterator.__iter__"):
             iterator = self^
 
     def __next__(mut self, out accessor: Self.Element) raises StopIteration:
@@ -649,7 +649,7 @@ struct _EntityIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
-        with TraceGuard(name="_EntityIterator.__next__"):
+        with TraceGuard(name="_ArchetypeEntityIterator.__next__"):
             if not self._has_next():
                 raise StopIteration()
             accessor = self.archetype[].get_entity_accessor(
@@ -658,7 +658,7 @@ struct _EntityIterator[
             self._index += 1
 
 
-struct _WorldIterator[
+struct _WorldEntityIterator[
     archetype_mutability: Bool,
     //,
     archetype_origin: Origin[mut=archetype_mutability],
@@ -666,7 +666,7 @@ struct _WorldIterator[
     *ComponentTypes: ComponentType,
     has_start_indices: Bool = False,
 ](Boolable, IterableOwned, Iterator, Movable, Sized):
-    """Iterator over all entities corresponding to a mask.
+    """Iterator over all entities of a world corresponding to a mask.
 
     Locks the world while it exists.
 
@@ -687,7 +687,7 @@ struct _WorldIterator[
 
     comptime Element = Self.Archetype.EntityAccessor[Self.archetype_origin]
 
-    comptime IteratorOwnedType = _WorldIterator[
+    comptime IteratorOwnedType = _WorldEntityIterator[
         Self.archetype_origin,
         Self.lock_origin,
         *Self.ComponentTypes,
@@ -703,7 +703,7 @@ struct _WorldIterator[
 
     var _archetype_iterator: Self.ArchetypeIterator
     var _entity_iterator: Optional[
-        _EntityIterator[
+        _ArchetypeEntityIterator[
             Self.archetype_origin,
             *Self.ComponentTypes,
         ]
@@ -729,7 +729,7 @@ struct _WorldIterator[
         Raises:
             Error: If the lock cannot be acquired.
         """
-        with TraceGuard(name="_WorldIterator.__init__"):
+        with TraceGuard(name="_WorldEntityIterator.__init__"):
             self._lock_ptr = lock_ptr
             self._lock = self._lock_ptr[].lock()
             self._start_indices = start_indices^
@@ -760,7 +760,7 @@ struct _WorldIterator[
         Raises:
             Error: If the lock cannot be acquired.
         """
-        with TraceGuard(name="_WorldIterator.__init__ query"):
+        with TraceGuard(name="_WorldEntityIterator.__init__ query"):
             self._lock_ptr = lock_ptr
             self._lock = self._lock_ptr[].lock()
             self._start_indices = start_indices^
@@ -776,7 +776,7 @@ struct _WorldIterator[
         """
         Releases the lock.
         """
-        with TraceGuard(name="_WorldIterator.__del__"):
+        with TraceGuard(name="_WorldEntityIterator.__del__"):
             try:
                 self._lock_ptr[].unlock(self._lock)
             except _:
@@ -793,7 +793,7 @@ struct _WorldIterator[
         Returns:
             Self as an iterator usable in for loops.
         """
-        with TraceGuard(name="_WorldIterator.__iter__"):
+        with TraceGuard(name="_WorldEntityIterator.__iter__"):
             iterator = self^
 
     @always_inline
@@ -807,7 +807,7 @@ struct _WorldIterator[
         Returns:
             An [..archetype.EntityAccessor] to the entity.
         """
-        with TraceGuard(name="_WorldIterator.__next__"):
+        with TraceGuard(name="_WorldEntityIterator.__next__"):
             if (
                 not self._entity_iterator
                 or not self._entity_iterator.unsafe_value()._has_next()
@@ -824,7 +824,7 @@ struct _WorldIterator[
 
                 self._current_archetype_index += 1
 
-                self._entity_iterator = _EntityIterator(
+                self._entity_iterator = _ArchetypeEntityIterator(
                     Pointer(to=self._archetype_iterator.__next__()[]),
                     start_idx,
                 )
@@ -838,7 +838,7 @@ struct _WorldIterator[
         Note that this requires iterating over all archetypes
         and may be a complex operation.
         """
-        with TraceGuard(name="_WorldIterator.__len__"):
+        with TraceGuard(name="_WorldEntityIterator.__len__"):
             size = 0
 
             if not self._has_next():
@@ -858,7 +858,7 @@ struct _WorldIterator[
                     start_idx = 0
                 archetype_idx += 1
 
-                entity_iter = _EntityIterator(
+                entity_iter = _ArchetypeEntityIterator(
                     Pointer(to=archetype[]), start_idx
                 )
                 size += len(entity_iter)
@@ -871,7 +871,7 @@ struct _WorldIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_WorldIterator._has_next"):
+        with TraceGuard(name="_WorldEntityIterator._has_next"):
             if (
                 self._entity_iterator
                 and self._entity_iterator.unsafe_value()._has_next()
@@ -891,5 +891,5 @@ struct _WorldIterator[
         Returns:
             Whether there are more elements to iterate.
         """
-        with TraceGuard(name="_WorldIterator.__bool__"):
+        with TraceGuard(name="_WorldEntityIterator.__bool__"):
             return self._has_next()
