@@ -274,6 +274,35 @@ struct _BitMask[total_bits: Int](
         """
         self._bytes &= other._bytes
 
+    @always_inline
+    def __xor__(self, other: Self, out result: Self):
+        """Returns the bitwise XOR of this mask and another mask.
+
+        Performs element-wise bitwise XOR operation between this mask and another mask,
+        creating a new mask where a bit is set if it's set in one mask but not the other.
+
+        Args:
+            other: The other BitMask to XOR with this mask.
+
+        Returns:
+            A new BitMask containing the bitwise XOR of both masks.
+        """
+        result = self.copy()
+        result ^= other
+
+    @always_inline
+    def __ixor__(mut self, other: Self):
+        """Performs in-place bitwise XOR with another BitMask.
+
+        This method modifies the current BitMask by performing a bitwise XOR operation
+        with another BitMask. Each bit in the resulting BitMask is set if it is set
+        in one mask but not the other.
+
+        Args:
+            other: The BitMask to perform the bitwise XOR operation with.
+        """
+        self._bytes ^= other._bytes
+
     @deprecated(use=write_to)
     def __str__(self) -> String:
         """Implements String(...).
