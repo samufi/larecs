@@ -7,10 +7,14 @@ from larecs.test_utils import *
 
 
 def benchmark_add_entity_1_000_000(mut bencher: Bencher):
+    try:
+        world = SmallWorld()
+    except e:
+        print(e)
+        return
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000_000):
                 keep(world.add_entity().get_id())
 
@@ -24,17 +28,21 @@ def benchmark_query_1_comp_1_000_000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    try:
+        world = SmallWorld()
+    except e:
+        print(e)
+        return
+
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1000):
                 _ = world.add_entity(pos)
             for _ in range(1000):
                 for entity in world.query[Position]():
                     keep(entity.get[Position]().x)
-
         except e:
             print(e)
 
@@ -46,11 +54,15 @@ def benchmark_query_2_comp_1_000_000(
 ):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    try:
+        world = SmallWorld()
+    except e:
+        print(e)
+        return
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1000):
                 _ = world.add_entity(pos, vel)
             for _ in range(1000):
@@ -72,11 +84,15 @@ def benchmark_query_5_comp_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
+    try:
+        world = FullWorld()
+    except e:
+        print(e)
+        return
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = FullWorld()
             for _ in range(1000):
                 _ = world.add_entity(c1, c2, c3, c4, c5)
             for _ in range(1000):
@@ -107,11 +123,15 @@ def benchmark_query_get_iter_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
+    try:
+        world = FullWorld()
+    except e:
+        print(e)
+        return
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = FullWorld()
             _ = world.add_entity(c1, c2, c3, c4, c5)
             for _ in range(1_000_000):
                 keep(world.query[FlexibleComponent[1]]().__iter__()._lock)
@@ -130,11 +150,15 @@ def benchmark_query_has_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
+    try:
+        world = FullWorld()
+    except e:
+        print(e)
+        return
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = FullWorld()
             _ = world.add_entity(c1, c2, c3, c4, c5)
             for entity in world.query[FlexibleComponent[1]]():
                 for _ in range(1_000_000):
@@ -168,3 +192,8 @@ def run_all_query_benchmarks(mut bench: Bench) raises:
     bench.bench_function(
         benchmark_query_get_iter_1_000_000, BenchId("10^6 * get query iter")
     )
+
+
+
+def main() raises:
+    run_all_query_benchmarks()

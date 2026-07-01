@@ -89,15 +89,11 @@ def benchmark_bitmask_get_indices_1_000_000(mut bencher: Bencher):
 
     @always_inline
     def bench_fn() {mut}:
-        try:
-            for _ in range(1_000_000):
-                ind = mask.get_indices()
-                # keep(mask.get_indices()) #.data[10])
-                for i in ind:
-                    keep(i)
-
-        except e:
-            print(e)
+        for _ in range(1_000_000):
+            ind = mask.get_indices()
+            # keep(mask.get_indices()) #.data[10])
+            for i in ind:
+                keep(i)
 
     bencher.iter(bench_fn)
 
@@ -165,28 +161,20 @@ def run_all_bitmask_benchmarks() raises:
 
 
 def run_all_bitmask_benchmarks(mut bench: Bench) raises:
-    bench.bench_function(
-        benchmark_bitmask_get_1_000_000, BenchId("10^6 * bitmask_get")
-    )
-    bench.bench_function(
-        benchmark_bitmask_set_1_000_000, BenchId("10^6 * bitmask_set")
-    )
-    bench.bench_function(
-        benchmark_bitmask_flip_1_000_000, BenchId("10^6 * bitmask_flip")
-    )
-    bench.bench_function(
-        benchmark_bitmask_contains_1_000_000, BenchId("10^6 * bitmask_contains")
-    )
+    bench.bench_function(benchmark_bitmask_get_1_000_000, BenchId("10^6 * bitmask_get"))
+    bench.bench_function(benchmark_bitmask_set_1_000_000, BenchId("10^6 * bitmask_set"))
+    bench.bench_function(benchmark_bitmask_flip_1_000_000, BenchId("10^6 * bitmask_flip"))
+    bench.bench_function(benchmark_bitmask_contains_1_000_000, BenchId("10^6 * bitmask_contains"))
     bench.bench_function(
         benchmark_bitmask_contains_any_1_000_000,
         BenchId("10^6 * bitmask_contains_any"),
     )
-    bench.bench_function(
-        benchmark_bitmask_eq_1_000_000, BenchId("10^6 * bitmask_eq")
-    )
+    bench.bench_function(benchmark_bitmask_eq_1_000_000, BenchId("10^6 * bitmask_eq"))
     # bench.bench_function(benchmark_bitmask_get_indices_1_000_000,
     #     BenchId("10^6 * get_indices")
     # )
-    bench.bench_function(
-        benchmark_bitmask_get_each_1_000_000, BenchId("10^6 * get_each")
-    )
+    bench.bench_function(benchmark_bitmask_get_each_1_000_000, BenchId("10^6 * get_each"))
+
+
+def main() raises:
+    run_all_bitmask_benchmarks()

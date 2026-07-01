@@ -43,3 +43,7 @@ def run_all_world_benchmarks(mut bench: Bench) raises:
     run_all_world_replace_single_batch_benchmarks(bench)
     run_all_world_replace_multi_benchmarks(bench)
     run_all_world_replace_multi_batch_benchmarks(bench)
+
+
+def main() raises:
+    run_all_world_benchmarks()

@@ -30,12 +30,8 @@ def benchmark_archetype_bitmask_contains_1_000_000(
 
     @always_inline
     def bench_fn() {read}:
-        try:
-            for _ in range(1_000_000):
-                keep(archetype.get_mask().contains(mask))
-
-        except e:
-            print(e)
+        for _ in range(1_000_000):
+            keep(archetype.get_mask().contains(mask))
 
     bencher.iter(bench_fn)
 
@@ -51,3 +47,7 @@ def run_all_archetype_benchmarks(mut bench: Bench) raises:
         benchmark_archetype_bitmask_contains_1_000_000,
         BenchId("10^6 * archetype bitmask contains"),
     )
+
+
+def main() raises:
+    run_all_archetype_benchmarks()
