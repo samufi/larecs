@@ -25,112 +25,18 @@ from .query import (
     _WorldEntityIterator,
     _ArchetypeIterator,
 )
-from .lock import LockManager, LockedContext, LockError
+from .lock import LockManager
 from .resource import Resources
 from ._utils import concatenate_inline_arrays
 from ._tracing import TraceGuard
 from .types import ComponentId
-
-
-@fieldwise_init
-struct WorldError(Equatable, ImplicitlyCopyable, Writable):
-    """Typed errors raised by world operations."""
-
-    var _variant: Int
-    """Numeric discriminator for the world error variant."""
-
-    comptime UNKNOWN = WorldError(_variant=0)
-    """Fallback world error variant."""
-    comptime non_existent_entity = WorldError(_variant=1)
-    """Error raised when an entity is no longer alive."""
-    comptime world_is_locked = WorldError(_variant=2)
-    """Error raised when mutating a world while it is locked."""
-    comptime missing_components_for_removal_entity = WorldError(_variant=3)
-    """Error raised when an entity lacks components requested for removal."""
-    comptime missing_components_for_removal_query = WorldError(_variant=4)
-    """Error raised when a removal query may match entities missing components."""
-    comptime duplicate_components_for_addition_entity = WorldError(_variant=5)
-    """Error raised when adding components already present on an entity."""
-    comptime duplicate_components_for_addition_query = WorldError(
-        _variant=6,
-    )
-    """Error raised when an addition query may match entities with duplicate components."""
-    comptime out_of_locks = WorldError(_variant=7)
-    """Error raised when the world cannot allocate another lock."""
-    comptime unbalanced_unlock = WorldError(_variant=8)
-    """Error raised when unlocking a lock that is not active."""
-
-    def __init__(out self, e: LockError):
-        """Converts a lock error into a world error.
-
-        Args:
-            e: The lock error to convert.
-        """
-        if e._variant == LockError.out_of_locks._variant:
-            return Self.out_of_locks
-        elif e._variant == LockError.unbalanced_unlock._variant:
-            return Self.unbalanced_unlock
-        else:
-            return Self.UNKNOWN
-
-    @always_inline
-    def variant_name(self) -> StaticString:
-        """Returns the world error variant name.
-
-        Returns:
-            The static string name for the variant.
-        """
-        comptime VARIANT_NAMES: InlineArray[StaticString, 9] = [
-            "unknown",
-            "non_existent_entity",
-            "world_is_locked",
-            "missing_components_for_removal_entity",
-            "missing_components_for_removal_query",
-            "duplicate_components_for_addition_entity",
-            "duplicate_components_for_addition_query",
-            "out_of_locks",
-            "unbalanced_unlock",
-        ]
-        ref global_variant_names = global_constant[VARIANT_NAMES]()
-        return global_variant_names[self._variant]
-
-    @always_inline
-    def msg(self) -> StaticString:
-        """Returns the world error message.
-
-        Returns:
-            The human-readable message for the variant.
-        """
-        comptime VARIANT_MESSAGES: InlineArray[StaticString, 9] = [
-            "Unknown error.",
-            "The considered entity does not exist anymore.",
-            "Attempt to modify a locked world.",
-            "Entity does not have all the components to remove.",
-            (
-                "Query matches entities that do not have all the components to"
-                " remove. Use `Query[Component, ...]()` to include those"
-                " components."
-            ),
-            "Entity already has one of the components to add.",
-            (
-                "Query matches entities that already have some of the"
-                " components to add. Use `Query.without[Component, ...]()` to"
-                " exclude those components."
-            ),
-            LockError.out_of_locks.msg(),
-            LockError.unbalanced_unlock.msg(),
-        ]
-
-        ref global_variant_messages = global_constant[VARIANT_MESSAGES]()
-        return global_variant_messages[self._variant]
-
-    def write_to(self, mut writer: Some[Writer]):
-        """Writes the world error to a writer.
-
-        Args:
-            writer: The destination writer.
-        """
-        writer.write("WorldError.", self.variant_name(), ": ", self.msg())
+from .error import (
+    LarecsError,
+    UnknownError,
+    ComponentError,
+    WorldError,
+    EntityError,
+)
 
 
 @fieldwise_init
@@ -159,7 +65,7 @@ struct Replacer[
     var _world: Pointer[Self.World, Self.world_origin]
     """Pointer to the world modified by this replacer."""
 
-    def by(self, entity: Entity) raises WorldError:
+    def by(self, entity: Entity) raises LarecsError:
         """
         Removes components from an [..entity.Entity].
 
@@ -178,7 +84,7 @@ struct Replacer[
 
     def by[
         T: ComponentType
-    ](self, var component: T, *, entity: Entity) raises WorldError:
+    ](self, var component: T, *, entity: Entity) raises LarecsError:
         """
         Removes components from and adds one component to an [..entity.Entity].
 
@@ -203,7 +109,7 @@ struct Replacer[
 
     def by[
         *AddTs: ComponentType
-    ](self, var *components: *AddTs, entity: Entity) raises WorldError:
+    ](self, var *components: *AddTs, entity: Entity) raises LarecsError:
         """
         Removes and adds the components to an [..entity.Entity].
 
@@ -238,7 +144,7 @@ struct Replacer[
             origin_of(self._world[]._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises LarecsError:
         """
         Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
 
@@ -272,7 +178,7 @@ struct Replacer[
             origin_of(self._world[]._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises LarecsError:
         """
         Removes and adds the components to multiple [..entity.Entity Entities] specified by a [..query.Query].
 
@@ -399,7 +305,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     var resources: Resources  # The resources of the world.
     """Resource storage associated with the world."""
 
-    def __init__(out self) raises:
+    def __init__(out self):
         """
         Creates a new [.World].
         """
@@ -513,7 +419,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     def add_entity[
         *Ts: ComponentType
-    ](mut self, var *components: *Ts, out entity: Entity) raises WorldError:
+    ](mut self, var *components: *Ts, out entity: Entity) raises LarecsError:
         """Returns a new or recycled [..entity.Entity].
 
         The given component types are added to the entity.
@@ -610,7 +516,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises WorldError:
+    ) raises LarecsError:
         """Adds a batch of [..entity.Entity Entities].
 
         The given component types are added to the entities.
@@ -651,7 +557,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             count: The number of entities to add.
 
         Raises:
-            Error: If the world is [.World.is_locked locked].
+            LarecsError: If the world is [.World.is_locked locked].
 
         Returns:
             An iterator to the new or recycled [..entity.Entity Entities].
@@ -703,7 +609,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     {[first_index_in_archetype]},
                 }
             except _:
-                raise WorldError.out_of_locks
+                raise LarecsError(WorldError.out_of_locks)
 
     @always_inline
     def _create_entity(mut self, archetype_index: Int, out entity: Entity):
@@ -754,7 +660,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             return arch_start_idx
 
-    def remove_entity(mut self, entity: Entity) raises:
+    def remove_entity(mut self, entity: Entity) raises LarecsError:
         """
         Removes an [..entity.Entity], making it eligible for recycling.
 
@@ -764,7 +670,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             entity: The entity to remove.
 
         Raises:
-            Error: If the world is locked or the entity does not exist.
+            LarecsError: If the world is locked or the entity does not exist.
         """
         self._assert_unlocked()
         self._assert_alive(entity)
@@ -772,9 +678,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         with TraceGuard(name="World.remove_entity"):
             entity_loc = self._entities[entity.get_id()]
             old_archetype = Pointer(
-                to=self._archetypes.unsafe_get(
-                    index(entity_loc.archetype_index)
-                )
+                to=self._archetypes.unsafe_get(entity_loc.archetype_index)
             )
 
             # if self._listener != nil:
@@ -805,7 +709,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     swap_entity.get_id()
                 ].entity_index = entity_loc.entity_index
 
-    def remove_entities(mut self, query: QueryInfo) raises:
+    def remove_entities(mut self, query: QueryInfo) raises LarecsError:
         """
         Removes multiple [..entity.Entity Entities] based on the provided query, making them eligible for recycling.
 
@@ -831,7 +735,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                    either use [..query.Query] or [..query.QueryInfo].
 
         Raises:
-            Error: If the world is locked.
+            LarecsError: If the world is locked.
         """
         self._assert_unlocked()
 
@@ -871,7 +775,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             return self._entity_pool.is_alive(entity)
 
     @always_inline
-    def has[T: ComponentType](self, entity: Entity) raises WorldError -> Bool:
+    def has[T: ComponentType](self, entity: Entity) raises LarecsError -> Bool:
         """
         Returns whether an [..entity.Entity] has a given component.
 
@@ -882,7 +786,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             entity: The entity to check.
 
         Raises:
-            Error: If the entity does not exist.
+            LarecsError: If the entity does not exist.
         """
         with TraceGuard(name="World.has"):
             comptime assert Self.component_manager._ContainsComponent[
@@ -896,14 +800,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def get[
         T: ComponentType
-    ](mut self, entity: Entity) raises -> ref[self._archetypes] T:
+    ](mut self, entity: Entity) raises LarecsError -> ref[self._archetypes] T:
         """Returns a reference to the given component of an [..entity.Entity].
 
         Parameters:
             T: The type of the component. Constraints: Must be in the component manager.
 
         Raises:
-            Error: If the entity is not alive or does not have the component.
+            LarecsError: If the entity is not alive or does not have the component.
         """
         comptime assert Self.component_manager._ContainsComponent[
             T
@@ -915,7 +819,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             if not self._archetypes.unsafe_get(
                 entity_loc.archetype_index
             ).has_component[T]():
-                raise Error("The component is missing.")
+                raise LarecsError(
+                    ComponentError.missing_components_on_assert.with_components(
+                        BitMask(Self.component_manager.get_id[T]())
+                    )
+                )
 
             return self._archetypes.unsafe_get(
                 entity_loc.archetype_index
@@ -924,7 +832,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def set[
         T: ComponentType
-    ](mut self, entity: Entity, var component: T) raises:
+    ](mut self, entity: Entity, var component: T) raises LarecsError:
         """
         Overwrites a component for an [..entity.Entity], using the given content.
 
@@ -951,7 +859,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def set[
         *Ts: ComponentType
-    ](mut self, entity: Entity, var *components: *Ts) raises:
+    ](mut self, entity: Entity, var *components: *Ts) raises LarecsError:
         """
         Overwrites components for an [..entity.Entity] using the given content.
 
@@ -982,7 +890,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     def add[
         *Ts: ComponentType
-    ](mut self, entity: Entity, var *add_components: *Ts) raises WorldError:
+    ](mut self, entity: Entity, var *add_components: *Ts) raises LarecsError:
         """
         Adds components to an [..entity.Entity].
 
@@ -1003,7 +911,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
     def add[
         *Ts: ComponentType
-    ](mut self, var *add_components: *Ts, entity: Entity) raises WorldError:
+    ](mut self, var *add_components: *Ts, entity: Entity) raises LarecsError:
         """
         Adds components to an [..entity.Entity].
 
@@ -1033,7 +941,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises LarecsError:
         """
         Adds components to multiple [..entity.Entity Entities] at once that are specified by a [..query.Query].
         The provided query must ensure that matching entities do not already have one or more of the
@@ -1094,7 +1002,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 *add_components^,
             )
 
-    def remove[*Ts: ComponentType](mut self, entity: Entity) raises WorldError:
+    def remove[*Ts: ComponentType](mut self, entity: Entity) raises LarecsError:
         """
         Removes components from an [..entity.Entity].
 
@@ -1131,7 +1039,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises LarecsError:
         """
         Removes components from multiple entities at once, specified by a [..query.Query].
         The provided query must ensure that matching entities have all of the components that should get removed.
@@ -1221,7 +1129,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         *Ts: ComponentType,
         rem_size: Int = 0,
         remove_ids: InlineArray[ComponentId, rem_size] = [],
-    ](mut self, entity: Entity, var *add_components: *Ts) raises WorldError:
+    ](mut self, entity: Entity, var *add_components: *Ts) raises LarecsError:
         """
         Adds and removes components to an [..entity.Entity].
 
@@ -1271,7 +1179,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             comptime if rem_size:
                 if not old_archetype_mask.contains(BitMask(runtime_remove_ids)):
-                    raise WorldError.missing_components_for_removal_entity
+                    raise LarecsError(
+                        ComponentError.missing_components_on_remove.with_components(
+                            old_archetype_mask ^ BitMask(runtime_remove_ids)
+                        )
+                    )
 
             comptime if add_size:
                 compare_mask = old_archetype_mask
@@ -1279,7 +1191,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 comptime if rem_size:
                     compare_mask.set(runtime_remove_ids, False)
                 if compare_mask.contains(BitMask(add_ids)):
-                    raise WorldError.duplicate_components_for_addition_entity
+                    raise LarecsError(
+                        ComponentError.existing_components_on_add.with_components(
+                            compare_mask & BitMask(add_ids)
+                        )
+                    )
 
             comptime ComponentIdsType = InlineArray[
                 ComponentId, add_size + rem_size
@@ -1358,7 +1274,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=True,
         ],
-    ) raises:
+    ) raises LarecsError:
         """
         Adds and removes components to multiple [..entity.Entity Entities] specified by a [..query.QueryInfo].
 
@@ -1433,18 +1349,31 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         if archetype[] and archetype_mask.contains_any(
                             BitMask(add_ids)
                         ):
-                            raise WorldError.duplicate_components_for_addition_query
+                            raise LarecsError(
+                                ComponentError.existing_components_on_add_query.with_components(
+                                    archetype_mask & BitMask(add_ids)
+                                )
+                            )
 
             comptime if rem_size:
                 # If query could match archetypes that don't have all of the components, raise an error
                 if not query.mask.contains(BitMask(runtime_remove_ids)):
-                    raise WorldError.missing_components_for_removal_query
+                    raise LarecsError(
+                        ComponentError.missing_components_on_remove_query.with_components(
+                            query.mask ^ BitMask(runtime_remove_ids)
+                        )
+                    )
 
                 comptime if has_without_mask:
                     if query.without_mask[].contains_any(
                         BitMask(runtime_remove_ids)
                     ):
-                        raise WorldError.duplicate_components_for_addition_query
+                        raise LarecsError(
+                            ComponentError.missing_components_on_remove_query.with_components(
+                                query.without_mask[]
+                                & BitMask(runtime_remove_ids)
+                            )
+                        )
 
             comptime if add_size and rem_size:
                 comptime concatenated = concatenate_inline_arrays(
@@ -1465,7 +1394,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         List[Int](),
                     }
                 except _:
-                    raise WorldError.out_of_locks
+                    raise LarecsError(WorldError.out_of_locks)
                 return
 
             self._assert_unlocked()
@@ -1479,79 +1408,74 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             )
 
             # Search for the archetype that matches the query mask
-            try:
-                with self._locked():
-                    for var old_archetype in self._get_archetype_iterator(
-                        query.mask, query.without_mask
-                    ):
-                        # Two cases per matching archetype A:
-                        # 1. If an archetype B with the new component combination exists, move entities from A to B
-                        #    and insert new component data for moved entities.
-                        # 2. If an archetype with the new component combination does not exist yet,
-                        #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
-                        old_node_index = old_archetype[].get_node_index()
-                        new_archetype_idx = self._get_archetype_index[
-                            add_size + rem_size
-                        ](component_ids, old_node_index)
+            with self._locked():
+                for var old_archetype in self._get_archetype_iterator(
+                    query.mask, query.without_mask
+                ):
+                    # Two cases per matching archetype A:
+                    # 1. If an archetype B with the new component combination exists, move entities from A to B
+                    #    and insert new component data for moved entities.
+                    # 2. If an archetype with the new component combination does not exist yet,
+                    #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
+                    old_node_index = old_archetype[].get_node_index()
+                    new_archetype_idx = self._get_archetype_index[
+                        add_size + rem_size
+                    ](component_ids, old_node_index)
 
-                        # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
-                        # resized during the call to `_get_archetype_index`.
-                        old_archetype_idx = self._archetype_map[old_node_index]
-                        old_archetype = Pointer(
-                            to=self._archetypes.unsafe_get(
-                                index(old_archetype_idx)
-                            )
-                        )
+                    # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
+                    # resized during the call to `_get_archetype_index`.
+                    old_archetype_idx = self._archetype_map[old_node_index]
+                    old_archetype = Pointer(
+                        to=self._archetypes.unsafe_get(index(old_archetype_idx))
+                    )
 
-                        new_archetype = Pointer(
-                            to=self._archetypes.unsafe_get(new_archetype_idx)
-                        )
+                    new_archetype = Pointer(
+                        to=self._archetypes.unsafe_get(new_archetype_idx)
+                    )
 
-                        # TODO: Optimization: If `new_archetype` is empty we can just shallow-copy the _ComponentStorage of `old_archetype` to `new_archetype` and reinit `old_archetype`.
+                    # TODO: Optimization: If `new_archetype` is empty we can just shallow-copy the _ComponentStorage of `old_archetype` to `new_archetype` and reinit `old_archetype`.
 
-                        old_archetype_size = len(old_archetype[])
-                        if old_archetype_idx == new_archetype_idx:
-                            arch_start_idcs.append(0)
-                            changed_archetype_idcs.append(new_archetype_idx)
-
-                            comptime for i in range(add_size):
-                                comptime T = Ts[i]
-                                new_archetype[].set_component_range[T](
-                                    0,
-                                    old_archetype_size,
-                                    add_components[i].copy(),
-                                )
-                            continue
-
-                        old_archetype_unsafe = UnsafePointer(
-                            to=old_archetype[]
-                        ).as_unsafe_any_origin()
-                        arch_start_idx = (
-                            new_archetype[].extend_from_archetype_unsafe(
-                                old_archetype_unsafe, old_archetype_size
-                            )
-                        )
-                        arch_start_idcs.append(arch_start_idx)
+                    old_archetype_size = len(old_archetype[])
+                    if old_archetype_idx == new_archetype_idx:
+                        arch_start_idcs.append(0)
                         changed_archetype_idcs.append(new_archetype_idx)
 
                         comptime for i in range(add_size):
                             comptime T = Ts[i]
                             new_archetype[].set_component_range[T](
-                                arch_start_idx,
+                                0,
                                 old_archetype_size,
                                 add_components[i].copy(),
                             )
+                        continue
 
-                        # Update entity index mappings for the moved entity range.
-                        for entity_idx in range(old_archetype_size):
-                            entity = old_archetype[].get_entity(entity_idx)
-                            self._entities[entity.get_id()] = EntityLocation(
-                                arch_start_idx + entity_idx, new_archetype_idx
-                            )
+                    old_archetype_unsafe = UnsafePointer(
+                        to=old_archetype[]
+                    ).as_unsafe_any_origin()
+                    arch_start_idx = (
+                        new_archetype[].extend_from_archetype_unsafe(
+                            old_archetype_unsafe, old_archetype_size
+                        )
+                    )
+                    arch_start_idcs.append(arch_start_idx)
+                    changed_archetype_idcs.append(new_archetype_idx)
 
-                        old_archetype[].clear()
-            except:
-                raise WorldError.UNKNOWN
+                    comptime for i in range(add_size):
+                        comptime T = Ts[i]
+                        new_archetype[].set_component_range[T](
+                            arch_start_idx,
+                            old_archetype_size,
+                            add_components[i].copy(),
+                        )
+
+                    # Update entity index mappings for the moved entity range.
+                    for entity_idx in range(old_archetype_size):
+                        entity = old_archetype[].get_entity(entity_idx)
+                        self._entities[entity.get_id()] = EntityLocation(
+                            arch_start_idx + entity_idx, new_archetype_idx
+                        )
+
+                    old_archetype[].clear()
 
             # Return iterator to iterate over the changed entities.
             try:
@@ -1563,10 +1487,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     arch_start_idcs^,
                 }
             except _:
-                raise WorldError.out_of_locks
+                raise LarecsError(WorldError.out_of_locks)
 
     @always_inline
-    def _assert_unlocked(self) raises WorldError:
+    def _assert_unlocked(self) raises LarecsError:
         """
         Checks if the world is locked, and raises if so.
 
@@ -1575,10 +1499,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         with TraceGuard(name="World._assert_unlocked"):
             if self.is_locked():
-                raise WorldError.world_is_locked
+                raise LarecsError(WorldError.world_is_locked)
 
     @always_inline
-    def _assert_alive(self, entity: Entity) raises WorldError:
+    def _assert_alive(self, entity: Entity) raises LarecsError:
         """
         Checks if the entity is alive, and raises if not.
 
@@ -1590,7 +1514,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         with TraceGuard(name="World._assert_alive"):
             if not self._entity_pool.is_alive(entity):
-                raise WorldError.non_existent_entity
+                raise LarecsError(
+                    EntityError.non_existent_entity.with_entities(entity)
+                )
 
     @always_inline
     def apply[
@@ -1603,7 +1529,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         operation: OperationType,
-    ) raises:
+    ) raises LarecsError:
         """
         Applies an operation to all entities with the given components.
 
@@ -1625,16 +1551,16 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         with TraceGuard(name="World.apply"):
             self._assert_unlocked()
 
-            try:
-                with self._locked():
-                    for archetype in Self.ArchetypeIterator(
-                        Pointer(to=self._archetypes),
-                        query.copy(),
-                    ):
-                        for i in range(len(archetype[])):
+            with self._locked():
+                for archetype in Self.ArchetypeIterator(
+                    Pointer(to=self._archetypes),
+                    query.copy(),
+                ):
+                    for i in range(len(archetype[])):
+                        try:
                             operation(archetype[].get_entity_accessor(i))
-            except:
-                raise WorldError.UNKNOWN
+                        except:
+                            raise LarecsError(UnknownError())
 
     def apply[
         OperationType: def[simd_width: Int](
@@ -1649,7 +1575,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         mut self,
         query: QueryInfo[has_without_mask=has_without_mask],
         operation: OperationType,
-    ) raises:
+    ) raises LarecsError:
         """
         Applies an operation to all entities with the given components.
 
@@ -1682,7 +1608,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The simd_width must be a power of 2.
 
         Raises:
-            Error: If the world is locked.
+            LarecsError: If the world is locked.
 
         Example:
         ```mojo {doctest="apply" global=true hide=true}
@@ -1733,27 +1659,24 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         with TraceGuard(name="World.apply simd"):
             self._assert_unlocked()
 
-            try:
-                with self._locked():
-                    for archetype in Self.ArchetypeIterator(
-                        Pointer(to=self._archetypes),
-                        query.copy(),
-                    ):
+            with self._locked():
+                for archetype in Self.ArchetypeIterator(
+                    Pointer(to=self._archetypes),
+                    query.copy(),
+                ):
 
-                        @always_inline
-                        def closure[width: Int](i: Int) {read}:
-                            accessor = archetype[].get_entity_accessor(i)
-                            try:
-                                operation[width](accessor)
-                            except:
-                                # Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
-                                pass
+                    @always_inline
+                    def closure[width: Int](i: Int) {read}:
+                        accessor = archetype[].get_entity_accessor(i)
+                        try:
+                            operation[width](accessor)
+                        except:
+                            # TODO: Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
+                            pass
 
-                        vectorize[simd_width, unroll_factor=unroll_factor](
-                            len(archetype[]), closure
-                        )
-            except:
-                raise WorldError.UNKNOWN
+                    vectorize[simd_width, unroll_factor=unroll_factor](
+                        len(archetype[]), closure
+                    )
 
     # def Reset(self):
     #     """
@@ -1875,7 +1798,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             origin_of(self._locks),
             has_start_indices=has_start_indices,
         ],
-    ) raises WorldError:
+    ) raises LarecsError:
         """
         Creates an iterator over all [..entity.Entity Entities] that have / do not have the components in the provided masks.
 
@@ -1905,7 +1828,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     start_indices^,
                 )
             except _:
-                raise WorldError.UNKNOWN
+                raise LarecsError(UnknownError())
 
     @always_inline
     def _get_archetype_iterator[
@@ -1942,7 +1865,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             return self._locks.is_locked()
 
     @always_inline
-    def _lock(mut self, out lock: Int) raises WorldError:
+    def _lock(mut self, out lock: Int) raises LarecsError:
         """
         Locks the world and gets the lock bit for later unlocking.
 
@@ -1950,30 +1873,28 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The lock bit for later unlocking.
 
         Raises:
-            WorldError: when the world is already locked by the maximum number of locks (256 in the current implementation).
+            LarecsError: when the world is already locked by the maximum number of locks (256 in the current implementation).
         """
         with TraceGuard(name="World._lock"):
             try:
                 return self._locks.lock()
-            except e:
-                raise WorldError(e)
+            except:
+                raise LarecsError(WorldError.out_of_locks)
 
     @always_inline
-    def _unlock(mut self, lock: Int) raises WorldError:
+    def _unlock(mut self, lock: Int):
         """
         Unlocks the given lock bit.
 
         Args:
             lock: The lock bit to unlock.
-
-        Raises:
-            WorldError: when called with an invalid lock bit, or when the lock bit is already unlocked.
         """
         with TraceGuard(name="World._unlock"):
             try:
                 self._locks.unlock(lock)
             except e:
-                raise WorldError(e)
+                # This should crash the program because an unexpected internal error occurred
+                assert False, "unlock failed: " + String(e)
 
     @always_inline
     def _locked(
@@ -1986,7 +1907,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             A context manager that unlocks the world when it goes out of scope.
         """
         with TraceGuard(name="World._locked"):
-            return self._locks.locked()
+            return LockedContext(Pointer(to=self._locks))
 
         # def Mask(self, entity: Entity) -> Mask:
         #     """
@@ -2618,3 +2539,78 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         #                 var entity = arch.GetEntity(e)
         #                 event.Entity = entity
         #                 self._listener.Notify(self, event)
+
+
+@fieldwise_init
+struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
+    """
+    A context manager for locking and unlocking the world.
+
+    Parameters:
+        origin: The origin of the LockManager to handle.
+    """
+
+    var _locks: Pointer[LockManager, Self.origin]
+    """Pointer to the lock manager controlled by this context."""
+    var _lock: Int
+    """The lock bit acquired by this context."""
+
+    @always_inline
+    def __init__(out self, locks: Pointer[LockManager, Self.origin]):
+        """
+        Initializes the LockedContext.
+
+        Args:
+            locks: The LockManager to handle.
+        """
+        self._locks = locks
+        self._lock = 0
+
+    @always_inline
+    def __enter__(mut self) raises LarecsError -> Self:
+        """
+        Locks the world.
+
+        Returns:
+            The LockedContext.
+
+        Raises:
+            LarecsError: If the number of locks exceeds 256.
+        """
+        self._lock = self._locks[].lock()
+        return self
+
+    @always_inline
+    def __exit__(mut self) raises LarecsError:
+        """
+        Unlocks the world.
+
+        Raises:
+            LarecsError: If trying to unlock a lock that is not set.
+        """
+        self._locks[].unlock(self._lock)
+
+    @always_inline
+    def __exit__[
+        ErrType: AnyType
+    ](mut self, err: ErrType) raises LarecsError -> Bool:
+        """
+        Handles exceptions raised during the context.
+
+        Returns:
+            False to indicate the exception should be propagated.
+        """
+        comptime type_name = reflect[ErrType].name()
+
+        self.__exit__()
+
+        comptime if type_name == "LarecsError":
+            return False
+        elif conforms_to(ErrType, Writable):
+            assert False, "An unexpected internal error occurred: " + String(
+                err
+            )
+        else:
+            assert False, "An unexpected internal error occurred: " + type_name
+
+        return True

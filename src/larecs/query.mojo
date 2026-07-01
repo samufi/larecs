@@ -13,6 +13,7 @@ from .lock import LockManager
 from .debug_utils import debug_warn
 from .static_optional import StaticOptional
 from ._tracing import TraceGuard
+from .error import LarecsError, WorldError
 
 
 @fieldwise_init
@@ -213,7 +214,7 @@ struct Query[
             *Self.ComponentTypes,
             has_start_indices=False,
         ],
-    ) raises:
+    ) raises QueryError:
         """
         Creates an iterator over all entities that match the query.
 
@@ -714,7 +715,7 @@ struct _WorldEntityIterator[
         var archetype_iter: Self.ArchetypeIterator,
         lock_ptr: Pointer[LockManager, Self.lock_origin],
         var start_indices: Self.StartIndices = None,
-    ) raises:
+    ) raises LarecsError:
         """
         Creates an entity iterator with or without excluded components.
 
@@ -727,11 +728,14 @@ struct _WorldEntityIterator[
                            are iterated.
 
         Raises:
-            Error: If the lock cannot be acquired.
+            LarecsError: If the lock cannot be acquired.
         """
         with TraceGuard(name="_WorldEntityIterator.__init__"):
             self._lock_ptr = lock_ptr
-            self._lock = self._lock_ptr[].lock()
+            try:
+                self._lock = self._lock_ptr[].lock()
+            except:
+                raise LarecsError(WorldError.out_of_locks)
             self._start_indices = start_indices^
 
             self._archetype_iterator = archetype_iter^
@@ -745,7 +749,7 @@ struct _WorldEntityIterator[
         var query_info: QueryInfo[has_without_mask=_],
         lock_ptr: Pointer[LockManager, Self.lock_origin],
         var start_indices: Self.StartIndices = None,
-    ) raises:
+    ) raises LarecsError:
         """
         Creates an entity iterator from query information after acquiring a lock.
 
@@ -758,11 +762,14 @@ struct _WorldEntityIterator[
                            order of the archetypes that are iterated.
 
         Raises:
-            Error: If the lock cannot be acquired.
+            LarecsError: If the lock cannot be acquired.
         """
         with TraceGuard(name="_WorldEntityIterator.__init__ query"):
             self._lock_ptr = lock_ptr
-            self._lock = self._lock_ptr[].lock()
+            try:
+                self._lock = self._lock_ptr[].lock()
+            except:
+                raise LarecsError(WorldError.out_of_locks)
             self._start_indices = start_indices^
 
             self._archetype_iterator = Self.ArchetypeIterator(
@@ -872,9 +879,8 @@ struct _WorldEntityIterator[
             Whether there are more elements to iterate.
         """
         with TraceGuard(name="_WorldEntityIterator._has_next"):
-            if (
-                self._entity_iterator
-                and Bool(self._entity_iterator.unsafe_value())
+            if self._entity_iterator and Bool(
+                self._entity_iterator.unsafe_value()
             ):
                 return True
 

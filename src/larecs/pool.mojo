@@ -1,6 +1,8 @@
 from std.collections.check_bounds import check_bounds
+
 from .types import EntityId
 from .entity import Entity
+from ._internal_error import InternalError
 
 
 struct EntityPool(Copyable, Movable, Sized):
@@ -43,17 +45,11 @@ struct EntityPool(Copyable, Movable, Sized):
         entity = Entity(EntityId(len(self._entities)))
         self._entities.append(entity)
 
-    def recycle(mut self, entity: Entity) raises:
+    def recycle(mut self, entity: Entity):
         """Hands an entity back for recycling."""
-        if entity.get_id() == 0:
-            raise Error("Can't recycle reserved zero entity")
+        assert entity.get_id() != 0, "Can't recycle reserved zero entity"
+        check_bounds(entity.get_id(), len(self._entities))
 
-        if Int(entity.get_id()) >= len(self._entities):
-            raise Error(
-                "Entity ID {} is out of bounds (max: {})".format(
-                    entity.get_id(), len(self._entities) - 1
-                )
-            )
         self._entities[entity.get_id()]._generation += 1
 
         tmp = self._next
@@ -131,14 +127,14 @@ struct BitPool(Copyable, Movable):
         self._length = 0
         self._available = 0
 
-    def get(mut self, out bit_idx: Int) raises:
+    def get(mut self, out bit_idx: Int) raises InternalError:
         """Returns a fresh or recycled bit index.
 
         Recycled indices are returned before allocating new indices. When no
         recycled index exists, the next fresh index is allocated.
 
         Raises:
-            Error: If the pool is full.
+            InternalError: If the pool is full.
 
         Returns:
             The acquired bit index.
@@ -154,20 +150,20 @@ struct BitPool(Copyable, Movable):
         )
         self._available -= 1
 
-    def _get_new(mut self, out bit_idx: Int) raises:
+    def _get_new(mut self, out bit_idx: Int) raises InternalError:
         """Allocates and returns a new bit index.
 
         This internal helper only allocates fresh indices; callers should use
         [.BitPool.get] so recycled indices are preferred.
 
         Raises:
-            Error: If the pool is full.
+            InternalError: If the pool is full.
 
         Returns:
             The index of the newly allocated bit.
         """
         if self._length >= Self.capacity:
-            raise Error(t"Ran out of the capacity of {Self.capacity} bits")
+            raise InternalError.ran_out_of_capacity
 
         bit_idx = self._length
         self._bits[self._length] = UInt8(bit_idx)
