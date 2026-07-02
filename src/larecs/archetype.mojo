@@ -1099,7 +1099,7 @@ struct Archetype[
             self._storage.clear()
 
     @always_inline
-    def add(mut self, entity: Entity) -> Int:
+    def add_entity(mut self, entity: Entity) -> Int:
         """Adds an entity to the archetype.
 
         Args:
@@ -1109,8 +1109,12 @@ struct Archetype[
             The index of the entity in the archetype.
         """
         with TraceGuard(name="Archetype.add"):
+            debug_assert(
+                len(self._entities) == len(self._storage),
+                "`Archetype._entities` and `Archetype._storage` size mismatch.",
+            )
             var idx = self._storage.add_entity()
-            self._entities.append(entity)
+            self._entities.insert(idx, entity)
 
             return idx
 

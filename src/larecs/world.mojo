@@ -616,12 +616,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Creates an [..entity.Entity] and adds it to the given archetype.
 
+        The entity's components are left uninitialized.
+        Initialize them using [..archetype.Archetype.init_components()] or similar before accessing them!
+
         Returns:
             The new entity.
         """
         with TraceGuard(name="World._create_entity"):
             entity = self._entity_pool.get()
-            idx = self._archetypes.unsafe_get(archetype_index).add(entity)
+            idx = self._archetypes.unsafe_get(archetype_index).add_entity(
+                entity
+            )
             if entity.get_id() == len(self._entities):
                 self._entities.append(EntityLocation(idx, archetype_index))
             else:
@@ -1235,7 +1240,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             new_archetype = Pointer(
                 to=self._archetypes.unsafe_get(new_archetype_idx)
             )
-            index_in_new_archetype = new_archetype[].add(entity)
+            index_in_new_archetype = new_archetype[].add_entity(entity)
 
             # Move component data from old archetype to new archetype.
             comptime for id in range(Self.component_manager.component_count):
