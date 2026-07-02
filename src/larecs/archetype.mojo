@@ -504,7 +504,6 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     @always_inline
     def assert_has_component[T: ComponentType](self) raises LarecsError:
         """Asserts if the storage does not contain the given component type.
-            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             T: The type of the component.
@@ -542,7 +541,6 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     @always_inline
     def assert_has_components[*Ts: ComponentType](self) raises LarecsError:
         """Raises if the storage does not contain all the given component types.
-            Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             Ts: The types of the components to check.
@@ -584,14 +582,19 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         self.assert_has_components[*Ts]()
 
         @always_inline
-        def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
+        def set_component[
+            comp_id: Int
+        ](var component: Ts[comp_id]) capturing -> None:
             comptime T = Ts[comp_id]
             try:
-                self.get_component_ptr[T]()[entity_idx] = component^
+                base_comp_ptr = self.get_component_ptr[T]()
             except:
-                assert_unreachable(
+                return assert_unreachable(
                     "Not reachable as component presence was asserted before."
                 )
+            entity_comp_ptr = base_comp_ptr + entity_idx
+            destroy_n(entity_comp_ptr, 1)
+            entity_comp_ptr.init_pointee_move(component^)
 
         (components^).consume_elements[set_component]()
 
