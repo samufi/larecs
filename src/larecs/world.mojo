@@ -661,7 +661,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             for i in range(arch_start_idx, arch_start_idx + count):
                 entity_id = archetype[].get_entity(i).get_id()
                 self._entities[entity_id].archetype_index = archetype_index
-                self._entities[entity_id].entity_index = arch_start_idx + i
+                self._entities[entity_id].entity_index = i
 
             return arch_start_idx
 
