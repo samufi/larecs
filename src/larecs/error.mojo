@@ -222,7 +222,7 @@ struct ComponentError(Equatable, ImplicitlyCopyable, Writable):
             "Unknown error.",
             "Entity does not have all the components to remove:",
             "Entity already has components that are being added:",
-            "Entity misses a components required by assertion:",
+            "Entity misses components required by assertion:",
             (
                 "Query matches entities that do not have all the components to"
                 " remove. Use `Query[Component, ...]()` to include those"
