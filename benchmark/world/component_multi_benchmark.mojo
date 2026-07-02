@@ -12,11 +12,11 @@ def benchmark_add_remove_5_comp_1_000_000(
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(pos)
             for _ in range(1_000_000):
                 world.add(entity, c1, c2, c3, c4, c5)

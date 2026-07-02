@@ -7,10 +7,11 @@ from larecs.entity import Entity
 def benchmark_replace_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn():
+    def bench_fn() {mut world}:
         try:
-            world = SmallWorld()
             _ = world.add_entities(
                 FlexibleComponent[0](1.0, 2.0),
                 FlexibleComponent[1](3.0, 4.0),
@@ -49,10 +50,11 @@ def benchmark_replace_5_comp_batch_1_000_000(
 def benchmark_replace_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn():
+    def bench_fn() {mut world}:
         try:
-            world = SmallWorld()
             _ = world.add_entities(
                 FlexibleComponent[0](1.0, 2.0),
                 FlexibleComponent[1](3.0, 4.0),
@@ -133,11 +135,11 @@ def benchmark_replace_1_comp_1_000_000_extra(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entities = List[Entity]()
             for _ in range(1000):
                 entities.append(world.add_entity(pos))

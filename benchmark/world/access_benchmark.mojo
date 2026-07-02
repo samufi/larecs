@@ -8,11 +8,11 @@ from larecs import MutableEntityAccessor
 def benchmark_get_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(pos, vel)
             for _ in range(1_000_000):
                 keep(world.get[Position](entity).x)
@@ -35,11 +35,11 @@ def benchmark_set_1_comp_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     pos2 = Position(2.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(pos, vel)
             for _ in range(500_000):
                 world.set(entity, pos2)
@@ -75,11 +75,11 @@ def benchmark_set_5_comp_1_000_000(
     c3_2 = FlexibleComponent[3](2.0, 4.0)
     c4_2 = FlexibleComponent[4](2.0, 4.0)
     c5_2 = FlexibleComponent[5](2.0, 4.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(c1, c2, c3, c4, c5)
             for _ in range(500_000):
                 world.set(entity, c1_2, c2_2, c3_2, c4_2, c5_2)
@@ -115,11 +115,11 @@ def benchmark_apply_expexp_1_comp_100_000(
 ):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000):
                 _ = world.add_entity(pos, vel)
 
@@ -148,11 +148,11 @@ def benchmark_apply_simd_expexp_1_comp_100_000(
 ):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000):
                 _ = world.add_entity(pos, vel)
 

@@ -16,10 +16,11 @@ def prevent_inlining_replace_batch() raises:
 def benchmark_replace_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             _ = world.add_entities(
                 FlexibleComponent[0](1.0, 2.0), count=1_000_000
             )
@@ -38,10 +39,11 @@ def benchmark_replace_1_comp_batch_1_000_000(
 def benchmark_replace_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
 
             for _ in range(500):

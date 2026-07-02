@@ -7,11 +7,8 @@ from larecs.test_utils import *
 
 
 def benchmark_add_entity_1_000_000(mut bencher: Bencher):
-    try:
-        world = SmallWorld()
-    except e:
-        print(e)
-        return
+    world = SmallWorld()
+
     @always_inline
     def bench_fn() {mut world}:
         try:
@@ -28,12 +25,7 @@ def benchmark_query_1_comp_1_000_000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
-    try:
-        world = SmallWorld()
-    except e:
-        print(e)
-        return
-
+    world = SmallWorld()
 
     @always_inline
     def bench_fn() {read, mut world}:
@@ -54,11 +46,7 @@ def benchmark_query_2_comp_1_000_000(
 ):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
-    try:
-        world = SmallWorld()
-    except e:
-        print(e)
-        return
+    world = SmallWorld()
 
     @always_inline
     def bench_fn() {read, mut world}:
@@ -84,11 +72,7 @@ def benchmark_query_5_comp_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
-    try:
-        world = FullWorld()
-    except e:
-        print(e)
-        return
+    world = FullWorld()
 
     @always_inline
     def bench_fn() {read, mut world}:
@@ -123,11 +107,7 @@ def benchmark_query_get_iter_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
-    try:
-        world = FullWorld()
-    except e:
-        print(e)
-        return
+    world = FullWorld()
 
     @always_inline
     def bench_fn() {read, mut world}:
@@ -150,11 +130,7 @@ def benchmark_query_has_1_000_000(
     c3 = FlexibleComponent[3](7.0, 8.0)
     c4 = FlexibleComponent[4](9.0, 10.0)
     c5 = FlexibleComponent[5](11.0, 12.0)
-    try:
-        world = FullWorld()
-    except e:
-        print(e)
-        return
+    world = FullWorld()
 
     @always_inline
     def bench_fn() {read, mut world}:
@@ -192,7 +168,6 @@ def run_all_query_benchmarks(mut bench: Bench) raises:
     bench.bench_function(
         benchmark_query_get_iter_1_000_000, BenchId("10^6 * get query iter")
     )
-
 
 
 def main() raises:

@@ -5,20 +5,19 @@ from larecs.entity import Entity
 
 
 def _replace_5_comp_workload() raises:
-    for _ in range(50):
-        world = FullWorld()
-        entities = List[Entity]()
-        for _ in range(1000):
-            entities.append(
-                world.add_entity(
-                    FlexibleComponent[0](1.0, 2.0),
-                    FlexibleComponent[1](3.0, 4.0),
-                    FlexibleComponent[2](5.0, 6.0),
-                    FlexibleComponent[3](7.0, 8.0),
-                    FlexibleComponent[4](9.0, 10.0),
-                )
+    world = FullWorld()
+    entities = List[Entity]()
+    for _ in range(1000):
+        entities.append(
+            world.add_entity(
+                FlexibleComponent[0](1.0, 2.0),
+                FlexibleComponent[1](3.0, 4.0),
+                FlexibleComponent[2](5.0, 6.0),
+                FlexibleComponent[3](7.0, 8.0),
+                FlexibleComponent[4](9.0, 10.0),
             )
-
+        )
+    for _ in range(50):
         comptime for i in range(20):
             comptime base = i * 5
             for entity in entities:

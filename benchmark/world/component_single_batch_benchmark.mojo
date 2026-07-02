@@ -18,12 +18,11 @@ def benchmark_add_remove_1_comp_batch_1_000_000(
 ):
     pos = Position(1.0, 2.0)
     comp = FlexibleComponent[1](1.0, 42.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
-
             # create 1_000_000 entities that initially do not have FlexibleComponent[1]
             _ = world.add_entities(pos, count=1_000_000)
 
@@ -45,12 +44,11 @@ def benchmark_add_remove_1_comp_1_000_batch_1_000(
 ):
     pos = Position(1.0, 2.0)
     comp1 = FlexibleComponent[1](1.0, 42.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
-
             # create 1_000 entities that initially do not have FlexibleComponent[1]
             _ = world.add_entities(pos, count=1_000)
             # then 1_000 x add component and remove it afterwards

@@ -5,10 +5,11 @@ from larecs.entity import Entity
 
 
 def benchmark_add_entity_1_000_000(mut bencher: Bencher):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000_000):
                 keep(world.add_entity().get_id())
 
@@ -21,10 +22,11 @@ def benchmark_add_entity_1_000_000(mut bencher: Bencher):
 def benchmark_add_entities_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
+    world = SmallWorld()
+
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000):
                 keep(Bool(world.add_entities(count=1000)))
 
@@ -38,14 +40,13 @@ def benchmark_add_entity_1_comp_1_000_000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000_000):
                 keep(world.add_entity(pos).get_id())
-
         except e:
             print(e)
 
@@ -56,11 +57,11 @@ def benchmark_add_entities_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000):
                 keep(Bool(world.add_entities(pos, count=1000)))
 
@@ -85,11 +86,11 @@ def benchmark_add_entities_5_comp_1_000_000(
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000_000):
                 keep(world.add_entity(c1, c2, c3, c4, c5).get_id())
 
@@ -107,11 +108,11 @@ def benchmark_add_entity_5_comp_1_000_batch_1_000(
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1_000):
                 keep(Bool(world.add_entities(c1, c2, c3, c4, c5, count=1000)))
 
@@ -136,11 +137,11 @@ def benchmark_add_remove_entity_1_comp_1_000_000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entities = List[Entity]()
             for _ in range(1000):
                 for _ in range(1000):
@@ -159,11 +160,11 @@ def benchmark_add_remove_entities_1_comp_1_000_batch_1000(
     mut bencher: Bencher,
 ):
     pos = Position(1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1000):
                 _ = world.add_entities(pos, count=1000)
                 world.remove_entities(world.query[Position]())
@@ -190,11 +191,11 @@ def benchmark_add_remove_entity_5_comp_1_000_000(
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             _ = world.add_entity(c3, c5)
 
             entities = List[Entity]()
@@ -221,11 +222,11 @@ def benchmark_add_remove_entities_5_comp_1_000_batch_1_000(
     c3 = FlexibleComponent[3](1.0, 2.0)
     c4 = FlexibleComponent[4](1.0, 2.0)
     c5 = FlexibleComponent[5](1.0, 2.0)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             for _ in range(1000):
                 _ = world.add_entities(c1, c2, c3, c4, c5, count=1000)
                 world.remove_entities(
@@ -269,11 +270,11 @@ def prevent_inlining_add_remove_entity_5_comp() raises:
 def benchmark_has_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(pos, vel)
             for _ in range(1_000_000):
                 keep(world.has[Position](entity))
@@ -287,11 +288,11 @@ def benchmark_has_1_000_000(mut bencher: Bencher):
 def benchmark_is_alive_1_000_000(mut bencher: Bencher):
     pos = Position(1.0, 2.0)
     vel = Velocity(0.1, 0.2)
+    world = SmallWorld()
 
     @always_inline
-    def bench_fn() {read}:
+    def bench_fn() {read, mut world}:
         try:
-            world = SmallWorld()
             entity = world.add_entity(pos, vel)
             for _ in range(1_000_000):
                 keep(world.is_alive(entity))

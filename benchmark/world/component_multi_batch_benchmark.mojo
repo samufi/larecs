@@ -6,11 +6,11 @@ from larecs.test_utils import *
 def benchmark_add_remove_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
-    @always_inline
-    def bench_fn() {read}:
-        try:
-            world = SmallWorld()
+    world = SmallWorld()
 
+    @always_inline
+    def bench_fn() {mut world}:
+        try:
             # create 1_000_000 entities that initially do not have FlexibleComponent[1]
             _ = world.add_entities(Position(1.0, 2.0), count=1_000_000)
 
@@ -53,11 +53,11 @@ def benchmark_add_remove_5_comp_batch_1_000_000(
 def benchmark_add_remove_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
-    @always_inline
-    def bench_fn() {read}:
-        try:
-            world = SmallWorld()
+    world = SmallWorld()
 
+    @always_inline
+    def bench_fn() {mut world}:
+        try:
             # create 1_000 entities that initially do not have FlexibleComponent[1...5]
             _ = world.add_entities(Position(1.0, 2.0), count=1_000)
             # then 1_000 x add components and remove them afterwards
