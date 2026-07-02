@@ -16,57 +16,6 @@ from ._tracing import TraceGuard
 from .error import LarecsError, WorldError
 
 
-@fieldwise_init
-struct QueryError(Equatable, ImplicitlyCopyable, Writable):
-    """
-    Typed errors raised by query operations.
-    """
-
-    var _variant: Int
-    """Numeric discriminator for the query error variant."""
-
-    comptime UNKNOWN = QueryError(_variant=0)
-    """Fallback query error variant."""
-    comptime could_not_create_iterator = QueryError(_variant=1)
-    """Error raised when an iterator cannot be constructed."""
-
-    def variant_name(self) -> String:
-        """
-        Returns the variant name.
-
-        Returns:
-            The name of the error variant.
-        """
-        with TraceGuard(name="QueryError.variant_name"):
-            if self._variant == Self.could_not_create_iterator._variant:
-                return "could_not_create_iterator"
-            else:
-                return "unknown"
-
-    def msg(self) -> String:
-        """
-        Returns the error message.
-
-        Returns:
-            The human-readable error message.
-        """
-        with TraceGuard(name="QueryError.msg"):
-            if self._variant == Self.could_not_create_iterator._variant:
-                return "Could not create query iterator."
-            else:
-                return "Unknown error."
-
-    def write_to(self, mut writer: Some[Writer]):
-        """
-        Writes the error to the given writer.
-
-        Args:
-            writer: The writer to write to.
-        """
-        with TraceGuard(name="QueryError.write_to"):
-            writer.write("QueryError.", self.variant_name(), ": ", self.msg())
-
-
 struct Query[
     archetype_mutability: Bool,
     //,
@@ -214,26 +163,23 @@ struct Query[
             *Self.ComponentTypes,
             has_start_indices=False,
         ],
-    ) raises QueryError:
+    ) raises LarecsError:
         """
         Creates an iterator over all entities that match the query.
 
         Raises:
-            QueryError: If the iterator cannot acquire a lock.
+            LarecsError: If the iterator cannot acquire a lock.
 
         Returns:
             An iterator over all entities that match the query.
         """
         with TraceGuard(name="Query.__iter__"):
-            try:
-                iterator = {
-                    self._archetypes,
-                    self._info^,
-                    self._lock_ptr,
-                    None,
-                }
-            except _:
-                raise QueryError.could_not_create_iterator
+            iterator = {
+                self._archetypes,
+                self._info^,
+                self._lock_ptr,
+                None,
+            }
 
     @always_inline
     def without[

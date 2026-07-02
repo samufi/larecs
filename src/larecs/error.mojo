@@ -69,7 +69,7 @@ struct WorldError(Equatable, ImplicitlyCopyable, Writable):
         return global_variant_messages[self._variant]
 
     def write_to(self, mut writer: Some[Writer]):
-        """Writes the .[WorldError] to a writer.
+        """Writes the [.WorldError] to a writer.
 
         Args:
             writer: The destination writer.
@@ -100,7 +100,9 @@ struct EntityError(Equatable, ImplicitlyCopyable, Writable):
         assert variant < 2, "Invalid variant for EntityError"
 
         self._variant = variant
-        self.entities = InlineArray[Entity, Self.MAX_ENTITY_COUNT]()
+        self.entities = InlineArray[Entity, Self.MAX_ENTITY_COUNT](
+            fill=Entity()  # fill with zero Entity
+        )
 
     @always_inline
     def with_entities[
@@ -148,7 +150,7 @@ struct EntityError(Equatable, ImplicitlyCopyable, Writable):
         return global_variant_messages[self._variant]
 
     def write_to(self, mut writer: Some[Writer]):
-        """Writes the .[EntityError] to a writer.
+        """Writes the [.EntityError] to a writer.
 
         Args:
             writer: The destination writer.
@@ -160,6 +162,8 @@ struct EntityError(Equatable, ImplicitlyCopyable, Writable):
 
         var first_iteration = True
         for entity in self.entities:
+            if entity.is_zero():
+                continue
             if not first_iteration:
                 writer.write(", ")
             writer.write(t"{entity}")
@@ -237,7 +241,7 @@ struct ComponentError(Equatable, ImplicitlyCopyable, Writable):
         return global_variant_messages[self._variant]
 
     def write_to(self, mut writer: Some[Writer]):
-        """Writes the .[ComponentError] to a writer.
+        """Writes the [.ComponentError] to a writer.
 
         Args:
             writer: The destination writer.

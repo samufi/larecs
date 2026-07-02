@@ -3,7 +3,7 @@ from std.random import random_float64
 
 
 from std.collections import Dict
-from larecs.pool import EntityPool, BitPool, IntPool
+from larecs.pool import EntityPool, BitPool
 from larecs.entity import Entity
 
 
@@ -236,22 +236,6 @@ def test_bit_pool_recycle_after_reset() raises:
 
     for i in range(9, -1, -1):
         assert_equal(i, p.get())
-
-
-def test_int_pool() raises:
-    p = IntPool()
-
-    for i in range(32):
-        assert_equal(i, p.get())
-
-    assert_equal(32, len(p._pool))
-
-    p.recycle(3)
-    p.recycle(4)
-    assert_equal(4, p.get())
-    assert_equal(3, p.get())
-
-    p.reset()
 
 
 comptime functions = __functions_in_module()

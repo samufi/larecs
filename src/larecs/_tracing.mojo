@@ -44,18 +44,3 @@ struct TraceGuard(ImplicitlyCopyable):
     def __exit__(mut self):
         """Emits the function-exit trace message."""
         _trace_function["OUT"](self.name)
-
-    @always_inline
-    def __exit__[
-        ErrType: AnyType
-    ](mut self, err: ErrType) raises ErrType -> Bool:
-        """Emits the function-exit trace message and propagates the error.
-
-        Args:
-            err: The error to propagate.
-
-        Returns:
-            False to indicate the error should be propagated.
-        """
-        self.__exit__()
-        return False

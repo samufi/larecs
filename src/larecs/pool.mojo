@@ -45,9 +45,11 @@ struct EntityPool(Copyable, Movable, Sized):
         entity = Entity(EntityId(len(self._entities)))
         self._entities.append(entity)
 
-    def recycle(mut self, entity: Entity):
+    @always_inline
+    def recycle(mut self, entity: Entity) raises InternalError:
         """Hands an entity back for recycling."""
-        assert entity.get_id() != 0, "Can't recycle reserved zero entity"
+        if entity.get_id() == 0:
+            raise InternalError.mutation_of_zero_entity
         check_bounds(entity.get_id(), len(self._entities))
 
         self._entities[entity.get_id()]._generation += 1
@@ -192,58 +194,4 @@ struct BitPool(Copyable, Movable):
         """
         self._next = 0
         self._length = 0
-        self._available = 0
-
-
-struct IntPool:
-    """IntPool is a pool implementation using implicit linked lists.
-
-    Implements https:#skypjack.github.io/2019-05-06-ecs-baf-part-3/
-    """
-
-    var _pool: List[Int]
-    """Integer storage and free-list links for recycled values."""
-    var _next: Int
-    """Next recycled integer or fresh allocation index."""
-    var _available: UInt32
-    """Number of recycled integers available for reuse."""
-
-    @always_inline
-    def __init__(out self):
-        """Creates a new, initialized entity pool."""
-        self._pool = List[Int]()
-        self._next = 0
-        self._available = 0
-
-    def get(mut self) -> Int:
-        """Returns a fresh or recycled entity."""
-        if self._available == 0:
-            return self._get_new()
-
-        curr = self._next
-        self._next, self._pool[self._next] = (
-            self._pool[self._next],
-            self._next,
-        )
-        self._available -= 1
-        return self._pool[curr]
-
-    @always_inline
-    def _get_new(mut self) -> Int:
-        """Allocates and returns a new entity. For internal use."""
-        element = len(self._pool)
-        self._pool.append(element)
-        return element
-
-    @always_inline
-    def recycle(mut self, element: Int):
-        """Hands an entity back for recycling."""
-        self._next, self._pool[element] = element, self._next
-        self._available += 1
-
-    @always_inline
-    def reset(mut self):
-        """Recycles all _entities. Does NOT free the reserved memory."""
-        self._pool.clear()
-        self._next = 0
         self._available = 0

@@ -17,7 +17,9 @@ from .types import ComponentId
 from ._utils import (
     _assert_index_in_bounds,
     _assert_range_in_bounds,
+    assert_unreachable,
 )
+from .error import LarecsError, ComponentError
 
 comptime DEFAULT_CAPACITY = 32
 """Default capacity of an archetype."""
@@ -78,22 +80,23 @@ struct EntityAccessor[
             return self._archetype[].get_entity(self._index_in_archetype)
 
     @always_inline
-    def get[T: ComponentType](ref self) raises -> ref[self.archetype_origin] T:
+    def get[
+        T: ComponentType
+    ](ref self) raises LarecsError -> ref[self.archetype_origin] T:
         """Returns a reference to the given component of the Entity.
 
         Parameters:
             T: The type of the component.
 
         Raises:
-            Error: If the entity's archetype does not contain the component.
+            LarecsError: If the entity's archetype does not contain the component.
 
         Returns:
             A reference to the component of the entity.
         """
 
         with TraceGuard(name="EntityAccessor.get"):
-            if not self._archetype[].has_component[T]():
-                raise Error("The component is missing.")
+            self._archetype[].assert_has_component[T]()
 
             return self._archetype[].get_component[T](
                 self._index_in_archetype,
@@ -108,7 +111,7 @@ struct EntityAccessor[
             *Self.ComponentTypes,
         ],
         var *components: *Ts,
-    ) raises:
+    ) raises LarecsError:
         """
         Overwrites components for an [..entity.Entity], using the given content.
 
@@ -120,7 +123,7 @@ struct EntityAccessor[
             components: The new components.
 
         Raises:
-            Error: If the entity's archetype does not contain one of the components.
+            LarecsError: If the entity's archetype does not contain one of the components.
         """
         with TraceGuard(name="EntityAccessor.set"):
             comptime assert constrain_components_unique[
@@ -144,34 +147,6 @@ struct EntityAccessor[
         """
         with TraceGuard(name="EntityAccessor.has"):
             return self._archetype[].has_component[T]()
-
-
-@fieldwise_init
-struct MissingComponentsError[*Ts: ComponentType](Writable):
-    """Error message writer for missing component requirements.
-
-    Parameters:
-        Ts: The component types that were required but missing.
-    """
-
-    def write_to(self, mut writer: Some[Writer]):
-        """Writes a missing-components diagnostic.
-
-        Args:
-            writer: The destination writer.
-        """
-        comptime if len(Self.Ts) <= 1:
-            writer.write("The component [")
-            comptime for i in range(len(Self.Ts)):
-                comptime T = Self.Ts[i]
-                writer.write(reflect[T].name())
-            writer.write("] is missing.")
-        else:
-            writer.write("At least one of the components [")
-            comptime for i in range(len(Self.Ts)):
-                comptime T = Self.Ts[i]
-                writer.write(reflect[T].name(), ", ")
-            writer.write("] is missing.")
 
 
 struct _ComponentStorage[*ComponentTypes: ComponentType](
@@ -483,7 +458,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
     @always_inline
     def get_component_ptr[
         T: ComponentType,
-    ](ref self) -> UnsafePointer[T, MutUntrackedOrigin]:
+    ](ref self) raises LarecsError -> UnsafePointer[T, MutUntrackedOrigin]:
         """Returns the base pointer for the given component type.
 
         Parameters:
@@ -491,6 +466,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         Returns:
             The pointer to the component.
+
+        Raises:
+            LarecsError: If the component is not contained in the storage.
         """
         comptime assert Self.component_manager._ContainsComponent[
             T
@@ -524,23 +502,29 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         return self._active_component_mask.contains(comp_mask)
 
     @always_inline
-    def assert_has_component[T: ComponentType](self):
+    def assert_has_component[T: ComponentType](self) raises LarecsError:
         """Asserts if the storage does not contain the given component type.
             Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             T: The type of the component.
 
+        Raises:
+            LarecsError: If the component is not contained in the storage.
         """
-        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
-            Self.component_manager.assert_valid_components[T]()
+        Self.component_manager.assert_valid_components[T]()
 
-            assert self.has_component[T](), MissingComponentsError[T]()
+        if not self.has_component[T]():
+            raise LarecsError(
+                ComponentError.missing_components_on_assert.with_components(
+                    BitMask(Self.component_manager.get_id[T]())
+                )
+            )
 
     @always_inline
     def set_component[
         T: ComponentType
-    ](mut self, entity_idx: Int, var component: T):
+    ](mut self, entity_idx: Int, var component: T) raises LarecsError:
         """Sets a typed component value.
 
         Parameters:
@@ -549,26 +533,36 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Args:
             entity_idx: The entity row index.
             component: The component value to store.
+
+        Raises:
+            LarecsError: If the component is not contained in the storage.
         """
         self.get_component_ptr[T]()[entity_idx] = component^
 
     @always_inline
-    def assert_has_components[*Ts: ComponentType](self):
+    def assert_has_components[*Ts: ComponentType](self) raises LarecsError:
         """Raises if the storage does not contain all the given component types.
             Is enabled by defining the ASSERT_COMPONENTS_EXIST flag at compile time.
 
         Parameters:
             Ts: The types of the components to check.
-        """
-        comptime if is_defined["ASSERT_COMPONENTS_EXIST"]():
-            Self.component_manager.assert_valid_components[*Ts]()
 
-            assert self.has_components[*Ts](), MissingComponentsError[*Ts]()
+        Raises:
+            LarecsError: If at least one of the components is not contained in the storage.
+        """
+        Self.component_manager.assert_valid_components[*Ts]()
+
+        if not self.has_components[*Ts]():
+            raise LarecsError(
+                ComponentError.missing_components_on_assert.with_components(
+                    BitMask(Self.component_manager.get_id_arr[*Ts]())
+                )
+            )
 
     @always_inline
     def set_components[
         *Ts: ComponentType
-    ](mut self, entity_idx: Int, var *components: *Ts):
+    ](mut self, entity_idx: Int, var *components: *Ts) raises LarecsError:
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -577,6 +571,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
+
+        Raises:
+            LarecsError: If at least one of the components is not present.
         """
         comptime assert constrain_components_unique[
             *Ts
@@ -589,7 +586,12 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         @always_inline
         def set_component[comp_id: Int](var component: Ts[comp_id]) capturing:
             comptime T = Ts[comp_id]
-            self.get_component_ptr[T]()[entity_idx] = component^
+            try:
+                self.get_component_ptr[T]()[entity_idx] = component^
+            except:
+                assert_unreachable(
+                    "Not reachable as component presence was asserted before."
+                )
 
         (components^).consume_elements[set_component]()
 
@@ -602,7 +604,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         storage: _ComponentStorage,
         count: Int,
         from_idx: Int = 0,
-    ):
+    ) raises LarecsError:
         """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
 
         Parameters:
@@ -613,6 +615,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             storage: The storage to copy components from. Must not be the same as self!
             count: The number of elements to set.
             from_idx: The index of the first entity in the storage to copy from.
+
+        Raises:
+            LarecsError: If the component is not present in the storage.
         """
         _assert_range_in_bounds(to_idx, count, self._size)
         _assert_range_in_bounds(from_idx, count, storage._size)
@@ -664,12 +669,18 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
             if self.has_component[T]() and source[].has_component[T]():
-                destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
-                uninit_copy_n[overlapping=False](
-                    dest=self.get_component_ptr[T]() + to_idx,
-                    src=source[].get_component_ptr[T]() + from_idx,
-                    count=count,
-                )
+                try:
+                    destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
+                    uninit_copy_n[overlapping=False](
+                        dest=self.get_component_ptr[T]() + to_idx,
+                        src=source[].get_component_ptr[T]() + from_idx,
+                        count=count,
+                    )
+                except:
+                    assert_unreachable(
+                        "Not reachable as component presence was checked"
+                        " before."
+                    )
 
     @always_inline
     def _apply_mut_to_active_components[
@@ -969,7 +980,7 @@ struct Archetype[
     @always_inline
     def get_component[
         T: ComponentType
-    ](ref self, entity_idx: Int) -> ref[self] T:
+    ](ref self, entity_idx: Int) raises LarecsError -> ref[self] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
@@ -977,6 +988,9 @@ struct Archetype[
 
         Args:
             entity_idx: The index of the entity.
+
+        Raises:
+            LarecsError: If the component is not present.
 
         Returns:
             A reference to the component.
@@ -989,7 +1003,7 @@ struct Archetype[
     @always_inline
     def set_component[
         T: ComponentType
-    ](mut self, entity_idx: Int, var component: T):
+    ](mut self, entity_idx: Int, var component: T) raises LarecsError:
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -998,6 +1012,9 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             component: The new value of the component.
+
+        Raises:
+            LarecsError: If the component is not present.
         """
         with TraceGuard(name="Archetype.set_component"):
             self._storage.set_component[T](entity_idx, component^)
@@ -1005,7 +1022,7 @@ struct Archetype[
     @always_inline
     def set_components[
         *Ts: ComponentType
-    ](mut self, entity_idx: Int, var *components: *Ts):
+    ](mut self, entity_idx: Int, var *components: *Ts) raises LarecsError:
         """Sets the component with the given Type T at the given index.
 
         Parameters:
@@ -1014,6 +1031,9 @@ struct Archetype[
         Args:
             entity_idx: The index of the entity.
             components: The new values of the components.
+
+        Raises:
+            LarecsError: If at least one of the components is not present.
         """
         with TraceGuard(name="Archetype.set_components"):
             self._storage.set_components[*Ts](entity_idx, *components^)
@@ -1021,7 +1041,7 @@ struct Archetype[
     @always_inline
     def set_component_range[
         T: ComponentType
-    ](mut self, start_entity_idx: Int, count: Int, value: T):
+    ](mut self, start_entity_idx: Int, count: Int, value: T) raises LarecsError:
         """Fills the component with the given Type T for multiple consecutive entities starting with the given index.
 
         Parameters:
@@ -1031,6 +1051,9 @@ struct Archetype[
             start_entity_idx: The index of the first entity to set.
             count: The number of elements to set.
             value: The value to fill the component with.
+
+        Raises:
+            LarecsError: If the component is not present.
         """
         with TraceGuard(name="Archetype.set_component_range"):
             _assert_range_in_bounds(
@@ -1052,7 +1075,7 @@ struct Archetype[
         archetype: Archetype,
         count: Int,
         from_idx: Int = 0,
-    ):
+    ) raises LarecsError:
         """Sets the component with the given Type T for multiple consecutive entities starting with the given index.
 
         Parameters:
@@ -1063,6 +1086,9 @@ struct Archetype[
             archetype: The archetype to copy components from.
             count: The number of elements to set.
             from_idx: The index of the first entity in the archetype to copy from.
+
+        Raises:
+            LarecsError: If the component is not present.
         """
 
         with TraceGuard(name="Archetype.copy_component_from"):
@@ -1094,11 +1120,14 @@ struct Archetype[
             return self._storage.has_component[T]()
 
     @always_inline
-    def assert_has_component[T: ComponentType](self):
+    def assert_has_component[T: ComponentType](self) raises LarecsError:
         """Raises if the archetype does not contain the given component id.
 
         Parameters:
             T: The type of the component. Constraints: Must be contained in the component manager of the storage.
+
+        Raises:
+            LarecsError: If the archetype does not contain the component.
         """
         with TraceGuard(name="Archetype.assert_has_component"):
             self._storage.assert_has_component[T]()
@@ -1209,13 +1238,20 @@ struct Archetype[
             comptime for id in range(len(Self.ComponentTypes)):
                 comptime T = Self.ComponentTypes[id]
                 if self.has_component[T]() and source[].has_component[T]():
-                    uninit_copy_n[overlapping=False](
-                        dest=self._storage.get_component_ptr[T]() + start_index,
-                        src=UnsafePointer(
-                            to=source[].get_component[T](from_idx)
-                        ),
-                        count=count,
-                    )
+                    try:
+                        uninit_copy_n[overlapping=False](
+                            dest=self._storage.get_component_ptr[T]()
+                            + start_index,
+                            src=UnsafePointer(
+                                to=source[].get_component[T](from_idx)
+                            ),
+                            count=count,
+                        )
+                    except:
+                        assert_unreachable(
+                            "Unreachable as component presence is checked"
+                            " before."
+                        )
 
             return start_index
 

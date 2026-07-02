@@ -3,7 +3,8 @@ from std.testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
-from larecs.query import QueryError, _ArchetypeIterator
+from larecs.query import _ArchetypeIterator
+from larecs.error import WorldError
 
 
 def test_query_length() raises:
@@ -412,7 +413,7 @@ def test_query_requires_available_lock() raises:
     for _ in range(world._locks.bit_pool.capacity):
         locks.append(world._lock())
 
-    with assert_raises(contains=QueryError.could_not_create_iterator.msg()):
+    with assert_raises(contains=WorldError.out_of_locks.msg()):
         for _ in world.query[FlexibleComponent[0]]():
             pass
 

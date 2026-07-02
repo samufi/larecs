@@ -1,6 +1,7 @@
 from std.testing import *
 
-from larecs.world import World, WorldError
+from larecs.world import World
+from larecs.error import ComponentError
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import ResourceType
@@ -274,7 +275,7 @@ def test_world_batch_add() raises:
         assert_equal(world.get[Velocity](entity).dy, 0.2)
 
     with assert_raises(
-        contains=WorldError.duplicate_components_for_addition_query.msg()
+        contains=ComponentError.existing_components_on_add_query.msg()
     ):
         _ = world.add(
             world.query[Position]().without[LargerComponent](),
@@ -342,7 +343,7 @@ def test_world_batch_remove() raises:
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
 
     with assert_raises(
-        contains=WorldError.missing_components_for_removal_query.msg()
+        contains=ComponentError.missing_components_on_remove_query.msg()
     ):
         _ = world.remove[Velocity](
             world.query[Position](),
@@ -430,7 +431,7 @@ def test_batch_remove_and_add() raises:
         assert_equal(world.get[FlexibleComponent[1]](entity).y, 4.0)
 
     with assert_raises(
-        contains=WorldError.duplicate_components_for_addition_query.msg()
+        contains=ComponentError.existing_components_on_add_query.msg()
     ):
         _ = world.replace[Velocity]().by(
             Position(5.0, 6.0), query=world.query[Position]()
@@ -560,12 +561,8 @@ def test_world_lock() raises:
     _ = world.add_entity(Position(1.0, 2.0))
     assert_false(world.is_locked())
 
-    try:
-        with world._locked():
-            assert_true(world.is_locked())
-            raise Error("Test")
-    except:
-        pass
+    with world._locked():
+        assert_true(world.is_locked())
 
     assert_false(world.is_locked())
 

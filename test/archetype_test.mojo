@@ -7,6 +7,7 @@ from larecs.component import ComponentManager
 from larecs.entity import Entity
 from larecs.pool import EntityPool
 from larecs.test_utils import *
+from larecs._utils import assert_unreachable
 
 
 comptime Archetype = _Archetype[
@@ -112,9 +113,14 @@ def init_tracked_component(
         idx: The initialized entity row.
         component: The component value to move into the uninitialized row.
     """
-    (
-        archetype._storage.get_component_ptr[TrackedComponent]() + idx
-    ).init_pointee_move(component^)
+    try:
+        (
+            archetype._storage.get_component_ptr[TrackedComponent]() + idx
+        ).init_pointee_move(component^)
+    except:
+        assert_unreachable(
+            "`NonTrivialArchetype` should have `TrackedComponent`."
+        )
 
 
 def test_archetype_init() raises:

@@ -27,7 +27,7 @@ from .query import (
 )
 from .lock import LockManager
 from .resource import Resources
-from ._utils import concatenate_inline_arrays
+from ._utils import concatenate_inline_arrays, assert_unreachable
 from ._tracing import TraceGuard
 from .types import ComponentId
 from .error import (
@@ -699,7 +699,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             swapped = old_archetype[].remove(entity_loc.entity_index)
 
-            self._entity_pool.recycle(entity)
+            try:
+                self._entity_pool.recycle(entity)
+            except:
+                assert_unreachable(
+                    "Zero Entity should never be handed via public API. So it"
+                    " should never be recycled here!"
+                )
 
             if swapped:
                 swap_entity = old_archetype[].get_entity(
@@ -744,7 +750,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 query.mask, query.without_mask
             ):
                 for entity in archetype[].get_entities():
-                    self._entity_pool.recycle(entity)
+                    try:
+                        self._entity_pool.recycle(entity)
+                    except:
+                        assert_unreachable(
+                            "Zero Entity should never be handed via public API."
+                            " So it should never be recycled here!"
+                        )
                 archetype[].clear()
 
             # if self._listener != nil:
@@ -2577,40 +2589,44 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
         Raises:
             LarecsError: If the number of locks exceeds 256.
         """
-        self._lock = self._locks[].lock()
+        try:
+            self._lock = self._locks[].lock()
+        except:
+            raise LarecsError(WorldError.out_of_locks)
+
         return self
 
     @always_inline
-    def __exit__(mut self) raises LarecsError:
+    def __exit__(mut self):
         """
         Unlocks the world.
-
-        Raises:
-            LarecsError: If trying to unlock a lock that is not set.
         """
-        self._locks[].unlock(self._lock)
+        try:
+            self._locks[].unlock(self._lock)
+        except e:
+            assert False, "An unexpected internal error occurred: " + String(e)
 
-    @always_inline
-    def __exit__[
-        ErrType: AnyType
-    ](mut self, err: ErrType) raises LarecsError -> Bool:
-        """
-        Handles exceptions raised during the context.
+    # @always_inline
+    # def __exit__[
+    #     ErrType: AnyType
+    # ](mut self, err: ErrType) raises LarecsError -> Bool:
+    #     """
+    #     Handles exceptions raised during the context.
 
-        Returns:
-            False to indicate the exception should be propagated.
-        """
-        comptime type_name = reflect[ErrType].name()
+    #     Returns:
+    #         False to indicate the exception should be propagated.
+    #     """
+    #     comptime type_name = reflect[ErrType].name()
 
-        self.__exit__()
+    #     self.__exit__()
 
-        comptime if type_name == "LarecsError":
-            return False
-        elif conforms_to(ErrType, Writable):
-            assert False, "An unexpected internal error occurred: " + String(
-                err
-            )
-        else:
-            assert False, "An unexpected internal error occurred: " + type_name
+    #     comptime if type_name == "LarecsError":
+    #         return False
+    #     elif conforms_to(ErrType, Writable):
+    #         assert False, "An unexpected internal error occurred: " + String(
+    #             err
+    #         )
+    #     else:
+    #         assert False, "An unexpected internal error occurred: " + type_name
 
-        return True
+    #     return True
