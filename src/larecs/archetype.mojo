@@ -284,9 +284,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Returns:
             A shallow copy of the component storage.
         """
-        # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
+        # Initialize with an empty active mask to avoid constructing a temporary
+        # storage whose active components intentionally have empty pointers.
         new_storage = Self(
-            active_component_mask=self._active_component_mask, capacity=0
+            active_component_mask=BitMask(),
+            capacity=0,
         )
         new_storage._capacity = self._capacity
         new_storage._size = self._size
@@ -321,7 +323,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             if init_component_mask.get(id):
                 if storage_capacity > 0:
                     return rebind[Self.ComponentPointer[T]](
-                        Optional(alloc[T](storage_capacity))
+                        alloc[T](storage_capacity)
                     )
                 return None
             else:
