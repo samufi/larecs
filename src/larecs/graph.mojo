@@ -180,6 +180,12 @@ struct BitMaskGraph[
             var next_node = self._nodes[current_node].neighbours[
                 different_bits[i]
             ]
+            if next_node != Self.null_index:
+                expected_mask = self._nodes[current_node].bit_mask
+                expected_mask.flip(different_bits[i])
+                if self._nodes[next_node].bit_mask != expected_mask:
+                    next_node = Self.null_index
+
             if next_node == Self.null_index:
                 next_node = self.create_link(current_node, different_bits[i])
             current_node = next_node

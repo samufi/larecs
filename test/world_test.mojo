@@ -72,6 +72,37 @@ def test_add_entities_iterator_length() raises:
     assert_equal(len(iter), 0)
 
 
+def test_add_entities_location_after_append_to_archetype() raises:
+    """Checks entity locations when batch creation appends to an archetype.
+
+    The second batch starts at a non-zero row in the same archetype. Entity
+    handles from that batch must point at their actual archetype rows.
+    """
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    _ = world.add_entities(pos, count=3)
+
+    entities = List[Entity]()
+    for accessor in world.add_entities(pos, count=2):
+        entities.append(accessor.get_entity())
+
+    assert_equal(len(entities), 2)
+    expected_archetype_index = world._entities[
+        entities[0].get_id()
+    ].archetype_index
+    assert_equal(
+        expected_archetype_index,
+        world._entities[entities[1].get_id()].archetype_index,
+    )
+    assert_equal(world._entities[entities[0].get_id()].entity_index, 3)
+    assert_equal(world._entities[entities[1].get_id()].entity_index, 4)
+    assert_true(
+        world._archetypes[expected_archetype_index].has_component[Position]()
+    )
+    assert_equal(world.get[Position](entities[0]).x, pos.x)
+    assert_equal(world.get[Position](entities[1]).x, pos.x)
+
+
 def test_world_len() raises:
     world = SmallWorld()
     pos = Position(1.0, 2.0)

@@ -359,7 +359,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         with TraceGuard(name="World._get_archetype_index root"):
             node_index = self._archetype_map.get_node_index(components, 0)
             if self._archetype_map.has_value(node_index):
-                return self._archetype_map[node_index]
+                archetype_index = self._archetype_map[node_index]
+                if self._archetypes[
+                    archetype_index
+                ].get_mask() == self._archetype_map.get_node_mask(node_index):
+                    return archetype_index
 
             archetype_index = len(self._archetypes)
             self._archetypes.append(
@@ -403,7 +407,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 components, start_node_index
             )
             if self._archetype_map.has_value(node_index):
-                return self._archetype_map[node_index]
+                archetype_index = self._archetype_map[node_index]
+                if self._archetypes[
+                    archetype_index
+                ].get_mask() == self._archetype_map.get_node_mask(node_index):
+                    return archetype_index
 
             archetype_index = len(self._archetypes)
             self._archetypes.append(
@@ -415,6 +423,27 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             self._archetype_map[node_index] = archetype_index
 
+            return archetype_index
+
+    @always_inline
+    def _get_archetype_index_by_mask(mut self, var mask: BitMask) -> Int:
+        """Returns the archetype list index for an exact component mask.
+
+        Args:
+            mask: The exact component mask to find or create.
+
+        Returns:
+            The archetype list index for the mask.
+        """
+        with TraceGuard(name="World._get_archetype_index_by_mask"):
+            for i in range(len(self._archetypes)):
+                if self._archetypes[i].get_mask() == mask:
+                    return i
+
+            node_index = self._archetype_map.add_node(mask.copy())
+            archetype_index = len(self._archetypes)
+            self._archetypes.append(Self.Archetype(node_index, mask^))
+            self._archetype_map[node_index] = archetype_index
             return archetype_index
 
     def add_entity[
@@ -1177,6 +1206,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
             runtime_remove_ids = remove_ids
+            runtime_add_ids = materialize[add_ids]()
 
             self._assert_unlocked()
             self._assert_alive(entity)
@@ -1218,15 +1248,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 ComponentId, add_size + rem_size
             ]
             comptime assert 0 <= add_size + rem_size
-            var component_ids: ComponentIdsType
+            var component_ids = ComponentIdsType(fill=ComponentId(0))
 
             comptime if add_size and rem_size:
-                comptime concatenated = concatenate_inline_arrays(
-                    remove_ids, add_ids
-                )
-                component_ids = rebind[ComponentIdsType](concatenated)
+                comptime for i in range(rem_size):
+                    component_ids[i] = runtime_remove_ids[i]
+                comptime for i in range(add_size):
+                    component_ids[rem_size + i] = runtime_add_ids[i]
             elif Bool(add_size) and not rem_size:
-                component_ids = rebind[ComponentIdsType](add_ids)
+                component_ids = rebind[ComponentIdsType](runtime_add_ids)
             elif not add_size and Bool(rem_size):
                 component_ids = rebind[ComponentIdsType](runtime_remove_ids)
             else:
@@ -1234,9 +1264,21 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             index_in_old_archetype = entity_loc.entity_index
             comptime assert 0 <= add_size + rem_size
+            expected_new_mask = old_archetype_mask
+            comptime if rem_size:
+                expected_new_mask.set(runtime_remove_ids, False)
+            comptime if add_size:
+                expected_new_mask.set(runtime_add_ids, True)
             new_archetype_idx = self._get_archetype_index(
                 component_ids, old_archetype[].get_node_index()
             )
+            if (
+                self._archetypes[new_archetype_idx].get_mask()
+                != expected_new_mask
+            ):
+                new_archetype_idx = self._get_archetype_index_by_mask(
+                    expected_new_mask
+                )
             new_archetype = Pointer(
                 to=self._archetypes.unsafe_get(new_archetype_idx)
             )
@@ -1332,8 +1374,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             comptime assert 0 <= add_size + rem_size
 
             runtime_remove_ids = materialize[remove_ids]()
+            runtime_add_ids = materialize[add_ids]()
 
-            var component_ids: ComponentIdsType
+            var component_ids = ComponentIdsType(fill=ComponentId(0))
 
             # Note:
             #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
@@ -1393,12 +1436,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         )
 
             comptime if add_size and rem_size:
-                comptime concatenated = concatenate_inline_arrays(
-                    remove_ids, add_ids
-                )
-                component_ids = rebind[ComponentIdsType](concatenated)
+                comptime for i in range(rem_size):
+                    component_ids[i] = runtime_remove_ids[i]
+                comptime for i in range(add_size):
+                    component_ids[rem_size + i] = runtime_add_ids[i]
             elif Bool(add_size) and not rem_size:
-                component_ids = rebind[ComponentIdsType](add_ids)
+                component_ids = rebind[ComponentIdsType](runtime_add_ids)
             elif not add_size and Bool(rem_size):
                 component_ids = rebind[ComponentIdsType](runtime_remove_ids)
             else:
@@ -1435,9 +1478,21 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     # 2. If an archetype with the new component combination does not exist yet,
                     #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
                     old_node_index = old_archetype[].get_node_index()
+                    expected_new_mask = old_archetype[].get_mask()
+                    comptime if rem_size:
+                        expected_new_mask.set(runtime_remove_ids, False)
+                    comptime if add_size:
+                        expected_new_mask.set(runtime_add_ids, True)
                     new_archetype_idx = self._get_archetype_index[
                         add_size + rem_size
                     ](component_ids, old_node_index)
+                    if (
+                        self._archetypes[new_archetype_idx].get_mask()
+                        != expected_new_mask
+                    ):
+                        new_archetype_idx = self._get_archetype_index_by_mask(
+                            expected_new_mask
+                        )
 
                     # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                     # resized during the call to `_get_archetype_index`.
