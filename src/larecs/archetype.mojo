@@ -96,7 +96,7 @@ struct EntityAccessor[
         """
 
         with TraceGuard(name="EntityAccessor.get"):
-            self._archetype[].assert_has_component[T]()
+            self._archetype[].assert_has_components[T]()
 
             return self._archetype[].get_component[T](
                 self._index_in_archetype,
@@ -146,7 +146,7 @@ struct EntityAccessor[
             Whether the entity has the component.
         """
         with TraceGuard(name="EntityAccessor.has"):
-            return self._archetype[].has_component[T]()
+            return self._archetype[].has_components[T]()
 
 
 struct _ComponentStorage[*ComponentTypes: ComponentType](
@@ -475,23 +475,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         ], "Component type not in component manager"
         comptime id = Self.component_manager.get_id[T]()
 
-        self.assert_has_component[T]()
+        self.assert_has_components[T]()
 
         return rebind[Self.ComponentPointer[T]](self._data[id]).value()
-
-    @always_inline
-    def has_component[T: ComponentType](self) -> Bool:
-        """Returns whether the storage contains the given component type.
-
-        Parameters:
-            T: The type of the component.
-
-        Returns:
-            Whether the storage contains the component type.
-        """
-        Self.component_manager.assert_valid_components[T]()
-        comptime id = Self.component_manager.get_id[T]()
-        return self._active_component_mask.get(id)
 
     @always_inline
     def has_components[*Ts: ComponentType](self) -> Bool:
@@ -500,43 +486,6 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Self.component_manager.assert_valid_components[*Ts]()
         comptime comp_mask = BitMask(Self.component_manager.get_id_arr[*Ts]())
         return self._active_component_mask.contains(comp_mask)
-
-    @always_inline
-    def assert_has_component[T: ComponentType](self) raises LarecsError:
-        """Asserts if the storage does not contain the given component type.
-
-        Parameters:
-            T: The type of the component.
-
-        Raises:
-            LarecsError: If the component is not contained in the storage.
-        """
-        Self.component_manager.assert_valid_components[T]()
-
-        if not self.has_component[T]():
-            raise LarecsError(
-                ComponentError.missing_components_on_assert.with_components(
-                    BitMask(Self.component_manager.get_id[T]())
-                )
-            )
-
-    @always_inline
-    def set_component[
-        T: ComponentType
-    ](mut self, entity_idx: Int, var component: T) raises LarecsError:
-        """Sets a typed component value.
-
-        Parameters:
-            T: The component type.
-
-        Args:
-            entity_idx: The entity row index.
-            component: The component value to store.
-
-        Raises:
-            LarecsError: If the component is not contained in the storage.
-        """
-        self.get_component_ptr[T]()[entity_idx] = component^
 
     @always_inline
     def assert_has_components[*Ts: ComponentType](self) raises LarecsError:
@@ -671,7 +620,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
 
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
-            if self.has_component[T]() and source[].has_component[T]():
+            if self.has_components[T]() and source[].has_components[T]():
                 try:
                     destroy_n(self.get_component_ptr[T]() + to_idx, count=count)
                     uninit_copy_n[overlapping=False](
@@ -704,7 +653,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
-            if self.has_component[T]():
+            if self.has_components[T]():
                 comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
                 self._data[id] = rebind[Self._PointerTuple.element_types[id]](
                     func[T, id](self._size, self._capacity, comp_ptr)
@@ -727,9 +676,9 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         """
         comptime for id in range(len(Self.ComponentTypes)):
             comptime T = Self.ComponentTypes[id]
-            if self.has_component[T]():
+            if self.has_components[T]():
                 comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
-                func[T, id](self._size, self._capacity, comp_ptr.value())
+                func[T, id](self._size, self._capacity, comp_ptr.value().copy())
 
 
 struct Archetype[
@@ -1004,25 +953,6 @@ struct Archetype[
             return self._storage.get_component_ptr[T]()[entity_idx]
 
     @always_inline
-    def set_component[
-        T: ComponentType
-    ](mut self, entity_idx: Int, var component: T) raises LarecsError:
-        """Sets the component with the given Type T at the given index.
-
-        Parameters:
-            T: The type of the component. Constraints: Must be contained in the component manager.
-
-        Args:
-            entity_idx: The index of the entity.
-            component: The new value of the component.
-
-        Raises:
-            LarecsError: If the component is not present.
-        """
-        with TraceGuard(name="Archetype.set_component"):
-            self._storage.set_component[T](entity_idx, component^)
-
-    @always_inline
     def set_components[
         *Ts: ComponentType
     ](mut self, entity_idx: Int, var *components: *Ts) raises LarecsError:
@@ -1110,30 +1040,30 @@ struct Archetype[
             return self._entities
 
     @always_inline
-    def has_component[T: ComponentType](self) -> Bool:
+    def has_components[*Ts: ComponentType](self) -> Bool:
         """Returns whether the archetype contains the given component id.
 
         Parameters:
-            T: The type of the component. Constraints: Must be contained in the component manager of the storage.
+            Ts: The types of the component. Constraints: Must be contained in the component manager of the storage.
 
         Returns:
             Whether the archetype contains the component.
         """
-        with TraceGuard(name="Archetype.has_component"):
-            return self._storage.has_component[T]()
+        with TraceGuard(name="Archetype.has_components"):
+            return self._storage.has_components[*Ts]()
 
     @always_inline
-    def assert_has_component[T: ComponentType](self) raises LarecsError:
+    def assert_has_components[*Ts: ComponentType](self) raises LarecsError:
         """Raises if the archetype does not contain the given component id.
 
         Parameters:
-            T: The type of the component. Constraints: Must be contained in the component manager of the storage.
+            Ts: The types of the component. Constraints: Must be contained in the component manager of the storage.
 
         Raises:
             LarecsError: If the archetype does not contain the component.
         """
-        with TraceGuard(name="Archetype.assert_has_component"):
-            self._storage.assert_has_component[T]()
+        with TraceGuard(name="Archetype.assert_has_components"):
+            self._storage.assert_has_components[*Ts]()
 
     @always_inline
     def remove(mut self, idx: Int) -> Bool:
@@ -1240,7 +1170,7 @@ struct Archetype[
 
             comptime for id in range(len(Self.ComponentTypes)):
                 comptime T = Self.ComponentTypes[id]
-                if self.has_component[T]() and source[].has_component[T]():
+                if self.has_components[T]() and source[].has_components[T]():
                     try:
                         uninit_copy_n[overlapping=False](
                             dest=self._storage.get_component_ptr[T]()

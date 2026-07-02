@@ -807,7 +807,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             self._assert_alive(entity)
             return self._archetypes.unsafe_get(
                 index(self._entities[entity.get_id()].archetype_index)
-            ).has_component[T]()
+            ).has_components[T]()
 
     @always_inline
     def get[
@@ -830,7 +830,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         with TraceGuard(name="World.get"):
             if not self._archetypes.unsafe_get(
                 entity_loc.archetype_index
-            ).has_component[T]():
+            ).has_components[T]():
                 raise LarecsError(
                     ComponentError.missing_components_on_assert.with_components(
                         BitMask(Self.component_manager.get_id[T]())
@@ -866,7 +866,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             entity_loc = self._entities[entity.get_id()]
             self._archetypes.unsafe_get(
                 entity_loc.archetype_index
-            ).set_component[T](entity_loc.entity_index, component^)
+            ).set_components[T](entity_loc.entity_index, component^)
 
     @always_inline
     def set[
@@ -1240,14 +1240,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             # Move component data from old archetype to new archetype.
             comptime for id in range(Self.component_manager.component_count):
                 comptime T = Self.component_types[id]
-                if not old_archetype[].has_component[T]():
+                if not old_archetype[].has_components[T]():
                     continue
 
                 comptime if rem_size:
-                    if not new_archetype[].has_component[T]():
+                    if not new_archetype[].has_components[T]():
                         continue
 
-                new_archetype[].set_component[T](
+                new_archetype[].set_components[T](
                     index_in_new_archetype,
                     old_archetype[]
                     .get_component[T](index_in_old_archetype)
