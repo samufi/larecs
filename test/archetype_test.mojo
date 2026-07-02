@@ -158,7 +158,7 @@ def test_archetype_get_entity() raises:
     var archetype = Archetype(0, mask2)
 
     var entity = Entity(0, 0)
-    idx = archetype.add(entity)
+    idx = archetype.add_entity(entity)
     assert_equal(archetype.get_entity(idx), entity)
 
 
@@ -167,8 +167,8 @@ def test_archetype_remove() raises:
 
     var entity1 = Entity(0, 0)
     var entity2 = Entity(1, 0)
-    _ = archetype.add(entity1)
-    _ = archetype.add(entity2)
+    _ = archetype.add_entity(entity1)
+    _ = archetype.add_entity(entity2)
 
     assert_equal(len(archetype), 2)
     assert_equal(archetype._entities[0], entity1)
@@ -188,15 +188,15 @@ def test_archetype_remove() raises:
 def test_archetype_has_component() raises:
     var archetype = Archetype(0, mask2)
 
-    assert_true(archetype.has_component[Archetype.ComponentTypes[1]]())
-    assert_true(archetype.has_component[Archetype.ComponentTypes[2]]())
-    assert_false(archetype.has_component[Archetype.ComponentTypes[3]]())
+    assert_true(archetype.has_components[Archetype.ComponentTypes[1]]())
+    assert_true(archetype.has_components[Archetype.ComponentTypes[2]]())
+    assert_false(archetype.has_components[Archetype.ComponentTypes[3]]())
 
 
 def test_archetype_move() raises:
     var archetype = Archetype(0, mask2)
 
-    idx = archetype.add(Entity())
+    idx = archetype.add_entity(Entity())
     archetype.set_components(
         idx,
         LargerComponent(1.0, 2.0, 3.0),
@@ -226,7 +226,7 @@ def test_archetype_move() raises:
 
 def test_archetype_copy() raises:
     var archetype = Archetype(0, mask2)
-    idx = archetype.add(Entity())
+    idx = archetype.add_entity(Entity())
     archetype.set_components(
         idx,
         LargerComponent(1.0, 2.0, 3.0),
@@ -249,7 +249,7 @@ def test_archetype_copy() raises:
 
 def test_entity_accessor_set_components() raises:
     var archetype = Archetype(0, mask2)
-    entity_idx = archetype.add(Entity(10, 3))
+    entity_idx = archetype.add_entity(Entity(10, 3))
     entity = archetype.get_entity_accessor(entity_idx)
 
     entity.set(
@@ -267,7 +267,7 @@ def test_archetype_add() raises:
     var archetype = Archetype(0, mask2)
 
     var entity = Entity(10, 3)
-    var index = archetype.add(entity)
+    var index = archetype.add_entity(entity)
 
     assert_equal(index, 0)
     assert_equal(len(archetype), 1)
@@ -295,7 +295,7 @@ def test_archetype_get_mask() raises:
     var archetype = Archetype(0, mask3)
 
     var entity = Entity(10, 3)
-    _ = archetype.add(entity)
+    _ = archetype.add_entity(entity)
 
     var mask = archetype.get_mask()
     assert_equal(mask, BitMask(1, 2, 3))
@@ -315,9 +315,9 @@ def test_archetype_reserve_non_trivial_component() raises:
     var counters = LifecycleCounters()
     var archetype = NonTrivialArchetype(0, tracked_mask, capacity=2)
 
-    var idx0 = archetype.add(Entity(0, 0))
+    var idx0 = archetype.add_entity(Entity(0, 0))
     init_tracked_component(archetype, idx0, counters.component())
-    var idx1 = archetype.add(Entity(1, 0))
+    var idx1 = archetype.add_entity(Entity(1, 0))
     init_tracked_component(archetype, idx1, counters.component())
 
     var base_copies = counters.copy_counter[]
@@ -343,9 +343,9 @@ def test_archetype_copy_non_trivial_component() raises:
     var counters = LifecycleCounters()
     var archetype = NonTrivialArchetype(0, tracked_mask, capacity=4)
 
-    var idx0 = archetype.add(Entity(0, 0))
+    var idx0 = archetype.add_entity(Entity(0, 0))
     init_tracked_component(archetype, idx0, counters.component())
-    var idx1 = archetype.add(Entity(1, 0))
+    var idx1 = archetype.add_entity(Entity(1, 0))
     init_tracked_component(archetype, idx1, counters.component())
 
     var base_copies = counters.copy_counter[]
@@ -376,9 +376,9 @@ def test_archetype_remove_non_trivial_component() raises:
     var counters = LifecycleCounters()
     var archetype = NonTrivialArchetype(0, tracked_mask, capacity=4)
 
-    var idx0 = archetype.add(Entity(0, 0))
+    var idx0 = archetype.add_entity(Entity(0, 0))
     init_tracked_component(archetype, idx0, counters.component())
-    var idx1 = archetype.add(Entity(1, 0))
+    var idx1 = archetype.add_entity(Entity(1, 0))
     init_tracked_component(archetype, idx1, counters.component())
 
     var base_copies = counters.copy_counter[]
@@ -407,9 +407,9 @@ def test_archetype_copy_component_from_non_trivial_component() raises:
     var source = NonTrivialArchetype(0, tracked_mask, capacity=2)
     var destination = NonTrivialArchetype(1, tracked_mask, capacity=2)
 
-    var source_idx = source.add(Entity(0, 0))
+    var source_idx = source.add_entity(Entity(0, 0))
     init_tracked_component(source, source_idx, counters.component())
-    var destination_idx = destination.add(Entity(1, 0))
+    var destination_idx = destination.add_entity(Entity(1, 0))
     init_tracked_component(destination, destination_idx, counters.component())
 
     var base_copies = counters.copy_counter[]
@@ -437,9 +437,9 @@ def test_archetype_extend_from_archetype_unsafe_non_trivial_component() raises:
     var source = NonTrivialArchetype(0, tracked_mask, capacity=4)
     var destination = NonTrivialArchetype(1, tracked_mask, capacity=1)
 
-    var idx0 = source.add(Entity(0, 0))
+    var idx0 = source.add_entity(Entity(0, 0))
     init_tracked_component(source, idx0, counters.component())
-    var idx1 = source.add(Entity(1, 0))
+    var idx1 = source.add_entity(Entity(1, 0))
     init_tracked_component(source, idx1, counters.component())
 
     var base_copies = counters.copy_counter[]

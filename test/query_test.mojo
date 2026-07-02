@@ -435,9 +435,9 @@ def test_query_archetype_iterator() raises:
     a1 = Archetype(0, BitMask(0))
     a2 = Archetype(0, BitMask(0))
     a3 = Archetype(2, BitMask(0, 1))
-    _ = a1.add(Entity(0, 0))
-    _ = a2.add(Entity(0, 0))
-    _ = a3.add(Entity(0, 0))
+    _ = a1.add_entity(Entity(0, 0))
+    _ = a2.add_entity(Entity(0, 0))
+    _ = a3.add_entity(Entity(0, 0))
     archetypes: List[Archetype] = [a1^, a2^, a3^]
     var count = 0
 

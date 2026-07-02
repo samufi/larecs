@@ -97,7 +97,7 @@ def test_add_entities_location_after_append_to_archetype() raises:
     assert_equal(world._entities[entities[0].get_id()].entity_index, 3)
     assert_equal(world._entities[entities[1].get_id()].entity_index, 4)
     assert_true(
-        world._archetypes[expected_archetype_index].has_component[Position]()
+        world._archetypes[expected_archetype_index].has_components[Position]()
     )
     assert_equal(world.get[Position](entities[0]).x, pos.x)
     assert_equal(world.get[Position](entities[1]).x, pos.x)
