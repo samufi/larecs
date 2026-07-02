@@ -548,6 +548,46 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         (components^).consume_elements[set_component]()
 
     @always_inline
+    def init_components[
+        *Ts: ComponentType
+    ](mut self, entity_idx: Int, var *components: *Ts) raises LarecsError:
+        """Initializes component values in an uninitialized entity row.
+
+        Parameters:
+            Ts: The component types to initialize.
+
+        Args:
+            entity_idx: The uninitialized entity row index.
+            components: The component values to move into the row.
+
+        Raises:
+            LarecsError: If at least one component is not present.
+        """
+        comptime assert constrain_components_unique[
+            *Ts
+        ](), "Component types must be unique."
+        _assert_index_in_bounds(entity_idx, self._size)
+
+        Self.component_manager.assert_valid_components[*Ts]()
+        self.assert_has_components[*Ts]()
+
+        @always_inline
+        def init_component[
+            comp_id: Int
+        ](var component: Ts[comp_id]) capturing -> None:
+            comptime T = Ts[comp_id]
+            try:
+                base_comp_ptr = self.get_component_ptr[T]()
+            except:
+                return assert_unreachable(
+                    "Not reachable as component presence was asserted before."
+                )
+            entity_comp_ptr = base_comp_ptr + entity_idx
+            entity_comp_ptr.init_pointee_move(component^)
+
+        (components^).consume_elements[init_component]()
+
+    @always_inline
     def copy_component_from[
         T: ComponentType
     ](
@@ -970,6 +1010,25 @@ struct Archetype[
         """
         with TraceGuard(name="Archetype.set_components"):
             self._storage.set_components[*Ts](entity_idx, *components^)
+
+    @always_inline
+    def init_components[
+        *Ts: ComponentType
+    ](mut self, entity_idx: Int, var *components: *Ts) raises LarecsError:
+        """Initializes components in an uninitialized entity row.
+
+        Parameters:
+            Ts: The component types to initialize.
+
+        Args:
+            entity_idx: The uninitialized entity row index.
+            components: The component values to move into the row.
+
+        Raises:
+            LarecsError: If at least one component is not present.
+        """
+        with TraceGuard(name="Archetype.init_components"):
+            self._storage.init_components[*Ts](entity_idx, *components^)
 
     @always_inline
     def set_component_range[

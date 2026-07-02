@@ -488,7 +488,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             comptime if component_count:
                 entity_index = self._entities[entity.get_id()].entity_index
-                self._archetypes[archetype_index].set_components[*Ts](
+                self._archetypes[archetype_index].init_components[*Ts](
                     entity_index, *components^
                 )
 
@@ -1259,7 +1259,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     .copy(),
                 )
 
-            new_archetype[].set_components[*Ts](
+            new_archetype[].init_components[*Ts](
                 index_in_new_archetype, *add_components^
             )
 
