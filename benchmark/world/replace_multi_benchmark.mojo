@@ -28,19 +28,19 @@ def _replace_5_comp_workload() raises:
                     FlexibleComponent[base + 3],
                     FlexibleComponent[base + 4],
                 ]().by(
-                    FlexibleComponent[base + 5](
+                    FlexibleComponent[(base + 5) % 100](
                         Float64(i) + 11.0, Float32(i) + 12.0
                     ),
-                    FlexibleComponent[base + 6](
+                    FlexibleComponent[(base + 6) % 100](
                         Float64(i) + 13.0, Float32(i) + 14.0
                     ),
-                    FlexibleComponent[base + 7](
+                    FlexibleComponent[(base + 7) % 100](
                         Float64(i) + 15.0, Float32(i) + 16.0
                     ),
-                    FlexibleComponent[base + 8](
+                    FlexibleComponent[(base + 8) % 100](
                         Float64(i) + 17.0, Float32(i) + 18.0
                     ),
-                    FlexibleComponent[base + 9](
+                    FlexibleComponent[(base + 9) % 100](
                         Float64(i) + 19.0, Float32(i) + 20.0
                     ),
                     entity=entity,

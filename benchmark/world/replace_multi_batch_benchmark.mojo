@@ -8,19 +8,18 @@ def benchmark_replace_5_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
     world = SmallWorld()
+    _ = world.add_entities(
+        FlexibleComponent[0](1.0, 2.0),
+        FlexibleComponent[1](3.0, 4.0),
+        FlexibleComponent[2](5.0, 6.0),
+        FlexibleComponent[3](7.0, 8.0),
+        FlexibleComponent[4](9.0, 10.0),
+        count=1_000_000,
+    )
 
     @always_inline
     def bench_fn() {mut world}:
         try:
-            _ = world.add_entities(
-                FlexibleComponent[0](1.0, 2.0),
-                FlexibleComponent[1](3.0, 4.0),
-                FlexibleComponent[2](5.0, 6.0),
-                FlexibleComponent[3](7.0, 8.0),
-                FlexibleComponent[4](9.0, 10.0),
-                count=1_000_000,
-            )
-
             _ = world.replace[
                 FlexibleComponent[0],
                 FlexibleComponent[1],
@@ -41,6 +40,27 @@ def benchmark_replace_5_comp_batch_1_000_000(
                 FlexibleComponent[8](17.0, 18.0),
                 FlexibleComponent[9](19.0, 20.0),
             )
+
+            _ = world.replace[
+                FlexibleComponent[5],
+                FlexibleComponent[6],
+                FlexibleComponent[7],
+                FlexibleComponent[8],
+                FlexibleComponent[9],
+            ]().by(
+                world.query[
+                    FlexibleComponent[5],
+                    FlexibleComponent[6],
+                    FlexibleComponent[7],
+                    FlexibleComponent[8],
+                    FlexibleComponent[9],
+                ](),
+                FlexibleComponent[0](1.0, 2.0),
+                FlexibleComponent[1](3.0, 4.0),
+                FlexibleComponent[2](5.0, 6.0),
+                FlexibleComponent[3](7.0, 8.0),
+                FlexibleComponent[4](9.0, 10.0),
+            )
         except e:
             print(e)
 
@@ -51,19 +71,18 @@ def benchmark_replace_5_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
     world = SmallWorld()
+    _ = world.add_entities(
+        FlexibleComponent[0](1.0, 2.0),
+        FlexibleComponent[1](3.0, 4.0),
+        FlexibleComponent[2](5.0, 6.0),
+        FlexibleComponent[3](7.0, 8.0),
+        FlexibleComponent[4](9.0, 10.0),
+        count=1_000,
+    )
 
     @always_inline
     def bench_fn() {mut world}:
         try:
-            _ = world.add_entities(
-                FlexibleComponent[0](1.0, 2.0),
-                FlexibleComponent[1](3.0, 4.0),
-                FlexibleComponent[2](5.0, 6.0),
-                FlexibleComponent[3](7.0, 8.0),
-                FlexibleComponent[4](9.0, 10.0),
-                count=1_000,
-            )
-
             for _ in range(500):
                 entity56789 = world.add_entity(
                     FlexibleComponent[5](11.0, 12.0),

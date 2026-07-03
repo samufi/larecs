@@ -21,7 +21,7 @@ def _replace_1_comp_workload() raises:
 
     for _ in range(100):
         comptime for i in range(10):
-            component = FlexibleComponent[i + 1](Float64(i), 2.0)
+            component = FlexibleComponent[(i + 1) % 10](Float64(i), 2.0)
             for entity in entities:
                 world.replace[FlexibleComponent[i]]().by(
                     component, entity=entity

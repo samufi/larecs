@@ -17,17 +17,19 @@ def benchmark_replace_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
     world = SmallWorld()
+    _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000_000)
 
     @always_inline
     def bench_fn() {read, mut world}:
         try:
-            _ = world.add_entities(
-                FlexibleComponent[0](1.0, 2.0), count=1_000_000
-            )
-
             _ = world.replace[FlexibleComponent[0]]().by(
                 world.query[FlexibleComponent[0]](),
                 FlexibleComponent[1](3.0, 4.0),
+            )
+
+            _ = world.replace[FlexibleComponent[1]]().by(
+                world.query[FlexibleComponent[1]](),
+                FlexibleComponent[0](1.0, 2.0),
             )
 
         except e:
@@ -40,12 +42,11 @@ def benchmark_replace_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
     world = SmallWorld()
+    _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
 
     @always_inline
     def bench_fn() {read, mut world}:
         try:
-            _ = world.add_entities(FlexibleComponent[0](1.0, 2.0), count=1_000)
-
             for _ in range(500):
                 _ = world.replace[FlexibleComponent[0]]().by(
                     world.query[FlexibleComponent[0]](),
