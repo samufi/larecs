@@ -798,42 +798,8 @@ struct Archetype[
                 mask, capacity=capacity
             )
 
-            self._entities = List[Entity]()
+            self._entities = List[Entity](capacity=capacity)
             self._node_index = node_index
-
-    @always_inline
-    def __init__[
-        component_count: Int
-    ](
-        out self,
-        node_index: Int,
-        component_ids: InlineArray[ComponentId, component_count] = InlineArray[
-            ComponentId, component_count
-        ](fill=ComponentId(0)),
-        capacity: Int = DEFAULT_CAPACITY,
-    ):
-        """Initializes the archetype with given components.
-
-        Args:
-            node_index:      The index of the archetype's node in the archetype graph.
-            component_ids:   The IDs of the components of the archetype.
-            capacity:        The initial capacity of the archetype.
-
-        Parameters:
-            component_count: The number of components in the archetype.
-
-        Returns:
-            The archetype with the given components.
-
-        Constraints:
-            `component_count` must be non-negative.
-        """
-        with TraceGuard(name="Archetype.__init__ components"):
-            comptime assert (
-                0 <= component_count
-            ), "Component count must be non-negative."
-
-            self = Self(node_index, BitMask(component_ids), capacity)
 
     @always_inline
     def __init__(out self, *, copy: Self):

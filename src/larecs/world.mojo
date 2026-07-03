@@ -343,47 +343,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def _get_archetype_index[
         size: Int
-    ](mut self, components: InlineArray[ComponentId, size]) -> Int:
-        """Returns the archetype list index of the archetype differing from
-        the archetype at the start node by the given indices.
-
-        If necessary, creates a new archetype.
-
-        Args:
-            components:       The components that distinguish the archetypes.
-
-        Returns:
-            The archetype list index of the archetype differing from the start
-            archetype by the components at the given indices.
-        """
-        with TraceGuard(name="World._get_archetype_index root"):
-            node_index = self._archetype_map.get_node_index(components, 0)
-            if self._archetype_map.has_value(node_index):
-                archetype_index = self._archetype_map[node_index]
-                if self._archetypes[
-                    archetype_index
-                ].get_mask() == self._archetype_map.get_node_mask(node_index):
-                    return archetype_index
-
-            archetype_index = len(self._archetypes)
-            self._archetypes.append(
-                Self.Archetype(
-                    node_index,
-                    components,
-                )
-            )
-
-            self._archetype_map[node_index] = archetype_index
-
-            return archetype_index
-
-    @always_inline
-    def _get_archetype_index[
-        size: Int
     ](
         mut self,
         components: InlineArray[ComponentId, size],
-        start_node_index: Int,
+        start_node_index: Int = 0,
     ) -> Int:
         """Returns the archetype list index of the archetype
         with the given component indices.
@@ -407,18 +370,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 components, start_node_index
             )
             if self._archetype_map.has_value(node_index):
-                archetype_index = self._archetype_map[node_index]
-                if self._archetypes[
-                    archetype_index
-                ].get_mask() == self._archetype_map.get_node_mask(node_index):
-                    return archetype_index
+                return self._archetype_map[node_index]
 
             archetype_index = len(self._archetypes)
-            self._archetypes.append(
+            self._archetypes.insert(
+                archetype_index,
                 Self.Archetype(
                     node_index,
                     self._archetype_map.get_node_mask(node_index),
-                )
+                ),
             )
 
             self._archetype_map[node_index] = archetype_index
@@ -1276,6 +1236,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 self._archetypes[new_archetype_idx].get_mask()
                 != expected_new_mask
             ):
+                assert_unreachable("Bug in archetype mask calculation!")
                 new_archetype_idx = self._get_archetype_index_by_mask(
                     expected_new_mask
                 )
@@ -1351,11 +1312,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator over the modified entities.
 
         Raises:
-            Error: when called with nothing to do (i.e. no components to add or remove).
-            Error: when called with a query that could match existing entities that already have at least one of the
+            LarecsError: when called with a query that could match existing entities that already have at least one of the
                 components to add.
-            Error: when called with a query that could match entities that don't have all of the components to remove.
-            Error: when called on a locked world. Do not use during [.World.query] iteration.
+            LarecsError: when called with a query that could match entities that don't have all of the components to remove.
+            LarecsError: when called on a locked world. Do not use during [.World.query] iteration.
         """
         with TraceGuard(name="World._batch_remove_and_add"):
             comptime assert Self.component_manager._ContainsComponents[
@@ -1372,11 +1332,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 ComponentId, add_size + rem_size
             ]
             comptime assert 0 <= add_size + rem_size
-
-            runtime_remove_ids = materialize[remove_ids]()
-            runtime_add_ids = materialize[add_ids]()
-
-            var component_ids = ComponentIdsType(fill=ComponentId(0))
 
             # Note:
             #    This operation can never map multiple archetypes onto one, due to the requirement that components to add
@@ -1404,7 +1359,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         archetype_mask = archetype[].get_mask()
 
                         comptime if rem_size:
-                            archetype_mask.set(runtime_remove_ids, False)
+                            archetype_mask.set(remove_ids, False)
 
                         if archetype[] and archetype_mask.contains_any(
                             BitMask(add_ids)
@@ -1420,7 +1375,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 if not query.mask.contains(BitMask(runtime_remove_ids)):
                     raise LarecsError(
                         ComponentError.missing_components_on_remove_query.with_components(
-                            query.mask ^ BitMask(runtime_remove_ids)
+                            query.mask ^ BitMask(remove_ids)
                         )
                     )
 
@@ -1430,21 +1385,22 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     ):
                         raise LarecsError(
                             ComponentError.missing_components_on_remove_query.with_components(
-                                query.without_mask[]
-                                & BitMask(runtime_remove_ids)
+                                query.without_mask[] & BitMask(remove_ids)
                             )
                         )
 
+            var component_ids = ComponentIdsType(fill=ComponentId(0))
             comptime if add_size and rem_size:
-                comptime for i in range(rem_size):
-                    component_ids[i] = runtime_remove_ids[i]
-                comptime for i in range(add_size):
-                    component_ids[rem_size + i] = runtime_add_ids[i]
+                comptime concatenated = concatenate_inline_arrays(
+                    remove_ids, add_ids
+                )
+                component_ids = concatenated
             elif Bool(add_size) and not rem_size:
-                component_ids = rebind[ComponentIdsType](runtime_add_ids)
+                component_ids = rebind[ComponentIdsType](add_ids)
             elif not add_size and Bool(rem_size):
-                component_ids = rebind[ComponentIdsType](runtime_remove_ids)
+                component_ids = rebind[ComponentIdsType](remove_ids)
             else:
+                # Nothing to do. Just return empty iterator.
                 try:
                     iterator = {
                         Self.ArchetypeIterator(
@@ -1480,9 +1436,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     old_node_index = old_archetype[].get_node_index()
                     expected_new_mask = old_archetype[].get_mask()
                     comptime if rem_size:
-                        expected_new_mask.set(runtime_remove_ids, False)
+                        expected_new_mask.set(remove_ids, False)
                     comptime if add_size:
-                        expected_new_mask.set(runtime_add_ids, True)
+                        expected_new_mask.set(add_ids, True)
                     new_archetype_idx = self._get_archetype_index[
                         add_size + rem_size
                     ](component_ids, old_node_index)
@@ -1490,6 +1446,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         self._archetypes[new_archetype_idx].get_mask()
                         != expected_new_mask
                     ):
+                        assert_unreachable(
+                            "Bug in _batch_remove_and_add: new archetype mask"
+                            " mismatch"
+                        )
                         new_archetype_idx = self._get_archetype_index_by_mask(
                             expected_new_mask
                         )
