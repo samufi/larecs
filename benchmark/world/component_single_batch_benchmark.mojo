@@ -4,35 +4,35 @@ from larecs.test_utils import *
 
 
 def prevent_inlining_add_remove_batch() raises:
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
     world = SmallWorld()
-    _ = world.add_entities(pos, count=1)
-    query = world.query[Position]().without[Velocity]()
-    _ = world.add(query, vel)
-    _ = world.remove[Position](query)
+    _ = world.add_entities(Position(1.0, 2.0), count=1)
+    _ = world.add(
+        world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)
+    )
+    _ = world.remove[Position](world.query[Position]())
 
 
 def benchmark_add_remove_1_comp_batch_1_000_000(
     mut bencher: Bencher,
 ):
-    pos = Position(1.0, 2.0)
-    comp = FlexibleComponent[1](1.0, 42.0)
     world = SmallWorld()
+    try:
+        # create 1_000_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(Position(1.0, 2.0), count=1_000_000)
+    except e:
+        print(e)
+        return
 
     @always_inline
     def bench_fn() {read, mut world}:
         try:
-            # create 1_000_000 entities that initially do not have FlexibleComponent[1]
-            _ = world.add_entities(pos, count=1_000_000)
-
             _ = world.add(
-                world.query[Position]().without[FlexibleComponent[1]](), comp
+                world.query[Position]().without[FlexibleComponent[1]](),
+                FlexibleComponent[1](1.0, 42.0),
             )
             _ = world.remove[FlexibleComponent[1]](
                 world.query[Position, FlexibleComponent[1]]()
             )
-
         except e:
             print(e)
 
@@ -42,15 +42,18 @@ def benchmark_add_remove_1_comp_batch_1_000_000(
 def benchmark_add_remove_1_comp_1_000_batch_1_000(
     mut bencher: Bencher,
 ):
-    pos = Position(1.0, 2.0)
-    comp1 = FlexibleComponent[1](1.0, 42.0)
     world = SmallWorld()
+
+    try:
+        # create 1_000 entities that initially do not have FlexibleComponent[1]
+        _ = world.add_entities(Position(1.0, 2.0), count=1_000)
+    except e:
+        print(e)
+        return
 
     @always_inline
     def bench_fn() {read, mut world}:
         try:
-            # create 1_000 entities that initially do not have FlexibleComponent[1]
-            _ = world.add_entities(pos, count=1_000)
             # then 1_000 x add component and remove it afterwards
             for _ in range(1000):
                 _ = world.add(

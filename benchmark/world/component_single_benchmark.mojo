@@ -7,15 +7,15 @@ from larecs.entity import Entity
 def _add_remove_1_comp_workload() raises:
     world = SmallWorld()
     entities = List[Entity]()
-    component0 = FlexibleComponent[0](1.0, 2.0)
     for _ in range(1000):
-        entities.append(world.add_entity(component0))
+        entities.append(world.add_entity(FlexibleComponent[0](1.0, 2.0)))
 
     for _ in range(100):
         comptime for i in range(10):
-            component = FlexibleComponent[i + 1](Float64(i), 2.0)
             for entity in entities:
-                world.add(entity, component)
+                world.add(
+                    entity, FlexibleComponent[(i + 1) % 10](Float64(i), 2.0)
+                )
             for entity in entities:
                 world.remove[FlexibleComponent[i]](entity)
 
