@@ -7,9 +7,12 @@ def prevent_inlining_add_remove_batch() raises:
     world = SmallWorld()
     _ = world.add_entities(Position(1.0, 2.0), count=1)
     _ = world.add(
-        world.query[Position]().without[Velocity](), Velocity(0.1, 0.2)
+        world.query[Position]().without[FlexibleComponent[1]](),
+        FlexibleComponent[1](1.0, 42.0),
     )
-    _ = world.remove[Position](world.query[Position]())
+    _ = world.remove[FlexibleComponent[1]](
+        world.query[Position, FlexibleComponent[1]]()
+    )
 
 
 def benchmark_add_remove_1_comp_batch_1_000_000(
@@ -58,12 +61,11 @@ def benchmark_add_remove_1_comp_1_000_batch_1_000(
             for _ in range(1000):
                 _ = world.add(
                     world.query[Position]().without[FlexibleComponent[1]](),
-                    comp1,
+                    FlexibleComponent[1](1.0, 42.0),
                 )
                 _ = world.remove[FlexibleComponent[1]](
                     world.query[Position, FlexibleComponent[1]]()
                 )
-
         except e:
             print(e)
 
