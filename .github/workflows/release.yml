@@ -12,20 +12,47 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Build and publish package
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        shell: bash -ieo pipefail {0}
-
+  build:
+    name: Build package
+    runs-on: ${{ matrix.os }}
+    env:
+      LARECS_VERSION: |-
+        ${{
+          case(
+            github.event_name == 'release', github.event.release.tag_name,
+            '0.5.0'
+          )
+        }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target-platform: linux-64
+          - os: macos-latest
+            target-platform: osx-arm64
     steps:
-      - name: Checkout Larecs
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v6
       - name: Build conda package
-        uses: prefix-dev/rattler-build-action@v0.2.37
+        uses: prefix-dev/rattler-build-action@v0.2.39
         with:
-          build-args: --channel conda-forge --channel https://repo.prefix.dev/max-nightly --channel https://repo.prefix.dev/modular-community --channel https://prefix.dev/tree-d
+          # needs to be unique for each matrix entry
+          artifact-name: package-${{ matrix.target-platform }}
+          build-args: --target-platform ${{ matrix.target-platform }}${{ matrix.target-platform == 'linux-aarch64' && ' --no-test' || '' }} --channel conda-forge --channel https://repo.prefix.dev/max-nightly --channel https://repo.prefix.dev/modular-community --channel https://prefix.dev/tree-d
+  upload:
+    if: ${{ github.event_name == 'release' }}
+    name: Upload conda packages to Tree-D Prefix channel
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-${{ matrix.target-platform }}
+          path: dist/${{ matrix.target-platform }}
+      - uses: prefix-dev/rattler-build-action@v0.2.39
+        with:
+          setup-only: true
+      - run: |
+          for pkg in $(find dist -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
+            echo "Uploading ${pkg}"
+            rattler-build upload prefix -c tree-d "${pkg}"
+          done
