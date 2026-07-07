@@ -1165,9 +1165,6 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             comptime add_size = len(Ts)
             comptime add_ids = Self.component_manager.get_id_arr[*Ts]()
 
-            runtime_remove_ids = remove_ids
-            runtime_add_ids = materialize[add_ids]()
-
             self._assert_unlocked()
             self._assert_alive(entity)
 
@@ -1185,10 +1182,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             old_archetype_mask = old_archetype[].get_mask()
 
             comptime if rem_size:
-                if not old_archetype_mask.contains(BitMask(runtime_remove_ids)):
+                if not old_archetype_mask.contains(BitMask(remove_ids)):
                     raise LarecsError(
                         ComponentError.missing_components_on_remove.with_components(
-                            old_archetype_mask ^ BitMask(runtime_remove_ids)
+                            old_archetype_mask ^ BitMask(remove_ids)
                         )
                     )
 
@@ -1196,7 +1193,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 compare_mask = old_archetype_mask
 
                 comptime if rem_size:
-                    compare_mask.set(runtime_remove_ids, False)
+                    compare_mask.set(remove_ids, False)
                 if compare_mask.contains(BitMask(add_ids)):
                     raise LarecsError(
                         ComponentError.existing_components_on_add.with_components(
@@ -1208,38 +1205,23 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 ComponentId, add_size + rem_size
             ]
             comptime assert 0 <= add_size + rem_size
-            var component_ids = ComponentIdsType(fill=ComponentId(0))
 
             comptime if add_size and rem_size:
-                comptime for i in range(rem_size):
-                    component_ids[i] = runtime_remove_ids[i]
-                comptime for i in range(add_size):
-                    component_ids[rem_size + i] = runtime_add_ids[i]
+                comptime concatenated = concatenate_inline_arrays(
+                    remove_ids, add_ids
+                )
+                component_ids = concatenated
             elif Bool(add_size) and not rem_size:
-                component_ids = rebind[ComponentIdsType](runtime_add_ids)
+                component_ids = rebind[ComponentIdsType](add_ids)
             elif not add_size and Bool(rem_size):
-                component_ids = rebind[ComponentIdsType](runtime_remove_ids)
+                component_ids = rebind[ComponentIdsType](remove_ids)
             else:
                 return
 
             index_in_old_archetype = entity_loc.entity_index
-            comptime assert 0 <= add_size + rem_size
-            expected_new_mask = old_archetype_mask
-            comptime if rem_size:
-                expected_new_mask.set(runtime_remove_ids, False)
-            comptime if add_size:
-                expected_new_mask.set(runtime_add_ids, True)
             new_archetype_idx = self._get_archetype_index(
                 component_ids, old_archetype[].get_node_index()
             )
-            if (
-                self._archetypes[new_archetype_idx].get_mask()
-                != expected_new_mask
-            ):
-                assert_unreachable("Bug in archetype mask calculation!")
-                new_archetype_idx = self._get_archetype_index_by_mask(
-                    expected_new_mask
-                )
             new_archetype = Pointer(
                 to=self._archetypes.unsafe_get(new_archetype_idx)
             )
@@ -1372,7 +1354,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             comptime if rem_size:
                 # If query could match archetypes that don't have all of the components, raise an error
-                if not query.mask.contains(BitMask(runtime_remove_ids)):
+                if not query.mask.contains(BitMask(remove_ids)):
                     raise LarecsError(
                         ComponentError.missing_components_on_remove_query.with_components(
                             query.mask ^ BitMask(remove_ids)
@@ -1380,16 +1362,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     )
 
                 comptime if has_without_mask:
-                    if query.without_mask[].contains_any(
-                        BitMask(runtime_remove_ids)
-                    ):
+                    if query.without_mask[].contains_any(BitMask(remove_ids)):
                         raise LarecsError(
                             ComponentError.missing_components_on_remove_query.with_components(
                                 query.without_mask[] & BitMask(remove_ids)
                             )
                         )
 
-            var component_ids = ComponentIdsType(fill=ComponentId(0))
             comptime if add_size and rem_size:
                 comptime concatenated = concatenate_inline_arrays(
                     remove_ids, add_ids
@@ -1434,25 +1413,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     # 2. If an archetype with the new component combination does not exist yet,
                     #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
                     old_node_index = old_archetype[].get_node_index()
-                    expected_new_mask = old_archetype[].get_mask()
-                    comptime if rem_size:
-                        expected_new_mask.set(remove_ids, False)
-                    comptime if add_size:
-                        expected_new_mask.set(add_ids, True)
                     new_archetype_idx = self._get_archetype_index[
                         add_size + rem_size
                     ](component_ids, old_node_index)
-                    if (
-                        self._archetypes[new_archetype_idx].get_mask()
-                        != expected_new_mask
-                    ):
-                        assert_unreachable(
-                            "Bug in _batch_remove_and_add: new archetype mask"
-                            " mismatch"
-                        )
-                        new_archetype_idx = self._get_archetype_index_by_mask(
-                            expected_new_mask
-                        )
 
                     # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                     # resized during the call to `_get_archetype_index`.
