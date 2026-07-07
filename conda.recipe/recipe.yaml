@@ -1,5 +1,5 @@
 context:
-  version: "0.5.0"
+  version: ${{ env.get("LARECS_VERSION", default="0.5.0") | default("0.5.0", true) }} # the default filter is needed to map empty strings to the fallback version
 
 package:
   name: "larecs"
