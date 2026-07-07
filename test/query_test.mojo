@@ -3,7 +3,8 @@ from std.testing import *
 from larecs.test_utils import *
 from larecs import Entity, Query
 from larecs.archetype import Archetype as _Archetype
-from larecs.query import QueryError, _ArchetypeByMaskIterator
+from larecs.query import _ArchetypeIterator
+from larecs.error import WorldError
 
 
 def test_query_length() raises:
@@ -99,13 +100,12 @@ def test_query_length() raises:
     )
     assert_equal(len(world.query()), 5 * n)
 
-    iterator = world.query[FlexibleComponent[0]]()
-    iter = iterator.__iter__()
-    size = len(iter)
-    while iter.__has_next__():
-        _ = iter.__next__()
+    iterator = world.query[FlexibleComponent[0]]().__iter__()
+    size = len(iterator)
+    while iterator:
+        _ = iterator.__next__()
         size -= 1
-        assert_equal(size, len(iter))
+        assert_equal(size, len(iterator))
 
 
 def test_query_result_ids() raises:
@@ -224,6 +224,28 @@ def test_query_empty() raises:
         assert_true(world.is_locked())
         cnt += 1
     assert_equal(cnt, 0)
+    assert_false(world.is_locked())
+
+
+def test_query_iterator_locks_on_creation() raises:
+    world = SmallWorld()
+
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    _ = world.add_entity(c0)
+
+    iterator = world.query[FlexibleComponent[0]]().__iter__()
+    assert_true(world.is_locked())
+
+    with assert_raises():
+        _ = world.add_entity(c0, c1)
+
+    count = 0
+    while iterator:
+        _ = iterator.__next__()
+        count += 1
+
+    assert_equal(count, 1)
 
 
 def test_query_without() raises:
@@ -297,6 +319,44 @@ def test_query_exclusive() raises:
     assert_false(world.is_locked())
 
 
+def test_query_without_builder_ownership() raises:
+    world = SmallWorld()
+    c0 = FlexibleComponent[0](1.0, 2.0)
+    c1 = FlexibleComponent[1](3.0, 4.0)
+    c2 = FlexibleComponent[2](5.0, 6.0)
+
+    n = 10
+
+    for _ in range(n):
+        _ = world.add_entity(c0)
+        _ = world.add_entity(c0, c1)
+        _ = world.add_entity(c0, c2)
+        _ = world.add_entity(c0, c1, c2)
+
+    chained = (
+        world.query[FlexibleComponent[0]]()
+        .without[FlexibleComponent[1]]()
+        .without[FlexibleComponent[2]]()
+    )
+    assert_equal(len(chained), n)
+
+    query = world.query[FlexibleComponent[0]]()
+    copied = query.copy().without[FlexibleComponent[1]]()
+    assert_equal(len(copied), 2 * n)
+    assert_equal(len(query), 4 * n)
+
+    moved_source = world.query[FlexibleComponent[0]]()
+    moved = moved_source^.without[FlexibleComponent[2]]()
+    assert_equal(len(moved), 2 * n)
+
+    exclusive = (
+        world.query[FlexibleComponent[0]]()
+        .without[FlexibleComponent[1]]()
+        .exclusive()
+    )
+    assert_equal(len(exclusive), n)
+
+
 def test_query_lock() raises:
     world = SmallWorld()
 
@@ -353,7 +413,7 @@ def test_query_requires_available_lock() raises:
     for _ in range(world._locks.bit_pool.capacity):
         locks.append(world._lock())
 
-    with assert_raises(contains=QueryError.could_not_create_iterator.msg()):
+    with assert_raises(contains=WorldError.out_of_locks.msg()):
         for _ in world.query[FlexibleComponent[0]]():
             pass
 
@@ -375,13 +435,13 @@ def test_query_archetype_iterator() raises:
     a1 = Archetype(0, BitMask(0))
     a2 = Archetype(0, BitMask(0))
     a3 = Archetype(2, BitMask(0, 1))
-    _ = a1.add(Entity(0, 0))
-    _ = a2.add(Entity(0, 0))
-    _ = a3.add(Entity(0, 0))
+    _ = a1.add_entity(Entity(0, 0))
+    _ = a2.add_entity(Entity(0, 0))
+    _ = a3.add_entity(Entity(0, 0))
     archetypes: List[Archetype] = [a1^, a2^, a3^]
     var count = 0
 
-    for _ in _ArchetypeByMaskIterator(Pointer(to=archetypes), BitMask()):
+    for _ in _ArchetypeIterator(Pointer(to=archetypes), [0, 1, 2]):
         count += 1
 
     assert_equal(count, 3)

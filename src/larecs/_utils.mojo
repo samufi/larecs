@@ -16,6 +16,16 @@ def _assert_index_in_bounds(index: Int, size: Int):
 
 
 @always_inline
+def assert_unreachable[
+    MsgType: Writable & Movable
+](reason: Optional[MsgType] = None):
+    if reason is None:
+        assert False, "Executed code that should be unreachable!"
+    else:
+        assert False, t"Executed code that should be unreachable: {reason}"
+
+
+@always_inline
 def concatenate_inline_arrays[
     ElementType: Copyable & Movable, a_size: Int, b_size: Int
 ](

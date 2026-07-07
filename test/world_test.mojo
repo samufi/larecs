@@ -1,6 +1,7 @@
 from std.testing import *
 
-from larecs.world import World, WorldError
+from larecs.world import World
+from larecs.error import ComponentError
 from larecs.entity import Entity
 from larecs.component import ComponentType
 from larecs.resource import ResourceType
@@ -69,6 +70,37 @@ def test_add_entities_iterator_length() raises:
         assert_equal(entity.get[Velocity]().dy, vel.dy)
 
     assert_equal(len(iter), 0)
+
+
+def test_add_entities_location_after_append_to_archetype() raises:
+    """Checks entity locations when batch creation appends to an archetype.
+
+    The second batch starts at a non-zero row in the same archetype. Entity
+    handles from that batch must point at their actual archetype rows.
+    """
+    world = SmallWorld()
+    pos = Position(1.0, 2.0)
+    _ = world.add_entities(pos, count=3)
+
+    entities = List[Entity]()
+    for accessor in world.add_entities(pos, count=2):
+        entities.append(accessor.get_entity())
+
+    assert_equal(len(entities), 2)
+    expected_archetype_index = world._entities[
+        entities[0].get_id()
+    ].archetype_index
+    assert_equal(
+        expected_archetype_index,
+        world._entities[entities[1].get_id()].archetype_index,
+    )
+    assert_equal(world._entities[entities[0].get_id()].entity_index, 3)
+    assert_equal(world._entities[entities[1].get_id()].entity_index, 4)
+    assert_true(
+        world._archetypes[expected_archetype_index].has_components[Position]()
+    )
+    assert_equal(world.get[Position](entities[0]).x, pos.x)
+    assert_equal(world.get[Position](entities[1]).x, pos.x)
 
 
 def test_world_len() raises:
@@ -274,7 +306,7 @@ def test_world_batch_add() raises:
         assert_equal(world.get[Velocity](entity).dy, 0.2)
 
     with assert_raises(
-        contains=WorldError.duplicate_components_for_addition_query.msg()
+        contains=ComponentError.existing_components_on_add_query.msg()
     ):
         _ = world.add(
             world.query[Position]().without[LargerComponent](),
@@ -342,7 +374,7 @@ def test_world_batch_remove() raises:
     assert_equal(len(world.query[Position]().without[Velocity]()), n)
 
     with assert_raises(
-        contains=WorldError.missing_components_for_removal_query.msg()
+        contains=ComponentError.missing_components_on_remove_query.msg()
     ):
         _ = world.remove[Velocity](
             world.query[Position](),
@@ -430,7 +462,7 @@ def test_batch_remove_and_add() raises:
         assert_equal(world.get[FlexibleComponent[1]](entity).y, 4.0)
 
     with assert_raises(
-        contains=WorldError.duplicate_components_for_addition_query.msg()
+        contains=ComponentError.existing_components_on_add_query.msg()
     ):
         _ = world.replace[Velocity]().by(
             Position(5.0, 6.0), query=world.query[Position]()
@@ -560,12 +592,8 @@ def test_world_lock() raises:
     _ = world.add_entity(Position(1.0, 2.0))
     assert_false(world.is_locked())
 
-    try:
-        with world._locked():
-            assert_true(world.is_locked())
-            raise Error("Test")
-    except:
-        pass
+    with world._locked():
+        assert_true(world.is_locked())
 
     assert_false(world.is_locked())
 

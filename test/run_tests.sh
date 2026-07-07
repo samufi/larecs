@@ -35,4 +35,4 @@ for arg in "$@"; do
     esac
 done
 
-mogo-tester "${precompile_args[@]}" --asan --mojo-build-args="-g" "${test_args[@]}"
+mogo-tester "${precompile_args[@]}" --asan --mojo-build-args="-g -DASSERT=all" "${test_args[@]}"

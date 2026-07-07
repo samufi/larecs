@@ -111,9 +111,10 @@ struct BitMaskGraph[
         Returns:
             The index of the added node.
         """
-        self._map[node_mask] = len(self._nodes)
-        self._nodes.append(Node(node_mask, value^))
-        return len(self._nodes) - 1
+        var new_node_idx = len(self._nodes)
+        self._map[node_mask] = new_node_idx
+        self._nodes.insert(new_node_idx, Node(node_mask, value^))
+        return new_node_idx
 
     @always_inline
     def create_link(mut self, from_node_index: Int, changed_bit: Int) -> Int:
@@ -140,9 +141,7 @@ struct BitMaskGraph[
             to_node_index = self.add_node(new_mask)
 
         self._nodes[from_node_index].neighbours[changed_bit] = to_node_index
-        self._nodes[to_node_index].neighbours[changed_bit] = index(
-            from_node_index
-        )
+        self._nodes[to_node_index].neighbours[changed_bit] = from_node_index
 
         return to_node_index
 
@@ -175,13 +174,13 @@ struct BitMaskGraph[
         var current_node = start_node_index
 
         comptime for i in range(size):
-            check_bounds(different_bits[i], BitMask.total_bits)
+            var differing_bit = different_bits[i]
+            check_bounds(differing_bit, BitMask.total_bits)
 
-            var next_node = self._nodes[current_node].neighbours[
-                different_bits[i]
-            ]
+            var next_node = self._nodes[current_node].neighbours[differing_bit]
+
             if next_node == Self.null_index:
-                next_node = self.create_link(current_node, different_bits[i])
+                next_node = self.create_link(current_node, differing_bit)
             current_node = next_node
         return current_node
 
@@ -202,7 +201,7 @@ struct BitMaskGraph[
 
     @always_inline
     def __getitem__(
-        ref[_] self: Self, node_index: Int
+        ref self: Self, node_index: Int
     ) -> ref[self._nodes[node_index].value] Self.DataType:
         """Returns the value stored in the node at the given index.
 

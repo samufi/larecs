@@ -28,13 +28,13 @@ jobs:
         run: |
           pixi install --locked
 
-      - name: Run tests
-        run: |
-          pixi run tests test
-
       - name: Check formatting
         run: |
           if pixi run mojo format src test benchmark 2>&1 | grep -E "reformatted|error|failed" ; then echo "Formatter failed" ; exit 1 ; else echo "Formatting OK"; fi
+
+      - name: Run tests
+        run: |
+          pixi run tests test
 
       - name: Run benchmarks
         run: |

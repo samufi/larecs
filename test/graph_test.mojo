@@ -45,16 +45,53 @@ def test_getitem() raises:
 
 
 def test_create_link() raises:
-    graph = BitMaskGraph[-1]()
-    bit_mask1 = BitMask(0, 2)
-    bit_mask2 = BitMask(0)
-    _ = graph.add_node(bit_mask1, 42)
-    to_node_index = graph.create_link(0, 0)
-    assert_equal(to_node_index, 2)
-    assert_equal(len(graph._nodes), 3)
-    assert_equal(graph._nodes[0].neighbours[0], 2)
-    assert_equal(graph._nodes[2].neighbours[0], 0)
-    assert_equal(graph._nodes[2].bit_mask, bit_mask2)
+    comptime null_value = -1
+    graph = BitMaskGraph[null_value]()
+    var bitmask_root = BitMask()
+    var bm_root_index = 0
+
+    assert_equal(graph._nodes[bm_root_index].bit_mask, bitmask_root)
+    assert_equal(graph._nodes[bm_root_index].value, null_value)
+
+    var graph_size = len(graph._nodes)
+    assert_equal(graph_size, 1)
+
+    var bit_mask02 = BitMask(0, 2)
+    var bm02_index = graph.add_node(bit_mask02, 42)
+    assert_equal(bm02_index, graph_size)
+    assert_equal(graph._nodes[bm02_index].bit_mask, bit_mask02)
+    assert_equal(graph._nodes[bm02_index].value, 42)
+
+    graph_size = len(graph._nodes)
+    assert_equal(graph_size, 2)
+
+    assert_equal(graph._nodes[bm02_index].neighbours[0], graph.null_index)
+    assert_equal(graph._nodes[bm02_index].neighbours[2], graph.null_index)
+
+    # This should create a new node with BitMask(0)
+    var bm0_index = graph.create_link(bm_root_index, 0)
+    assert_equal(bm0_index, graph_size)
+    assert_equal(graph._nodes[bm0_index].bit_mask, BitMask(0))
+    assert_equal(graph._nodes[bm0_index].value, null_value)
+
+    graph_size = len(graph._nodes)
+    assert_equal(graph_size, 3)
+
+    assert_equal(graph._nodes[bm_root_index].neighbours[0], bm0_index)
+    assert_equal(graph._nodes[bm0_index].neighbours[0], bm_root_index)
+    # Check that the neighbour for the second bit is still null
+    assert_equal(graph._nodes[bm0_index].neighbours[2], graph.null_index)
+
+    # This should not create a new node, as node with BitMask(0,2) already exists
+    var to_index = graph.create_link(bm0_index, 2)
+    assert_equal(to_index, bm02_index)
+
+    assert_equal(graph_size, len(graph._nodes))
+
+    assert_equal(graph._nodes[bm0_index].neighbours[2], bm02_index)
+    assert_equal(graph._nodes[bm02_index].neighbours[2], bm0_index)
+    # Check that the neighbour for the zero-th bit is still null
+    assert_equal(graph._nodes[bm02_index].neighbours[0], graph.null_index)
 
 
 def test_get_node_index() raises:
