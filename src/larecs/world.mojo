@@ -574,7 +574,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     }
                     return
                 except _:
-                    raise WorldError.out_of_locks
+                    raise LarecsError(WorldError.out_of_locks)
 
             self._assert_unlocked()
 
