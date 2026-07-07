@@ -12,8 +12,18 @@ permissions:
   contents: write
 
 jobs:
+  define-matrix:
+    name: Define matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          echo 'matrix=[{ "os": "ubuntu-latest", "target-platform": "linux-64" }, { "os": "macos-latest", "target-platform": "osx-arm64" }]' >> $GITHUB_OUTPUT
   build:
     name: Build package
+    needs: define-matrix
     runs-on: ${{ matrix.os }}
     env:
       LARECS_VERSION: |-
@@ -25,11 +35,8 @@ jobs:
         }}
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            target-platform: linux-64
-          - os: macos-latest
-            target-platform: osx-arm64
+        include: ${{ fromJSON(needs.define-matrix.outputs.matrix) }}
+
     steps:
       - uses: actions/checkout@v6
       - name: Build conda package
@@ -48,7 +55,12 @@ jobs:
     if: ${{ github.event_name == 'release' }}
     name: Upload conda packages to Tree-D Prefix channel
     runs-on: ubuntu-latest
-    needs: build-gate
+    needs:
+      - build-gate
+      - define-matrix
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.define-matrix.outputs.matrix) }}
     steps:
       - uses: actions/download-artifact@v4
         with:
