@@ -42,7 +42,7 @@ def constrain_valid_components[*Ts: ComponentType]() -> Bool:
 
 struct ComponentManager[
     *ComponentTypes: ComponentType,
-](TrivialRegisterPassable):
+](TrivialRegisterPassable, Writable):
     """ComponentManager is a manager for ECS components.
 
     It is used to assign IDs to types and to create
@@ -132,3 +132,17 @@ struct ComponentManager[
                 Ts[i]
             ], "Component type not in component manager"
             ids[i] = Self.get_id[Ts[i]]()
+
+    def write_to(self, mut writer: Some[Writer]):
+        """Writes the component manager to a writer.
+
+        Args:
+            writer: The writer to write to.
+        """
+        writer.write("ComponentManager[")
+        comptime if len(Self.ComponentTypes) > 0:
+            writer.write(reflect[Self.ComponentTypes[0]].name())
+        comptime for i in range(1, len(Self.ComponentTypes)):
+            writer.write(", ")
+            writer.write(reflect[Self.ComponentTypes[i]].name())
+        writer.write("]")
