@@ -16,13 +16,11 @@ jobs:
     name: Define matrix
     runs-on: ubuntu-latest
     outputs:
-      os: ${{ steps.set-matrix.outputs.os }}
-      target-platform: ${{ steps.set-matrix.outputs.target-platform }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - id: set-matrix
         run: |
-          echo 'os=["ubuntu-latest","macos-latest"]' >> $GITHUB_OUTPUT
-          echo 'target-platform=["linux-64","osx-arm64"]' >> $GITHUB_OUTPUT
+          echo 'matrix=[{ "os": "ubuntu-latest", "target-platform": "linux-64" }, { "os": "macos-latest", "target-platform": "osx-arm64" }]' >> $GITHUB_OUTPUT
   build:
     name: Build package
     needs: define-matrix
@@ -37,8 +35,7 @@ jobs:
         }}
     strategy:
       matrix:
-        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
-        target-platform: ${{ fromJSON(needs.define-matrix.outputs.target-platform) }}
+        include: ${{ fromJSON(needs.define-matrix.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -63,8 +60,7 @@ jobs:
       - define-matrix
     strategy:
       matrix:
-        os: ${{ fromJSON(needs.define-matrix.outputs.os) }}
-        target-platform: ${{ fromJSON(needs.define-matrix.outputs.target-platform) }}
+        include: ${{ fromJSON(needs.define-matrix.outputs.matrix) }}
     steps:
       - uses: actions/download-artifact@v4
         with:
