@@ -22,18 +22,30 @@ jobs:
       - id: set-matrix
         run: |
           echo 'matrix=[{ "os": "ubuntu-latest", "target-platform": "linux-64" }, { "os": "macos-latest", "target-platform": "osx-arm64" }]' >> $GITHUB_OUTPUT
+  define-version:
+    name: Define version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - id: set-version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.5.0b1" >> "$GITHUB_OUTPUT"
+          fi
   build:
     name: Build package
-    needs: define-matrix
+    needs:
+      - define-matrix
+      - define-version
     runs-on: ${{ matrix.os }}
     env:
-      LARECS_VERSION: |-
-        ${{
-          case(
-            github.event_name == 'release', github.event.release.tag_name,
-            '0.5.0b1'
-          )
-        }}
+      LARECS_VERSION: ${{ needs.define-version.outputs.version }}
     strategy:
       matrix:
         include: ${{ fromJSON(needs.define-matrix.outputs.matrix) }}
