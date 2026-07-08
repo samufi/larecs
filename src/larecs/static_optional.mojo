@@ -28,7 +28,7 @@ struct _EmptyStaticOptionalStorage(
 
 @fieldwise_init
 struct StaticOptional[
-    ElementType: Copyable & Movable & ImplicitlyDeletable,
+    ElementType: Copyable & ImplicitlyDeletable,
     has_value: Bool = True,
 ](
     Boolable,
@@ -46,12 +46,7 @@ struct StaticOptional[
         has_value: Whether the optional contains a value at compile time.
     """
 
-    comptime Storage = ConditionalType[
-        Trait=Copyable & Movable & ImplicitlyDeletable,
-        If=Self.has_value,
-        Then=Self.ElementType,
-        Else=_EmptyStaticOptionalStorage,
-    ]
+    comptime Storage = Self.ElementType if Self.has_value else _EmptyStaticOptionalStorage
     """Selected backing storage type."""
 
     var _value: Self.Storage

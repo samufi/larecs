@@ -3,7 +3,7 @@ from std.reflection import reflect
 
 from .unsafe_box import UnsafeBox
 
-comptime ResourceType = Copyable & Movable & ImplicitlyDeletable
+comptime ResourceType = Copyable & ImplicitlyDeletable
 """The trait that resources must conform to."""
 
 

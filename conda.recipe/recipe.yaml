@@ -24,11 +24,11 @@ build:
 
 requirements:
   build:
-    - mojo-compiler ==1.0.0b3.dev2026062206
+    - mojo-compiler >=1.0.0b3.dev2026070806, <2
   host:
-    - mojo-compiler ==1.0.0b3.dev2026062206
+    - mojo-compiler >=1.0.0b3.dev2026070806, <2
   run:
-    - mojo-compiler ==1.0.0b3.dev2026062206
+    - mojo-compiler >=1.0.0b3.dev2026070806, <2
 
 tests:
   - script:
@@ -39,7 +39,7 @@ tests:
       run:
         - clang >=22.1.7, <23
         - mogo-tester >=2.3.2
-        - mojo-compiler ==1.0.0b3.dev2026062206
+        - mojo-compiler >=1.0.0b3.dev2026070806, <2
     files:
       source:
         - test/

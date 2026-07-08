@@ -102,7 +102,7 @@ struct UnsafeBox(Copyable, Movable):
     comptime data_type = Optional[UnsafePointer[Byte, MutUntrackedOrigin]]
     """The type of the data stored in the box."""
 
-    comptime EltType = Copyable & Movable & ImplicitlyDeletable
+    comptime EltType = Copyable & ImplicitlyDeletable
     """Trait requirements for values that can be stored in the box."""
 
     var _data: Self.data_type

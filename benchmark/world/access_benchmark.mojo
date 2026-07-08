@@ -110,37 +110,37 @@ def prevent_inlining_set_5_comp() raises:
     world.set(entity, c1, c2, c3, c4, c5)
 
 
-def benchmark_apply_expexp_1_comp_100_000(
-    mut bencher: Bencher,
-):
-    pos = Position(1.0, 2.0)
-    vel = Velocity(0.1, 0.2)
-    world = SmallWorld()
+# def benchmark_apply_expexp_1_comp_100_000(
+#     mut bencher: Bencher,
+# ):
+#     pos = Position(1.0, 2.0)
+#     vel = Velocity(0.1, 0.2)
+#     world = SmallWorld()
 
-    @always_inline
-    def bench_fn() {read, mut world}:
-        try:
-            for _ in range(1_000):
-                _ = world.add_entity(pos, vel)
+#     @always_inline
+#     def bench_fn() {read, mut world}:
+#         try:
+#             for _ in range(1_000):
+#                 _ = world.add_entity(pos, vel)
 
-            @always_inline
-            def operation_plus(accessor: MutableEntityAccessor):
-                try:
-                    ref pos2 = accessor.get[Position]()
-                    pos2.x = exp(1 - exp(pos2.x))
-                    pos2.y = exp(1 - exp(pos2.y))
-                except:
-                    pass
+#             @always_inline
+#             def operation_plus(accessor: MutableEntityAccessor):
+#                 try:
+#                     ref pos2 = accessor.get[Position]()
+#                     pos2.x = exp(1 - exp(pos2.x))
+#                     pos2.y = exp(1 - exp(pos2.y))
+#                 except:
+#                     pass
 
-            for _ in range(100):
-                world.apply[unroll_factor=3](
-                    world.query[Position](), operation_plus
-                )
+#             for _ in range(100):
+#                 world.apply[unroll_factor=3](
+#                     world.query[Position](), operation_plus
+#                 )
 
-        except e:
-            print(e)
+#         except e:
+#             print(e)
 
-    bencher.iter(bench_fn)
+#     bencher.iter(bench_fn)
 
 
 def benchmark_apply_simd_expexp_1_comp_100_000(
@@ -196,10 +196,10 @@ def run_all_world_access_benchmarks(mut bench: Bench) raises:
     bench.bench_function(
         benchmark_set_5_comp_1_000_000, BenchId("10^6 * set 5 components")
     )
-    bench.bench_function(
-        benchmark_apply_expexp_1_comp_100_000,
-        BenchId("10^5 * get and set exp(exp) via apply 1 component"),
-    )
+    # bench.bench_function(
+    #     benchmark_apply_expexp_1_comp_100_000,
+    #     BenchId("10^5 * get and set exp(exp) via apply 1 component"),
+    # )
     bench.bench_function(
         benchmark_apply_simd_expexp_1_comp_100_000,
         BenchId("10^5 * get and set exp(exp) via apply simd 1 component"),

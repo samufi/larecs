@@ -1572,121 +1572,121 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         except:
                             raise LarecsError(UnknownError())
 
-    def apply[
-        OperationType: def[simd_width: Int](
-            accessor: MutableEntityAccessor
-        ) raises -> None,
-        //,
-        has_without_mask: Bool = False,
-        *,
-        simd_width: Int = 1,
-        unroll_factor: Int = 1,
-    ](
-        mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
-        operation: OperationType,
-    ) raises LarecsError:
-        """
-        Applies an operation to all entities with the given components.
+    # def apply[
+    #     OperationType: def[simd_width: Int](
+    #         accessor: MutableEntityAccessor
+    #     ) raises -> None,
+    #     //,
+    #     has_without_mask: Bool = False,
+    #     *,
+    #     simd_width: Int = 1,
+    #     unroll_factor: Int = 1,
+    # ](
+    #     mut self,
+    #     query: QueryInfo[has_without_mask=has_without_mask],
+    #     operation: OperationType,
+    # ) raises LarecsError:
+    #     """
+    #     Applies an operation to all entities with the given components.
 
-        The operation is applied to chunks of `simd_width` entities,
-        unless not enough are available anymore. Then the chunk size
-        `simd_width` is reduced.
+    #     The operation is applied to chunks of `simd_width` entities,
+    #     unless not enough are available anymore. Then the chunk size
+    #     `simd_width` is reduced.
 
-        Processes full `simd_width` chunks directly, then handles any trailing
-        entities one at a time.
+    #     Processes full `simd_width` chunks directly, then handles any trailing
+    #     entities one at a time.
 
-        Caution! If `simd_width` is greater than 1, the operation **must**
-        apply to the `simd_width` elements after the element passed to
-        `operation`, assuming that each component is stored in contiguous
-        memory. This may require knowledge of the memory layout
-        of the components!
+    #     Caution! If `simd_width` is greater than 1, the operation **must**
+    #     apply to the `simd_width` elements after the element passed to
+    #     `operation`, assuming that each component is stored in contiguous
+    #     memory. This may require knowledge of the memory layout
+    #     of the components!
 
-        Parameters:
-            OperationType: The type of the operation to apply.
-            has_without_mask: Whether the query has a without mask.
-            simd_width: The SIMD width for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
-            unroll_factor: The unroll factor for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+    #     Parameters:
+    #         OperationType: The type of the operation to apply.
+    #         has_without_mask: Whether the query has a without mask.
+    #         simd_width: The SIMD width for the operation
+    #             (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+    #         unroll_factor: The unroll factor for the operation
+    #             (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
 
-        Args:
-            query: The query to determine which entities to apply the operation to.
-            operation: The operation to apply.
+    #     Args:
+    #         query: The query to determine which entities to apply the operation to.
+    #         operation: The operation to apply.
 
-        Constraints:
-            The simd_width must be a power of 2.
+    #     Constraints:
+    #         The simd_width must be a power of 2.
 
-        Raises:
-            LarecsError: If the world is locked.
+    #     Raises:
+    #         LarecsError: If the world is locked.
 
-        Example:
-        ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, MutableEntityAccessor
-        ```
+    #     Example:
+    #     ```mojo {doctest="apply" global=true hide=true}
+    #     from larecs import World, MutableEntityAccessor
+    #     ```
 
-        ```mojo {doctest="apply"}
-        from sys.info import simdwidthof
-        from memory import LegacyUnsafePointer
+    #     ```mojo {doctest="apply"}
+    #     from sys.info import simdwidthof
+    #     from memory import LegacyUnsafePointer
 
-        world = World[Float64]()
-        e = world.add_entity()
+    #     world = World[Float64]()
+    #     e = world.add_entity()
 
-        def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
-            # Define the operation to apply here.
-            # Note that due to the immature
-            # capturing system of Mojo, the world may be
-            # accessible by copy capturing here, even
-            # though it is not copyable.
-            # Do NOT change `world` from inside the operation,
-            # as it will not be reflected in the world
-            # or may cause a segmentation fault.
+    #     def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+    #         # Define the operation to apply here.
+    #         # Note that due to the immature
+    #         # capturing system of Mojo, the world may be
+    #         # accessible by copy capturing here, even
+    #         # though it is not copyable.
+    #         # Do NOT change `world` from inside the operation,
+    #         # as it will not be reflected in the world
+    #         # or may cause a segmentation fault.
 
-            try:
-                # Get the component
-                ref component = accessor.get[Float64]()
+    #         try:
+    #             # Get the component
+    #             ref component = accessor.get[Float64]()
 
-                # Get an unsafe pointer to the memory
-                # location of the component
-                ptr = LegacyUnsafePointer(to=component)
-            except:
-                return
+    #             # Get an unsafe pointer to the memory
+    #             # location of the component
+    #             ptr = LegacyUnsafePointer(to=component)
+    #         except:
+    #             return
 
-            # Load a SIMD of size `simd_width`
-            # Note that a strided load is needed if the component as more than one field.
-            val = ptr.load[width=simd_width]()
+    #         # Load a SIMD of size `simd_width`
+    #         # Note that a strided load is needed if the component as more than one field.
+    #         val = ptr.load[width=simd_width]()
 
-            # Do an operation on the SIMD
-            val += 1
+    #         # Do an operation on the SIMD
+    #         val += 1
 
-            # Store the SIMD at the same address
-            ptr.store(val)
+    #         # Store the SIMD at the same address
+    #         ptr.store(val)
 
-        world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
-        ```
+    #     world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
+    #     ```
 
-        """
-        with TraceGuard(name="World.apply simd"):
-            self._assert_unlocked()
+    #     """
+    #     with TraceGuard(name="World.apply simd"):
+    #         self._assert_unlocked()
 
-            with self._locked():
-                for archetype in Self.ArchetypeIterator(
-                    Pointer(to=self._archetypes),
-                    query.copy(),
-                ):
+    #         with self._locked():
+    #             for archetype in Self.ArchetypeIterator(
+    #                 Pointer(to=self._archetypes),
+    #                 query.copy(),
+    #             ):
 
-                    @always_inline
-                    def closure[width: Int](i: Int) {read}:
-                        accessor = archetype[].get_entity_accessor(i)
-                        try:
-                            operation[width](accessor)
-                        except:
-                            # TODO: Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
-                            pass
+    #                 @always_inline
+    #                 def closure[width: Int](i: Int) {read}:
+    #                     accessor = archetype[].get_entity_accessor(i)
+    #                     try:
+    #                         operation[width](accessor)
+    #                     except:
+    #                         # TODO: Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
+    #                         pass
 
-                    vectorize[simd_width, unroll_factor=unroll_factor](
-                        len(archetype[]), closure
-                    )
+    #                 vectorize[simd_width, unroll_factor=unroll_factor](
+    #                     len(archetype[]), closure
+    #                 )
 
     # def Reset(self):
     #     """
