@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   define-matrix:
@@ -69,8 +70,10 @@ jobs:
       - uses: prefix-dev/rattler-build-action@v0.2.39
         with:
           setup-only: true
-      - run: |
+      - name: Upload package to prefix.dev
+        shell: bash
+        run: |
           for pkg in $(find dist -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
             echo "Uploading ${pkg}"
-            rattler-build upload prefix -c tree-d "${pkg}"
+            rattler-build upload prefix --channel tree-d "${pkg}"
           done
