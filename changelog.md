@@ -1,6 +1,26 @@
 # Changelog
 
-## [Unreleased](https://github.com/samufi/larecs/compare/v0.5.0b1...main)
+## [Unreleased](https://github.com/samufi/larecs/compare/v0.5.0b4...main)
+
+### Breaking changes
+
+## [0.5.0b4](https://github.com/samufi/larecs/compare/v0.5.0b3...v0.5.0b4)
+
+### Hotfix
+
+- Strip leading 'v' from release version tags in CI.
+
+## [0.5.0b3](https://github.com/samufi/larecs/compare/v0.5.0b2...v0.5.0b3)
+
+### Hotfix
+
+- Authentication with Prefix.dev in CI for package upload.
+
+## [0.5.0b2](https://github.com/samufi/larecs/compare/v0.5.0b1...v0.5.0b2)
+
+### Hotfix
+
+- Define matrix in CI for release builds.
 
 ## [0.5.0b1](https://github.com/samufi/larecs/compare/v0.4.0...v0.5.0b1)
 
