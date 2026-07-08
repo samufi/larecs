@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   define-matrix:
@@ -44,7 +45,13 @@ jobs:
         with:
           # needs to be unique for each matrix entry
           artifact-name: package-${{ matrix.target-platform }}
-          build-args: --target-platform ${{ matrix.target-platform }}${{ matrix.target-platform == 'linux-aarch64' && ' --no-test' || '' }} --channel conda-forge --channel https://repo.prefix.dev/max-nightly --channel https://repo.prefix.dev/modular-community --channel https://prefix.dev/tree-d
+          build-args: >
+            --target-platform ${{ matrix.target-platform }}
+            --channel conda-forge
+            --channel https://repo.prefix.dev/max-nightly
+            --channel https://repo.prefix.dev/modular-community
+            --channel https://prefix.dev/tree-d
+            ${{ case(github.event_name == 'release', '', '--no-test') }}
   build-gate:
     name: Build gate
     runs-on: ubuntu-latest
@@ -69,8 +76,10 @@ jobs:
       - uses: prefix-dev/rattler-build-action@v0.2.39
         with:
           setup-only: true
-      - run: |
+      - name: Upload package to prefix.dev
+        shell: bash
+        run: |
           for pkg in $(find dist -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
             echo "Uploading ${pkg}"
-            rattler-build upload prefix -c tree-d "${pkg}"
+            rattler-build upload prefix --channel tree-d "${pkg}"
           done
