@@ -45,15 +45,13 @@ jobs:
         with:
           # needs to be unique for each matrix entry
           artifact-name: package-${{ matrix.target-platform }}
-          build-args: |
+          build-args: >
             --target-platform ${{ matrix.target-platform }}
-            ${{ case(
-              github.event_name == 'release', '',
-              ' --no-test') }}
             --channel conda-forge
             --channel https://repo.prefix.dev/max-nightly
             --channel https://repo.prefix.dev/modular-community
             --channel https://prefix.dev/tree-d
+            ${{ case(github.event_name == 'release', '', '--no-test') }}
   build-gate:
     name: Build gate
     runs-on: ubuntu-latest
