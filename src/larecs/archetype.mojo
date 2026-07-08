@@ -1,7 +1,5 @@
-from std.sys.intrinsics import _type_is_eq
 from std.sys.defines import is_defined
 from std.reflection import reflect
-from std.reflection.traits import AllCopyable
 from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
 
@@ -310,14 +308,20 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 "_ComponentStorage.shallow_copy(out new_storage: Self)"
             )
         ):
-            # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
-            new_storage = Self(active_component_mask=BitMask(), capacity=0)
+            # Initialize with an empty active mask to avoid constructing a temporary
+            # storage whose active components intentionally have empty pointers.
+            new_storage = Self(
+                active_component_mask=BitMask(),
+                capacity=0,
+            )
             new_storage._capacity = self._capacity
             new_storage._size = self._size
             new_storage._active_component_mask = self._active_component_mask
-            comptime assert AllCopyable[
-                *Self.ComponentTypes.map[Self._PointerMapper]()
-            ]
+            comptime assert Self.ComponentTypes.map[
+                Self._PointerMapper
+            ]().all_conforms_to[
+                Copyable
+            ](), "All component pointer types must be copyable for shallow copy."
             new_storage._data = self._data.copy()
 
     def _unsafe_init_components(mut self, read init_component_mask: BitMask):
