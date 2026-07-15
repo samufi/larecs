@@ -545,7 +545,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 )
             entity_comp_ptr = base_comp_ptr + entity_idx
             destroy_n(entity_comp_ptr, 1)
-            entity_comp_ptr.init_pointee_move(component^)
+            entity_comp_ptr.unsafe_write(component^)
 
         (components^).consume_elements[set_component]()
 
@@ -585,7 +585,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     "Not reachable as component presence was asserted before."
                 )
             entity_comp_ptr = base_comp_ptr + entity_idx
-            entity_comp_ptr.init_pointee_move(component^)
+            entity_comp_ptr.unsafe_write(component^)
 
         (components^).consume_elements[init_component]()
 
