@@ -607,12 +607,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     base_comp_ptr = self.get_component_ptr[T]()
                 except:
                     return assert_unreachable(
-                        "Not reachable as component presence was asserted"
-                        " before."
+                        "Not reachable as component presence was asserted before."
                     )
                 entity_comp_ptr = base_comp_ptr + entity_idx
                 destroy_n(entity_comp_ptr, 1)
-                entity_comp_ptr.init_pointee_move(component^)
+                entity_comp_ptr.unsafe_write(component^)
 
             (components^).consume_elements[set_component]()
 
@@ -655,11 +654,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     base_comp_ptr = self.get_component_ptr[T]()
                 except:
                     return assert_unreachable(
-                        "Not reachable as component presence was asserted"
-                        " before."
+                        "Not reachable as component presence was asserted before."
                     )
                 entity_comp_ptr = base_comp_ptr + entity_idx
-                entity_comp_ptr.init_pointee_move(component^)
+                entity_comp_ptr.unsafe_write(component^)
 
             (components^).consume_elements[init_component]()
 
