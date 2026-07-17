@@ -23,6 +23,7 @@ set -e
 
 precompile_args=(--precompile src/larecs)
 test_args=()
+: "${CONDA_PREFIX:?must be set}"
 mojo_build_args="-g -DASSERT=all -Xlinker -L${CONDA_PREFIX}/lib -Xlinker -lmojotracy"
 
 for arg in "$@"; do
