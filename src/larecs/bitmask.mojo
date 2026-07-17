@@ -175,10 +175,11 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: Variadic bit indices to set to True.
         """
-        comptime assert (
-            Self.total_bits.is_power_of_two()
-        ), "BitMask size must be a power of two."
-        self._bytes = Self.BytesType()
+        with Zone(function_name="BitMask.__init__(*bits: Int)"):
+            comptime assert (
+                Self.total_bits.is_power_of_two()
+            ), "BitMask size must be a power of two."
+            self._bytes = Self.BytesType()
         for bit in bits:
             self.set[True](bit)
 
@@ -318,8 +319,11 @@ struct _BitMask[total_bits: Int](
         Returns:
             A new BitMask containing the bitwise XOR of both masks.
         """
-        result = self.copy()
-        result ^= other
+        with Zone(
+            function_name="BitMask.__xor__(other: Self, out result: Self)"
+        ):
+            result = self.copy()
+            result ^= other
 
     @always_inline
     def __ixor__(mut self, other: Self):
@@ -332,7 +336,8 @@ struct _BitMask[total_bits: Int](
         Args:
             other: The BitMask to perform the bitwise XOR operation with.
         """
-        self._bytes ^= other._bytes
+        with Zone(function_name="BitMask.__ixor__(other: Self)"):
+            self._bytes ^= other._bytes
 
     @deprecated(use=write_to)
     def __str__(self) -> String:
@@ -484,7 +489,8 @@ struct _BitMask[total_bits: Int](
         Args:
             bit: The index of the bit to modify.
         """
-        check_bounds(bit, Self.total_bits)
+        with Zone(function_name="BitMask.set[value: Bool](bit: Int)"):
+            check_bounds(bit, Self.total_bits)
 
         var idx = bit >> 3  # equivalent to bit // 8
         var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)

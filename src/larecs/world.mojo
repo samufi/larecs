@@ -1730,7 +1730,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         ```mojo {doctest="apply"}
-        from sys.info import simdwidthof
+        from sys.info import simd_width_of
         from memory import LegacyUnsafePointer
 
         world = World[Float64]()
@@ -2701,8 +2701,11 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
         Args:
             locks: The LockManager to handle.
         """
-        self._locks = locks
-        self._lock = 0
+        with Zone(
+            function_name="LockedContext.__init__(locks: Pointer[LockManager])"
+        ):
+            self._locks = locks
+            self._lock = 0
 
     @always_inline
     def __enter__(mut self) raises LarecsError -> Self:
@@ -2715,22 +2718,26 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
         Raises:
             LarecsError: If the number of locks exceeds 256.
         """
-        try:
-            self._lock = self._locks[].lock()
-        except:
-            raise LarecsError(WorldError.out_of_locks)
+        with Zone(function_name="LockedContext.__enter__()"):
+            try:
+                self._lock = self._locks[].lock()
+            except:
+                raise LarecsError(WorldError.out_of_locks)
 
-        return self
+            return self
 
     @always_inline
     def __exit__(mut self):
         """
         Unlocks the world.
         """
-        try:
-            self._locks[].unlock(self._lock)
-        except e:
-            assert False, "An unexpected internal error occurred: " + String(e)
+        with Zone(function_name="LockedContext.__exit__()"):
+            try:
+                self._locks[].unlock(self._lock)
+            except e:
+                assert (
+                    False
+                ), "An unexpected internal error occurred: " + String(e)
 
     # @always_inline
     # def __exit__[

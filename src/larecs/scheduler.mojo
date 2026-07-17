@@ -3,6 +3,7 @@ from .resource import Resources
 from .world import World
 from .unsafe_box import UnsafeBox
 
+from std.reflection import reflect
 from tracy import Zone, frame_mark
 
 

@@ -5,6 +5,8 @@ from std.sys.intrinsics import _type_is_eq
 # from collections import Dict
 from std.memory import UnsafePointer
 
+from tracy import Zone
+
 from .bitmask import BitMask
 from .types import ComponentId
 
@@ -64,7 +66,8 @@ struct ComponentManager[
         Constraints:
             The component count must fit into the bitmask capacity.
         """
-        comptime assert Self.component_count <= Int(Self.max_size)
+        with Zone(function_name="ComponentManager.__init__()"):
+            comptime assert Self.component_count <= Int(Self.max_size)
 
     comptime _ContainsComponent[
         T: ComponentType

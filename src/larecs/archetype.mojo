@@ -550,7 +550,12 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Raises:
             LarecsError: If at least one of the components is not contained in the storage.
         """
-        Self.component_manager.assert_valid_components[*Ts]()
+        with Zone(
+            function_name=(
+                "_ComponentStorage.assert_has_components[*Ts: ComponentType]()"
+            )
+        ):
+            Self.component_manager.assert_valid_components[*Ts]()
 
         if not self.has_components[*Ts]():
             raise LarecsError(
@@ -623,29 +628,36 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Raises:
             LarecsError: If at least one component is not present.
         """
-        comptime assert constrain_components_unique[
-            *Ts
-        ](), "Component types must be unique."
-        _assert_index_in_bounds(entity_idx, self._size)
+        with Zone(
+            function_name=(
+                "_ComponentStorage.init_components[*Ts:"
+                " ComponentType](entity_idx: Int, var *components: *Ts)"
+            )
+        ):
+            comptime assert constrain_components_unique[
+                *Ts
+            ](), "Component types must be unique."
+            _assert_index_in_bounds(entity_idx, self._size)
 
-        Self.component_manager.assert_valid_components[*Ts]()
-        self.assert_has_components[*Ts]()
+            Self.component_manager.assert_valid_components[*Ts]()
+            self.assert_has_components[*Ts]()
 
-        @always_inline
-        def init_component[
-            comp_id: Int
-        ](var component: Ts[comp_id]) capturing -> None:
-            comptime T = Ts[comp_id]
-            try:
-                base_comp_ptr = self.get_component_ptr[T]()
-            except:
-                return assert_unreachable(
-                    "Not reachable as component presence was asserted before."
-                )
-            entity_comp_ptr = base_comp_ptr + entity_idx
-            entity_comp_ptr.init_pointee_move(component^)
+            @always_inline
+            def init_component[
+                comp_id: Int
+            ](var component: Ts[comp_id]) capturing -> None:
+                comptime T = Ts[comp_id]
+                try:
+                    base_comp_ptr = self.get_component_ptr[T]()
+                except:
+                    return assert_unreachable(
+                        "Not reachable as component presence was asserted"
+                        " before."
+                    )
+                entity_comp_ptr = base_comp_ptr + entity_idx
+                entity_comp_ptr.init_pointee_move(component^)
 
-        (components^).consume_elements[init_component]()
+            (components^).consume_elements[init_component]()
 
     @always_inline
     def copy_component_from[
@@ -764,13 +776,19 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             func: A function that takes a component ID and the corresponding typed pointer, and performs some mutating operation.
                 The function can return a new pointer to replace the existing one in the storage (e.g. for reallocations), which will be updated accordingly.
         """
-        comptime for id in range(len(Self.ComponentTypes)):
-            comptime T = Self.ComponentTypes[id]
-            if self.has_components[T]():
-                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
-                self._data[id] = rebind[Self._PointerTuple.element_types[id]](
-                    func[T, id](self._size, self._capacity, comp_ptr)
-                )
+        with Zone(
+            function_name=(
+                "_ComponentStorage._apply_mut_to_active_components[FuncType](func:"
+                " FuncType)"
+            )
+        ):
+            comptime for id in range(len(Self.ComponentTypes)):
+                comptime T = Self.ComponentTypes[id]
+                if self.has_components[T]():
+                    comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
+                    self._data[id] = rebind[
+                        Self._PointerTuple.element_types[id]
+                    ](func[T, id](self._size, self._capacity, comp_ptr))
 
     def _apply_to_active_components[
         FuncType: def[T: ComponentType, id: ComponentId](
@@ -787,11 +805,19 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
         Args:
             func: A function that takes a component ID and the corresponding typed pointer, and performs some operation.
         """
-        comptime for id in range(len(Self.ComponentTypes)):
-            comptime T = Self.ComponentTypes[id]
-            if self.has_components[T]():
-                comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
-                func[T, id](self._size, self._capacity, comp_ptr.value().copy())
+        with Zone(
+            function_name=(
+                "_ComponentStorage._apply_to_active_components[FuncType](func:"
+                " FuncType)"
+            )
+        ):
+            comptime for id in range(len(Self.ComponentTypes)):
+                comptime T = Self.ComponentTypes[id]
+                if self.has_components[T]():
+                    comp_ptr = rebind[Self.ComponentPointer[T]](self._data[id])
+                    func[T, id](
+                        self._size, self._capacity, comp_ptr.value().copy()
+                    )
 
 
 struct Archetype[

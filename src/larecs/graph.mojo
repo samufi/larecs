@@ -125,10 +125,16 @@ struct BitMaskGraph[
         Returns:
             The index of the added node.
         """
-        var new_node_idx = len(self._nodes)
-        self._map[node_mask] = new_node_idx
-        self._nodes.insert(new_node_idx, Node(node_mask, value^))
-        return new_node_idx
+        with Zone(
+            function_name=(
+                "BitMaskGraph.add_node(node_mask: BitMask, var value:"
+                " Self.DataType)"
+            )
+        ):
+            var new_node_idx = len(self._nodes)
+            self._map[node_mask] = new_node_idx
+            self._nodes.insert(new_node_idx, Node(node_mask, value^))
+            return new_node_idx
 
     @always_inline
     def create_link(mut self, from_node_index: Int, changed_bit: Int) -> Int:

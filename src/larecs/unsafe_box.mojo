@@ -23,7 +23,7 @@ def _destructor[T: ImplicitlyDeletable](box_storage: UnsafeBox.data_type):
     ):
         debug_assert(
             box_storage is not None,
-            "Attempting to copy an empty UnsafeBox.",
+            "Attempting to destroy an empty UnsafeBox.",
         )
 
         box_storage.unsafe_value().bitcast[T]().destroy_pointee()
