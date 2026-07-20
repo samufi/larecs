@@ -144,10 +144,10 @@ newest-version discovery are configured in `MOJO_SEARCH_CHANNELS`.
 
 Larecs🌲 supports optional profiling with [Tracy](https://github.com/wolfpld/tracy) enabled by the [Mojo Tracy bindings](https://github.com/moseschmiedel/mojo-tracy).
 
-To enable Tracy profiling, the final application must be compiled with the following flags:
+To enable Tracy profiling, the final application must be compiled with the following flags (see the `profiling` task in `pixi.toml` for reference):
 
 ```sh
-mojo build --XLinker -L${CONDA_PREFIX}/lib --XLinker -lmojotracy <your_application_source.mojo>
+mojo build --XLinker -L${CONDA_PREFIX}/lib --XLinker -lmojotracy -DTRACY_ENABLED <your_application_source.mojo>
 ```
 
 This assumes that `mojo-tracy` was installed via `pixi`.
