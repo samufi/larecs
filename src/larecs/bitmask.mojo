@@ -135,11 +135,10 @@ struct _BitMask[total_bits: Int](
         Args:
             bytes: The raw byte data representing the bitmask state.
         """
-        with Zone(function_name="BitMask.__init__(bytes: Self.BytesType)"):
-            comptime assert (
-                Self.total_bits.is_power_of_two()
-            ), "BitMask size must be a power of two."
-            self._bytes = bytes
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
+        self._bytes = bytes
 
     @always_inline
     def __init__[size: Int](out self, bits: InlineArray[Int, size]):
@@ -153,18 +152,13 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: An inline array of bit indices to set to True.
         """
-        with Zone(
-            function_name=(
-                "BitMask.__init__[size: Int](bits: InlineArray[Int, size])"
-            )
-        ):
-            comptime assert (
-                Self.total_bits.is_power_of_two()
-            ), "BitMask size must be a power of two."
-            self._bytes = Self.BytesType()
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
+        self._bytes = Self.BytesType()
 
-            comptime for i in range(size):
-                self.set[True](bits[i])
+        comptime for i in range(size):
+            self.set[True](bits[i])
 
     @always_inline
     def __init__(out self, *bits: Int):
@@ -175,11 +169,10 @@ struct _BitMask[total_bits: Int](
         Args:
             bits: Variadic bit indices to set to True.
         """
-        with Zone(function_name="BitMask.__init__(*bits: Int)"):
-            comptime assert (
-                Self.total_bits.is_power_of_two()
-            ), "BitMask size must be a power of two."
-            self._bytes = Self.BytesType()
+        comptime assert (
+            Self.total_bits.is_power_of_two()
+        ), "BitMask size must be a power of two."
+        self._bytes = Self.BytesType()
         for bit in bits:
             self.set[True](bit)
 
@@ -489,8 +482,7 @@ struct _BitMask[total_bits: Int](
         Args:
             bit: The index of the bit to modify.
         """
-        with Zone(function_name="BitMask.set[value: Bool](bit: Int)"):
-            check_bounds(bit, Self.total_bits)
+        check_bounds(bit, Self.total_bits)
 
         var idx = bit >> 3  # equivalent to bit // 8
         var offset = UInt8(bit) & 7  # equivalent to bit - (8 * idx)
