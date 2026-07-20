@@ -74,7 +74,7 @@ def _copy_initializer[
             self_data = None
             return
 
-        comptime if size_of[T]() == 1:
+        comptime if size_of[T]() == 0:
             self_data = None
             self_data = {
                 UnsafePointer(to=self_data._value)
