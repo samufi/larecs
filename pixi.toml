@@ -18,8 +18,8 @@ update-mojo = { cmd = "python scripts/update_mojo.py", default-environment = "de
 profiling = { cmd = "mojo run -I src -Xlinker -L\"$CONDA_PREFIX/lib\" -Xlinker -lmojotracy -DTRACY_ENABLED benchmark/run_benchmarks.mojo", default-environment = "default" }
 
 [dependencies]
-mojo = ">=1.0.0b3.dev2026071505,<2"
-mojo-tracy = ">=0.2.0"
+mojo = ">=1.0.0b3.dev2026072206,<2"
+mojo-tracy = ">=0.3.0, <0.4.0"
 
 [feature.test.dependencies]
 clang = ">=22.1.8,<23"
