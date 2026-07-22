@@ -1,5 +1,8 @@
 # from collections import Dict
 from std.collections.check_bounds import check_bounds
+
+from tracy import Zone
+
 from .bitmask import BitMask
 
 
@@ -40,9 +43,14 @@ struct Node[DataType: NodeDataType](ImplicitlyCopyable):
             bit_mask: The bit mask of the node.
             value:    The value stored in the node.
         """
-        self.value = value^
-        self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
-        self.bit_mask = bit_mask
+        with Zone(
+            function_name=(
+                "Node.__init__(bit_mask: BitMask, var value: Self.DataType)"
+            )
+        ):
+            self.value = value^
+            self.neighbours = InlineArray[Int, 256](fill=Self.null_index)
+            self.bit_mask = bit_mask
 
     def __init__(out self, *, copy: Self):
         """Copies a graph node.
@@ -50,7 +58,8 @@ struct Node[DataType: NodeDataType](ImplicitlyCopyable):
         Args:
             copy: The node to copy.
         """
-        self = Self(copy.bit_mask, copy.value.copy())
+        with Zone(function_name="Node.__init__(copy: Self)"):
+            self = Self(copy.bit_mask, copy.value.copy())
 
 
 struct BitMaskGraph[
@@ -92,9 +101,14 @@ struct BitMaskGraph[
             first_value: The value stored in the first node,
                          corresponding to an empty bitmask.
         """
-        self._nodes = List[Node[Self.DataType]]()
-        self._map = Dict[BitMask, Int]()
-        _ = self.add_node(BitMask(), first_value^)
+        with Zone(
+            function_name=(
+                "BitMaskGraph.__init__(var first_value: Self.DataType)"
+            )
+        ):
+            self._nodes = List[Node[Self.DataType]]()
+            self._map = Dict[BitMask, Int]()
+            _ = self.add_node(BitMask(), first_value^)
 
     @always_inline
     def add_node(
@@ -111,10 +125,16 @@ struct BitMaskGraph[
         Returns:
             The index of the added node.
         """
-        var new_node_idx = len(self._nodes)
-        self._map[node_mask] = new_node_idx
-        self._nodes.insert(new_node_idx, Node(node_mask, value^))
-        return new_node_idx
+        with Zone(
+            function_name=(
+                "BitMaskGraph.add_node(node_mask: BitMask, var value:"
+                " Self.DataType)"
+            )
+        ):
+            var new_node_idx = len(self._nodes)
+            self._map[node_mask] = new_node_idx
+            self._nodes.insert(new_node_idx, Node(node_mask, value^))
+            return new_node_idx
 
     @always_inline
     def create_link(mut self, from_node_index: Int, changed_bit: Int) -> Int:
@@ -129,21 +149,27 @@ struct BitMaskGraph[
         Returns:
             The index of the node to which the link is created.
         """
-        check_bounds(from_node_index, len(self._nodes))
-        check_bounds(changed_bit, BitMask.total_bits)
+        with Zone(
+            function_name=(
+                "BitMaskGraph.create_link(from_node_index: Int, changed_bit:"
+                " Int)"
+            )
+        ):
+            check_bounds(from_node_index, len(self._nodes))
+            check_bounds(changed_bit, BitMask.total_bits)
 
-        new_mask = self._nodes[from_node_index].bit_mask
-        new_mask.flip(changed_bit)
-        optional_to_index = self._map.get(new_mask)
-        if optional_to_index:
-            to_node_index = optional_to_index.value()
-        else:
-            to_node_index = self.add_node(new_mask)
+            new_mask = self._nodes[from_node_index].bit_mask
+            new_mask.flip(changed_bit)
+            optional_to_index = self._map.get(new_mask)
+            if optional_to_index:
+                to_node_index = optional_to_index.value()
+            else:
+                to_node_index = self.add_node(new_mask)
 
-        self._nodes[from_node_index].neighbours[changed_bit] = to_node_index
-        self._nodes[to_node_index].neighbours[changed_bit] = from_node_index
+            self._nodes[from_node_index].neighbours[changed_bit] = to_node_index
+            self._nodes[to_node_index].neighbours[changed_bit] = from_node_index
 
-        return to_node_index
+            return to_node_index
 
     @always_inline
     def get_node_index[
@@ -168,21 +194,29 @@ struct BitMaskGraph[
         Returns:
             The index of the node differing from the start node by the given indices.
         """
-        comptime assert 0 <= size, "Size must be non-negative"
-        check_bounds(start_node_index, len(self._nodes))
+        with Zone(
+            function_name=(
+                "BitMaskGraph.get_node_index[size: Int](different_bits:"
+                " InlineArray[Int, size], start_node_index: Int)"
+            )
+        ):
+            comptime assert 0 <= size, "Size must be non-negative"
+            check_bounds(start_node_index, len(self._nodes))
 
-        var current_node = start_node_index
+            var current_node = start_node_index
 
-        comptime for i in range(size):
-            var differing_bit = different_bits[i]
-            check_bounds(differing_bit, BitMask.total_bits)
+            comptime for i in range(size):
+                var differing_bit = different_bits[i]
+                check_bounds(differing_bit, BitMask.total_bits)
 
-            var next_node = self._nodes[current_node].neighbours[differing_bit]
+                var next_node = self._nodes[current_node].neighbours[
+                    differing_bit
+                ]
 
-            if next_node == Self.null_index:
-                next_node = self.create_link(current_node, differing_bit)
-            current_node = next_node
-        return current_node
+                if next_node == Self.null_index:
+                    next_node = self.create_link(current_node, differing_bit)
+                current_node = next_node
+            return current_node
 
     @always_inline
     def get_node_mask(
@@ -196,8 +230,9 @@ struct BitMaskGraph[
         Returns:
             The mask of the node.
         """
-        check_bounds(node_index, len(self._nodes))
-        return self._nodes[node_index].bit_mask
+        with Zone(function_name="BitMaskGraph.get_node_mask(node_index: Int)"):
+            check_bounds(node_index, len(self._nodes))
+            return self._nodes[node_index].bit_mask
 
     @always_inline
     def __getitem__(
@@ -208,8 +243,9 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
-        check_bounds(node_index, len(self._nodes))
-        return self._nodes[node_index].value
+        with Zone(function_name="BitMaskGraph.__getitem__(node_index: Int)"):
+            check_bounds(node_index, len(self._nodes))
+            return self._nodes[node_index].value
 
     @always_inline
     def has_value(self: Self, node_index: Int) -> Bool:
@@ -218,5 +254,6 @@ struct BitMaskGraph[
         Args:
             node_index: The index of the node.
         """
-        check_bounds(node_index, len(self._nodes))
-        return self[node_index] != materialize[Self.null_value]()
+        with Zone(function_name="BitMaskGraph.has_value(node_index: Int)"):
+            check_bounds(node_index, len(self._nodes))
+            return self[node_index] != materialize[Self.null_value]()

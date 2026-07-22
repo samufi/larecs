@@ -1,5 +1,7 @@
 from std.sys import size_of
 
+from tracy import Zone
+
 
 def _destructor[T: ImplicitlyDeletable](box_storage: UnsafeBox.data_type):
     """
@@ -13,14 +15,20 @@ def _destructor[T: ImplicitlyDeletable](box_storage: UnsafeBox.data_type):
     Args:
         box_storage: The UnsafeBox.data_type instance to be destroyed.
     """
-    debug_assert(
-        box_storage is not None,
-        "Attempting to copy an empty UnsafeBox.",
-    )
+    with Zone(
+        function_name=(
+            "unsafe_box._destructor[T: ImplicitlyDeletable](box_storage:"
+            " UnsafeBox.data_type)"
+        )
+    ):
+        debug_assert(
+            box_storage is not None,
+            "Attempting to destroy an empty UnsafeBox.",
+        )
 
-    box_storage.unsafe_value().bitcast[T]().destroy_pointee()
-    comptime if size_of[T]() > 0:
-        box_storage.unsafe_value().free()
+        box_storage.unsafe_value().bitcast[T]().destroy_pointee()
+        comptime if size_of[T]() > 0:
+            box_storage.unsafe_value().free()
 
 
 def _dummy_destructor(box: UnsafeBox.data_type):
@@ -31,7 +39,10 @@ def _dummy_destructor(box: UnsafeBox.data_type):
         box: The UnsafeBox.data_type instance to be destroyed.
              Note, this will not be touched here.
     """
-    pass
+    with Zone(
+        function_name="unsafe_box._dummy_destructor(box: UnsafeBox.data_type)"
+    ):
+        pass
 
 
 def _copy_initializer[
@@ -53,21 +64,27 @@ def _copy_initializer[
         A pointer to the newly allocated data.
     """
 
-    if existing_box is None:
-        self_data = None
-        return
+    with Zone(
+        function_name=(
+            "unsafe_box._copy_initializer[T: Copyable](existing_box:"
+            " UnsafeBox.data_type)"
+        )
+    ):
+        if existing_box is None:
+            self_data = None
+            return
 
-    comptime if size_of[T]() == 0:
-        self_data = None
-        self_data = {
-            UnsafePointer(to=self_data._value)
-            .bitcast[Byte]()
-            .unsafe_origin_cast[MutUntrackedOrigin]()
-        }
-    else:
-        ptr = alloc[T](1)
-        ptr.init_pointee_copy(existing_box.unsafe_value().bitcast[T]()[])
-        self_data = ptr.bitcast[Byte]()
+        comptime if size_of[T]() == 0:
+            self_data = None
+            self_data = {
+                UnsafePointer(to=self_data._value)
+                .bitcast[Byte]()
+                .unsafe_origin_cast[MutUntrackedOrigin]()
+            }
+        else:
+            ptr = alloc[T](1)
+            ptr.init_pointee_copy(existing_box.unsafe_value().bitcast[T]()[])
+            self_data = ptr.bitcast[Byte]()
 
 
 def _dummy_copy_initializer(
@@ -84,7 +101,13 @@ def _dummy_copy_initializer(
     Returns:
         A null pointer.
     """
-    return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
+    with Zone(
+        function_name=(
+            "unsafe_box._dummy_copy_initializer(existing_box:"
+            " UnsafeBox.data_type)"
+        )
+    ):
+        return Optional[UnsafePointer[Byte, MutUntrackedOrigin]]()
 
 
 struct UnsafeBox(Copyable, Movable):
@@ -127,12 +150,13 @@ struct UnsafeBox(Copyable, Movable):
         Constraints:
             `used_internally` must be `True` to use this constructor.
         """
-        comptime assert (
-            used_internally
-        ), "This constructor is meant for internal use only."
-        self._data = None
-        self._destructor = _dummy_destructor
-        self._copy_initializer = _dummy_copy_initializer
+        with Zone(function_name="UnsafeBox.__init__[used_internally: Bool]()"):
+            comptime assert (
+                used_internally
+            ), "This constructor is meant for internal use only."
+            self._data = None
+            self._destructor = _dummy_destructor
+            self._copy_initializer = _dummy_copy_initializer
 
     def __init__[T: Self.EltType](out self, var data: T):
         """
@@ -145,20 +169,23 @@ struct UnsafeBox(Copyable, Movable):
             data: The value to be stored in the box.
         """
 
-        comptime if size_of[T]() == 0:
-            self._data = None
-            self._data = {
-                UnsafePointer(to=self._data._value)
-                .bitcast[Byte]()
-                .unsafe_origin_cast[MutUntrackedOrigin]()
-            }
-        else:
-            var ptr = alloc[T](1)
-            ptr.init_pointee_move(data^)
-            self._data = ptr.bitcast[Byte]()
+        with Zone(
+            function_name="UnsafeBox.__init__[T: Self.EltType](var data: T)"
+        ):
+            comptime if size_of[T]() == 0:
+                self._data = None
+                self._data = {
+                    UnsafePointer(to=self._data._value)
+                    .bitcast[Byte]()
+                    .unsafe_origin_cast[MutUntrackedOrigin]()
+                }
+            else:
+                var ptr = alloc[T](1)
+                ptr.init_pointee_move(data^)
+                self._data = ptr.bitcast[Byte]()
 
-        self._destructor = _destructor[T]
-        self._copy_initializer = _copy_initializer[T]
+            self._destructor = _destructor[T]
+            self._copy_initializer = _copy_initializer[T]
 
     def __init__(out self, *, copy: Self):
         """
@@ -167,10 +194,11 @@ struct UnsafeBox(Copyable, Movable):
         Args:
             copy: The UnsafeBox instance to be copied from.
         """
-        self = Self.__init__[used_internally=True]()
-        self._data = copy._copy_initializer(copy._data)
-        self._destructor = copy._destructor
-        self._copy_initializer = copy._copy_initializer
+        with Zone(function_name="UnsafeBox.__init__(copy: Self)"):
+            self = Self.__init__[used_internally=True]()
+            self._data = copy._copy_initializer(copy._data)
+            self._destructor = copy._destructor
+            self._copy_initializer = copy._copy_initializer
 
     @always_inline
     def __del__(deinit self):
@@ -180,11 +208,12 @@ struct UnsafeBox(Copyable, Movable):
         It destroys the data stored in the box and frees the memory
         associated with the box.
         """
-        debug_assert(
-            self._data is not None,
-            "Attempting to destroy an empty UnsafeBox.",
-        )
-        self._destructor(self._data)
+        with Zone(function_name="UnsafeBox.__del__()"):
+            debug_assert(
+                self._data is not None,
+                "Attempting to destroy an empty UnsafeBox.",
+            )
+            self._destructor(self._data)
 
     @always_inline
     def unsafe_get[T: Self.EltType](ref self) -> ref[self] T:
@@ -197,11 +226,12 @@ struct UnsafeBox(Copyable, Movable):
         Returns:
             A reference to the data stored in the box.
         """
-        debug_assert(
-            self._data is not None,
-            (
-                t"Attempting to get `{String(reflect[T].base_name())}` from an"
-                t" empty UnsafeBox."
-            ),
-        )
-        return self._data.unsafe_value().bitcast[T]()[]
+        with Zone(function_name="UnsafeBox.unsafe_get[T: Self.EltType]()"):
+            debug_assert(
+                self._data is not None,
+                (
+                    t"Attempting to get `{String(reflect[T].base_name())}` from"
+                    t" an empty UnsafeBox."
+                ),
+            )
+            return self._data.unsafe_value().bitcast[T]()[]

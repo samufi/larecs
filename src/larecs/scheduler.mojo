@@ -3,6 +3,9 @@ from .resource import Resources
 from .world import World
 from .unsafe_box import UnsafeBox
 
+from std.reflection import reflect
+from tracy import Zone, frame_mark
+
 
 trait System(Copyable, ImplicitlyDeletable, Movable):
     """Trait for systems in the scheduler."""
@@ -60,8 +63,9 @@ def _update_system[
         system: The system to update.
         world: The world to use for the update.
     """
-    ref concrete_system = system.unsafe_get[S]()
-    S.update[*ComponentTypes](concrete_system, world)
+    with Zone(function_name=String(t"{reflect[S].name()}.update()")):
+        ref concrete_system = system.unsafe_get[S]()
+        S.update[*ComponentTypes](concrete_system, world)
 
 
 def _initialize_system[
@@ -77,8 +81,9 @@ def _initialize_system[
         system: The system to initialize.
         world: The world to use for the initialization.
     """
-    ref concrete_system = system.unsafe_get[S]()
-    S.initialize[*ComponentTypes](concrete_system, world)
+    with Zone(function_name=String(t"{reflect[S].name()}.initialize()")):
+        ref concrete_system = system.unsafe_get[S]()
+        S.initialize[*ComponentTypes](concrete_system, world)
 
 
 def _finalize_system[
@@ -94,8 +99,9 @@ def _finalize_system[
         system: The system to finalize.
         world: The world to use for the finalization.
     """
-    ref concrete_system = system.unsafe_get[S]()
-    S.finalize[*ComponentTypes](concrete_system, world)
+    with Zone(function_name=String(t"{reflect[S].name()}.finalize()")):
+        ref concrete_system = system.unsafe_get[S]()
+        S.finalize[*ComponentTypes](concrete_system, world)
 
 
 struct Scheduler[*ComponentTypes: ComponentType](Movable):
@@ -190,15 +196,16 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         """
         Initializes the scheduler, creating a new world.
         """
-        self._systems = List[
-            Tuple[
-                UnsafeBox,
-                Self.FunctionType,
-                Self.FunctionType,
-                Self.FunctionType,
-            ]
-        ]()
-        self.world = Self.World()
+        with Zone(function_name="Scheduler.__init__()"):
+            self._systems = List[
+                Tuple[
+                    UnsafeBox,
+                    Self.FunctionType,
+                    Self.FunctionType,
+                    Self.FunctionType,
+                ]
+            ]()
+            self.world = Self.World()
 
     def __init__(out self, var world: Self.World):
         """
@@ -207,15 +214,16 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         Args:
             world: The world to use.
         """
-        self._systems = List[
-            Tuple[
-                UnsafeBox,
-                Self.FunctionType,
-                Self.FunctionType,
-                Self.FunctionType,
-            ]
-        ]()
-        self.world = world^
+        with Zone(function_name="Scheduler.__init__(var world: Self.World)"):
+            self._systems = List[
+                Tuple[
+                    UnsafeBox,
+                    Self.FunctionType,
+                    Self.FunctionType,
+                    Self.FunctionType,
+                ]
+            ]()
+            self.world = world^
 
     def add_system[S: System](mut self, var system: S):
         """Adds a system to the scheduler.
@@ -223,21 +231,26 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         Args:
             system: The system to add.
         """
-        self._systems.append(
-            (
-                UnsafeBox(system^),
-                _initialize_system[S, *Self.ComponentTypes],
-                _update_system[S, *Self.ComponentTypes],
-                _finalize_system[S, *Self.ComponentTypes],
+        with Zone(
+            function_name="Scheduler.add_system[S: System](var system: S)"
+        ):
+            self._systems.append(
+                (
+                    UnsafeBox(system^),
+                    _initialize_system[S, *Self.ComponentTypes],
+                    _update_system[S, *Self.ComponentTypes],
+                    _finalize_system[S, *Self.ComponentTypes],
+                )
             )
-        )
 
     def initialize(mut self) raises:
         """Initializes all systems in the scheduler."""
-        for ref system_info in self._systems:
-            system_info[Self._initialize_index](
-                system_info[Self._system_index], self.world
-            )
+        with Zone(function_name="Scheduler.initialize()"):
+            for ref system_info in self._systems:
+                system_info[Self._initialize_index](
+                    system_info[Self._system_index], self.world
+                )
+        frame_mark()
 
     def update(mut self, steps: Int = 1) raises:
         """Updates all systems in the scheduler repeatedly.
@@ -245,18 +258,22 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         Args:
             steps: How often the systems should be updated.
         """
-        for _ in range(steps):
-            for ref system_info in self._systems:
-                system_info[Self._update_index](
-                    system_info[Self._system_index], self.world
-                )
+        with Zone(function_name="Scheduler.update(steps: Int)"):
+            for _ in range(steps):
+                for ref system_info in self._systems:
+                    system_info[Self._update_index](
+                        system_info[Self._system_index], self.world
+                    )
+        frame_mark()
 
     def finalize(mut self) raises:
         """Finalizes all systems in the scheduler."""
-        for ref system_info in self._systems:
-            system_info[Self._finalize_index](
-                system_info[Self._system_index], self.world
-            )
+        with Zone(function_name="Scheduler.finalize()"):
+            for ref system_info in self._systems:
+                system_info[Self._finalize_index](
+                    system_info[Self._system_index], self.world
+                )
+        frame_mark()
 
     def run(mut self, steps: Int) raises:
         """Runs the scheduler for a given number of steps.
@@ -270,6 +287,7 @@ struct Scheduler[*ComponentTypes: ComponentType](Movable):
         Args:
             steps: The number of steps to run.
         """
-        self.initialize()
-        self.update(steps)
-        self.finalize()
+        with Zone(function_name="Scheduler.run(steps: Int)"):
+            self.initialize()
+            self.update(steps)
+            self.finalize()

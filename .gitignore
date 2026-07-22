@@ -10,6 +10,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+output/
 .Python
 .vscode
 build/
@@ -177,6 +178,7 @@ benchmark/simd_benchmark.mojo
 
 # Mojo packages
 *.mojopkg
+*.mojoc
 
 # Profiling & Debuginfo
 *.ptrace

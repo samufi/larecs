@@ -1,15 +1,19 @@
 [workspace]
 authors = ["samufi <samufi@web.de>"]
-channels = ["conda-forge", "https://repo.prefix.dev/max-nightly"]
+channels = ["conda-forge", "https://repo.prefix.dev/max-nightly", "https://prefix.dev/tree-d"]
 description = "Example for the usage of the larecs ECS"
 name = "satellites"
 platforms = ["linux-64", "osx-arm64"]
 version = "0.4.0"
+preview = ["pixi-build"]
 
 [tasks]
+satellites = { cmd = "mojo run -I ../../src model.mojo", default-environment = "default" }
+profiling = { cmd = "mojo run -I ../../src -Xlinker -L\"$CONDA_PREFIX/lib\" -Xlinker -lmojotracy -DTRACY_ENABLED model.mojo", default-environment = "default" }
 
 [dependencies]
-mojo = ">=1.0.0b3.dev2026061606,<2"
+mojo = "==1.0.0b3.dev2026062206" # BUG: last working version until https://github.com/modular/modular/issues/6719 is resolved
 python = ">=3.14.4,<3.15"
 matplotlib = ">=3.10.9,<4"
 numpy = ">=2.4.3,<3"
+mojo-tracy = ">=0.2.0"

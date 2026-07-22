@@ -1,5 +1,7 @@
 from std.collections.check_bounds import check_bounds
 
+from tracy import Zone
+
 from .types import EntityId
 from .entity import Entity
 from ._internal_error import InternalError
@@ -21,71 +23,83 @@ struct EntityPool(Copyable, Movable, Sized):
     @always_inline
     def __init__(out self):
         """Initializes an empty entity pool with the reserved zero entity."""
-        self._entities = List[Entity]()
-        self._entities.append(Entity(0, UInt32(UInt16.MAX)))
-        self._next = 0
-        self._available = 0
+        with Zone(function_name="EntityPool.__init__()"):
+            self._entities = List[Entity]()
+            self._entities.append(Entity(0, UInt32(UInt16.MAX)))
+            self._next = 0
+            self._available = 0
 
     def get(mut self) -> Entity:
         """Returns a fresh or recycled entity."""
-        if self._available == 0:
-            return self._get_new()
+        with Zone(function_name="EntityPool.get()"):
+            if self._available == 0:
+                return self._get_new()
 
-        curr = self._next
-        self._entities[self._next]._id, self._next = (
-            self._next,
-            self._entities[self._next].get_id(),
-        )
-        self._available -= 1
-        return self._entities[curr]
+            curr = self._next
+            self._entities[self._next]._id, self._next = (
+                self._next,
+                self._entities[self._next].get_id(),
+            )
+            self._available -= 1
+            return self._entities[curr]
 
     @always_inline
     def _get_new(mut self, out entity: Entity):
         """Allocates and returns a new entity. For internal use."""
-        entity = Entity(EntityId(len(self._entities)))
-        self._entities.append(entity)
+        with Zone(function_name="EntityPool._get_new(out entity: Entity)"):
+            entity = Entity(EntityId(len(self._entities)))
+            self._entities.append(entity)
 
     @always_inline
     def recycle(mut self, entity: Entity) raises InternalError:
         """Hands an entity back for recycling."""
-        if entity.get_id() == 0:
-            raise InternalError.mutation_of_zero_entity
-        check_bounds(entity.get_id(), len(self._entities))
+        with Zone(function_name="EntityPool.recycle(entity: Entity)"):
+            if entity.get_id() == 0:
+                raise InternalError.mutation_of_zero_entity
+            check_bounds(entity.get_id(), len(self._entities))
 
-        self._entities[entity.get_id()]._generation += 1
+            self._entities[entity.get_id()]._generation += 1
 
-        tmp = self._next
-        self._next = entity.get_id()
-        self._entities[entity.get_id()]._id = tmp
-        self._available += 1
+            tmp = self._next
+            self._next = entity.get_id()
+            self._entities[entity.get_id()]._id = tmp
+            self._available += 1
 
     @always_inline
     def reset(mut self):
         """Recycles all entities. Does NOT free the reserved memory."""
-        self._entities.shrink(1)
-        self._next = 0
-        self._available = 0
+        with Zone(function_name="EntityPool.reset()"):
+            self._entities.shrink(1)
+            self._next = 0
+            self._available = 0
 
     @always_inline
     def is_alive(self, entity: Entity) -> Bool:
         """Returns whether an entity is still alive, based on the entity's generations.
         """
-        return entity._generation == self._entities[entity.get_id()]._generation
+        with Zone(function_name="EntityPool.is_alive(entity: Entity)"):
+            return (
+                entity._generation
+                == self._entities[entity.get_id()]._generation
+            )
 
     @always_inline
     def __len__(self) -> Int:
         """Returns the current number of used entities."""
-        return len(self._entities) - 1 - self._available
+        with Zone(function_name="EntityPool.__len__()"):
+            return len(self._entities) - 1 - self._available
 
     @always_inline
     def capacity(self) -> Int:
         """Returns the current capacity (used and recycled entities)."""
-        return len(self._entities) - 1
+        with Zone(function_name="EntityPool.capacity()"):
+            return len(self._entities) - 1
 
     @always_inline
     def available(self) -> Int:
         """Returns the current number of available/recycled entities."""
-        return self._available
+        with Zone(function_name="EntityPool.available()"):
+            return self._available
 
 
 @fieldwise_init
@@ -124,10 +138,11 @@ struct BitPool(Copyable, Movable):
         to [.BitPool.get] return monotonically increasing indices until recycled
         bits become available.
         """
-        self._bits = InlineArray[UInt8, Self.capacity](fill=0)
-        self._next = 0
-        self._length = 0
-        self._available = 0
+        with Zone(function_name="BitPool.__init__()"):
+            self._bits = InlineArray[UInt8, Self.capacity](fill=0)
+            self._next = 0
+            self._length = 0
+            self._available = 0
 
     def get(mut self, out bit_idx: Int) raises InternalError:
         """Returns a fresh or recycled bit index.
@@ -141,16 +156,17 @@ struct BitPool(Copyable, Movable):
         Returns:
             The acquired bit index.
         """
-        if self._available == 0:
-            bit_idx = self._next = self._get_new()
-            return
+        with Zone(function_name="BitPool.get(out bit_idx: Int)"):
+            if self._available == 0:
+                bit_idx = self._next = self._get_new()
+                return
 
-        bit_idx = self._next
-        self._next, self._bits[self._next] = (
-            Int(self._bits[self._next]),
-            UInt8(self._next),
-        )
-        self._available -= 1
+            bit_idx = self._next
+            self._next, self._bits[self._next] = (
+                Int(self._bits[self._next]),
+                UInt8(self._next),
+            )
+            self._available -= 1
 
     def _get_new(mut self, out bit_idx: Int) raises InternalError:
         """Allocates and returns a new bit index.
@@ -164,12 +180,13 @@ struct BitPool(Copyable, Movable):
         Returns:
             The index of the newly allocated bit.
         """
-        if self._length >= Self.capacity:
-            raise InternalError.ran_out_of_capacity
+        with Zone(function_name="BitPool._get_new(out bit_idx: Int)"):
+            if self._length >= Self.capacity:
+                raise InternalError.ran_out_of_capacity
 
-        bit_idx = self._length
-        self._bits[self._length] = UInt8(bit_idx)
-        self._length += 1
+            bit_idx = self._length
+            self._bits[self._length] = UInt8(bit_idx)
+            self._length += 1
 
     @always_inline
     def recycle(mut self, bit_idx: Int):
@@ -181,9 +198,10 @@ struct BitPool(Copyable, Movable):
         Args:
             bit_idx: The index of the bit to recycle.
         """
-        check_bounds(bit_idx, self._length)
-        self._next, self._bits[bit_idx] = bit_idx, UInt8(self._next)
-        self._available += 1
+        with Zone(function_name="BitPool.recycle(bit_idx: Int)"):
+            check_bounds(bit_idx, self._length)
+            self._next, self._bits[bit_idx] = bit_idx, UInt8(self._next)
+            self._available += 1
 
     @always_inline
     def reset(mut self):

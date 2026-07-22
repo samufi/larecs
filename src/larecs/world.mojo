@@ -3,6 +3,8 @@ from std.sys import size_of
 from std.algorithm.backend.vectorize import vectorize
 from std.builtin.globals import global_constant
 
+from tracy import Zone
+
 from .pool import EntityPool
 from .entity import Entity, EntityLocation
 from .archetype import (
@@ -28,7 +30,6 @@ from .query import (
 from .lock import LockManager
 from .resource import Resources
 from ._utils import concatenate_inline_arrays, assert_unreachable
-from ._tracing import TraceGuard
 from .types import ComponentId
 from .error import (
     LarecsError,
@@ -77,10 +78,11 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._world[]._remove_and_add[
-            rem_size=Self.size,
-            remove_ids=Self.remove_ids,
-        ](entity)
+        with Zone(function_name="Replacer.by(entity: Entity)"):
+            self._world[]._remove_and_add[
+                rem_size=Self.size,
+                remove_ids=Self.remove_ids,
+            ](entity)
 
     def by[
         T: ComponentType
@@ -101,11 +103,17 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._world[]._remove_and_add[
-            T,
-            rem_size=Self.size,
-            remove_ids=Self.remove_ids,
-        ](entity, component^)
+        with Zone(
+            function_name=(
+                "Replacer.by[T: ComponentType](var component: T, entity:"
+                " Entity)"
+            )
+        ):
+            self._world[]._remove_and_add[
+                T,
+                rem_size=Self.size,
+                remove_ids=Self.remove_ids,
+            ](entity, component^)
 
     def by[
         *AddTs: ComponentType
@@ -126,11 +134,17 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        self._world[]._remove_and_add[
-            *AddTs,
-            rem_size=Self.size,
-            remove_ids=Self.remove_ids,
-        ](entity, *components^)
+        with Zone(
+            function_name=(
+                "Replacer.by[*AddTs: ComponentType](var *components: *AddTs,"
+                " entity: Entity)"
+            )
+        ):
+            self._world[]._remove_and_add[
+                *AddTs,
+                rem_size=Self.size,
+                remove_ids=Self.remove_ids,
+            ](entity, *components^)
 
     def by[
         *AddTs: ComponentType,
@@ -161,10 +175,17 @@ struct Replacer[
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        return self.by(
-            *components^,
-            query=query,
-        )
+        with Zone(
+            function_name=(
+                "Replacer.by[*AddTs: ComponentType, has_without_mask:"
+                " Bool](query: QueryInfo, var *components: *AddTs, out"
+                " iterator: Self.World.Iterator)"
+            )
+        ):
+            return self.by(
+                *components^,
+                query=query,
+            )
 
     def by[
         *AddTs: ComponentType,
@@ -196,13 +217,20 @@ struct Replacer[
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
 
-        return self._world[]._batch_remove_and_add[
-            rem_size=Self.size,
-            remove_ids=Self.remove_ids,
-        ](
-            query,
-            *components^,
-        )
+        with Zone(
+            function_name=(
+                "Replacer.by[*AddTs: ComponentType, has_without_mask: Bool](var"
+                " *components: *AddTs, query: QueryInfo, out iterator:"
+                " Self.World.Iterator)"
+            )
+        ):
+            return self._world[]._batch_remove_and_add[
+                rem_size=Self.size,
+                remove_ids=Self.remove_ids,
+            ](
+                query,
+                *components^,
+            )
 
 
 struct World[*component_types: ComponentType](Copyable, Movable, Sized):
@@ -309,7 +337,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Creates a new [.World].
         """
-        with TraceGuard(name="World.__init__"):
+        with Zone(function_name="World.__init__()"):
             self._archetype_map = BitMaskGraph[-1](0)
             self._archetypes = [Self.Archetype()]
             self._entities = [EntityLocation(0, 0)]
@@ -335,7 +363,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Note that this requires iterating over all archetypes and
         may be an expensive operation.
         """
-        with TraceGuard(name="World.__len__"):
+        with Zone(function_name="World.__len__(out size: Int)"):
             size = 0
             for archetype in self._archetypes:
                 size += len(archetype)
@@ -364,7 +392,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Constraints:
             `size` must be non-negative.
         """
-        with TraceGuard(name="World._get_archetype_index start"):
+        with Zone(
+            function_name=(
+                "World._get_archetype_index[size: Int](components:"
+                " InlineArray[ComponentId, size], start_node_index: Int)"
+            )
+        ):
             comptime assert 0 <= size, "Size must be non-negative."
             node_index = self._archetype_map.get_node_index(
                 components, start_node_index
@@ -395,7 +428,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The archetype list index for the mask.
         """
-        with TraceGuard(name="World._get_archetype_index_by_mask"):
+        with Zone(
+            function_name="World._get_archetype_index_by_mask(mask: BitMask)"
+        ):
             for i in range(len(self._archetypes)):
                 if self._archetypes[i].get_mask() == mask:
                     return i
@@ -454,7 +489,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             The new or recycled [..entity.Entity].
 
         """
-        with TraceGuard(name="World.add_entity"):
+        with Zone(
+            function_name=(
+                "World.add_entity[*Ts: ComponentType](var *components: *Ts, out"
+                " entity: Entity)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "Not all component types are in the component manager."
@@ -552,7 +592,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             An iterator to the new or recycled [..entity.Entity Entities].
 
         """
-        with TraceGuard(name="World.add_entities"):
+        with Zone(
+            function_name=(
+                "World.add_entities[*Ts: ComponentType](*components: *Ts,"
+                " count: Int, out iterator: Self.Iterator)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "Not all component types are in the component manager."
@@ -625,7 +670,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The new entity.
         """
-        with TraceGuard(name="World._create_entity"):
+        with Zone(
+            function_name=(
+                "World._create_entity(archetype_index: Int, out entity: Entity)"
+            )
+        ):
             entity = self._entity_pool.get()
             idx = self._archetypes.unsafe_get(archetype_index).add_entity(
                 entity
@@ -645,7 +694,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             The index of the first newly created entity in the archetype.
         """
-        with TraceGuard(name="World._create_entities"):
+        with Zone(
+            function_name=(
+                "World._create_entities(archetype_index: Int, count: Int)"
+            )
+        ):
             debug_assert(count > 0, "Count must be positive.")
             archetype = Pointer(to=self._archetypes.unsafe_get(archetype_index))
             arch_start_idx = archetype[].extend(count, self._entity_pool)
@@ -684,7 +737,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._assert_unlocked()
         self._assert_alive(entity)
 
-        with TraceGuard(name="World.remove_entity"):
+        with Zone(function_name="World.remove_entity(entity: Entity)"):
             entity_loc = self._entities[entity.get_id()]
             old_archetype = Pointer(
                 to=self._archetypes.unsafe_get(entity_loc.archetype_index)
@@ -754,7 +807,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         self._assert_unlocked()
 
-        with TraceGuard(name="World.remove_entities"):
+        with Zone(function_name="World.remove_entities(query: QueryInfo)"):
             for archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
@@ -792,7 +845,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             entity: The entity to check.
         """
-        with TraceGuard(name="World.is_alive"):
+        with Zone(function_name="World.is_alive(entity: Entity)"):
             return self._entity_pool.is_alive(entity)
 
     @always_inline
@@ -809,7 +862,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             LarecsError: If the entity does not exist.
         """
-        with TraceGuard(name="World.has"):
+        with Zone(function_name="World.has[T: ComponentType](entity: Entity)"):
             comptime assert Self.component_manager._ContainsComponent[
                 T
             ], "Component type not in component manager"
@@ -836,7 +889,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         entity_loc = self._entities[entity.get_id()]
         self._assert_alive(entity)
 
-        with TraceGuard(name="World.get"):
+        with Zone(function_name="World.get[T: ComponentType](entity: Entity)"):
             if not self._archetypes.unsafe_get(
                 entity_loc.archetype_index
             ).has_components[T]():
@@ -867,7 +920,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the [..entity.Entity] does not exist.
         """
-        with TraceGuard(name="World.set"):
+        with Zone(
+            function_name=(
+                "World.set[T: ComponentType](entity: Entity, var component: T)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponent[
                 T
             ], "Component type not in component manager"
@@ -895,7 +952,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the entity does not exist.
             Error: If the entity does not have one of the components.
         """
-        with TraceGuard(name="World.set_components"):
+        with Zone(
+            function_name=(
+                "World.set[*Ts: ComponentType](entity: Entity, var *components:"
+                " *Ts)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "One or more component types not in component manager"
@@ -927,7 +989,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        with TraceGuard(name="World.add"):
+        with Zone(
+            function_name=(
+                "World.add[*Ts: ComponentType](entity: Entity, var"
+                " *add_components: *Ts)"
+            )
+        ):
             self._remove_and_add(entity, *add_components^)
 
     def add[
@@ -948,7 +1015,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be added because they are already present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        with TraceGuard(name="World.add reversed"):
+        with Zone(
+            function_name=(
+                "World.add[*Ts: ComponentType](var *add_components: *Ts,"
+                " entity: Entity)"
+            )
+        ):
             self._remove_and_add(entity, *add_components^)
 
     def add[
@@ -1010,7 +1082,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match existing entities that already have at least one of the
                 components to add.
         """
-        with TraceGuard(name="World.add query"):
+        with Zone(
+            function_name=(
+                "World.add[has_without_mask: Bool, *Ts: ComponentType](query:"
+                " QueryInfo, var *add_components: *Ts, out iterator:"
+                " Self.Iterator)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "One or more component types not in component manager"
@@ -1038,7 +1116,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        with TraceGuard(name="World.remove"):
+        with Zone(
+            function_name="World.remove[*Ts: ComponentType](entity: Entity)"
+        ):
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Duplicate component types in remove are not allowed."
@@ -1101,12 +1181,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with a query that could match entities that don't have all of the components to remove.
         """
 
-        # Note:
-        #     This operation can never map multiple archetypes onto one, due to the requirement that components to remove
-        #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
-        #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
-        #     into one.  This also enables potential parallelization optimizations.
-        with TraceGuard(name="World.remove query"):
+        with Zone(
+            function_name=(
+                "World.remove[*Ts: ComponentType, has_without_mask:"
+                " Bool](query: QueryInfo, out iterator: Self.Iterator)"
+            )
+        ):
+            # Note:
+            #     This operation can never map multiple archetypes onto one, due to the requirement that components to remove
+            #     must be already present on archetypes matched by the query. Therefore, we can apply the transformation to
+            #     each matching archetype individually, without checking for edge cases where multiple archetypes get merged
+            #     into one.  This also enables potential parallelization optimizations.
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Duplicate component types in remove are not allowed."
@@ -1138,7 +1223,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Parameters:
             Ts: The types of the components to remove.
         """
-        with TraceGuard(name="World.replace"):
+        with Zone(function_name="World.replace[*Ts: ComponentType]()"):
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Duplicate component types in replace are not allowed."
@@ -1169,7 +1254,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: when called with components that can't be removed because they are not present.
             Error: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        with TraceGuard(name="World._remove_and_add"):
+        with Zone(
+            function_name=(
+                "World._remove_and_add[*Ts: ComponentType, rem_size: Int,"
+                " remove_ids: InlineArray[ComponentId, rem_size]](entity:"
+                " Entity, var *add_components: *Ts)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "One or more component types not in component manager"
@@ -1314,7 +1405,14 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             LarecsError: when called with a query that could match entities that don't have all of the components to remove.
             LarecsError: when called on a locked world. Do not use during [.World.query] iteration.
         """
-        with TraceGuard(name="World._batch_remove_and_add"):
+        with Zone(
+            function_name=(
+                "World._batch_remove_and_add[*Ts: ComponentType, rem_size: Int,"
+                " remove_ids: InlineArray[ComponentId, rem_size],"
+                " has_without_mask: Bool](query: QueryInfo, var"
+                " *add_components: *Ts, out iterator: Self.Iterator)"
+            )
+        ):
             comptime assert Self.component_manager._ContainsComponents[
                 *Ts
             ], "One or more component types not in component manager"
@@ -1507,7 +1605,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the world is locked.
         """
-        with TraceGuard(name="World._assert_unlocked"):
+        with Zone(function_name="World._assert_unlocked()"):
             if self.is_locked():
                 raise LarecsError(WorldError.world_is_locked)
 
@@ -1522,7 +1620,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             Error: If the entity does not exist.
         """
-        with TraceGuard(name="World._assert_alive"):
+        with Zone(function_name="World._assert_alive(entity: Entity)"):
             if not self._entity_pool.is_alive(entity):
                 raise LarecsError(
                     EntityError.non_existent_entity.with_entities(entity)
@@ -1558,7 +1656,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             Error: If the operation raises.
         """
 
-        with TraceGuard(name="World.apply"):
+        with Zone(
+            function_name=(
+                "World.apply[OperationType, has_without_mask: Bool, *,"
+                " unroll_factor: Int](query: QueryInfo, operation:"
+                " OperationType)"
+            )
+        ):
             self._assert_unlocked()
 
             with self._locked():
@@ -1577,8 +1681,8 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             accessor: MutableEntityAccessor
         ) raises -> None,
         //,
-        has_without_mask: Bool = False,
         *,
+        has_without_mask: Bool = False,
         simd_width: Int = 1,
         unroll_factor: Int = 1,
     ](
@@ -1626,7 +1730,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         ```
 
         ```mojo {doctest="apply"}
-        from sys.info import simdwidthof
+        from sys.info import simd_width_of
         from memory import LegacyUnsafePointer
 
         world = World[Float64]()
@@ -1662,11 +1766,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             # Store the SIMD at the same address
             ptr.store(val)
 
-        world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
+        world.apply[operation, simd_width=simd_width_of[Float64]()](world.query[Float64]())
         ```
 
         """
-        with TraceGuard(name="World.apply simd"):
+        with Zone(
+            function_name=(
+                "World.apply[OperationType, *, has_without_mask: Bool,"
+                " simd_width: Int, unroll_factor: Int](query: QueryInfo,"
+                " operation: OperationType)"
+            )
+        ):
             self._assert_unlocked()
 
             with self._locked():
@@ -1779,7 +1889,11 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A [..query.Query] for all entities with the given components.
         """
-        with TraceGuard(name="World.query"):
+        with Zone(
+            function_name=(
+                "World.query[*Ts: ComponentType](out iterator: Self.Query)"
+            )
+        ):
             comptime assert constrain_components_unique[
                 *Ts
             ](), "Duplicate component types in query are not allowed."
@@ -1822,7 +1936,15 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
             without_mask:  The mask of components to exclude.
             start_indices: The start indices of the iterator. See [..query._WorldEntityIterator].
         """
-        with TraceGuard(name="World._get_entity_iterator"):
+        with Zone(
+            function_name=(
+                "World._get_entity_iterator[has_without_mask: Bool,"
+                " has_start_indices: Bool](mask: BitMask, without_mask:"
+                " StaticOptional[BitMask, has_without_mask], var start_indices:"
+                " StaticOptional[List[Int], has_start_indices], out iterator:"
+                " Self.Iterator)"
+            )
+        ):
             try:
                 iterator = Self.Iterator[
                     origin_of(self._archetypes),
@@ -1857,7 +1979,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             An iterator over all archetypes that match the query.
         """
-        with TraceGuard(name="World._get_archetype_iterator"):
+        with Zone(
+            function_name=(
+                "World._get_archetype_iterator[has_without_mask: Bool](mask:"
+                " BitMask, without_mask: StaticOptional[BitMask,"
+                " has_without_mask], out iterator: Self.ArchetypeIterator)"
+            )
+        ):
             iterator = Self.ArchetypeIterator(
                 Pointer(to=self._archetypes),
                 QueryInfo(
@@ -1871,7 +1999,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         """
         Returns whether the world is locked by any [.World.query queries].
         """
-        with TraceGuard(name="World.is_locked"):
+        with Zone(function_name="World.is_locked(out result: Bool)"):
             return self._locks.is_locked()
 
     @always_inline
@@ -1885,7 +2013,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Raises:
             LarecsError: when the world is already locked by the maximum number of locks (256 in the current implementation).
         """
-        with TraceGuard(name="World._lock"):
+        with Zone(function_name="World._lock(out lock: Int)"):
             try:
                 return self._locks.lock()
             except:
@@ -1899,7 +2027,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Args:
             lock: The lock bit to unlock.
         """
-        with TraceGuard(name="World._unlock"):
+        with Zone(function_name="World._unlock(lock: Int)"):
             try:
                 self._locks.unlock(lock)
             except e:
@@ -1916,7 +2044,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         Returns:
             A context manager that unlocks the world when it goes out of scope.
         """
-        with TraceGuard(name="World._locked"):
+        with Zone(function_name="World._locked()"):
             return LockedContext(Pointer(to=self._locks))
 
         # def Mask(self, entity: Entity) -> Mask:
@@ -2573,8 +2701,11 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
         Args:
             locks: The LockManager to handle.
         """
-        self._locks = locks
-        self._lock = 0
+        with Zone(
+            function_name="LockedContext.__init__(locks: Pointer[LockManager])"
+        ):
+            self._locks = locks
+            self._lock = 0
 
     @always_inline
     def __enter__(mut self) raises LarecsError -> Self:
@@ -2587,22 +2718,26 @@ struct LockedContext[origin: MutOrigin](ImplicitlyCopyable):
         Raises:
             LarecsError: If the number of locks exceeds 256.
         """
-        try:
-            self._lock = self._locks[].lock()
-        except:
-            raise LarecsError(WorldError.out_of_locks)
+        with Zone(function_name="LockedContext.__enter__()"):
+            try:
+                self._lock = self._locks[].lock()
+            except:
+                raise LarecsError(WorldError.out_of_locks)
 
-        return self
+            return self
 
     @always_inline
     def __exit__(mut self):
         """
         Unlocks the world.
         """
-        try:
-            self._locks[].unlock(self._lock)
-        except e:
-            assert False, "An unexpected internal error occurred: " + String(e)
+        with Zone(function_name="LockedContext.__exit__()"):
+            try:
+                self._locks[].unlock(self._lock)
+            except e:
+                assert (
+                    False
+                ), "An unexpected internal error occurred: " + String(e)
 
     # @always_inline
     # def __exit__[
