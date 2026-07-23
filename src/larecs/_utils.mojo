@@ -32,7 +32,7 @@ def assert_unreachable[
 
 @always_inline
 def concatenate_inline_arrays[
-    ElementType: Copyable & Movable, a_size: Int, b_size: Int
+    ElementType: Copyable, a_size: Int, b_size: Int
 ](
     a: InlineArray[ElementType, a_size],
     b: InlineArray[ElementType, b_size],

@@ -1,7 +1,5 @@
-from std.sys.intrinsics import _type_is_eq
 from std.sys.defines import is_defined
 from std.reflection import reflect
-from std.reflection.traits import AllCopyable
 from std.memory import UnsafePointer, uninit_copy_n, uninit_move_n, destroy_n
 from std.bit import next_power_of_two
 
@@ -310,17 +308,23 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 "_ComponentStorage.shallow_copy(out new_storage: Self)"
             )
         ):
-            # Initialize with capacity=0 to avoid allocating buffers, which will be copied from self
-            new_storage = Self(active_component_mask=BitMask(), capacity=0)
+            # Initialize with an empty active mask to avoid constructing a temporary
+            # storage whose active components intentionally have empty pointers.
+            new_storage = Self(
+                active_component_mask=BitMask(),
+                capacity=0,
+            )
             new_storage._capacity = self._capacity
             new_storage._size = self._size
             new_storage._active_component_mask = self._active_component_mask
-            comptime assert AllCopyable[
-                *Self.ComponentTypes.map[Self._PointerMapper]()
-            ]
+            comptime assert Self.ComponentTypes.map[
+                Self._PointerMapper
+            ]().all_conforms_to[
+                Copyable
+            ](), "All component pointer types must be copyable for shallow copy."
             new_storage._data = self._data.copy()
 
-    def _unsafe_init_components(mut self, read init_component_mask: BitMask):
+    def _unsafe_init_components(mut self, imm init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
 
         Important:
@@ -348,7 +352,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 comp_ptr: Self.ComponentPointer[T],
-            ) {read} -> Self.ComponentPointer[T]:
+            ) {imm} -> Self.ComponentPointer[T]:
                 if init_component_mask.get(id):
                     if storage_capacity > 0:
                         return rebind[Self.ComponentPointer[T]](
@@ -424,7 +428,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 old_ptr: Self.ComponentPointer[T],
-            ) {read} -> Self.ComponentPointer[T]:
+            ) {imm} -> Self.ComponentPointer[T]:
                 var new_ptr = alloc[T](new_pow2_capacity)
                 if storage_size > 0:
                     uninit_move_n[overlapping=False](
@@ -484,7 +488,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
-            ) {read}:
+            ) {imm}:
                 destroy_n(comp_ptr + remove_idx, count=1)
                 if need_swap:
                     uninit_move_n[overlapping=False](
@@ -603,12 +607,11 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     base_comp_ptr = self.get_component_ptr[T]()
                 except:
                     return assert_unreachable(
-                        "Not reachable as component presence was asserted"
-                        " before."
+                        "Not reachable as component presence was asserted before."
                     )
                 entity_comp_ptr = base_comp_ptr + entity_idx
                 destroy_n(entity_comp_ptr, 1)
-                entity_comp_ptr.init_pointee_move(component^)
+                entity_comp_ptr.unsafe_write(component^)
 
             (components^).consume_elements[set_component]()
 
@@ -651,11 +654,10 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                     base_comp_ptr = self.get_component_ptr[T]()
                 except:
                     return assert_unreachable(
-                        "Not reachable as component presence was asserted"
-                        " before."
+                        "Not reachable as component presence was asserted before."
                     )
                 entity_comp_ptr = base_comp_ptr + entity_idx
-                entity_comp_ptr.init_pointee_move(component^)
+                entity_comp_ptr.unsafe_write(component^)
 
             (components^).consume_elements[init_component]()
 
@@ -1001,7 +1003,7 @@ struct Archetype[
             self._entities.reserve(self._storage._capacity)
 
     @always_inline
-    def get_entity(self, idx: Int) -> ref[self._entities] Entity:
+    def get_entity(self, idx: Int) -> ref[origin_of(self._entities[idx])] Entity:
         """Returns the entity at the given index.
 
         Args:
@@ -1016,12 +1018,10 @@ struct Archetype[
             return self._entities[idx]
 
     @always_inline
-    def get_entity_accessor[
-        mut: Bool, //, origin: Origin[mut=mut]
-    ](
-        ref[origin] self,
+    def get_entity_accessor(
+        ref self,
         idx: Int,
-        out accessor: Self.EntityAccessor[archetype_origin=origin],
+        out accessor: Self.EntityAccessor[archetype_origin=origin_of(self)],
     ):
         """Returns an accessor for the entity at the given index.
 
@@ -1047,7 +1047,7 @@ struct Archetype[
     @always_inline
     def get_component[
         T: ComponentType
-    ](ref self, entity_idx: Int) raises LarecsError -> ref[self] T:
+    ](ref self, entity_idx: Int) raises LarecsError -> ref[origin_of(self)] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
@@ -1246,7 +1246,8 @@ struct Archetype[
             var swapped = self._storage.swap_remove_entity(idx)
 
             if swapped:
-                self._entities[idx] = self._entities.pop()
+                ref entity = self._entities.pop()
+                self._entities[idx] = entity
             else:
                 _ = self._entities.pop()
 

@@ -1,4 +1,5 @@
-from std.memory import UnsafePointer, Span
+from std.memory import UnsafePointer
+from std.collections import Span
 from std.sys import size_of
 from std.algorithm.backend.vectorize import vectorize
 from std.builtin.globals import global_constant
@@ -706,9 +707,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 archetype[].get_entity(arch_start_idx + count - 1).get_id() + 1
             )
             if entities_size > len(self._entities):
-                if entities_size > self._entities.capacity:
+                if entities_size > self._entities.capacity():
                     self._entities.reserve(
-                        max(entities_size, 2 * self._entities.capacity)
+                        max(entities_size, 2 * self._entities.capacity())
                     )
 
                 self._entities.resize(
@@ -808,10 +809,10 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
         self._assert_unlocked()
 
         with Zone(function_name="World.remove_entities(query: QueryInfo)"):
-            for archetype in self._get_archetype_iterator(
+            for ref archetype in self._get_archetype_iterator(
                 query.mask, query.without_mask
             ):
-                for entity in archetype[].get_entities():
+                for entity in archetype.get_entities():
                     try:
                         self._entity_pool.recycle(entity)
                     except:
@@ -819,7 +820,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                             "Zero Entity should never be handed via public API."
                             " So it should never be recycled here!"
                         )
-                archetype[].clear()
+                archetype.clear()
 
             # if self._listener != nil:
             #     var oldRel *Id
@@ -874,7 +875,13 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
     @always_inline
     def get[
         T: ComponentType
-    ](mut self, entity: Entity) raises LarecsError -> ref[self._archetypes] T:
+    ](mut self, entity: Entity) raises LarecsError -> ref[
+        origin_of(
+            self._archetypes.unsafe_get(
+                self._entities[entity.get_id()].archetype_index
+            )
+        )
+    ] T:
         """Returns a reference to the given component of an [..entity.Entity].
 
         Parameters:
@@ -1451,12 +1458,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     for archetype in self._get_archetype_iterator(
                         query.mask, query.without_mask
                     ):
-                        archetype_mask = archetype[].get_mask()
+                        archetype_mask = archetype.get_mask()
 
                         comptime if rem_size:
                             archetype_mask.set(remove_ids, False)
 
-                        if archetype[] and archetype_mask.contains_any(
+                        if archetype and archetype_mask.contains_any(
                             BitMask(add_ids)
                         ):
                             raise LarecsError(
@@ -1517,7 +1524,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
             # Search for the archetype that matches the query mask
             with self._locked():
-                for var old_archetype in self._get_archetype_iterator(
+                for ref old_archetype1 in self._get_archetype_iterator(
                     query.mask, query.without_mask
                 ):
                     # Two cases per matching archetype A:
@@ -1525,7 +1532,7 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     #    and insert new component data for moved entities.
                     # 2. If an archetype with the new component combination does not exist yet,
                     #    create new archetype B = A.different_by(component_ids) and move entities and component data from A to B.
-                    old_node_index = old_archetype[].get_node_index()
+                    old_node_index = old_archetype1.get_node_index()
                     new_archetype_idx = self._get_archetype_index[
                         add_size + rem_size
                     ](component_ids, old_node_index)
@@ -1533,24 +1540,24 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                     # We need to update the pointer to the old archetype, because the `self._archetypes` list may have been
                     # resized during the call to `_get_archetype_index`.
                     old_archetype_idx = self._archetype_map[old_node_index]
-                    old_archetype = Pointer(
-                        to=self._archetypes.unsafe_get(index(old_archetype_idx))
+                    ref old_archetype = self._archetypes.unsafe_get(
+                        index(old_archetype_idx)
                     )
 
-                    new_archetype = Pointer(
-                        to=self._archetypes.unsafe_get(new_archetype_idx)
+                    ref new_archetype = self._archetypes.unsafe_get(
+                        new_archetype_idx
                     )
 
                     # TODO: Optimization: If `new_archetype` is empty we can just shallow-copy the _ComponentStorage of `old_archetype` to `new_archetype` and reinit `old_archetype`.
 
-                    old_archetype_size = len(old_archetype[])
+                    old_archetype_size = len(old_archetype)
                     if old_archetype_idx == new_archetype_idx:
                         arch_start_idcs.append(0)
                         changed_archetype_idcs.append(new_archetype_idx)
 
                         comptime for i in range(add_size):
                             comptime T = Ts[i]
-                            new_archetype[].set_component_range[T](
+                            new_archetype.set_component_range[T](
                                 0,
                                 old_archetype_size,
                                 add_components[i].copy(),
@@ -1558,19 +1565,17 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         continue
 
                     old_archetype_unsafe = UnsafePointer(
-                        to=old_archetype[]
+                        to=old_archetype
                     ).as_unsafe_any_origin()
-                    arch_start_idx = (
-                        new_archetype[].extend_from_archetype_unsafe(
-                            old_archetype_unsafe, old_archetype_size
-                        )
+                    arch_start_idx = new_archetype.extend_from_archetype_unsafe(
+                        old_archetype_unsafe, old_archetype_size
                     )
                     arch_start_idcs.append(arch_start_idx)
                     changed_archetype_idcs.append(new_archetype_idx)
 
                     comptime for i in range(add_size):
                         comptime T = Ts[i]
-                        new_archetype[].set_component_range[T](
+                        new_archetype.set_component_range[T](
                             arch_start_idx,
                             old_archetype_size,
                             add_components[i].copy(),
@@ -1578,12 +1583,12 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
 
                     # Update entity index mappings for the moved entity range.
                     for entity_idx in range(old_archetype_size):
-                        entity = old_archetype[].get_entity(entity_idx)
+                        entity = old_archetype.get_entity(entity_idx)
                         self._entities[entity.get_id()] = EntityLocation(
                             arch_start_idx + entity_idx, new_archetype_idx
                         )
 
-                    old_archetype[].clear()
+                    old_archetype.clear()
 
             # Return iterator to iterate over the changed entities.
             try:
@@ -1676,127 +1681,121 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                         except:
                             raise LarecsError(UnknownError())
 
-    def apply[
-        OperationType: def[simd_width: Int](
-            accessor: MutableEntityAccessor
-        ) raises -> None,
-        //,
-        *,
-        has_without_mask: Bool = False,
-        simd_width: Int = 1,
-        unroll_factor: Int = 1,
-    ](
-        mut self,
-        query: QueryInfo[has_without_mask=has_without_mask],
-        operation: OperationType,
-    ) raises LarecsError:
-        """
-        Applies an operation to all entities with the given components.
+    # def apply[
+    #     OperationType: def[simd_width: Int](
+    #         accessor: MutableEntityAccessor
+    #     ) raises -> None,
+    #     //,
+    #     has_without_mask: Bool = False,
+    #     *,
+    #     simd_width: Int = 1,
+    #     unroll_factor: Int = 1,
+    # ](
+    #     mut self,
+    #     query: QueryInfo[has_without_mask=has_without_mask],
+    #     operation: OperationType,
+    # ) raises LarecsError:
+    #     """
+    #     Applies an operation to all entities with the given components.
 
-        The operation is applied to chunks of `simd_width` entities,
-        unless not enough are available anymore. Then the chunk size
-        `simd_width` is reduced.
+    #     The operation is applied to chunks of `simd_width` entities,
+    #     unless not enough are available anymore. Then the chunk size
+    #     `simd_width` is reduced.
 
-        Processes full `simd_width` chunks directly, then handles any trailing
-        entities one at a time.
+    #     Processes full `simd_width` chunks directly, then handles any trailing
+    #     entities one at a time.
 
-        Caution! If `simd_width` is greater than 1, the operation **must**
-        apply to the `simd_width` elements after the element passed to
-        `operation`, assuming that each component is stored in contiguous
-        memory. This may require knowledge of the memory layout
-        of the components!
+    #     Caution! If `simd_width` is greater than 1, the operation **must**
+    #     apply to the `simd_width` elements after the element passed to
+    #     `operation`, assuming that each component is stored in contiguous
+    #     memory. This may require knowledge of the memory layout
+    #     of the components!
 
-        Parameters:
-            OperationType: The type of the operation to apply.
-            has_without_mask: Whether the query has a without mask.
-            simd_width: The SIMD width for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
-            unroll_factor: The unroll factor for the operation
-                (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+    #     Parameters:
+    #         OperationType: The type of the operation to apply.
+    #         has_without_mask: Whether the query has a without mask.
+    #         simd_width: The SIMD width for the operation
+    #             (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
+    #         unroll_factor: The unroll factor for the operation
+    #             (see [vectorize doc](https://docs.modular.com/mojo/stdlib/algorithm/backend/vectorize/vectorize)).
 
-        Args:
-            query: The query to determine which entities to apply the operation to.
-            operation: The operation to apply.
+    #     Args:
+    #         query: The query to determine which entities to apply the operation to.
+    #         operation: The operation to apply.
 
-        Constraints:
-            The simd_width must be a power of 2.
+    #     Constraints:
+    #         The simd_width must be a power of 2.
 
-        Raises:
-            LarecsError: If the world is locked.
+    #     Raises:
+    #         LarecsError: If the world is locked.
 
-        Example:
-        ```mojo {doctest="apply" global=true hide=true}
-        from larecs import World, MutableEntityAccessor
-        ```
+    #     Example:
+    #     ```mojo {doctest="apply" global=true hide=true}
+    #     from larecs import World, MutableEntityAccessor
+    #     ```
 
-        ```mojo {doctest="apply"}
-        from sys.info import simd_width_of
-        from memory import LegacyUnsafePointer
+    #     ```mojo {doctest="apply"}
+    #     from sys.info import simdwidthof
+    #     from memory import LegacyUnsafePointer
 
-        world = World[Float64]()
-        e = world.add_entity()
+    #     world = World[Float64]()
+    #     e = world.add_entity()
 
-        def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
-            # Define the operation to apply here.
-            # Note that due to the immature
-            # capturing system of Mojo, the world may be
-            # accessible by copy capturing here, even
-            # though it is not copyable.
-            # Do NOT change `world` from inside the operation,
-            # as it will not be reflected in the world
-            # or may cause a segmentation fault.
+    #     def operation[simd_width: Int](accessor: MutableEntityAccessor) capturing:
+    #         # Define the operation to apply here.
+    #         # Note that due to the immature
+    #         # capturing system of Mojo, the world may be
+    #         # accessible by copy capturing here, even
+    #         # though it is not copyable.
+    #         # Do NOT change `world` from inside the operation,
+    #         # as it will not be reflected in the world
+    #         # or may cause a segmentation fault.
 
-            try:
-                # Get the component
-                ref component = accessor.get[Float64]()
+    #         try:
+    #             # Get the component
+    #             ref component = accessor.get[Float64]()
 
-                # Get an unsafe pointer to the memory
-                # location of the component
-                ptr = LegacyUnsafePointer(to=component)
-            except:
-                return
+    #             # Get an unsafe pointer to the memory
+    #             # location of the component
+    #             ptr = LegacyUnsafePointer(to=component)
+    #         except:
+    #             return
 
-            # Load a SIMD of size `simd_width`
-            # Note that a strided load is needed if the component as more than one field.
-            val = ptr.load[width=simd_width]()
+    #         # Load a SIMD of size `simd_width`
+    #         # Note that a strided load is needed if the component as more than one field.
+    #         val = ptr.load[width=simd_width]()
 
-            # Do an operation on the SIMD
-            val += 1
+    #         # Do an operation on the SIMD
+    #         val += 1
 
-            # Store the SIMD at the same address
-            ptr.store(val)
+    #         # Store the SIMD at the same address
+    #         ptr.store(val)
 
-        world.apply[operation, simd_width=simd_width_of[Float64]()](world.query[Float64]())
-        ```
+    #     world.apply[operation, simd_width=simdwidthof[Float64]()](world.query[Float64]())
+    #     ```
 
-        """
-        with Zone(
-            function_name=(
-                "World.apply[OperationType, *, has_without_mask: Bool,"
-                " simd_width: Int, unroll_factor: Int](query: QueryInfo,"
-                " operation: OperationType)"
-            )
-        ):
-            self._assert_unlocked()
+    #     """
+    #     with TraceGuard(name="World.apply simd"):
+    #         self._assert_unlocked()
 
-            with self._locked():
-                for archetype in Self.ArchetypeIterator(
-                    Pointer(to=self._archetypes),
-                    query.copy(),
-                ):
+    #         with self._locked():
+    #             for archetype in Self.ArchetypeIterator(
+    #                 Pointer(to=self._archetypes),
+    #                 query.copy(),
+    #             ):
 
-                    @always_inline
-                    def closure[width: Int](i: Int) {read}:
-                        accessor = archetype[].get_entity_accessor(i)
-                        try:
-                            operation[width](accessor)
-                        except:
-                            # TODO: Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
-                            pass
+    #                 @always_inline
+    #                 def closure[width: Int](i: Int) {read}:
+    #                     accessor = archetype[].get_entity_accessor(i)
+    #                     try:
+    #                         operation[width](accessor)
+    #                     except:
+    #                         # TODO: Silence all errors at the moment. In the future this should be handled more gracefully, e.g. by collecting errors and returning them after the loop.
+    #                         pass
 
-                    vectorize[simd_width, unroll_factor=unroll_factor](
-                        len(archetype[]), closure
-                    )
+    #                 vectorize[simd_width, unroll_factor=unroll_factor](
+    #                     len(archetype[]), closure
+    #                 )
 
     # def Reset(self):
     #     """
