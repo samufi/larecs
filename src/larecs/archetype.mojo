@@ -324,7 +324,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
             ](), "All component pointer types must be copyable for shallow copy."
             new_storage._data = self._data.copy()
 
-    def _unsafe_init_components(mut self, read init_component_mask: BitMask):
+    def _unsafe_init_components(mut self, imm init_component_mask: BitMask):
         """(Re)Initializes owned component storage while keeping the component layout intact.
 
         Important:
@@ -352,7 +352,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 comp_ptr: Self.ComponentPointer[T],
-            ) {read} -> Self.ComponentPointer[T]:
+            ) {imm} -> Self.ComponentPointer[T]:
                 if init_component_mask.get(id):
                     if storage_capacity > 0:
                         return rebind[Self.ComponentPointer[T]](
@@ -428,7 +428,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 old_ptr: Self.ComponentPointer[T],
-            ) {read} -> Self.ComponentPointer[T]:
+            ) {imm} -> Self.ComponentPointer[T]:
                 var new_ptr = alloc[T](new_pow2_capacity)
                 if storage_size > 0:
                     uninit_move_n[overlapping=False](
@@ -488,7 +488,7 @@ struct _ComponentStorage[*ComponentTypes: ComponentType](
                 storage_size: Int,
                 storage_capacity: Int,
                 comp_ptr: UnsafePointer[T, MutUntrackedOrigin],
-            ) {read}:
+            ) {imm}:
                 destroy_n(comp_ptr + remove_idx, count=1)
                 if need_swap:
                     uninit_move_n[overlapping=False](

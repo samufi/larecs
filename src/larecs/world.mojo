@@ -1,4 +1,5 @@
-from std.memory import UnsafePointer, Span
+from std.memory import UnsafePointer
+from std.collections import Span
 from std.sys import size_of
 from std.algorithm.backend.vectorize import vectorize
 from std.builtin.globals import global_constant
@@ -706,9 +707,9 @@ struct World[*component_types: ComponentType](Copyable, Movable, Sized):
                 archetype[].get_entity(arch_start_idx + count - 1).get_id() + 1
             )
             if entities_size > len(self._entities):
-                if entities_size > self._entities.capacity:
+                if entities_size > self._entities.capacity():
                     self._entities.reserve(
-                        max(entities_size, 2 * self._entities.capacity)
+                        max(entities_size, 2 * self._entities.capacity())
                     )
 
                 self._entities.resize(
