@@ -1003,7 +1003,7 @@ struct Archetype[
             self._entities.reserve(self._storage._capacity)
 
     @always_inline
-    def get_entity(self, idx: Int) -> ref[self._entities] Entity:
+    def get_entity(self, idx: Int) -> ref[origin_of(self._entities[idx])] Entity:
         """Returns the entity at the given index.
 
         Args:
@@ -1018,12 +1018,10 @@ struct Archetype[
             return self._entities[idx]
 
     @always_inline
-    def get_entity_accessor[
-        mut: Bool, //, origin: Origin[mut=mut]
-    ](
-        ref[origin] self,
+    def get_entity_accessor(
+        ref self,
         idx: Int,
-        out accessor: Self.EntityAccessor[archetype_origin=origin],
+        out accessor: Self.EntityAccessor[archetype_origin=origin_of(self)],
     ):
         """Returns an accessor for the entity at the given index.
 
@@ -1049,7 +1047,7 @@ struct Archetype[
     @always_inline
     def get_component[
         T: ComponentType
-    ](ref self, entity_idx: Int) raises LarecsError -> ref[self] T:
+    ](ref self, entity_idx: Int) raises LarecsError -> ref[origin_of(self)] T:
         """Returns the component with the given Type T at the given index.
 
         Parameters:
@@ -1248,7 +1246,8 @@ struct Archetype[
             var swapped = self._storage.swap_remove_entity(idx)
 
             if swapped:
-                self._entities[idx] = self._entities.pop()
+                ref entity = self._entities.pop()
+                self._entities[idx] = entity
             else:
                 _ = self._entities.pop()
 
